@@ -12,7 +12,7 @@ contributions is: it stays deterministic, stack-agnostic, and dependency-free.
 ## Getting started
 
 ```sh
-git clone https://github.com/OWNER/forma.git
+git clone https://github.com/LucaDominici/forma.git
 cd forma
 npm test        # runs the fixture: init → gen → check
 npm run lint    # syntax-checks bin + lib

@@ -13,13 +13,13 @@
     "stack-agnostic",
     "cli"
   ],
-  "homepage": "https://github.com/OWNER/forma#readme",
+  "homepage": "https://github.com/LucaDominici/forma#readme",
   "bugs": {
-    "url": "https://github.com/OWNER/forma/issues"
+    "url": "https://github.com/LucaDominici/forma/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OWNER/forma.git"
+    "url": "git+https://github.com/LucaDominici/forma.git"
   },
   "license": "Apache-2.0",
   "author": "Luca Dominici",

@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/OWNER/forma/blob/main/lib/schema/c4-model.schema.json",
+  "$id": "https://github.com/LucaDominici/forma/blob/main/lib/schema/c4-model.schema.json",
   "title": "C4 model \u2014 stack-agnostic architecture graph",
   "description": "Reusable contract for the C4 live dashboard. A generator conforms iff its output validates; the viewer renders anything that validates. Stack-specific facts live only in tech/meta.",
   "type": "object",

@@ -18,5 +18,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stack-agnostic viewer with swappable skins (`holo`, `blueprint`).
 - JSON schema contract (`lib/schema/c4-model.schema.json`).
 
-[Unreleased]: https://github.com/OWNER/forma/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/OWNER/forma/releases/tag/v0.1.0
+[Unreleased]: https://github.com/LucaDominici/forma/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/LucaDominici/forma/releases/tag/v0.1.0
