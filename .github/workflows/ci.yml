@@ -22,3 +22,15 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm run lint
       - run: npm test
+  ci-required:
+    # fail-closed aggregate: one required status check that gates the whole matrix, so branch
+    # protection lists a single context instead of one per matrix node version.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: test
+    if: always()
+    steps:
+      - env: { RESULT: "${{ needs.test.result }}" }
+        run: |
+          echo "test result: $RESULT"
+          [ "$RESULT" = success ] || { echo "::error::ci test job did not succeed"; exit 1; }
