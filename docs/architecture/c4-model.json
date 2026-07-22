@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.1.0",
-  "generatedAt": "2026-07-22T20:52:22.838Z",
+  "generatedAt": "2026-07-22T21:01:42.797Z",
   "source": {
     "repo": "forma",
-    "commit": "ffc4dbd70c0bc374ff1838c67b231e1068e34bc1",
+    "commit": "7607344a37ed35eea2dc3c0c63af5835692ad8d2",
     "branch": "main",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.1.0"
@@ -12,7 +12,7 @@
     "repo": "forma",
     "stack": "JavaScript (Node ESM, zero-dependency)",
     "seededBy": "forma init (curated)",
-    "verifiedAt": "2026-07-22T20:52:22.839Z",
+    "verifiedAt": "2026-07-22T21:01:42.798Z",
     "verifyMethod": "code+topology (gh re-verify optional)"
   },
   "levels": [
