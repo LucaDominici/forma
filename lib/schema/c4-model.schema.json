@@ -1,0 +1,274 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/OWNER/forma/blob/main/lib/schema/c4-model.schema.json",
+  "title": "C4 model \u2014 stack-agnostic architecture graph",
+  "description": "Reusable contract for the C4 live dashboard. A generator conforms iff its output validates; the viewer renders anything that validates. Stack-specific facts live only in tech/meta.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "source",
+    "levels",
+    "nodes",
+    "edges"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semver. The viewer renders any JSON with the same MAJOR; MINOR/PATCH are additive-only."
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "repo",
+        "commit",
+        "generator"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "repo": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "docPath": {
+          "type": "string",
+          "description": "The arc42 architecture doc this model derives from."
+        },
+        "generator": {
+          "type": "string"
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "description": "Repo-level escape hatch (archetype, stack, overlays, version). Never required by the viewer.",
+      "additionalProperties": true
+    },
+    "levels": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      },
+      "description": "Ordered C4 levels present (e.g. context, container, component, code)."
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "level",
+          "name",
+          "kind"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable, unique, natural-key-like."
+          },
+          "level": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "person",
+              "system",
+              "external",
+              "container",
+              "component",
+              "store",
+              "boundary",
+              "leaf"
+            ]
+          },
+          "parent": {
+            "type": "string",
+            "description": "Containment / boundary node id."
+          },
+          "drill": {
+            "type": "string",
+            "description": "Level id to open when drilling into this node."
+          },
+          "tech": {
+            "type": "string",
+            "description": "Free text; NOT enumerated."
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "current",
+              "partial",
+              "planned",
+              "deprecated",
+              "unknown"
+            ],
+            "default": "current"
+          },
+          "link": {
+            "type": "string",
+            "format": "uri"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "ref"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Open vocabulary: path|doc|adr|url|test|glob."
+                },
+                "ref": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "integer",
+                  "description": "For glob evidence: number of files matched (drift anchor)."
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "category": {
+            "type": "string",
+            "description": "Sub-type tag shown top-left (surface/core/gen/out/gate/...)."
+          },
+          "status2": {
+            "type": "string",
+            "enum": [
+              "done",
+              "in-progress",
+              "next",
+              "planned",
+              "problem"
+            ],
+            "description": "Hologram completion status (colour)."
+          },
+          "completion": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "statusWord": {
+            "type": "string",
+            "description": "Optional badge word overriding the %."
+          },
+          "current": {
+            "type": "string",
+            "description": "STATO ATTUALE (fatti) \u2014 what is true now."
+          },
+          "target": {
+            "type": "string",
+            "description": "STATO FINITO (progetto) \u2014 where it must land."
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "verify": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Verification source (gh issue/PR + state + ts)."
+          },
+          "func": {
+            "type": "string",
+            "description": "Plain-language 'what it does' for non-developers."
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "from",
+          "to"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "level": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "description": "import | runtime | ci \u2014 provenance of the relationship."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "current",
+              "planned",
+              "deprecated"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "ref"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "ref": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "estatus": {
+            "type": "string",
+            "enum": [
+              "active",
+              "to-build"
+            ],
+            "description": "active = animated flow; to-build = dashed."
+          }
+        }
+      }
+    }
+  }
+}

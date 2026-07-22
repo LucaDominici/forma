@@ -1,0 +1,25 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+  id-token: write   # required for npm trusted publishing (OIDC) + provenance
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+      - name: Assert tag matches package version
+        run: |
+          PKG="v$(node -p "require('./package.json').version")"
+          TAG="${GITHUB_REF_NAME}"
+          echo "tag=$TAG pkg=$PKG"
+          test "$TAG" = "$PKG" || { echo "::error::tag $TAG != package version $PKG"; exit 1; }
+      - run: npm install -g npm@latest   # trusted publishing needs npm >= 11.5.1
+      - run: npm run lint && npm test
+      - run: npm publish               # no NODE_AUTH_TOKEN: trusted publisher + automatic provenance

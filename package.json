@@ -1,0 +1,51 @@
+{
+  "name": "forma-arch",
+  "version": "0.1.0",
+  "description": "Forma — present your architecture instead of slides. An interactive, stack-agnostic C4 explorer (context → container → component → leaf) generated from your code and kept true to it by a deterministic drift check.",
+  "keywords": [
+    "architecture",
+    "c4",
+    "arc42",
+    "diagram",
+    "presentation",
+    "explorer",
+    "documentation",
+    "stack-agnostic",
+    "cli"
+  ],
+  "homepage": "https://github.com/OWNER/forma#readme",
+  "bugs": {
+    "url": "https://github.com/OWNER/forma/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OWNER/forma.git"
+  },
+  "license": "Apache-2.0",
+  "author": "Luca Dominici",
+  "type": "module",
+  "bin": {
+    "forma": "bin/forma.mjs"
+  },
+  "exports": {
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin/forma.mjs",
+    "lib",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "lint": "node scripts/lint.mjs",
+    "test": "node test/run.mjs",
+    "prepack": "node scripts/check-clean.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+*.log
+.DS_Store
+coverage/
+dist/
+*.tgz
+.env
+.env.*
+!.env.example
+.fuse_hidden*
+
+PROMPT_claude-code-publish.md

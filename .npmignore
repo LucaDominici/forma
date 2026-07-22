@@ -1,0 +1,14 @@
+# ship only runtime files (defense-in-depth on top of package.json "files")
+.github/
+test/
+scripts/
+adapters/
+docs/
+.git*
+.fuse_hidden*
+*.tgz
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+CHANGELOG.md
+PUBLISH.md
