@@ -1,0 +1,355 @@
+{
+  "schemaVersion": "1.1.0",
+  "generatedAt": "2026-07-22T20:52:22.838Z",
+  "source": {
+    "repo": "forma",
+    "commit": "ffc4dbd70c0bc374ff1838c67b231e1068e34bc1",
+    "branch": "main",
+    "docPath": "docs/architecture/ARCHITECTURE.md",
+    "generator": "gen-c4-model@1.1.0"
+  },
+  "meta": {
+    "repo": "forma",
+    "stack": "JavaScript (Node ESM, zero-dependency)",
+    "seededBy": "forma init (curated)",
+    "verifiedAt": "2026-07-22T20:52:22.839Z",
+    "verifyMethod": "code+topology (gh re-verify optional)"
+  },
+  "levels": [
+    "context",
+    "container",
+    "component",
+    "leaf"
+  ],
+  "nodes": [
+    {
+      "status": "current",
+      "id": "forma",
+      "level": "context",
+      "kind": "system",
+      "name": "forma",
+      "tech": "JavaScript (Node ESM, zero-dep)",
+      "description": "Forma — a stack-agnostic C4 architecture explorer plus a deterministic drift check. Walks a codebase into an interactive viewer kept true to the code.",
+      "category": "system",
+      "status2": "done",
+      "completion": 100,
+      "current": "JavaScript (Node ESM, zero-dep)",
+      "target": "",
+      "func": "Forma — a stack-agnostic C4 architecture explorer plus a deterministic drift check. Walks a codebase into an interactive viewer kept true to the code."
+    },
+    {
+      "status": "current",
+      "id": "cli",
+      "level": "container",
+      "kind": "container",
+      "parent": "forma",
+      "name": "cli",
+      "tech": "JavaScript",
+      "description": "CLI entrypoint — dispatches init | gen | check | doc | serve.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "bin",
+          "count": 1
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "JavaScript",
+      "target": "",
+      "func": "CLI entrypoint — dispatches init | gen | check | doc | serve."
+    },
+    {
+      "status": "current",
+      "id": "lib",
+      "level": "container",
+      "kind": "container",
+      "parent": "forma",
+      "name": "lib",
+      "tech": "JavaScript",
+      "description": "Engine — the five commands, the C4 JSON-schema contract, and the interactive viewer.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "lib",
+          "count": 5
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "JavaScript",
+      "target": "",
+      "func": "Engine — the five commands, the C4 JSON-schema contract, and the interactive viewer."
+    },
+    {
+      "status": "current",
+      "id": "scripts",
+      "level": "container",
+      "kind": "container",
+      "parent": "forma",
+      "name": "scripts",
+      "tech": "JavaScript",
+      "description": "Zero-dependency gates — lint and the prepack .fuse_hidden clean-check.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "scripts",
+          "count": 2
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "JavaScript",
+      "target": "",
+      "func": "Zero-dependency gates — lint and the prepack .fuse_hidden clean-check."
+    },
+    {
+      "status": "current",
+      "id": "test",
+      "level": "container",
+      "kind": "container",
+      "parent": "forma",
+      "name": "test",
+      "tech": "JavaScript",
+      "description": "Test runner — exercises init→gen→check on the mini fixture.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "test",
+          "count": 1
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "JavaScript",
+      "target": "",
+      "func": "Test runner — exercises init→gen→check on the mini fixture."
+    },
+    {
+      "id": "cli__forma_mjs",
+      "level": "leaf",
+      "parent": "cli",
+      "kind": "leaf",
+      "name": "forma",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "bin/forma.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "Exists: bin/forma.mjs",
+      "target": "",
+      "func": "Component of module cli."
+    },
+    {
+      "id": "lib__check_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "check",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/check.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "Exists: lib/check.mjs",
+      "target": "",
+      "func": "Component of module lib."
+    },
+    {
+      "id": "lib__doc_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "doc",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/doc.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "Exists: lib/doc.mjs",
+      "target": "",
+      "func": "Component of module lib."
+    },
+    {
+      "id": "lib__gen_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "gen",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/gen.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "Exists: lib/gen.mjs",
+      "target": "",
+      "func": "Component of module lib."
+    },
+    {
+      "id": "lib__init_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "init",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/init.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "Exists: lib/init.mjs",
+      "target": "",
+      "func": "Component of module lib."
+    },
+    {
+      "id": "lib__serve_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "serve",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/serve.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "Exists: lib/serve.mjs",
+      "target": "",
+      "func": "Component of module lib."
+    },
+    {
+      "id": "scripts__check_clean_mjs",
+      "level": "leaf",
+      "parent": "scripts",
+      "kind": "leaf",
+      "name": "check-clean",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "scripts/check-clean.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "Exists: scripts/check-clean.mjs",
+      "target": "",
+      "func": "Component of module scripts."
+    },
+    {
+      "id": "scripts__lint_mjs",
+      "level": "leaf",
+      "parent": "scripts",
+      "kind": "leaf",
+      "name": "lint",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "scripts/lint.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "Exists: scripts/lint.mjs",
+      "target": "",
+      "func": "Component of module scripts."
+    },
+    {
+      "id": "test__run_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "run",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/run.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "Exists: test/run.mjs",
+      "target": "",
+      "func": "Component of module test."
+    }
+  ],
+  "edges": [
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cli",
+      "to": "lib",
+      "label": "dispatches",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "scripts",
+      "to": "cli",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "scripts",
+      "to": "lib",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "test",
+      "to": "cli",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "test",
+      "to": "lib",
+      "label": "1×",
+      "kind": "import"
+    }
+  ]
+}

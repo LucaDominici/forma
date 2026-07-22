@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "repo": "forma",
+    "stack": "JavaScript (Node ESM, zero-dependency)",
+    "seededBy": "forma init (curated)"
+  },
+  "docPath": "docs/architecture/ARCHITECTURE.md",
+  "levels": [
+    "context",
+    "container",
+    "component",
+    "leaf"
+  ],
+  "nodes": [
+    {
+      "id": "forma",
+      "level": "context",
+      "kind": "system",
+      "name": "forma",
+      "tech": "JavaScript (Node ESM, zero-dep)",
+      "description": "Forma — a stack-agnostic C4 architecture explorer plus a deterministic drift check. Walks a codebase into an interactive viewer kept true to the code."
+    },
+    {
+      "id": "cli",
+      "level": "container",
+      "kind": "container",
+      "parent": "forma",
+      "name": "cli",
+      "tech": "JavaScript",
+      "description": "CLI entrypoint — dispatches init | gen | check | doc | serve."
+    },
+    {
+      "id": "lib",
+      "level": "container",
+      "kind": "container",
+      "parent": "forma",
+      "name": "lib",
+      "tech": "JavaScript",
+      "description": "Engine — the five commands, the C4 JSON-schema contract, and the interactive viewer."
+    },
+    {
+      "id": "scripts",
+      "level": "container",
+      "kind": "container",
+      "parent": "forma",
+      "name": "scripts",
+      "tech": "JavaScript",
+      "description": "Zero-dependency gates — lint and the prepack .fuse_hidden clean-check."
+    },
+    {
+      "id": "test",
+      "level": "container",
+      "kind": "container",
+      "parent": "forma",
+      "name": "test",
+      "tech": "JavaScript",
+      "description": "Test runner — exercises init→gen→check on the mini fixture."
+    }
+  ],
+  "leafSources": [
+    { "parent": "cli", "dir": "bin", "match": "\\.mjs$" },
+    { "parent": "lib", "dir": "lib", "match": "\\.mjs$" },
+    { "parent": "scripts", "dir": "scripts", "match": "\\.mjs$" },
+    { "parent": "test", "dir": "test", "match": "\\.mjs$" }
+  ],
+  "edges": [
+    { "from": "cli", "to": "lib", "label": "dispatches", "kind": "import", "estatus": "active" }
+  ],
+  "descriptions": {}
+}

@@ -1,0 +1,10 @@
+# Architecture Decision Records
+
+Decisions for Forma. Each ADR is immutable once Accepted; supersede one by writing a new ADR
+that links back to it. Newest last.
+
+| ID | Decision | Status |
+|---|---|---|
+| [0001](0001-zero-dependency-esm.md) | Zero-dependency Node ESM CLI | Accepted |
+| [0002](0002-single-source-of-truth-model.md) | One `c4-model.json` as single source of truth | Accepted |
+| [0003](0003-npm-oidc-trusted-publishing.md) | Publish via npm OIDC trusted publishing + provenance | Accepted |
