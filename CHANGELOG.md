@@ -6,6 +6,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-25
+
+The self-model stops being a lonely box in an empty canvas: the viewer shrink-wraps the level it
+draws, and forma is finally pointed at forma with every channel the engine grew in 0.4.0.
+
+### Added
+- Viewer: **fit-to-content viewBox** — a sparse level renders zoomed and dense instead of lost in a
+  fixed 1020px canvas (minimums keep a single box from becoming comically large; extra room is
+  split evenly so content stays centred). Exported SVG/PNG backgrounds honour the fitted origin.
+- Viewer: **per-level programme tally** in the breadcrumb — status dots with counts plus mean
+  completion ("progress 63%"), computed on the level's real children (catalogue members included).
+- **Self-model dogfood:** curated context level (developer/agent, target codebase, npm registry,
+  GitHub CI + Pages, planned status boards), programme overlay `docs/architecture/c4-status.json`,
+  curated `layout` hints for L1/L2, and `meta.title` — the Pages demo now shows what the tool can do.
+
+### Changed
+- Viewer: description lines cap raised 3 → 4 when the box height allows (still geometry-driven, so
+  short boxes cannot print through `[+] DRILL`).
+
+### Fixed
+- Viewer: edge endpoints trim at the **true rectangle border** instead of a radial guess — on wide
+  boxes with shallow angles the old trim landed inside the box and dragged the arrow label under
+  the node (falls back to the radial trim when boxes touch).
+- Viewer: edge labels get a stage-coloured paint-order halo, so they stay legible over grid lines,
+  arrows and box borders in both skins.
+- Viewer: the fitted viewBox is **held still while a box is dragged** (`draw()` runs on every
+  mousemove, so a live refit rescaled the whole canvas under the pointer); the drop refits.
+- Test: the attach fixture drops the repo's real programme overlay before regenerating a synthetic
+  topology over the self-repo copy (the overlay refers to the curated topology's ids; gen failing
+  loud on the mismatch is correct behaviour).
+
 ## [0.4.0] - 2026-07-24
 
 Closes the QA findings on 0.3.0 (R1-R5).
@@ -70,7 +101,9 @@ Closes the QA findings on 0.3.0 (R1-R5).
 - Stack-agnostic viewer with swappable skins (`holo`, `blueprint`).
 - JSON schema contract (`lib/schema/c4-model.schema.json`).
 
-[Unreleased]: https://github.com/LucaDominici/forma/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/LucaDominici/forma/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/LucaDominici/forma/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/LucaDominici/forma/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/LucaDominici/forma/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/LucaDominici/forma/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/LucaDominici/forma/releases/tag/v0.1.0

@@ -2,7 +2,8 @@
   "meta": {
     "repo": "forma",
     "stack": "JavaScript (Node ESM, zero-dependency)",
-    "seededBy": "forma init (curated)"
+    "seededBy": "forma init (curated)",
+    "title": "Forma · self-model"
   },
   "docPath": "docs/architecture/ARCHITECTURE.md",
   "levels": [
@@ -18,7 +19,48 @@
       "kind": "system",
       "name": "forma",
       "tech": "JavaScript (Node ESM, zero-dep)",
-      "description": "Forma \u2014 a stack-agnostic C4 architecture explorer plus a deterministic drift check. Walks a codebase into an interactive viewer kept true to the code."
+      "description": "Forma — a stack-agnostic C4 architecture explorer plus a deterministic drift check. Walks a codebase into an interactive viewer kept true to the code."
+    },
+    {
+      "id": "dev",
+      "level": "context",
+      "kind": "person",
+      "name": "Developer / agent",
+      "category": "person",
+      "description": "Runs the five commands by hand or through any agent; the Claude skill in adapters/ is a thin wrapper over the same CLI."
+    },
+    {
+      "id": "target",
+      "level": "context",
+      "kind": "external",
+      "name": "Your codebase",
+      "category": "target repo",
+      "description": "Any stack. src/ is walked live; docstrings and READMEs become the box text; cross-references become the arrows."
+    },
+    {
+      "id": "npmjs",
+      "level": "context",
+      "kind": "external",
+      "name": "npm registry",
+      "category": "distribution",
+      "description": "forma-arch, published on tag via OIDC trusted publishing with provenance - no long-lived tokens."
+    },
+    {
+      "id": "ghci",
+      "level": "context",
+      "kind": "external",
+      "name": "GitHub CI + Pages",
+      "category": "gate + demo",
+      "description": "ci-required aggregate gate (lint, tests, check on Node 18/20/22) and the live self-model demo on Pages."
+    },
+    {
+      "id": "boards",
+      "level": "context",
+      "kind": "external",
+      "name": "Status boards",
+      "category": "embed",
+      "status": "planned",
+      "description": "The viewer as a rendering engine for curated programme boards (injected model + bridge adapter)."
     },
     {
       "id": "cli",
@@ -27,7 +69,7 @@
       "parent": "forma",
       "name": "cli",
       "tech": "JavaScript",
-      "description": "CLI entrypoint \u2014 dispatches init | gen | check | doc | serve | verify."
+      "description": "CLI entrypoint — dispatches init | gen | check | doc | serve | verify."
     },
     {
       "id": "lib",
@@ -36,7 +78,7 @@
       "parent": "forma",
       "name": "lib",
       "tech": "JavaScript",
-      "description": "Engine \u2014 the six commands, the C4 JSON-schema contract, and the interactive viewer."
+      "description": "Engine — the six commands, the C4 JSON-schema contract, and the interactive viewer."
     },
     {
       "id": "scripts",
@@ -45,7 +87,7 @@
       "parent": "forma",
       "name": "scripts",
       "tech": "JavaScript",
-      "description": "Zero-dependency gates \u2014 lint and the prepack .fuse_hidden clean-check."
+      "description": "Zero-dependency gates — lint and the prepack .fuse_hidden clean-check."
     },
     {
       "id": "test",
@@ -54,7 +96,7 @@
       "parent": "forma",
       "name": "test",
       "tech": "JavaScript",
-      "description": "Test runner \u2014 exercises init\u2192gen\u2192check across the fixtures, plus a gh stub for verify."
+      "description": "Test runner — exercises init→gen→check across the fixtures, plus a gh stub for verify."
     }
   ],
   "leafSources": [
@@ -81,6 +123,41 @@
   ],
   "edges": [
     {
+      "from": "dev",
+      "to": "forma",
+      "label": "init·gen·serve",
+      "kind": "runtime",
+      "estatus": "active"
+    },
+    {
+      "from": "forma",
+      "to": "target",
+      "label": "walks src/ + derives edges",
+      "kind": "runtime",
+      "estatus": "active"
+    },
+    {
+      "from": "ghci",
+      "to": "forma",
+      "label": "gate + demo",
+      "kind": "ci",
+      "estatus": "active"
+    },
+    {
+      "from": "forma",
+      "to": "npmjs",
+      "label": "release (OIDC provenance)",
+      "kind": "ci",
+      "estatus": "active"
+    },
+    {
+      "from": "forma",
+      "to": "boards",
+      "label": "renders (injected model)",
+      "kind": "runtime",
+      "estatus": "to-build"
+    },
+    {
       "from": "cli",
       "to": "lib",
       "label": "dispatches",
@@ -88,5 +165,71 @@
       "estatus": "active"
     }
   ],
-  "descriptions": {}
+  "descriptions": {},
+  "layout": {
+    "root": {
+      "dev": {
+        "x": 40,
+        "y": 140,
+        "w": 200,
+        "h": 96
+      },
+      "target": {
+        "x": 40,
+        "y": 330,
+        "w": 200,
+        "h": 96
+      },
+      "forma": {
+        "x": 330,
+        "y": 170,
+        "w": 250,
+        "h": 132
+      },
+      "npmjs": {
+        "x": 670,
+        "y": 60,
+        "w": 200,
+        "h": 92
+      },
+      "ghci": {
+        "x": 670,
+        "y": 210,
+        "w": 200,
+        "h": 92
+      },
+      "boards": {
+        "x": 670,
+        "y": 360,
+        "w": 200,
+        "h": 92
+      }
+    },
+    "forma": {
+      "cli": {
+        "x": 60,
+        "y": 70,
+        "w": 210,
+        "h": 100
+      },
+      "lib": {
+        "x": 350,
+        "y": 150,
+        "w": 260,
+        "h": 132
+      },
+      "scripts": {
+        "x": 60,
+        "y": 300,
+        "w": 210,
+        "h": 100
+      },
+      "test": {
+        "x": 680,
+        "y": 150,
+        "w": 210,
+        "h": 100
+      }
+    }
+  }
 }

@@ -34,7 +34,16 @@ drift check. Users: developers and AI agents who want the architecture picture t
 C4Context
   title System Context
   System(forma, "forma", "JavaScript (Node ESM, zero-dep)")
-
+  Person(dev, "Developer / agent")
+  System_Ext(target, "Your codebase")
+  System_Ext(npmjs, "npm registry")
+  System_Ext(ghci, "GitHub CI + Pages")
+  System_Ext(boards, "Status boards")
+  Rel(dev, forma, "init·gen·serve")
+  Rel(forma, target, "walks src/ + derives edges")
+  Rel(ghci, forma, "gate + demo")
+  Rel(forma, npmjs, "release (OIDC provenance)")
+  Rel(forma, boards, "renders (injected model)")
 ```
 
 - **In scope:** walking a repo's source into a C4 model, deriving container edges from code
