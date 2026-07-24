@@ -29,6 +29,9 @@ button.on{background:rgba(62,231,255,.18);color:var(--cyan);border-color:var(--c
 #back[disabled]{opacity:.28;cursor:default;border-color:var(--border);color:var(--ter)}
 select#skin option{background:#08202e;color:var(--nm)}
 #crumb{font-size:11px;color:var(--sec);margin:8px 0}
+#crumb .agg{float:right;color:var(--ter2);letter-spacing:.05em}
+#crumb .agg i{display:inline-block;width:7px;height:7px;border-radius:50%;margin:0 3px 0 8px;vertical-align:baseline}
+#crumb .agg b{color:var(--nm)}
 #crumb b{color:var(--cyan)}
 #crumb a{color:#8fd8ec;cursor:pointer}
 #crumb a:hover{text-decoration:underline}
@@ -64,7 +67,8 @@ svg{width:100%;height:100%;display:block}
 .edge.plan{stroke:var(--edgeplan);stroke-dasharray:3 6;opacity:.6;marker-end:url(#arp)}
 .edge.hot{stroke:var(--cyan);stroke-width:2.6;opacity:1}
 .edgehit{stroke:transparent;stroke-width:14;fill:none;cursor:help}
-.elbl{font-size:8.2px;fill:var(--elbl);letter-spacing:.04em;pointer-events:none}
+.elbl{font-size:8.2px;fill:var(--elbl);letter-spacing:.04em;pointer-events:none;
+ paint-order:stroke;stroke:var(--stagebg);stroke-width:3px;stroke-linejoin:round}
 @keyframes dash{to{stroke-dashoffset:-24}}
 .nd.pulse rect{animation:pul 2.4s ease-in-out infinite}
 @keyframes pul{0%,100%{filter:drop-shadow(0 0 8px rgba(62,231,255,.5))}50%{filter:drop-shadow(0 0 18px rgba(62,231,255,.95))}}
@@ -178,7 +182,7 @@ var STRINGS={
   detClose:"[x] close", detFunc:"What it does", detNow:"Current state (facts)",
   detTgt:"Target state (project)", detSrc:"Verification source", detIssue:"Issue",
   detTarget:"TARGET",
-  rosterSearch:"filter…", rosterCount:"members", rosterEmpty:"no match",
+  rosterSearch:"filter…", rosterCount:"members", rosterEmpty:"no match", aggProgress:"progress",
   stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology", staticSrc:"(static source)",
   errEmpty:"Model unreachable or empty.",
   errNotFound:"Model not found (./c4-model.json). Open via `forma serve` or inject window.__C4_MODEL__.",
@@ -197,7 +201,7 @@ var STRINGS={
   detClose:"[x] chiudi", detFunc:"Cosa fa", detNow:"Stato attuale (fatti)",
   detTgt:"Stato finito (progetto)", detSrc:"Fonte verifica", detIssue:"Issue",
   detTarget:"TARGET",
-  rosterSearch:"filtra…", rosterCount:"elementi", rosterEmpty:"nessun risultato",
+  rosterSearch:"filtra…", rosterCount:"elementi", rosterEmpty:"nessun risultato", aggProgress:"avanzamento",
   stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology", staticSrc:"(fonte statica)",
   errEmpty:"Modello non raggiungibile o vuoto.",
   errNotFound:"Modello non trovato (./c4-model.json). Apri via `forma serve` o inietta window.__C4_MODEL__.",
@@ -216,7 +220,8 @@ var LABEL_AUTO_MAX=14;    // above this many arrows in the current level, fixed 
 var LABELS=null;          // null = auto (by arrow count); true/false = user override for this session
 var SKINS=[["holo","◆ holo"],["blueprint","▭ blueprint"]], SKIN_IDS=["holo","blueprint"];
 var STMAP={done:"done","in-progress":"prog",next:"next",planned:"plan",problem:"prob"};
-var M=null, stack=[null], mode="now", POS={}, drag=null, justDragged=false, CATNODES={}, FETCHED=false;
+var M=null, stack=[null], mode="now", POS={}, drag=null, justDragged=false, CATNODES={}, FETCHED=false
+var VBOX={}; // last fitted viewBox per level — frozen while dragging so the canvas does not rescale
 function $(i){return document.getElementById(i)}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;")}
 function setSkin(s){var k=SKIN_IDS.indexOf(s)>-1?s:"holo";document.documentElement.dataset.skin=k;var el=$("skin");if(el)el.value=k;}
@@ -324,19 +329,44 @@ function draw(animate){
  function mapId(id){return memberMap[id]||id;}
  var edges=(M.edges||[]).map(function(e){return {from:mapId(e.from),to:mapId(e.to),label:e.label,estatus:e.estatus};})
   .filter(function(e){return idset[e.from]&&idset[e.to]&&e.from!==e.to;});
- var s='<svg viewBox="0 0 '+lay.W+' '+lay.H+'" preserveAspectRatio="xMidYMid meet" class="'+(mode==="target"?"mode-t":"")+'">'
-  +'<defs><marker id="ar" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edge")+'"/></marker>'
-  +'<marker id="arp" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edgeplan")+'"/></marker></defs>';
  // fixed arrow labels: on by default while the level stays readable, else hover-only (the tooltip
  // is always there). A level with 40 arrows would be unreadable with every label painted at once.
  var showLbl=(LABELS===null)?(edges.length<=LABEL_AUTO_MAX):LABELS;
  var blbl=$("blbl");if(blbl)blbl.className=showLbl?"on":"";
- for(var i=0;i<edges.length;i++){
+ // geometry pre-pass: edge paths first, so the viewBox can shrink-wrap nodes AND label anchors
+ var geo=[],i;
+ for(i=0;i<edges.length;i++){
   var a=pos[edges[i].from],b=pos[edges[i].to];if(!a||!b)continue;
-  var e=edgePath(a,b),cl=(edges[i].estatus==="to-build"?"plan":"flow");
-  s+='<path class="edge '+cl+'" data-e="'+i+'" d="'+e.d+'"/>';
-  s+='<path class="edgehit" data-e="'+i+'" data-label="'+esc(edges[i].label||"")+'" d="'+e.d+'"/>';
-  if(showLbl&&edges[i].label){var lb=String(edges[i].label);if(lb.length>28)lb=lb.slice(0,27)+"…";
+  geo.push({e:edges[i],i:i,g:edgePath(a,b)});
+ }
+ // Fit-to-content viewBox: a sparse level renders zoomed and dense instead of lost in a fixed
+ // 1020px canvas — the hand-made status boards read well precisely because they waste no space.
+ // Minimums stop a single box from becoming comically large; extra room is split evenly so the
+ // content stays centred inside the enforced window.
+ var bx1=Infinity,by1=Infinity,bx2=-Infinity,by2=-Infinity,j,pp;
+ for(j=0;j<kids.length;j++){pp=pos[kids[j].id];if(!pp)continue;
+  if(pp.x<bx1)bx1=pp.x;if(pp.y<by1)by1=pp.y;if(pp.x+pp.w>bx2)bx2=pp.x+pp.w;if(pp.y+pp.h>by2)by2=pp.y+pp.h;}
+ for(j=0;j<geo.length;j++){var gm=geo[j].g;
+  if(gm.mx-14<bx1)bx1=gm.mx-14;if(gm.my-18<by1)by1=gm.my-18;
+  if(gm.mx+14>bx2)bx2=gm.mx+14;if(gm.my+6>by2)by2=gm.my+6;}
+ if(bx2<bx1){bx1=0;by1=0;bx2=lay.W;by2=lay.H;}
+ var VPAD=56,MINW=880,MINH=460;
+ var cw=bx2-bx1+2*VPAD,ch=by2-by1+2*VPAD;
+ var vw=Math.max(MINW,cw),vh=Math.max(MINH,ch);
+ var vx=bx1-VPAD-(vw-cw)/2,vy=by1-VPAD-(vh-ch)/2;
+ // …but hold it still while a box is being dragged: draw() runs on every mousemove, so a live
+ // refit would rescale the whole canvas under the pointer. The drop refits (see mouseup).
+ var vbk=keyOf();
+ if(drag&&VBOX[vbk]){vx=VBOX[vbk][0];vy=VBOX[vbk][1];vw=VBOX[vbk][2];vh=VBOX[vbk][3];}
+ else VBOX[vbk]=[vx,vy,vw,vh];
+ var s='<svg viewBox="'+vx.toFixed(1)+' '+vy.toFixed(1)+' '+vw.toFixed(1)+' '+vh.toFixed(1)+'" preserveAspectRatio="xMidYMid meet" class="'+(mode==="target"?"mode-t":"")+'">'
+  +'<defs><marker id="ar" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edge")+'"/></marker>'
+  +'<marker id="arp" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edgeplan")+'"/></marker></defs>';
+ for(j=0;j<geo.length;j++){
+  var e=geo[j].g,ed=geo[j].e,cl=(ed.estatus==="to-build"?"plan":"flow");
+  s+='<path class="edge '+cl+'" data-e="'+geo[j].i+'" d="'+e.d+'"/>';
+  s+='<path class="edgehit" data-e="'+geo[j].i+'" data-label="'+esc(ed.label||"")+'" d="'+e.d+'"/>';
+  if(showLbl&&ed.label){var lb=String(ed.label);if(lb.length>28)lb=lb.slice(0,27)+"…";
    s+='<text class="elbl" x="'+e.mx+'" y="'+(e.my-4)+'" text-anchor="middle">'+esc(lb)+'</text>';}
  }
  for(var j=0;j<kids.length;j++){
@@ -358,7 +388,7 @@ function draw(animate){
   // Description lines: how many fit comes from the geometry (text starts at y+51, 12.5px apart,
   // and must clear the footer control at h-25), so a curated layout hint with short boxes cannot
   // print through [+] DRILL. wrapDesc is pure and clamps every line to the box width.
-  var floorY=p.h-((dr||isCat)?25:6),MAXL=Math.min(3,Math.floor((floorY-51)/12.5)+1);
+  var floorY=p.h-((dr||isCat)?25:6),MAXL=Math.min(4,Math.floor((floorY-51)/12.5)+1);
   var dlines=wrapDesc(desc,Math.floor((p.w-26)/5.4),MAXL);
   for(var q=0;q<dlines.length;q++)s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+q*12.5)+'">'+esc(dlines[q])+'</text>';
   if(dr)s+='<rect class="drillhit" data-drill="1" x="'+(p.x+p.w-96)+'" y="'+(p.y+p.h-25)+'" width="88" height="20" rx="5"/>'
@@ -379,6 +409,21 @@ function draw(animate){
  var lvlIdx=((M.levels||[]).indexOf(lvlKey));
  var cb=(lvlIdx>-1?STR.crumbLevel+"-L"+(lvlIdx+1):STR.crumbLevel)+" · "+lvl.toUpperCase()+"  &nbsp;&nbsp; <a data-d='-1'>"+esc(STR.crumbRoot)+"</a>";
  for(var w=0;w<chain.length;w++)cb+=" &rsaquo; "+(w===chain.length-1?"<b>"+esc(chain[w].name)+"</b>":"<a data-d='"+w+"'>"+esc(chain[w].name)+"</a>");
+ // Per-level programme tally — the status-board essence in one glance: the status mix of THIS
+ // view plus mean completion. Counts use the real children (a collapsed catalogue still counts
+ // its members), so the tally never changes when the catalogue threshold does.
+ var cnt={},tot=0,sum=0,nc=0,st3;
+ for(j=0;j<realKids.length;j++){
+  st3=STMAP[realKids[j].status2]||(realKids[j].status==="planned"?"plan":"done");
+  cnt[st3]=(cnt[st3]||0)+1;tot++;
+  if(realKids[j].completion!=null){sum+=(+realKids[j].completion||0);nc++;}
+ }
+ if(tot){
+  var DOT={done:"#2fe08a",prog:"#ffc74d",next:"#3ee7ff",plan:"#2d5a72",prob:"#ff5d5d"},ord=["done","prog","next","plan","prob"],agg="";
+  for(j=0;j<ord.length;j++)if(cnt[ord[j]])agg+='<i style="background:'+DOT[ord[j]]+'"></i>'+cnt[ord[j]];
+  if(nc)agg+=' &nbsp;'+esc(STR.aggProgress)+' <b>'+Math.round(sum/nc)+'%</b>';
+  cb='<span class="agg">'+agg+'</span>'+cb;
+ }
  $("crumb").innerHTML=cb;
  $("back").disabled=stack.length<2;
  $("detail").style.display="none";
@@ -399,9 +444,15 @@ function wrapDesc(desc,cpl,max){
 }
 // Returns the path plus the point ON the curve at t=0.5 — the label anchor. (The quadratic's
 // control point sits at twice the bow, so anchoring a label there would float it off the arrow.)
+// Endpoints are trimmed at the true RECTANGLE border (not a radial guess): with wide boxes the
+// radial trim landed inside the box on shallow angles, dragging the label anchor under the node.
 function edgePath(a,b){
  var ax=a.x+a.w/2,ay=a.y+a.h/2,bx=b.x+b.w/2,by=b.y+b.h/2,dx=bx-ax,dy=by-ay,L=Math.sqrt(dx*dx+dy*dy)||1;
- var x1=ax+(a.w/2+10)*dx/L,y1=ay+(a.h/2+10)*dy/L,x2=bx-(b.w/2+12)*dx/L,y2=by-(b.h/2+12)*dy/L;
+ var ux=dx/L,uy=dy/L;
+ var ta=Math.min(ux?(a.w/2)/Math.abs(ux):Infinity,uy?(a.h/2)/Math.abs(uy):Infinity)+8;
+ var tb=Math.min(ux?(b.w/2)/Math.abs(ux):Infinity,uy?(b.h/2)/Math.abs(uy):Infinity)+11;
+ if(ta+tb>L-4){ta=(a.w/2+10);tb=(b.w/2+12);} // boxes touch/overlap: fall back to the radial trim
+ var x1=ax+ta*ux,y1=ay+ta*uy,x2=bx-tb*ux,y2=by-tb*uy;
  var cx=(x1+x2)/2+(y2-y1)*.12,cy=(y1+y2)/2-(x2-x1)*.12;
  return {d:"M"+x1+","+y1+" Q"+cx+","+cy+" "+x2+","+y2, mx:(x1+2*cx+x2)/4, my:(y1+2*cy+y2)/4};
 }
@@ -471,7 +522,9 @@ function wire(){
   pos[drag.id].y=clamp(p.y-drag.oy,4,lay.H-pos[drag.id].h-4);
   drag.moved=true;draw(false);
  });
- document.addEventListener("mouseup",function(){if(drag){if(drag.moved)justDragged=true;drag=null;}});
+ document.addEventListener("mouseup",function(){if(!drag)return;var m=drag.moved;drag=null;
+  // refit after the drop, deferred so the click that follows mouseup still lands on the live DOM
+  if(m){justDragged=true;setTimeout(function(){draw(false);},0);}});
  // edge label on hover (invisible fat hit-path)
  stage.addEventListener("mouseover",function(ev){
   if(ev.target.classList&&ev.target.classList.contains("edgehit")){
@@ -577,14 +630,14 @@ function serializeSvg(){
  clone.setAttribute("xmlns","http://www.w3.org/2000/svg");
  clone.setAttribute("xmlns:xlink","http://www.w3.org/1999/xlink");
  var vb=(svg.getAttribute("viewBox")||"0 0 1080 660").split(/\s+/);
- var w=+vb[2]||1080,h=+vb[3]||660;
+ var vbx=+vb[0]||0,vby=+vb[1]||0,w=+vb[2]||1080,h=+vb[3]||660;
  clone.setAttribute("width",w);clone.setAttribute("height",h);
  // Inline the resolved variables on the root so var(--x) resolves standalone,
  // independent of the skin-selector chain that won't exist in the exported file.
  var vars=resolvedVars();if(vars)clone.setAttribute("style",vars);
  // solid dark/light background so the standalone file isn't transparent
  var bg=cssv("--stagebg")||"#050d14";
- var rect='<rect x="0" y="0" width="'+w+'" height="'+h+'" fill="'+bg+'"/>';
+ var rect='<rect x="'+vbx+'" y="'+vby+'" width="'+w+'" height="'+h+'" fill="'+bg+'"/>';
  var style="<style>"+collectSvgCss()+"</style>";
  var inner=clone.innerHTML;
  var attrs='';for(var a=0;a<clone.attributes.length;a++){var at=clone.attributes[a];attrs+=' '+at.name+'="'+String(at.value).replace(/"/g,"&quot;")+'"';}

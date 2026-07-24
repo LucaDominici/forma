@@ -102,6 +102,9 @@ const diffPaths = (a, b, at = '') => {
 {
   const repo = join(tmp, 'selfrepo')
   cpSync(join(HERE, '..'), repo, { recursive: true, filter: (s) => !/(^|\/)(node_modules|\.git)(\/|$)/.test(s) })
+  // this test regenerates a synthetic topology over the self-repo copy; the repo's REAL programme
+  // overlay refers to the curated topology's ids, so drop it or gen fails loud (correctly) on it
+  rmSync(join(repo, 'docs/architecture/c4-status.json'), { force: true })
   const topo = join(tmp, 's-topo.json'), model = join(tmp, 's-model.json')
   let r = run(['init', '--repo', repo, '--out', topo, '--force']); if (r.status !== 0) die('attach init exit ' + r.status, r)
   r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('attach gen exit ' + r.status, r)

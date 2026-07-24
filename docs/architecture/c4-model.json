@@ -1,17 +1,85 @@
 {
   "schemaVersion": "1.3.0",
-  "generatedAt": "2026-07-24T21:22:24.249Z",
+  "generatedAt": "2026-07-24T22:20:30.516Z",
   "source": {
     "repo": "forma",
-    "commit": "111462d3e384c3f508e50de6bf57501a91a6c2bb",
-    "branch": "fix/qa-r1-r5-attach-gate",
+    "commit": "30b0c46776c43699bc7efb87b06b28f1e9eaf920",
+    "branch": "main",
     "docPath": "docs/architecture/ARCHITECTURE.md",
-    "generator": "gen-c4-model@1.3.0"
+    "generator": "gen-c4-model@1.3.0",
+    "statusPath": "docs/architecture/c4-status.json"
   },
   "meta": {
     "repo": "forma",
     "stack": "JavaScript (Node ESM, zero-dependency)",
     "seededBy": "forma init (curated)",
+    "title": "Forma · self-model",
+    "layout": {
+      "root": {
+        "dev": {
+          "x": 40,
+          "y": 140,
+          "w": 200,
+          "h": 96
+        },
+        "target": {
+          "x": 40,
+          "y": 330,
+          "w": 200,
+          "h": 96
+        },
+        "forma": {
+          "x": 330,
+          "y": 170,
+          "w": 250,
+          "h": 132
+        },
+        "npmjs": {
+          "x": 670,
+          "y": 60,
+          "w": 200,
+          "h": 92
+        },
+        "ghci": {
+          "x": 670,
+          "y": 210,
+          "w": 200,
+          "h": 92
+        },
+        "boards": {
+          "x": 670,
+          "y": 360,
+          "w": 200,
+          "h": 92
+        }
+      },
+      "forma": {
+        "cli": {
+          "x": 60,
+          "y": 70,
+          "w": 210,
+          "h": 100
+        },
+        "lib": {
+          "x": 350,
+          "y": 150,
+          "w": 260,
+          "h": 132
+        },
+        "scripts": {
+          "x": 60,
+          "y": 300,
+          "w": 210,
+          "h": 100
+        },
+        "test": {
+          "x": 680,
+          "y": 150,
+          "w": 210,
+          "h": 100
+        }
+      }
+    },
     "verifyMethod": "code+topology (gh re-verify optional)"
   },
   "levels": [
@@ -30,11 +98,111 @@
       "tech": "JavaScript (Node ESM, zero-dep)",
       "description": "Forma — a stack-agnostic C4 architecture explorer plus a deterministic drift check. Walks a codebase into an interactive viewer kept true to the code.",
       "category": "system",
+      "status2": "in-progress",
+      "completion": 80,
+      "target": "v1.0 - public launch (LAUNCH.md), adopters beyond the home repo, schema 1.x frozen.",
+      "func": "Forma — a stack-agnostic C4 architecture explorer plus a deterministic drift check. Walks a codebase into an interactive viewer kept true to the code.",
+      "descSource": "curated",
+      "statusWord": "v0.4.0",
+      "current": "v0.4.0 on main (24/07): status overlay, live gh verify, layout hints, agent enricher; QA R1-R5 closed.",
+      "verify": {
+        "source": "CHANGELOG 0.4.0 · tag v0.4.0"
+      }
+    },
+    {
+      "status": "current",
+      "id": "dev",
+      "level": "context",
+      "kind": "person",
+      "name": "Developer / agent",
+      "category": "person",
+      "description": "Runs the five commands by hand or through any agent; the Claude skill in adapters/ is a thin wrapper over the same CLI.",
       "status2": "done",
       "completion": 100,
       "target": "",
-      "func": "Forma — a stack-agnostic C4 architecture explorer plus a deterministic drift check. Walks a codebase into an interactive viewer kept true to the code.",
-      "descSource": "curated"
+      "func": "Runs the five commands by hand or through any agent; the Claude skill in adapters/ is a thin wrapper over the same CLI.",
+      "descSource": "curated",
+      "statusWord": "npx",
+      "current": "Five commands, no build step; the Claude skill drives the same CLI contract.",
+      "verify": {
+        "source": "adapters/claude/SKILL.md"
+      }
+    },
+    {
+      "status": "current",
+      "id": "target",
+      "level": "context",
+      "kind": "external",
+      "name": "Your codebase",
+      "category": "target repo",
+      "description": "Any stack. src/ is walked live; docstrings and READMEs become the box text; cross-references become the arrows.",
+      "status2": "next",
+      "completion": 0,
+      "target": "Adoption beyond the home repo - flat dirs get a component layer automatically.",
+      "func": "Any stack. src/ is walked live; docstrings and READMEs become the box text; cross-references become the arrows.",
+      "descSource": "curated",
+      "statusWord": "NEXT",
+      "current": "Point forma at a repo: npx forma-arch init && gen && serve.",
+      "verify": {
+        "source": "README · Install"
+      }
+    },
+    {
+      "status": "current",
+      "id": "npmjs",
+      "level": "context",
+      "kind": "external",
+      "name": "npm registry",
+      "category": "distribution",
+      "description": "forma-arch, published on tag via OIDC trusted publishing with provenance - no long-lived tokens.",
+      "status2": "done",
+      "completion": 100,
+      "target": "",
+      "func": "forma-arch, published on tag via OIDC trusted publishing with provenance - no long-lived tokens.",
+      "descSource": "curated",
+      "statusWord": "forma-arch",
+      "current": "Published on tag with OIDC provenance; no NPM_TOKEN anywhere.",
+      "verify": {
+        "source": "ADR-0003 · release.yml"
+      }
+    },
+    {
+      "status": "current",
+      "id": "ghci",
+      "level": "context",
+      "kind": "external",
+      "name": "GitHub CI + Pages",
+      "category": "gate + demo",
+      "description": "ci-required aggregate gate (lint, tests, check on Node 18/20/22) and the live self-model demo on Pages.",
+      "status2": "done",
+      "completion": 100,
+      "target": "",
+      "func": "ci-required aggregate gate (lint, tests, check on Node 18/20/22) and the live self-model demo on Pages.",
+      "descSource": "curated",
+      "statusWord": "live",
+      "current": "Fail-closed ci-required gate; Pages serves the live self-model.",
+      "verify": {
+        "source": "ci.yml · pages.yml"
+      }
+    },
+    {
+      "status": "planned",
+      "id": "boards",
+      "level": "context",
+      "kind": "external",
+      "name": "Status boards",
+      "category": "embed",
+      "description": "The viewer as a rendering engine for curated programme boards (injected model + bridge adapter).",
+      "status2": "planned",
+      "completion": 0,
+      "target": "One engine, two deployments: this viewer + injected model + bridge adapter.",
+      "func": "The viewer as a rendering engine for curated programme boards (injected model + bridge adapter).",
+      "descSource": "curated",
+      "statusWord": "Track B",
+      "current": "Not built: curated boards still hand-inject their model into a forked viewer.",
+      "verify": {
+        "source": "holo-parity plan §5"
+      }
     },
     {
       "status": "current",
@@ -57,7 +225,12 @@
       "completion": 100,
       "target": "",
       "func": "CLI entrypoint — dispatches init | gen | check | doc | serve | verify.",
-      "descSource": "curated"
+      "descSource": "curated",
+      "statusWord": "npx",
+      "current": "Thin dispatcher; every subcommand is a plain Node script any agent can drive.",
+      "verify": {
+        "source": "bin/forma.mjs"
+      }
     },
     {
       "status": "current",
@@ -78,9 +251,14 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "target": "",
+      "target": "The viewer doubles as the rendering engine for curated status boards (Track B).",
       "func": "Engine — the six commands, the C4 JSON-schema contract, and the interactive viewer.",
-      "descSource": "curated"
+      "descSource": "curated",
+      "statusWord": "6 commands",
+      "current": "init·gen·check·doc·serve·verify + schema 1.3.0 + the hologram viewer.",
+      "verify": {
+        "source": "lib/ on main · npm test green"
+      }
     },
     {
       "status": "current",
@@ -103,7 +281,12 @@
       "completion": 100,
       "target": "",
       "func": "Zero-dependency gates — lint and the prepack .fuse_hidden clean-check.",
-      "descSource": "curated"
+      "descSource": "curated",
+      "statusWord": "0 deps",
+      "current": "Zero-dep lint + prepack clean-check keep the supply chain reviewable.",
+      "verify": {
+        "source": "scripts/ on main"
+      }
     },
     {
       "status": "current",
@@ -126,7 +309,12 @@
       "completion": 100,
       "target": "",
       "func": "Test runner — exercises init→gen→check across the fixtures, plus a gh stub for verify.",
-      "descSource": "curated"
+      "descSource": "curated",
+      "statusWord": "18/20/22",
+      "current": "init→gen→check across fixtures + viewer logic seams; green on Node 18/20/22.",
+      "verify": {
+        "source": "CI matrix ci.yml"
+      }
     },
     {
       "id": "cli__forma_mjs",
@@ -430,6 +618,46 @@
     }
   ],
   "edges": [
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "dev",
+      "to": "forma",
+      "label": "init·gen·serve",
+      "kind": "runtime"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "forma",
+      "to": "target",
+      "label": "walks src/ + derives edges",
+      "kind": "runtime"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "ghci",
+      "to": "forma",
+      "label": "gate + demo",
+      "kind": "ci"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "forma",
+      "to": "npmjs",
+      "label": "release (OIDC provenance)",
+      "kind": "ci"
+    },
+    {
+      "status": "current",
+      "estatus": "to-build",
+      "from": "forma",
+      "to": "boards",
+      "label": "renders (injected model)",
+      "kind": "runtime"
+    },
     {
       "status": "current",
       "estatus": "active",
