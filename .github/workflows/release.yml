@@ -23,10 +23,9 @@ jobs:
           test "$TAG" = "$PKG" || { echo "::error::tag $TAG != package version $PKG"; exit 1; }
       - run: npm install -g npm@latest   # trusted publishing needs npm >= 11.5.1
       - run: npm run lint && npm test
-      # First publish uses an NPM_TOKEN (npm trusted publishing / OIDC can only be linked to a
-      # package that already exists, so it cannot bootstrap a brand-new package). Once forma-arch
-      # exists on npm, switch back to trusted publishing by removing NODE_AUTH_TOKEN and relying on
-      # id-token: write + automatic provenance.
+      # Trusted publishing (OIDC): no token. id-token: write (above) + a Trusted Publisher
+      # configured on npmjs.com (GitHub Actions -> LucaDominici/forma -> release.yml) authenticate
+      # the publish and auto-generate provenance (repo is public). forma-arch's first publish
+      # (0.1.0) was bootstrapped manually with a web-auth login + passkey; OIDC covers every
+      # release from here. Do NOT re-add NODE_AUTH_TOKEN — npm's 2025 policy broke classic tokens.
       - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
