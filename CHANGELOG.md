@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-24
+
 ### Added
 - **Description ingest (§1a):** box text resolves from existing docs — curated → module docstring → dir `README.md` → mapped arc42 section — before the generic fallback. `descSource` records provenance. No LLM; pure parsing.
 - **Component layer on flat containers (§2):** `forma gen` auto-groups a large flat container's leaves by common `foo_*` prefix into `component` nodes (`--no-cluster` to disable). Deterministic.
@@ -37,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stack-agnostic viewer with swappable skins (`holo`, `blueprint`).
 - JSON schema contract (`lib/schema/c4-model.schema.json`).
 
-[Unreleased]: https://github.com/LucaDominici/forma/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/LucaDominici/forma/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/LucaDominici/forma/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/LucaDominici/forma/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/LucaDominici/forma/releases/tag/v0.1.0
