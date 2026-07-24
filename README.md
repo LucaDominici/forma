@@ -49,6 +49,16 @@ code, the check is deterministic. The only human (or agent) step is curating the
 and writing the arc42 prose — and *any* model can do that against the documented JSON/Markdown
 contract. The Claude skill in `adapters/` is a thin wrapper, not the product.
 
+## Explore
+
+The viewer is a live C4 map, not a static picture:
+
+- **Click any box** to read its explanation — what it does, current state, target, verification source — at *every* level, from context down to a leaf.
+- **Double-click a box** (or its `[+] DRILL`) to descend into it; **BACK**, the breadcrumb, or `ESC` climb back out.
+- **Drag boxes** to lay out the view your way; **RESET LAYOUT** restores the auto-arrangement.
+- **Hover an arrow** to reveal its relationship label.
+- **PRINT / EXPORT** to SVG or PNG for docs and slides.
+
 ## Skins
 
 The viewer ships with swappable skins (`holo`, `blueprint`) via a dropdown or `?skin=`. Themes are
