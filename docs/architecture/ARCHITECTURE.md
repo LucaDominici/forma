@@ -55,10 +55,10 @@ C4Context
 
 | Container | Tech | Leaves | What it does |
 |---|---|---|---|
-| cli | JavaScript | 1 | CLI entrypoint — dispatches init | gen | check | doc | serve. |
-| lib | JavaScript | 5 | Engine — the five commands, the C4 JSON-schema contract, and the interactive viewer. |
+| cli | JavaScript | 1 | CLI entrypoint — dispatches init | gen | check | doc | serve | verify. |
+| lib | JavaScript | 10 | Engine — the six commands, the C4 JSON-schema contract, and the interactive viewer. |
 | scripts | JavaScript | 2 | Zero-dependency gates — lint and the prepack .fuse_hidden clean-check. |
-| test | JavaScript | 1 | Test runner — exercises init→gen→check on the mini fixture. |
+| test | JavaScript | 2 | Test runner — exercises init→gen→check across the fixtures, plus a gh stub for verify. |
 
 ```mermaid
 C4Container
@@ -71,7 +71,7 @@ C4Container
   Rel(scripts, cli, "1×")
   Rel(scripts, lib, "1×")
   Rel(test, cli, "1×")
-  Rel(test, lib, "1×")
+  Rel(test, lib, "4×")
 ```
 
 - **cli** (`bin/forma.mjs`) — thin dispatcher; parses the command and delegates to `lib/`.
@@ -111,7 +111,7 @@ with provenance (ADR-0003).
 
 - `forma check` is deterministic: same repo + topology ⇒ identical verdict.
 - `npm run lint` + `npm test` green on Node 18/20/22 (CI matrix).
-- `npm pack --dry-run` stays at 12 files, zero `.fuse_hidden` (enforced by `prepack`).
+- `npm pack --dry-run` stays at 17 files, zero `.fuse_hidden` (enforced by `prepack`).
 
 ## 11. Risks and Technical Debt
 

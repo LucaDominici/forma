@@ -6,6 +6,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-24
+
+Closes the QA findings on 0.3.0 (R1-R5).
+
+### Fixed
+- **The drift gate now governs every attached doc, not just `docPath` (R1).** `forma doc --attach <file>` records the target in `source.attachedDocs` and `forma gen` carries that registry across regens, so a block injected into any file is checked for staleness and malformed markers. Previously `forma check` read `source.docPath` alone: attaching to any other file produced a generated block no gate ever looked at — a silent false green.
+- **`forma init` language detection ignores data/fixture/doc dirs**, the same ones it already refuses to seed as containers. Counting them meant a repo whose fixtures hold another language could be detected as that language and then fail with a confusing "no directory with source files directly in it" — which now also names the detected language and suggests `--include`.
+- **A registered doc cannot quietly stop being governed.** Deleting both forma markers — or the file itself — from a doc listed in `source.attachedDocs` now fails the check: registry membership proves a block was injected, so silence there is the same false green the registry was added to close. `docPath` keeps its lenient behaviour (it may simply never have been attached), and `gen` warns instead of dropping the registry when a prior model exists but cannot be read.
+- **A component's cached prose goes stale when its children gain documentation.** `descInputHash` now folds in the children's descriptions for `component` nodes — they are what the box is composed from. Without it a child gaining a docstring left the hash unchanged, so the old LLM sentence was restored over the fresh documentation, `--enrich` saw no hole and `check` never warned: the box was frozen with no way back.
+- **Viewer: a description line can no longer paint outside its box.** Every wrapped line is clamped to the box width, so an unbreakable token (a long class name, a URL) is truncated instead of spilling over the rounded rect and its neighbours.
+- **Enriched prose survives a failed refill (R5).** When a node's inputs change, the cached LLM sentence is kept (with its now-stale hash) instead of collapsing to the generic fallback, and `--enrich` still refills it on the next successful run. A network outage can no longer make a box worse; `forma check` keeps flagging staleness as advisory.
+
+### Added
+- **`--enricher agent`** — enrichment without a network call or an API key, for the case forma is built for: an agent is already driving it. `gen --enrich --enricher agent` writes `enrich-plan.json` (one entry per hole, with the source path to read for certainty), the agent writes the sentences, and `gen --enrich-apply <file>` applies them with the same cache, provenance and stickiness as any other enricher. A fill aimed at a node described by its docstring/README/arc42 is refused, not silently applied.
+- **Curated layout hints.** An optional `"layout"` section in the topology (keyed by parent id, `"root"` at the top) rides into `meta.layout`; the viewer pins those boxes at their exact `x/y/w/h` — variable heights included — and auto-arranges unhinted nodes *below* the pinned block, so a partial hint set can never produce an overlap. **Export layout JSON** in the PRINT/EXPORT menu dumps every level you have arranged in exactly that shape, ready to paste back. No browser storage: the repo is the memory.
+- **Viewer: `meta.title`** names the board (and the browser tab) when the model is not "repo X" — an embedded, curated model usually has its own name.
+- **`window.__C4_API__`** (`model()`, `redraw()`, `stamp()`) for embedders that re-verify through their own bridge and need to push results back without forking the viewer.
+- **`forma verify`** — the only networked command, opt-in and separate from the gate. One `gh issue list` call per run: nodes whose referenced issues are closed become `done`/`100` and get their `current` prefixed with dated evidence (`Closed with evidence (#7 CLOSED, gh <ts>).`); open issues are left alone; re-running never stacks prefixes. Structure is never touched, so `forma check` is unaffected. A missing or failing `gh` exits 1 with the model untouched. Stamps `meta.verifiedAt` — the field `gen` no longer writes. A node marked done also gives up a curated `statusWord`, which otherwise wins over `completion` in the badge and would leave a green box still labelled "NEXT".
+- **Viewer: RE-VERIFY re-reads the model** when it was served, updating the boxes without losing the current level, layout or mode. With an injected `window.__C4_MODEL__` (or a failed re-read) it re-stamps and says so — "(static source)" / "(fonte statica)".
+- **Curated programme-status overlay** (`docs/architecture/c4-status.json`, or `--status <path>`): decorates nodes by id with `status2`, `completion`, `statusWord`, `current`, `target`, `verify` and `issues` — the state code cannot know. `func` is refused (documentation owns what a module does). `gen` validates only the form — ids resolve, fields are known, enums and issue numbers are well-shaped — and `check` fails when the overlay decorates a node the model no longer has. The path is recorded in `source.statusPath`.
+- **Viewer: arrow labels on the diagram**, not only on hover — automatic while the level stays readable (≤14 arrows), with a `LABELS` toggle to force them either way. They survive SVG/PNG export, so an exported picture no longer loses every relationship.
+- **Viewer: description lines are laid out from the box geometry** — up to three, as many as clear the footer control, so a curated layout hint with short boxes can never print its text through `[+] DRILL`. Default node height 106 → 118 (three lines). Truncation now marks the last visible line instead of spending a whole line on a lone `…`, and a node title is measured against the actual badge width rather than a flat reserve, so names stop being clipped when there was room for them.
+- **Viewer: the breadcrumb names the C4 level by number** (`C4-L1 · CONTEXT`, `C4-L3 · COMPONENTS`) from the model's own `levels` list.
+- `forma gen --cluster-min <n>` / `--group-min <n>` (R3): the §2 clustering thresholds (default 8 and 3) are no longer hardcoded. A non-integer value fails loud rather than silently disabling clustering.
+- Synthesized components describe themselves from their children's docs (R4) — first sentence of up to three, ordered by name — instead of falling straight to "Groups related files under X". Deterministic, no LLM.
+
+### Changed
+- **`current` is no longer filled with `Exists: <path>`.** That field is for programme facts; restating the evidence path in it left every box saying nothing. Undecorated nodes leave it empty and the viewer shows `func` — which, since 0.3.0, carries the module's real documentation.
+- **One volatile field per run (R2):** `gen` no longer writes `meta.verifiedAt`; `generatedAt` is the only field that changes between two runs on an unchanged tree, so a model diff in git is signal. `meta.verifiedAt` is reserved for the (network, opt-in) verify command.
+- Schema `1.2.0` → `1.3.0` (additive: `source.attachedDocs`, `source.statusPath`).
+
 ## [0.3.0] - 2026-07-24
 
 ### Added

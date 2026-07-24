@@ -29,10 +29,29 @@ npx forma-arch <command>        # or: npm i -D forma-arch
 | `forma check` | Deterministic drift check — **fails if the model no longer matches the code** |
 | `forma doc` | Project the arc42 scaffold (`ARCHITECTURE.scaffold.md`), or `--attach <file>` to inject a governed block into an existing doc |
 | `forma serve` | Open the live explorer at `http://localhost:4173` |
+| `forma verify` | Refresh status from live GitHub issues through your `gh` CLI — the **only** networked command |
 
-**Box text comes from your docs.** `gen` fills each box with the module's docstring (Python `"""…"""`, JS/TS leading block), else the directory `README.md`, else a mapped arc42 section — so the explorer shows meaning, not a list of symbols. On a flat directory of many `foo_*` files it also synthesizes a **component** layer (`--no-cluster` to disable).
+**Box text comes from your docs.** `gen` fills each box with the module's docstring (Python `"""…"""`, JS/TS leading block), else the directory `README.md`, else a mapped arc42 section — so the explorer shows meaning, not a list of symbols. On a flat directory of many `foo_*` files it also synthesizes a **component** layer, described from its children's docs (`--no-cluster` to disable; `--cluster-min <n>` = leaves before a container is clustered, default 8; `--group-min <n>` = files sharing a prefix before they become a component, default 3).
 
-**One source of truth.** `forma doc --attach docs/architecture/arc42.md` injects the generated diagrams/tables between `<!-- forma:begin -->` / `<!-- forma:end -->` markers in your existing doc; your prose lives outside them, and `forma check` fails if that block drifts. Where a repo lacks docs, `forma gen --enrich` can fill the remaining box holes with an LLM (opt-in, cached, never on the deterministic gate; `--enricher anthropic|openai|ollama`).
+**Programme state is curated, not guessed.** Code shows what exists, never how far along it is. Drop a `docs/architecture/c4-status.json` (`--status <path>` to move it) and `gen` decorates nodes by id with `status2`, `completion`, `statusWord`, `current`, `target`, `verify`, `issues` — never `func`, which belongs to the docs. `gen` validates the *form* (ids resolve, fields known, enums and issue numbers well-shaped) and never the prose; `forma check` fails if the overlay decorates a node the model no longer has.
+
+```json
+{ "nodes": { "engine": { "status2": "in-progress", "completion": 60, "statusWord": "v2 in progress",
+  "current": "Live on ACA: RAG + citations. Hardening this week.",
+  "target": "Multi-surface substrate with client-ready output.",
+  "verify": { "source": "ADR-040 on main" }, "issues": ["#534"] } } }
+```
+
+**Curated state, verified against reality.** `forma verify` asks your `gh` CLI for the state of every issue the model references (`--gh-repo owner/repo`, or `meta.ghRepo` in the topology), marks the nodes whose issues are closed as done, and prefixes their `current` with dated evidence. It touches state, never structure, and re-running it never stacks the evidence. It is opt-in and separate on purpose: `gen` and `check` never open a socket. In the served viewer, **RE-VERIFY** re-reads the model without losing your level, layout or mode.
+
+**One source of truth.** `forma doc --attach docs/architecture/arc42.md` injects the generated diagrams/tables between `<!-- forma:begin -->` / `<!-- forma:end -->` markers in your existing doc; your prose lives outside them, and `forma check` fails if that block drifts. Attached files are recorded in `source.attachedDocs`, so the gate governs **every** doc you attach — not just the model's `docPath`; deleting the markers (or the file) from a registered doc fails the check rather than quietly un-governing it. That registry lives in `c4-model.json`, so **commit the model** — a lost model takes the registry with it. Where a repo lacks docs, `forma gen --enrich` can fill the remaining box holes with an LLM — opt-in, cached, never on the deterministic gate:
+
+| `--enricher` | Use it when | Network |
+|---|---|---|
+| `agent` | **An agent is driving forma.** Writes `enrich-plan.json` with the holes; the agent writes the sentences (reading the sources if it wants) and `gen --enrich-apply <file>` applies them with the same cache and provenance. | none |
+| `anthropic` (default) | Headless / CI, with `ANTHROPIC_API_KEY`. | REST |
+| `openai` | Same, with `OPENAI_API_KEY`. | REST |
+| `ollama` | Sensitive repos: a local model, nothing leaves the machine. | localhost |
 
 ## How it fits together
 
@@ -59,9 +78,10 @@ The viewer is a live C4 map, not a static picture:
 
 - **Click any box** to read its explanation — what it does, current state, target, verification source — at *every* level, from context down to a leaf.
 - **Double-click a box** (or its `[+] DRILL`) to descend into it; **BACK**, the breadcrumb, or `ESC` climb back out.
-- **Drag boxes** to lay out the view your way; **RESET LAYOUT** restores the auto-arrangement.
-- **Hover an arrow** to reveal its relationship label.
-- **PRINT / EXPORT** to SVG or PNG for docs and slides.
+- **Drag boxes** to lay out the view your way; **RESET LAYOUT** restores the arrangement (your curated hints if the topology has them, the automatic one otherwise). To keep a layout, drag it, pick **Export layout JSON**, and paste the result under `"layout"` in the topology — `gen` carries it into `meta.layout` and the viewer pins those boxes, auto-arranging everything else clear of them.
+- **Arrow labels** are painted on the diagram while the level stays readable (≤14 arrows) and turn off above that; **LABELS** forces them on or off, and hovering an arrow always reveals its label.
+- **PRINT / EXPORT** to SVG or PNG for docs and slides — exported arrows carry their labels.
+- The breadcrumb names the C4 level you are on (`C4-L1 · CONTEXT` → `C4-L3 · COMPONENTS`).
 
 ## Skins
 

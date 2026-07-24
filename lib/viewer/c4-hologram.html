@@ -64,6 +64,7 @@ svg{width:100%;height:100%;display:block}
 .edge.plan{stroke:var(--edgeplan);stroke-dasharray:3 6;opacity:.6;marker-end:url(#arp)}
 .edge.hot{stroke:var(--cyan);stroke-width:2.6;opacity:1}
 .edgehit{stroke:transparent;stroke-width:14;fill:none;cursor:help}
+.elbl{font-size:8.2px;fill:var(--elbl);letter-spacing:.04em;pointer-events:none}
 @keyframes dash{to{stroke-dashoffset:-24}}
 .nd.pulse rect{animation:pul 2.4s ease-in-out infinite}
 @keyframes pul{0%,100%{filter:drop-shadow(0 0 8px rgba(62,231,255,.5))}50%{filter:drop-shadow(0 0 18px rgba(62,231,255,.95))}}
@@ -132,12 +133,14 @@ html[data-skin="blueprint"] button.on{text-shadow:none}
    <button id="bnow" class="on" type="button"></button>
    <button id="btgt" type="button"></button>
    <button id="brf" type="button"></button>
+   <button id="blbl" type="button"></button>
    <button id="brl" type="button"></button>
    <span class="menuwrap">
     <button id="pexp" type="button" aria-haspopup="true" aria-expanded="false"></button>
     <span id="pmenu" role="menu">
      <button id="pexpSvg" type="button" role="menuitem"></button>
      <button id="pexpPng" type="button" role="menuitem"></button>
+     <button id="pexpLayout" type="button" role="menuitem"></button>
      <button id="pexpPrint" type="button" role="menuitem"></button>
     </span>
    </span>
@@ -165,9 +168,10 @@ var STRINGS={
  en:{
   subhelp:"click = explain (any level) · double-click or [+] = drill in · drag to move · hover an arrow = label · ESC/BACK",
   back:"← BACK", now:"CURRENT STATE", tgt:"TARGET STATE", reverify:"RE-VERIFY",
+  labels:"LABELS", labelsTitle:"arrow labels (auto-off above 14 arrows)",
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"re-arrange",
-  printExport:"PRINT / EXPORT", exportSvg:"Export SVG", exportPng:"Export PNG", print:"Print",
-  legDone:"DONE", legProg:"IN PROGRESS", legNext:"NEXT", legPlan:"PLAN ONLY", legProb:"PROBLEM",
+  printExport:"PRINT / EXPORT", exportSvg:"Export SVG", exportPng:"Export PNG", exportLayout:"Export layout JSON", print:"Print",
+  legDone:"DONE (proven)", legProg:"IN PROGRESS", legNext:"NEXT", legPlan:"PLAN ONLY", legProb:"PROBLEM",
   legHint:"— animated arrow = active flow · dashed = to build",
   crumbRoot:"Context", crumbLevel:"C4", lvlContext:"CONTEXT",
   lvlNames:{context:"Context",container:"Container",component:"Components",leaf:"Leaves"},
@@ -175,7 +179,7 @@ var STRINGS={
   detTgt:"Target state (project)", detSrc:"Verification source", detIssue:"Issue",
   detTarget:"TARGET",
   rosterSearch:"filter…", rosterCount:"members", rosterEmpty:"no match",
-  stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology",
+  stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology", staticSrc:"(static source)",
   errEmpty:"Model unreachable or empty.",
   errNotFound:"Model not found (./c4-model.json). Open via `forma serve` or inject window.__C4_MODEL__.",
   errUnavail:"Model unavailable."
@@ -183,9 +187,10 @@ var STRINGS={
  it:{
   subhelp:"click = spiega (ogni livello) · doppio-click o [+] = entra · trascina per spostare · hover su una freccia = etichetta · ESC/BACK",
   back:"← BACK", now:"STATO ATTUALE", tgt:"STATO FINITO", reverify:"RE-VERIFICA",
+  labels:"ETICHETTE", labelsTitle:"etichette sugli archi (spente sopra i 14 archi)",
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"ridisponi",
-  printExport:"STAMPA / ESPORTA", exportSvg:"Esporta SVG", exportPng:"Esporta PNG", print:"Stampa",
-  legDone:"FATTO", legProg:"IN CORSO", legNext:"PROSSIMO", legPlan:"SOLO PROGETTO", legProb:"PROBLEMA",
+  printExport:"STAMPA / ESPORTA", exportSvg:"Esporta SVG", exportPng:"Esporta PNG", exportLayout:"Esporta layout JSON", print:"Stampa",
+  legDone:"FATTO (provato)", legProg:"IN CORSO", legNext:"PROSSIMO", legPlan:"SOLO PROGETTO", legProb:"PROBLEMA",
   legHint:"— freccia animata = flusso attivo · tratteggio = da costruire",
   crumbRoot:"Contesto", crumbLevel:"C4", lvlContext:"CONTESTO",
   lvlNames:{context:"Contesto",container:"Container",component:"Componenti",leaf:"Foglie"},
@@ -193,7 +198,7 @@ var STRINGS={
   detTgt:"Stato finito (progetto)", detSrc:"Fonte verifica", detIssue:"Issue",
   detTarget:"TARGET",
   rosterSearch:"filtra…", rosterCount:"elementi", rosterEmpty:"nessun risultato",
-  stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology",
+  stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology", staticSrc:"(fonte statica)",
   errEmpty:"Modello non raggiungibile o vuoto.",
   errNotFound:"Modello non trovato (./c4-model.json). Apri via `forma serve` o inietta window.__C4_MODEL__.",
   errUnavail:"Modello non disponibile."
@@ -207,13 +212,18 @@ function pickLang(model){
  return STRINGS[cand]?cand:"en";
 }
 var CATALOG_THRESHOLD=24; // group of same-category siblings above this collapses to one catalogue node
+var LABEL_AUTO_MAX=14;    // above this many arrows in the current level, fixed labels would knot the view
+var LABELS=null;          // null = auto (by arrow count); true/false = user override for this session
 var SKINS=[["holo","◆ holo"],["blueprint","▭ blueprint"]], SKIN_IDS=["holo","blueprint"];
 var STMAP={done:"done","in-progress":"prog",next:"next",planned:"plan",problem:"prob"};
-var M=null, stack=[null], mode="now", POS={}, drag=null, justDragged=false, CATNODES={};
+var M=null, stack=[null], mode="now", POS={}, drag=null, justDragged=false, CATNODES={}, FETCHED=false;
 function $(i){return document.getElementById(i)}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;")}
 function setSkin(s){var k=SKIN_IDS.indexOf(s)>-1?s:"holo";document.documentElement.dataset.skin=k;var el=$("skin");if(el)el.value=k;}
-function keyOf(){return stack.join(">")||"root";}
+// Layout key = the id of the level's parent ("root" at the top). Stable and documentable: it is
+// exactly the key used by meta.layout hints and by the exported layout JSON.
+function keyOf(){return stack[stack.length-1]||"root";}
+function hintsFor(k){return (M&&M.meta&&M.meta.layout&&M.meta.layout[k])||null;}
 function childrenOf(pid){var o=[];for(var i=0;i<M.nodes.length;i++){var n=M.nodes[i];if((pid==null&&!n.parent)||n.parent===pid)o.push(n);}return o;}
 // FEATURE #4: collapse large homogeneous catalogs.
 // Given real children, returns render items where any group of >CATALOG_THRESHOLD
@@ -260,8 +270,25 @@ function nameOf(id){var n=node(id);return n?n.name:id;}
 function srcOf(n){if(n.verify){if(typeof n.verify==="string")return n.verify;if(n.verify.source)return n.verify.source;if(n.verify.ref)return n.verify.ref;if(n.verify.issue)return "#"+n.verify.issue;}
  var ev=(n.evidence||[]).filter(function(e){return e.type==="doc"||e.type==="path";})[0];return ev?ev.ref:((M.meta&&M.meta.verifyMethod)||"");}
 
-function seedLayout(kids){
- var NW=228,NH=106,pos={},i,hub=null;
+var NW=228,NH=118; // NH fits 3 description lines without hitting the [+] DRILL
+// Curated coordinates from meta.layout win; everything else keeps the automatic arrangement,
+// placed BELOW the pinned block so a partial hint set can never overlap generated nodes.
+function seedLayout(kids,hints){
+ var pinned=[],free=[],i;
+ for(i=0;i<kids.length;i++)(hints&&hints[kids[i].id]?pinned:free).push(kids[i]);
+ if(!pinned.length)return autoLayout(kids);
+ var pos={},maxX=0,maxY=0,h;
+ for(i=0;i<pinned.length;i++){var q=hints[pinned[i].id];
+  h={x:+q.x||0,y:+q.y||0,w:+q.w||NW,h:+q.h||NH};pos[pinned[i].id]=h;
+  maxX=Math.max(maxX,h.x+h.w);maxY=Math.max(maxY,h.y+h.h);}
+ var W=Math.max(1020,maxX+64),H=Math.max(560,maxY+58);
+ if(free.length){var sub=autoLayout(free),oy=maxY+58;
+  for(i=0;i<free.length;i++){var p=sub.pos[free[i].id];pos[free[i].id]={x:p.x,y:oy+p.y,w:p.w,h:p.h};}
+  W=Math.max(W,sub.W);H=Math.max(H,oy+sub.H);}
+ return {W:W,H:H,pos:pos};
+}
+function autoLayout(kids){
+ var pos={},i,hub=null;
  for(i=0;i<kids.length;i++)if(kids[i].kind==="system"){hub=kids[i];break;}
  if(hub&&kids.length<=10){
   var W=1080,H=660,cx=W/2,cy=H/2;
@@ -280,9 +307,9 @@ function seedLayout(kids){
   pos[kids[i].id]={x:offx+c*(NW+gx),y:py+r*(NH+gy),w:NW,h:NH};}
  return {W:W,H:H,pos:pos};
 }
-function layoutFor(kids){var k=keyOf();if(!POS[k])POS[k]=seedLayout(kids);
+function layoutFor(kids){var k=keyOf();if(!POS[k])POS[k]=seedLayout(kids,hintsFor(k));
  // make sure every current kid has a slot (model may have changed)
- var lay=POS[k];for(var i=0;i<kids.length;i++)if(!lay.pos[kids[i].id]){var s=seedLayout(kids);POS[k]=s;return s;}return lay;}
+ var lay=POS[k];for(var i=0;i<kids.length;i++)if(!lay.pos[kids[i].id]){var s=seedLayout(kids,hintsFor(k));POS[k]=s;return s;}return lay;}
 
 function draw(animate){
  if(!M)return;
@@ -300,11 +327,17 @@ function draw(animate){
  var s='<svg viewBox="0 0 '+lay.W+' '+lay.H+'" preserveAspectRatio="xMidYMid meet" class="'+(mode==="target"?"mode-t":"")+'">'
   +'<defs><marker id="ar" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edge")+'"/></marker>'
   +'<marker id="arp" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edgeplan")+'"/></marker></defs>';
+ // fixed arrow labels: on by default while the level stays readable, else hover-only (the tooltip
+ // is always there). A level with 40 arrows would be unreadable with every label painted at once.
+ var showLbl=(LABELS===null)?(edges.length<=LABEL_AUTO_MAX):LABELS;
+ var blbl=$("blbl");if(blbl)blbl.className=showLbl?"on":"";
  for(var i=0;i<edges.length;i++){
   var a=pos[edges[i].from],b=pos[edges[i].to];if(!a||!b)continue;
-  var d=edgePath(a,b),cl=(edges[i].estatus==="to-build"?"plan":"flow");
-  s+='<path class="edge '+cl+'" data-e="'+i+'" d="'+d+'"/>';
-  s+='<path class="edgehit" data-e="'+i+'" data-label="'+esc(edges[i].label||"")+'" d="'+d+'"/>';
+  var e=edgePath(a,b),cl=(edges[i].estatus==="to-build"?"plan":"flow");
+  s+='<path class="edge '+cl+'" data-e="'+i+'" d="'+e.d+'"/>';
+  s+='<path class="edgehit" data-e="'+i+'" data-label="'+esc(edges[i].label||"")+'" d="'+e.d+'"/>';
+  if(showLbl&&edges[i].label){var lb=String(edges[i].label);if(lb.length>28)lb=lb.slice(0,27)+"…";
+   s+='<text class="elbl" x="'+e.mx+'" y="'+(e.my-4)+'" text-anchor="middle">'+esc(lb)+'</text>';}
  }
  for(var j=0;j<kids.length;j++){
   var n=kids[j],p=pos[n.id];
@@ -313,18 +346,21 @@ function draw(animate){
   var isCat=!!n.__catalog,dr=!isCat&&hasKids(n.id),cls="nd s-"+st+(dr?" drill":"")+(isCat?" cat":"")+(pulse?" pulse":"");
   var desc=isCat?(n.count+" "+STR.rosterCount):(mode==="target"?(n.target||n.func||""):(n.current||n.func||n.tech||""));
   var badge=isCat?String(n.count):(mode==="target"?STR.detTarget:(n.statusWord||(n.completion!=null?n.completion+"%":(n.tech||""))));
-  var tmax=Math.floor((p.w-70)/6.7),tt=n.name;if(String(tt).length>tmax)tt=String(tt).slice(0,tmax-1)+"…";
+  // the title runs until the badge, so reserve the badge's actual width (9px text ≈ 5.4px/char)
+  // instead of a flat 70px — a fixed reserve clipped names that had all the room they needed
+  var tmax=Math.floor((p.w-34-String(badge).length*5.4)/6.7),tt=n.name;
+  if(String(tt).length>tmax)tt=String(tt).slice(0,Math.max(1,tmax-1))+"…";
   s+='<g class="'+cls+'" data-id="'+esc(n.id)+'">'
    +'<rect x="'+p.x+'" y="'+p.y+'" width="'+p.w+'" height="'+p.h+'" rx="10"/>'
    +'<text class="kk" x="'+(p.x+13)+'" y="'+(p.y+16)+'">'+esc(n.category||n.kind||"")+'</text>'
    +'<text class="tt" x="'+(p.x+13)+'" y="'+(p.y+33)+'">'+esc(tt)+'</text>'
    +'<text class="pp" x="'+(p.x+p.w-13)+'" y="'+(p.y+16)+'" text-anchor="end">'+esc(badge)+'</text>';
-  var words=String(desc).split(" "),line="",ln=0,cpl=Math.floor((p.w-26)/5.4),MAXL=2;
-  for(var k=0;k<words.length&&ln<MAXL;k++){
-   if((line+words[k]).length>cpl){s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+ln*12.5)+'">'+esc(line.trim())+'</text>';line=words[k]+" ";ln++;}
-   else line+=words[k]+" ";}
-  if(ln<MAXL&&line)s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+ln*12.5)+'">'+esc(line.length>cpl?line.slice(0,cpl-1)+"…":line.trim())+'</text>';
-  else if(ln===MAXL&&line.trim())s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+ln*12.5)+'">…</text>';
+  // Description lines: how many fit comes from the geometry (text starts at y+51, 12.5px apart,
+  // and must clear the footer control at h-25), so a curated layout hint with short boxes cannot
+  // print through [+] DRILL. wrapDesc is pure and clamps every line to the box width.
+  var floorY=p.h-((dr||isCat)?25:6),MAXL=Math.min(3,Math.floor((floorY-51)/12.5)+1);
+  var dlines=wrapDesc(desc,Math.floor((p.w-26)/5.4),MAXL);
+  for(var q=0;q<dlines.length;q++)s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+q*12.5)+'">'+esc(dlines[q])+'</text>';
   if(dr)s+='<rect class="drillhit" data-drill="1" x="'+(p.x+p.w-96)+'" y="'+(p.y+p.h-25)+'" width="88" height="20" rx="5"/>'
    +'<text class="plus" x="'+(p.x+p.w-13)+'" y="'+(p.y+p.h-9)+'" text-anchor="end">[+] DRILL</text>';
   else if(isCat)s+='<text class="plus" x="'+(p.x+p.w-13)+'" y="'+(p.y+p.h-9)+'" text-anchor="end">[≡] '+esc(String(n.count))+'</text>';
@@ -337,18 +373,37 @@ function draw(animate){
  st2.classList.toggle("anim",animate!==false);
  // breadcrumb
  var chain=[],c=pid;while(c){var nn=node(c);chain.unshift(nn);c=nn?nn.parent:null;}
- var lvl=pid?levelName(kids[0]&&kids[0].level):STR.lvlContext;
- var cb=STR.crumbLevel+" · "+lvl.toUpperCase()+"  &nbsp;&nbsp; <a data-d='-1'>"+esc(STR.crumbRoot)+"</a>";
+ var lvlKey=pid?(kids[0]&&kids[0].level):"context";
+ var lvl=pid?levelName(lvlKey):STR.lvlContext;
+ // C4 notation: number the level by its position in the model's own `levels` list (L1 = context).
+ var lvlIdx=((M.levels||[]).indexOf(lvlKey));
+ var cb=(lvlIdx>-1?STR.crumbLevel+"-L"+(lvlIdx+1):STR.crumbLevel)+" · "+lvl.toUpperCase()+"  &nbsp;&nbsp; <a data-d='-1'>"+esc(STR.crumbRoot)+"</a>";
  for(var w=0;w<chain.length;w++)cb+=" &rsaquo; "+(w===chain.length-1?"<b>"+esc(chain[w].name)+"</b>":"<a data-d='"+w+"'>"+esc(chain[w].name)+"</a>");
  $("crumb").innerHTML=cb;
  $("back").disabled=stack.length<2;
  $("detail").style.display="none";
 }
+// Greedy word wrap into at most `max` lines of `cpl` characters. Every returned line is clamped to
+// cpl — an unbreakable token (a long class name, a URL) would otherwise paint outside the box, and
+// there is no clip-path on the node. The last line carries the ellipsis when text was dropped,
+// rather than spending a whole line on it (on a short curated box that was half the visible text).
+function wrapDesc(desc,cpl,max){
+ if(max<1||cpl<2)return [];
+ var words=String(desc==null?"":desc).split(" "),all=[],line="",i;
+ for(i=0;i<words.length;i++){if(line&&(line+words[i]).length>cpl){all.push(line.trim());line="";}line+=words[i]+" ";}
+ if(line.trim())all.push(line.trim());
+ var out=all.slice(0,max),dropped=all.length>out.length;
+ if(dropped&&out.length)out[out.length-1]=out[out.length-1]+"…";
+ for(i=0;i<out.length;i++)if(out[i].length>cpl)out[i]=out[i].slice(0,cpl-1)+"…";
+ return out;
+}
+// Returns the path plus the point ON the curve at t=0.5 — the label anchor. (The quadratic's
+// control point sits at twice the bow, so anchoring a label there would float it off the arrow.)
 function edgePath(a,b){
  var ax=a.x+a.w/2,ay=a.y+a.h/2,bx=b.x+b.w/2,by=b.y+b.h/2,dx=bx-ax,dy=by-ay,L=Math.sqrt(dx*dx+dy*dy)||1;
  var x1=ax+(a.w/2+10)*dx/L,y1=ay+(a.h/2+10)*dy/L,x2=bx-(b.w/2+12)*dx/L,y2=by-(b.h/2+12)*dy/L;
- var mx=(x1+x2)/2+(y2-y1)*.12,my=(y1+y2)/2-(x2-x1)*.12;
- return "M"+x1+","+y1+" Q"+mx+","+my+" "+x2+","+y2;
+ var cx=(x1+x2)/2+(y2-y1)*.12,cy=(y1+y2)/2-(x2-x1)*.12;
+ return {d:"M"+x1+","+y1+" Q"+cx+","+cy+" "+x2+","+y2, mx:(x1+2*cx+x2)/4, my:(y1+2*cy+y2)/4};
 }
 function levelName(l){return (STR.lvlNames&&STR.lvlNames[l])||l||"—";}
 function cssv(v){try{return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||"#2b6e8a";}catch(e){return "#2b6e8a";}}
@@ -456,7 +511,15 @@ function wire(){
  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&stack.length>1){stack.pop();draw(true);}});
  $("bnow").addEventListener("click",function(){mode="now";$("bnow").className="on";$("btgt").className="";draw(false);});
  $("btgt").addEventListener("click",function(){mode="target";$("btgt").className="on";$("bnow").className="";draw(false);});
- $("brf").addEventListener("click",function(){var m=(M&&M.meta)||{};$("stamp").textContent=STR.stampBase+" "+(m.verifiedAt||(M&&M.source&&M.source.commit)||"—")+" · "+STR.stampMethod+" "+(m.verifyMethod||STR.stampVerify);});
+ $("brf").addEventListener("click",function(){
+  // Served model ⇒ actually re-read it (a `forma verify` run in the terminal shows up here without
+  // losing the level, the layout or the mode). Injected/offline ⇒ re-stamp, and say why.
+  if(!FETCHED){stamp(STR.staticSrc);return;}
+  fetch("./c4-model.json?ts="+(new Date()).getTime()).then(function(r){return r.json();})
+   .then(function(m){if(m&&m.nodes&&m.nodes.length){M=m;stamp("");draw(false);}else stamp(STR.staticSrc);})
+   .catch(function(){stamp(STR.staticSrc);});
+ });
+ $("blbl").addEventListener("click",function(){LABELS=!($("blbl").className==="on");draw(false);});
  $("brl").addEventListener("click",function(){delete POS[keyOf()];draw(true);});
  $("skin").innerHTML=SKINS.map(function(s){return '<option value="'+s[0]+'">'+s[1]+'</option>';}).join("");
  $("skin").addEventListener("change",function(e){setSkin(e.target.value);});
@@ -467,7 +530,9 @@ function applyStrings(){
  function set(id,txt){var e=$(id);if(e)e.textContent=txt;}
  set("subhelp",STR.subhelp);set("back",STR.back);set("bnow",STR.now);set("btgt",STR.tgt);
  set("brf",STR.reverify);set("brl",STR.resetLayout);var brl=$("brl");if(brl)brl.title=STR.resetLayoutTitle;
- set("pexp",STR.printExport);set("pexpSvg",STR.exportSvg);set("pexpPng",STR.exportPng);set("pexpPrint",STR.print);
+ set("blbl",STR.labels);var bl=$("blbl");if(bl)bl.title=STR.labelsTitle;
+ set("pexp",STR.printExport);set("pexpSvg",STR.exportSvg);set("pexpPng",STR.exportPng);
+ set("pexpLayout",STR.exportLayout);set("pexpPrint",STR.print);
  set("lg-done",STR.legDone);set("lg-prog",STR.legProg);set("lg-next",STR.legNext);
  set("lg-plan",STR.legPlan);set("lg-prob",STR.legProb);set("lg-hint",STR.legHint);
 }
@@ -486,7 +551,7 @@ function collectSvgCss(){
   if(!rules)continue;
   for(j=0;j<rules.length;j++){var r=rules[j],t=r.cssText||"";
    // keep rules that target svg-internal classes/elements + the color vars on :root/html
-   if(/\.(nd|edge|edgehit|s-done|s-prog|s-next|s-plan|s-prob|mode-t|tt|kk|dd|pp|plus|cat)\b/.test(t)
+   if(/\.(nd|edge|edgehit|elbl|s-done|s-prog|s-next|s-plan|s-prob|mode-t|tt|kk|dd|pp|plus|cat)\b/.test(t)
       ||/(^|[\s,])svg\b/.test(t)||/:root|html\[data-skin/.test(t)){
     // drop animations for a static export (keepdefs stable)
     out.push(t);
@@ -531,6 +596,17 @@ function triggerDownload(blob,filename){
  a.href=url;a.download=filename;document.body.appendChild(a);a.click();
  document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url);},4000);
 }
+// Every level you have arranged, in the exact shape meta.layout expects — drag the boxes, export,
+// paste into the topology's "layout" and `gen` bakes it in. No storage: the repo is the memory.
+function exportLayout(){
+ var out={},k,id,p;
+ for(k in POS){if(!POS.hasOwnProperty(k))continue;
+  var lvl={},any=false;
+  for(id in POS[k].pos){if(!POS[k].pos.hasOwnProperty(id))continue;
+   p=POS[k].pos[id];lvl[id]={x:Math.round(p.x),y:Math.round(p.y),w:Math.round(p.w),h:Math.round(p.h)};any=true;}
+  if(any)out[k]=lvl;}
+ triggerDownload(new Blob([JSON.stringify({layout:out},null,2)+"\n"],{type:"application/json"}),exportBaseName()+"-layout.json");
+}
 function exportSvg(){
  var s=serializeSvg();if(!s)return;
  triggerDownload(new Blob([s.xml],{type:"image/svg+xml;charset=utf-8"}),exportBaseName()+".svg");
@@ -564,23 +640,34 @@ function wireExport(){
  document.addEventListener("keydown",function(e){if(e.key==="Escape")close();});
  var sv=$("pexpSvg");if(sv)sv.addEventListener("click",function(){close();exportSvg();});
  var pn=$("pexpPng");if(pn)pn.addEventListener("click",function(){close();exportPng();});
+ var lay=$("pexpLayout");if(lay)lay.addEventListener("click",function(){close();exportLayout();});
  var pr=$("pexpPrint");if(pr)pr.addEventListener("click",function(){close();window.print();});
 }
 function moveTip(ev){var st=$("stage").getBoundingClientRect(),t=$("etip");
  var x=ev.clientX-st.left+12,y=ev.clientY-st.top+12;
  t.style.left=Math.min(x,st.width-t.offsetWidth-6)+"px";t.style.top=Math.min(y,st.height-t.offsetHeight-6)+"px";}
 
+// Fact-base line. `suffix` marks a RE-VERIFY that could not re-read the model (injected/offline).
+function stamp(suffix){
+ var m=(M&&M.meta)||{};
+ $("stamp").textContent=STR.stampBase+" "+(m.verifiedAt||(M&&M.generatedAt)||(M&&M.source&&M.source.commit)||"—")
+  +" · "+STR.stampMethod+" "+(m.verifyMethod||STR.stampVerify)+(suffix?" "+suffix:"");
+}
 function boot(model){
  M=model;
  LANG=pickLang(M);STR=STRINGS[LANG];
  try{document.documentElement.setAttribute("lang",LANG);}catch(e){}
  applyStrings();
  if(!M||!M.nodes||!M.nodes.length){$("err").style.display="block";$("err").textContent=STR.errEmpty;return;}
- if(M.source&&M.source.repo)$("title").textContent="Forma · "+M.source.repo;
- var m=M.meta||{};$("stamp").textContent=STR.stampBase+" "+(m.verifiedAt||(M.source&&M.source.commit)||"—")+" · "+(m.verifyMethod||STR.stampVerify);
- setSkin((new URLSearchParams(location.search).get("skin"))||window.__C4_SKIN__||(m.skin)||"holo");
+ var ttl=(M.meta&&M.meta.title)||((M.source&&M.source.repo)?"Forma · "+M.source.repo:null);
+ if(ttl){$("title").textContent=ttl;try{document.title=ttl;}catch(e){}}
+ stamp("");
+ setSkin((new URLSearchParams(location.search).get("skin"))||window.__C4_SKIN__||(M.meta&&M.meta.skin)||"holo");
  stack=[null];mode="now";POS={};
  draw(true);
+ // Minimal hook for embedders (the Cowork artifact re-verifies through its own MCP bridge and
+ // needs to push the result back in without forking the viewer).
+ window.__C4_API__={model:function(){return M;},redraw:function(){draw(false);},stamp:function(t){$("stamp").textContent=t;}};
 }
 function start(){
  // Pick language from URL/global up-front so header + errors render even if the model never loads.
@@ -589,6 +676,7 @@ function start(){
  applyStrings();
  wire();
  if(window.__C4_MODEL__){boot(window.__C4_MODEL__);return;}
+ FETCHED=true; // the model has a live URL ⇒ RE-VERIFY can re-read it instead of only re-stamping
  try{fetch("./c4-model.json").then(function(r){return r.json();}).then(boot).catch(function(){
   $("err").style.display="block";$("err").textContent=STR.errNotFound;});}
  catch(e){$("err").style.display="block";$("err").textContent=STR.errUnavail;}
