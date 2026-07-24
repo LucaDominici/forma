@@ -346,20 +346,26 @@ function draw(animate){
   var isCat=!!n.__catalog,dr=!isCat&&hasKids(n.id),cls="nd s-"+st+(dr?" drill":"")+(isCat?" cat":"")+(pulse?" pulse":"");
   var desc=isCat?(n.count+" "+STR.rosterCount):(mode==="target"?(n.target||n.func||""):(n.current||n.func||n.tech||""));
   var badge=isCat?String(n.count):(mode==="target"?STR.detTarget:(n.statusWord||(n.completion!=null?n.completion+"%":(n.tech||""))));
-  var tmax=Math.floor((p.w-70)/6.7),tt=n.name;if(String(tt).length>tmax)tt=String(tt).slice(0,tmax-1)+"…";
+  // the title runs until the badge, so reserve the badge's actual width (9px text ≈ 5.4px/char)
+  // instead of a flat 70px — a fixed reserve clipped names that had all the room they needed
+  var tmax=Math.floor((p.w-34-String(badge).length*5.4)/6.7),tt=n.name;
+  if(String(tt).length>tmax)tt=String(tt).slice(0,Math.max(1,tmax-1))+"…";
   s+='<g class="'+cls+'" data-id="'+esc(n.id)+'">'
    +'<rect x="'+p.x+'" y="'+p.y+'" width="'+p.w+'" height="'+p.h+'" rx="10"/>'
    +'<text class="kk" x="'+(p.x+13)+'" y="'+(p.y+16)+'">'+esc(n.category||n.kind||"")+'</text>'
    +'<text class="tt" x="'+(p.x+13)+'" y="'+(p.y+33)+'">'+esc(tt)+'</text>'
    +'<text class="pp" x="'+(p.x+p.w-13)+'" y="'+(p.y+16)+'" text-anchor="end">'+esc(badge)+'</text>';
-  // 3 description lines when the box is tall enough for them (last baseline y+76 must clear the
-  // [+] DRILL hit at h-25); 2 on shorter boxes — layout hints and catalogues may set their own h.
-  var words=String(desc).split(" "),line="",ln=0,cpl=Math.floor((p.w-26)/5.4),MAXL=p.h>=118?3:2;
-  for(var k=0;k<words.length&&ln<MAXL;k++){
-   if((line+words[k]).length>cpl){s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+ln*12.5)+'">'+esc(line.trim())+'</text>';line=words[k]+" ";ln++;}
-   else line+=words[k]+" ";}
-  if(ln<MAXL&&line)s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+ln*12.5)+'">'+esc(line.length>cpl?line.slice(0,cpl-1)+"…":line.trim())+'</text>';
-  else if(ln===MAXL&&line.trim())s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+ln*12.5)+'">…</text>';
+  // Wrap everything, then keep as many lines as the box can hold. The last kept line carries the
+  // ellipsis instead of spending a whole line on it — on a short curated box that lone "…" was
+  // half the visible text. MAXL comes from the geometry: the deepest baseline (51+(MAXL-1)*12.5)
+  // must clear the footer control ([+] DRILL / [≡] roster at h-25), whatever height a hint sets.
+  var floorY=p.h-((dr||isCat)?25:6),MAXL=Math.min(3,Math.floor((floorY-51)/12.5)+1);
+  var words=String(desc).split(" "),cpl=Math.floor((p.w-26)/5.4),all=[],line="",k;
+  for(k=0;k<words.length;k++){if(line&&(line+words[k]).length>cpl){all.push(line.trim());line="";}line+=words[k]+" ";}
+  if(line.trim())all.push(line.trim());
+  var lines2=MAXL>0?all.slice(0,MAXL):[];
+  if(all.length>lines2.length&&lines2.length){var lst=lines2[lines2.length-1];lines2[lines2.length-1]=(lst.length>cpl-1?lst.slice(0,cpl-1):lst)+"…";}
+  for(k=0;k<lines2.length;k++)s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+k*12.5)+'">'+esc(lines2[k])+'</text>';
   if(dr)s+='<rect class="drillhit" data-drill="1" x="'+(p.x+p.w-96)+'" y="'+(p.y+p.h-25)+'" width="88" height="20" rx="5"/>'
    +'<text class="plus" x="'+(p.x+p.w-13)+'" y="'+(p.y+p.h-9)+'" text-anchor="end">[+] DRILL</text>';
   else if(isCat)s+='<text class="plus" x="'+(p.x+p.w-13)+'" y="'+(p.y+p.h-9)+'" text-anchor="end">[≡] '+esc(String(n.count))+'</text>';
