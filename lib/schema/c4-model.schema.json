@@ -45,6 +45,13 @@
           "type": "string",
           "description": "The arc42 architecture doc this model derives from."
         },
+        "attachedDocs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Repo-relative docs carrying an injected forma block (written by `forma doc --attach`). The drift gate governs every one of them, not just docPath."
+        },
         "generator": {
           "type": "string"
         }

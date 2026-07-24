@@ -13,8 +13,16 @@ const tmp = mkdtempSync(join(tmpdir(), 'forma-test-'))
 const run = (args) => spawnSync(process.execPath, [BIN, ...args], { encoding: 'utf-8' })
 const die = (m, r) => { console.error('FAIL: ' + m + (r ? '\n' + (r.stdout || '') + (r.stderr || '') : '')); process.exit(1) }
 const readJson = (p) => JSON.parse(readFileSync(p, 'utf-8'))
-// strip the four volatile fields so two gen runs on the same tree can be compared byte-for-byte
-const stripVolatile = (x) => { const c = JSON.parse(JSON.stringify(x)); delete c.generatedAt; if (c.meta) delete c.meta.verifiedAt; if (c.source) { delete c.source.commit; delete c.source.branch } return JSON.stringify(c) }
+// strip the volatile fields so two gen runs on the same tree can be compared byte-for-byte
+const stripVolatile = (x) => { const c = JSON.parse(JSON.stringify(x)); delete c.generatedAt; if (c.source) { delete c.source.commit; delete c.source.branch } return JSON.stringify(c) }
+// every JSON path where two objects differ (R2: gen x2 must diverge on exactly one)
+const diffPaths = (a, b, at = '') => {
+  if (a === b) return []
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return [at || '<root>']
+  const out = []
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) out.push(...diffPaths(a[k], b[k], at ? at + '.' + k : k))
+  return out
+}
 
 // 1) mini: init → gen → check, basic counts + derived edge (unchanged behavior; no clustering) + determinism
 {
@@ -32,7 +40,16 @@ const stripVolatile = (x) => { const c = JSON.parse(JSON.stringify(x)); delete c
   // determinism: a second gen on the same tree is byte-identical excluding timestamps/commit
   r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model2]); if (r.status !== 0) die('gen(2) exit ' + r.status, r)
   if (stripVolatile(m) !== stripVolatile(readJson(model2))) die('determinism: gen output differs across runs (excl. volatile fields)')
-  console.log(`  ok mini — ${containers} containers, ${leaves} leaves, ${derived} derived edge(s); deterministic`)
+  // R2: exactly ONE volatile path — same tree, same commit ⇒ only generatedAt may differ
+  const vol = diffPaths(m, readJson(model2))
+  if (vol.join() !== 'generatedAt') die('R2: gen x2 should differ on generatedAt only, got [' + vol.join(', ') + ']')
+  // R3, lowering the bar: the 2-file report_* group is below the default groupMin and only
+  // clusters when the user asks for it — the direction that matters on a real repo.
+  if (m.nodes.some((n) => n.kind === 'component')) die('R3: default thresholds should leave mini unclustered')
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model2, '--cluster-min', '1', '--group-min', '2'])
+  if (r.status !== 0) die('R3 --cluster-min 1 --group-min 2 exit ' + r.status, r)
+  if (!readJson(model2).nodes.some((n) => n.kind === 'component' && n.name === 'report')) die('R3: lowering the thresholds did not surface the 2-file report_* group')
+  console.log(`  ok mini — ${containers} containers, ${leaves} leaves, ${derived} derived edge(s); one volatile field (generatedAt)`)
 }
 
 // 2) flat-python: §2 prefix clustering + §1a docstring/README resolution
@@ -50,7 +67,21 @@ const stripVolatile = (x) => { const c = JSON.parse(JSON.stringify(x)); delete c
   if (!(flat.includes('health') && flat.includes('version'))) die('§2: no-prefix leaves should stay flat, got ' + flat)
   if (!m.nodes.some((n) => n.name === 'user_service' && n.descSource === 'docstring')) die('§1a: user_service func not from docstring')
   if (!m.nodes.some((n) => n.name === 'health' && n.descSource === 'readme')) die('§1a: health func not from dir README')
-  console.log(`  ok flat-python — ${compNames.length} components (${compNames}); §1a docstring+readme; containerOf gate green`)
+  // R4: a synthesized component describes itself from its children's docs, not "Groups related files under X."
+  const userComp = m.nodes.find((n) => n.kind === 'component' && n.name === 'user')
+  if (!userComp || /^Groups related files under/.test(userComp.func)) die('R4: component "user" still on the bare fallback: ' + (userComp && userComp.func))
+  if (!/user/i.test(userComp.func)) die('R4: component func not composed from its children docstrings: ' + userComp.func)
+  // R3, raising the bar: this fixture's groups are 3 files each, so --group-min 4 (or a
+  // --cluster-min above the leaf count) must dissolve the component layer entirely
+  const m2 = join(tmp, 'fp-model-thresholds.json')
+  const compsOf = (p) => readJson(p).nodes.filter((n) => n.kind === 'component').length
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', m2, '--group-min', '4']); if (r.status !== 0) die('R3 --group-min 4 exit ' + r.status, r)
+  if (compsOf(m2) !== 0) die('R3: --group-min was ignored (3-file groups still clustered at min 4)')
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', m2, '--cluster-min', '99']); if (r.status !== 0) die('R3 --cluster-min 99 exit ' + r.status, r)
+  if (compsOf(m2) !== 0) die('R3: --cluster-min was ignored (container clustered below the new floor)')
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', m2, '--group-min', 'abc'])
+  if (r.status === 0) die('R3: a non-integer --group-min must fail loud, not silently disable clustering')
+  console.log(`  ok flat-python — ${compNames.length} components (${compNames}); §1a docstring+readme; R3 flags; R4 composed component prose`)
 }
 
 // 3) data-noise: §3 init skips data/fixture dirs and records why
@@ -61,7 +92,10 @@ const stripVolatile = (x) => { const c = JSON.parse(JSON.stringify(x)); delete c
   if (!t.nodes.some((n) => n.name === 'api')) die('§3: expected api container')
   if (t.nodes.some((n) => ['demo', 'fixtures'].includes(n.name))) die('§3: a data dir was seeded as a container')
   if (!(t._skipped || []).some((s) => /demo|fixtures/.test(s.dir))) die('§3: skipped data dirs not recorded in _skipped')
-  console.log('  ok data-noise — api seeded; demo/fixtures skipped + logged')
+  // language detection must ignore the same dirs: src/fixtures/*.py outnumbers src/api/*.js here,
+  // and counting it would detect Python and then find no container at all (init exits 1).
+  if (t.meta.stack !== 'JavaScript') die('§3: data-dir files hijacked language detection, got ' + t.meta.stack)
+  console.log('  ok data-noise — api seeded; demo/fixtures skipped, and ignored by language detection')
 }
 
 // 4) §1b attach-mode + check freshness, end-to-end on a copy of the self-repo
@@ -80,7 +114,24 @@ const stripVolatile = (x) => { const c = JSON.parse(JSON.stringify(x)); delete c
   if (!(d.includes('Human intro prose.') && d.includes('Human footer prose.'))) die('§1b: attach clobbered human prose')
   if (!d.includes('C4Context')) die('§1b: attach did not inject the generated block')
   r = run(['check', '--repo', repo, '--model', model, '--topology', topo]); if (r.status !== 0) die('§1b: check should PASS after regen', r)
-  console.log('  ok attach-doc — §1b inject preserves prose; check drift→pass')
+
+  // R1: a block attached to a file that is NOT source.docPath must be governed too — otherwise
+  // `forma doc --attach any.md` produces a generated block no gate ever checks (false green).
+  const other = join(repo, 'docs/architecture/NOTES.md')
+  writeFileSync(other, '# Notes\n\nHuman notes.\n')
+  r = run(['doc', '--repo', repo, '--model', model, '--attach', other]); if (r.status !== 0) die('R1: doc --attach NOTES.md exit ' + r.status, r)
+  if (!(readJson(model).source.attachedDocs || []).includes('docs/architecture/NOTES.md')) die('R1: --attach did not register the target in source.attachedDocs')
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo]); if (r.status !== 0) die('R1: check should PASS right after attach', r)
+  // the registry must survive a plain regen, or the gate silently stops governing the file
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('R1 regen exit ' + r.status, r)
+  if (!(readJson(model).source.attachedDocs || []).includes('docs/architecture/NOTES.md')) die('R1: gen dropped source.attachedDocs — the attached doc is un-governed again')
+  writeFileSync(other, readFileSync(other, 'utf-8').replace('C4Context', 'C4Tampered'))
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo])
+  if (r.status === 0) die('R1: check stayed green on a tampered block in an attached doc (false green)')
+  if (!/NOTES\.md/.test((r.stdout || '') + (r.stderr || ''))) die('R1: check failed but did not name the offending file')
+  r = run(['doc', '--repo', repo, '--model', model, '--attach', other]); if (r.status !== 0) die('R1: re-attach exit ' + r.status, r)
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo]); if (r.status !== 0) die('R1: check should PASS after re-attach', r)
+  console.log('  ok attach-doc — §1b inject preserves prose; R1 gate governs attached docs ≠ docPath, survives regen')
 }
 
 // 5) §7 enrichment via the offline 'echo' enricher (no network): fills only holes, caches, sticky across plain regen
@@ -100,7 +151,28 @@ const stripVolatile = (x) => { const c = JSON.parse(JSON.stringify(x)); delete c
   // sticky: a plain regen (no --enrich) preserves the cached llm prose on unchanged inputs
   r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('§7 regen exit ' + r.status, r)
   if (readJson(model).nodes.find((n) => n.id === holes[0].id).descSource !== 'llm') die('§7: cache-merge did not preserve enrichment across a plain regen')
-  console.log(`  ok enrich — §7 filled ${holes.length} hole(s) offline; check no-network; cache-merge sticky`)
+
+  // R5: stale prose survives a failed refill — a network outage must never make a box worse.
+  const corrupt = readJson(model)
+  corrupt.nodes.find((n) => n.id === holes[0].id).descInputHash = 'stale'
+  writeFileSync(model, JSON.stringify(corrupt, null, 2) + '\n')
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('R5 regen exit ' + r.status, r)
+  let n5 = readJson(model).nodes.find((n) => n.id === holes[0].id)
+  if (!(n5.descSource === 'llm' && n5.func === 'Auto-described (test enricher).')) die('R5: stale llm prose dropped on a plain regen')
+  r = run(['check', '--repo', REPO, '--model', model, '--topology', topo])
+  if (r.status !== 0) die('R5: stale enrichment must stay advisory, not a gate failure', r)
+  if (!/enrichment stale/.test(r.stderr || '')) die('R5: check did not warn about the stale enrichment')
+  // enricher unreachable (unknown provider ⇒ same code path, zero network): prose still stands
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model, '--enrich', '--enricher', 'nope'])
+  if (r.status !== 0) die('R5: a failing enricher must not abort gen', r)
+  n5 = readJson(model).nodes.find((n) => n.id === holes[0].id)
+  if (n5.func !== 'Auto-described (test enricher).') die('R5: prose lost when the enricher was unreachable')
+  // ...and a working enricher DOES refresh it (stale entries must stay refillable)
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model, '--enrich', '--enricher', 'echo'])
+  if (r.status !== 0) die('R5 refill exit ' + r.status, r)
+  n5 = readJson(model).nodes.find((n) => n.id === holes[0].id)
+  if (n5.descInputHash === 'stale') die('R5: a stale hash was never refreshed — the node is stuck stale forever')
+  console.log(`  ok enrich — §7 filled ${holes.length} hole(s) offline; cache-merge sticky; R5 stale prose survives + refills`)
 }
 
 // 6) scaffold regression: default `forma doc` (no --attach) still writes the arc42 scaffold unchanged

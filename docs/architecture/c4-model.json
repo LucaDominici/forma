@@ -1,18 +1,17 @@
 {
-  "schemaVersion": "1.2.0",
-  "generatedAt": "2026-07-24T18:06:11.775Z",
+  "schemaVersion": "1.3.0",
+  "generatedAt": "2026-07-24T20:16:01.653Z",
   "source": {
     "repo": "forma",
-    "commit": "ec91e84a4a1ec02cb492f9b3f56424059102f193",
-    "branch": "feat/forma-doc-ingest-components",
+    "commit": "d87321485e6c3d18ebbd5207c064df2996eb3f28",
+    "branch": "fix/qa-r1-r5-attach-gate",
     "docPath": "docs/architecture/ARCHITECTURE.md",
-    "generator": "gen-c4-model@1.2.0"
+    "generator": "gen-c4-model@1.3.0"
   },
   "meta": {
     "repo": "forma",
     "stack": "JavaScript (Node ESM, zero-dependency)",
     "seededBy": "forma init (curated)",
-    "verifiedAt": "2026-07-24T18:06:11.775Z",
     "verifyMethod": "code+topology (gh re-verify optional)"
   },
   "levels": [
@@ -404,7 +403,7 @@
       "completion": 100,
       "current": "Exists: test/run.mjs",
       "target": "",
-      "func": "Fixture test: init → gen → check on a tiny repo. Deterministic, no deps.",
+      "func": "Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.",
       "descSource": "docstring"
     }
   ],
@@ -446,7 +445,7 @@
       "estatus": "active",
       "from": "test",
       "to": "lib",
-      "label": "1×",
+      "label": "3×",
       "kind": "import"
     }
   ]

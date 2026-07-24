@@ -456,7 +456,7 @@ function wire(){
  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&stack.length>1){stack.pop();draw(true);}});
  $("bnow").addEventListener("click",function(){mode="now";$("bnow").className="on";$("btgt").className="";draw(false);});
  $("btgt").addEventListener("click",function(){mode="target";$("btgt").className="on";$("bnow").className="";draw(false);});
- $("brf").addEventListener("click",function(){var m=(M&&M.meta)||{};$("stamp").textContent=STR.stampBase+" "+(m.verifiedAt||(M&&M.source&&M.source.commit)||"—")+" · "+STR.stampMethod+" "+(m.verifyMethod||STR.stampVerify);});
+ $("brf").addEventListener("click",function(){var m=(M&&M.meta)||{};$("stamp").textContent=STR.stampBase+" "+(m.verifiedAt||(M&&M.generatedAt)||(M&&M.source&&M.source.commit)||"—")+" · "+STR.stampMethod+" "+(m.verifyMethod||STR.stampVerify);});
  $("brl").addEventListener("click",function(){delete POS[keyOf()];draw(true);});
  $("skin").innerHTML=SKINS.map(function(s){return '<option value="'+s[0]+'">'+s[1]+'</option>';}).join("");
  $("skin").addEventListener("change",function(e){setSkin(e.target.value);});
@@ -577,7 +577,7 @@ function boot(model){
  applyStrings();
  if(!M||!M.nodes||!M.nodes.length){$("err").style.display="block";$("err").textContent=STR.errEmpty;return;}
  if(M.source&&M.source.repo)$("title").textContent="Forma · "+M.source.repo;
- var m=M.meta||{};$("stamp").textContent=STR.stampBase+" "+(m.verifiedAt||(M.source&&M.source.commit)||"—")+" · "+(m.verifyMethod||STR.stampVerify);
+ var m=M.meta||{};$("stamp").textContent=STR.stampBase+" "+(m.verifiedAt||M.generatedAt||(M.source&&M.source.commit)||"—")+" · "+(m.verifyMethod||STR.stampVerify);
  setSkin((new URLSearchParams(location.search).get("skin"))||window.__C4_SKIN__||(m.skin)||"holo");
  stack=[null];mode="now";POS={};
  draw(true);

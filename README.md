@@ -30,9 +30,9 @@ npx forma-arch <command>        # or: npm i -D forma-arch
 | `forma doc` | Project the arc42 scaffold (`ARCHITECTURE.scaffold.md`), or `--attach <file>` to inject a governed block into an existing doc |
 | `forma serve` | Open the live explorer at `http://localhost:4173` |
 
-**Box text comes from your docs.** `gen` fills each box with the module's docstring (Python `"""…"""`, JS/TS leading block), else the directory `README.md`, else a mapped arc42 section — so the explorer shows meaning, not a list of symbols. On a flat directory of many `foo_*` files it also synthesizes a **component** layer (`--no-cluster` to disable).
+**Box text comes from your docs.** `gen` fills each box with the module's docstring (Python `"""…"""`, JS/TS leading block), else the directory `README.md`, else a mapped arc42 section — so the explorer shows meaning, not a list of symbols. On a flat directory of many `foo_*` files it also synthesizes a **component** layer, described from its children's docs (`--no-cluster` to disable; `--cluster-min <n>` = leaves before a container is clustered, default 8; `--group-min <n>` = files sharing a prefix before they become a component, default 3).
 
-**One source of truth.** `forma doc --attach docs/architecture/arc42.md` injects the generated diagrams/tables between `<!-- forma:begin -->` / `<!-- forma:end -->` markers in your existing doc; your prose lives outside them, and `forma check` fails if that block drifts. Where a repo lacks docs, `forma gen --enrich` can fill the remaining box holes with an LLM (opt-in, cached, never on the deterministic gate; `--enricher anthropic|openai|ollama`).
+**One source of truth.** `forma doc --attach docs/architecture/arc42.md` injects the generated diagrams/tables between `<!-- forma:begin -->` / `<!-- forma:end -->` markers in your existing doc; your prose lives outside them, and `forma check` fails if that block drifts. Attached files are recorded in `source.attachedDocs`, so the gate governs **every** doc you attach — not just the model's `docPath`. Where a repo lacks docs, `forma gen --enrich` can fill the remaining box holes with an LLM (opt-in, cached, never on the deterministic gate; `--enricher anthropic|openai|ollama`).
 
 ## How it fits together
 
