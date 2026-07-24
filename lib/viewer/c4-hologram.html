@@ -45,6 +45,8 @@ svg{width:100%;height:100%;display:block}
 .nd .pp{font-size:9px;font-weight:700}
 .nd:hover rect{filter:brightness(1.32)}
 .nd.drill .plus{font-size:9px;fill:var(--cyan);letter-spacing:.1em}
+.nd .drillhit{fill:transparent;stroke:none;pointer-events:auto;cursor:zoom-in}
+.nd .drillhit:hover{fill:rgba(62,231,255,.12)}
 .s-done rect{stroke:var(--done);filter:drop-shadow(0 0 7px rgba(47,224,138,.55))}
 .s-done .tt,.s-done .pp{fill:var(--done)}
 .s-prog rect{stroke:var(--prog);filter:drop-shadow(0 0 7px rgba(255,199,77,.5))}
@@ -161,7 +163,7 @@ html[data-skin="blueprint"] button.on{text-shadow:none}
 // ---- i18n: every user-facing string. en is DEFAULT. ----
 var STRINGS={
  en:{
-  subhelp:"click = detail · [+] = drill · drag the nodes · hover an arrow = label · ESC/BACK",
+  subhelp:"click = explain (any level) · double-click or [+] = drill in · drag to move · hover an arrow = label · ESC/BACK",
   back:"← BACK", now:"CURRENT STATE", tgt:"TARGET STATE", reverify:"RE-VERIFY",
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"re-arrange",
   printExport:"PRINT / EXPORT", exportSvg:"Export SVG", exportPng:"Export PNG", print:"Print",
@@ -179,7 +181,7 @@ var STRINGS={
   errUnavail:"Model unavailable."
  },
  it:{
-  subhelp:"click = dettaglio · [+] = drill · trascina i nodi · hover su una freccia = etichetta · ESC/BACK",
+  subhelp:"click = spiega (ogni livello) · doppio-click o [+] = entra · trascina per spostare · hover su una freccia = etichetta · ESC/BACK",
   back:"← BACK", now:"STATO ATTUALE", tgt:"STATO FINITO", reverify:"RE-VERIFICA",
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"ridisponi",
   printExport:"STAMPA / ESPORTA", exportSvg:"Esporta SVG", exportPng:"Esporta PNG", print:"Stampa",
@@ -323,7 +325,8 @@ function draw(animate){
    else line+=words[k]+" ";}
   if(ln<MAXL&&line)s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+ln*12.5)+'">'+esc(line.length>cpl?line.slice(0,cpl-1)+"…":line.trim())+'</text>';
   else if(ln===MAXL&&line.trim())s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+ln*12.5)+'">…</text>';
-  if(dr)s+='<text class="plus" x="'+(p.x+p.w-13)+'" y="'+(p.y+p.h-9)+'" text-anchor="end">[+] DRILL</text>';
+  if(dr)s+='<rect class="drillhit" data-drill="1" x="'+(p.x+p.w-96)+'" y="'+(p.y+p.h-25)+'" width="88" height="20" rx="5"/>'
+   +'<text class="plus" x="'+(p.x+p.w-13)+'" y="'+(p.y+p.h-9)+'" text-anchor="end">[+] DRILL</text>';
   else if(isCat)s+='<text class="plus" x="'+(p.x+p.w-13)+'" y="'+(p.y+p.h-9)+'" text-anchor="end">[≡] '+esc(String(n.count))+'</text>';
   s+='</g>';
  }
@@ -399,6 +402,7 @@ function clamp(v,lo,hi){return v<lo?lo:v>hi?hi:v;}
 function wire(){
  var stage=$("stage");
  stage.addEventListener("mousedown",function(ev){
+  if(ev.target.getAttribute&&ev.target.getAttribute("data-drill"))return; // [+] is a click→drill, not a drag grip
   var g=ev.target;while(g&&g!==stage&&!(g.getAttribute&&g.getAttribute("data-id")))g=g.parentNode;
   if(!g||g===stage)return;
   var id=g.getAttribute("data-id"),pos=curPos();if(!pos||!pos[id])return;
@@ -428,13 +432,23 @@ function wire(){
  });
  stage.addEventListener("click",function(ev){
   if(justDragged){justDragged=false;return;}
+  var wantDrill=ev.target.getAttribute&&ev.target.getAttribute("data-drill");
   var g=ev.target;while(g&&g!==stage&&!(g.getAttribute&&g.getAttribute("data-id")))g=g.parentNode;
   if(!g||g===stage){ $("detail").style.display="none"; return; }
   var id=g.getAttribute("data-id");
   if(CATNODES[id]){showDetail(CATNODES[id]);return;}
   var n=node(id);if(!n)return;
-  if(hasKids(id)){stack.push(id);draw(true);return;}
+  // click inspects at EVERY level (parents carry func/current/description too);
+  // drilling is the explicit [+] control or a double-click — it no longer steals the click.
+  if(wantDrill&&hasKids(id)){stack.push(id);draw(true);return;}
   showDetail(n);
+ });
+ stage.addEventListener("dblclick",function(ev){
+  var g=ev.target;while(g&&g!==stage&&!(g.getAttribute&&g.getAttribute("data-id")))g=g.parentNode;
+  if(!g||g===stage)return;
+  var id=g.getAttribute("data-id");
+  if(CATNODES[id])return; // catalogues open their roster on click; nothing to drill into
+  if(hasKids(id)){$("detail").style.display="none";stack.push(id);draw(true);}
  });
  $("crumb").addEventListener("click",function(ev){if(ev.target.tagName==="A"){var d=+ev.target.getAttribute("data-d");
   stack=stack.slice(0,d+2);if(!stack.length)stack=[null];draw(true);}});
