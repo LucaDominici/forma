@@ -71,7 +71,7 @@ The viewer is a live C4 map, not a static picture:
 
 - **Click any box** to read its explanation — what it does, current state, target, verification source — at *every* level, from context down to a leaf.
 - **Double-click a box** (or its `[+] DRILL`) to descend into it; **BACK**, the breadcrumb, or `ESC` climb back out.
-- **Drag boxes** to lay out the view your way; **RESET LAYOUT** restores the auto-arrangement.
+- **Drag boxes** to lay out the view your way; **RESET LAYOUT** restores the arrangement (your curated hints if the topology has them, the automatic one otherwise). To keep a layout, drag it, pick **Export layout JSON**, and paste the result under `"layout"` in the topology — `gen` carries it into `meta.layout` and the viewer pins those boxes, auto-arranging everything else clear of them.
 - **Arrow labels** are painted on the diagram while the level stays readable (≤14 arrows) and turn off above that; **LABELS** forces them on or off, and hovering an arrow always reveals its label.
 - **PRINT / EXPORT** to SVG or PNG for docs and slides — exported arrows carry their labels.
 - The breadcrumb names the C4 level you are on (`C4-L1 · CONTEXT` → `C4-L3 · COMPONENTS`).

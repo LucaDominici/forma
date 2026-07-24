@@ -140,6 +140,7 @@ html[data-skin="blueprint"] button.on{text-shadow:none}
     <span id="pmenu" role="menu">
      <button id="pexpSvg" type="button" role="menuitem"></button>
      <button id="pexpPng" type="button" role="menuitem"></button>
+     <button id="pexpLayout" type="button" role="menuitem"></button>
      <button id="pexpPrint" type="button" role="menuitem"></button>
     </span>
    </span>
@@ -169,7 +170,7 @@ var STRINGS={
   back:"← BACK", now:"CURRENT STATE", tgt:"TARGET STATE", reverify:"RE-VERIFY",
   labels:"LABELS", labelsTitle:"arrow labels (auto-off above 14 arrows)",
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"re-arrange",
-  printExport:"PRINT / EXPORT", exportSvg:"Export SVG", exportPng:"Export PNG", print:"Print",
+  printExport:"PRINT / EXPORT", exportSvg:"Export SVG", exportPng:"Export PNG", exportLayout:"Export layout JSON", print:"Print",
   legDone:"DONE (proven)", legProg:"IN PROGRESS", legNext:"NEXT", legPlan:"PLAN ONLY", legProb:"PROBLEM",
   legHint:"— animated arrow = active flow · dashed = to build",
   crumbRoot:"Context", crumbLevel:"C4", lvlContext:"CONTEXT",
@@ -188,7 +189,7 @@ var STRINGS={
   back:"← BACK", now:"STATO ATTUALE", tgt:"STATO FINITO", reverify:"RE-VERIFICA",
   labels:"ETICHETTE", labelsTitle:"etichette sugli archi (spente sopra i 14 archi)",
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"ridisponi",
-  printExport:"STAMPA / ESPORTA", exportSvg:"Esporta SVG", exportPng:"Esporta PNG", print:"Stampa",
+  printExport:"STAMPA / ESPORTA", exportSvg:"Esporta SVG", exportPng:"Esporta PNG", exportLayout:"Esporta layout JSON", print:"Stampa",
   legDone:"FATTO (provato)", legProg:"IN CORSO", legNext:"PROSSIMO", legPlan:"SOLO PROGETTO", legProb:"PROBLEMA",
   legHint:"— freccia animata = flusso attivo · tratteggio = da costruire",
   crumbRoot:"Contesto", crumbLevel:"C4", lvlContext:"CONTESTO",
@@ -219,7 +220,10 @@ var M=null, stack=[null], mode="now", POS={}, drag=null, justDragged=false, CATN
 function $(i){return document.getElementById(i)}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;")}
 function setSkin(s){var k=SKIN_IDS.indexOf(s)>-1?s:"holo";document.documentElement.dataset.skin=k;var el=$("skin");if(el)el.value=k;}
-function keyOf(){return stack.join(">")||"root";}
+// Layout key = the id of the level's parent ("root" at the top). Stable and documentable: it is
+// exactly the key used by meta.layout hints and by the exported layout JSON.
+function keyOf(){return stack[stack.length-1]||"root";}
+function hintsFor(k){return (M&&M.meta&&M.meta.layout&&M.meta.layout[k])||null;}
 function childrenOf(pid){var o=[];for(var i=0;i<M.nodes.length;i++){var n=M.nodes[i];if((pid==null&&!n.parent)||n.parent===pid)o.push(n);}return o;}
 // FEATURE #4: collapse large homogeneous catalogs.
 // Given real children, returns render items where any group of >CATALOG_THRESHOLD
@@ -266,8 +270,25 @@ function nameOf(id){var n=node(id);return n?n.name:id;}
 function srcOf(n){if(n.verify){if(typeof n.verify==="string")return n.verify;if(n.verify.source)return n.verify.source;if(n.verify.ref)return n.verify.ref;if(n.verify.issue)return "#"+n.verify.issue;}
  var ev=(n.evidence||[]).filter(function(e){return e.type==="doc"||e.type==="path";})[0];return ev?ev.ref:((M.meta&&M.meta.verifyMethod)||"");}
 
-function seedLayout(kids){
- var NW=228,NH=118,pos={},i,hub=null; // NH fits 3 description lines without hitting the [+] DRILL
+var NW=228,NH=118; // NH fits 3 description lines without hitting the [+] DRILL
+// Curated coordinates from meta.layout win; everything else keeps the automatic arrangement,
+// placed BELOW the pinned block so a partial hint set can never overlap generated nodes.
+function seedLayout(kids,hints){
+ var pinned=[],free=[],i;
+ for(i=0;i<kids.length;i++)(hints&&hints[kids[i].id]?pinned:free).push(kids[i]);
+ if(!pinned.length)return autoLayout(kids);
+ var pos={},maxX=0,maxY=0,h;
+ for(i=0;i<pinned.length;i++){var q=hints[pinned[i].id];
+  h={x:+q.x||0,y:+q.y||0,w:+q.w||NW,h:+q.h||NH};pos[pinned[i].id]=h;
+  maxX=Math.max(maxX,h.x+h.w);maxY=Math.max(maxY,h.y+h.h);}
+ var W=Math.max(1020,maxX+64),H=Math.max(560,maxY+58);
+ if(free.length){var sub=autoLayout(free),oy=maxY+58;
+  for(i=0;i<free.length;i++){var p=sub.pos[free[i].id];pos[free[i].id]={x:p.x,y:oy+p.y,w:p.w,h:p.h};}
+  W=Math.max(W,sub.W);H=Math.max(H,oy+sub.H);}
+ return {W:W,H:H,pos:pos};
+}
+function autoLayout(kids){
+ var pos={},i,hub=null;
  for(i=0;i<kids.length;i++)if(kids[i].kind==="system"){hub=kids[i];break;}
  if(hub&&kids.length<=10){
   var W=1080,H=660,cx=W/2,cy=H/2;
@@ -286,9 +307,9 @@ function seedLayout(kids){
   pos[kids[i].id]={x:offx+c*(NW+gx),y:py+r*(NH+gy),w:NW,h:NH};}
  return {W:W,H:H,pos:pos};
 }
-function layoutFor(kids){var k=keyOf();if(!POS[k])POS[k]=seedLayout(kids);
+function layoutFor(kids){var k=keyOf();if(!POS[k])POS[k]=seedLayout(kids,hintsFor(k));
  // make sure every current kid has a slot (model may have changed)
- var lay=POS[k];for(var i=0;i<kids.length;i++)if(!lay.pos[kids[i].id]){var s=seedLayout(kids);POS[k]=s;return s;}return lay;}
+ var lay=POS[k];for(var i=0;i<kids.length;i++)if(!lay.pos[kids[i].id]){var s=seedLayout(kids,hintsFor(k));POS[k]=s;return s;}return lay;}
 
 function draw(animate){
  if(!M)return;
@@ -495,7 +516,8 @@ function applyStrings(){
  set("subhelp",STR.subhelp);set("back",STR.back);set("bnow",STR.now);set("btgt",STR.tgt);
  set("brf",STR.reverify);set("brl",STR.resetLayout);var brl=$("brl");if(brl)brl.title=STR.resetLayoutTitle;
  set("blbl",STR.labels);var bl=$("blbl");if(bl)bl.title=STR.labelsTitle;
- set("pexp",STR.printExport);set("pexpSvg",STR.exportSvg);set("pexpPng",STR.exportPng);set("pexpPrint",STR.print);
+ set("pexp",STR.printExport);set("pexpSvg",STR.exportSvg);set("pexpPng",STR.exportPng);
+ set("pexpLayout",STR.exportLayout);set("pexpPrint",STR.print);
  set("lg-done",STR.legDone);set("lg-prog",STR.legProg);set("lg-next",STR.legNext);
  set("lg-plan",STR.legPlan);set("lg-prob",STR.legProb);set("lg-hint",STR.legHint);
 }
@@ -559,6 +581,17 @@ function triggerDownload(blob,filename){
  a.href=url;a.download=filename;document.body.appendChild(a);a.click();
  document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url);},4000);
 }
+// Every level you have arranged, in the exact shape meta.layout expects — drag the boxes, export,
+// paste into the topology's "layout" and `gen` bakes it in. No storage: the repo is the memory.
+function exportLayout(){
+ var out={},k,id,p;
+ for(k in POS){if(!POS.hasOwnProperty(k))continue;
+  var lvl={},any=false;
+  for(id in POS[k].pos){if(!POS[k].pos.hasOwnProperty(id))continue;
+   p=POS[k].pos[id];lvl[id]={x:Math.round(p.x),y:Math.round(p.y),w:Math.round(p.w),h:Math.round(p.h)};any=true;}
+  if(any)out[k]=lvl;}
+ triggerDownload(new Blob([JSON.stringify({layout:out},null,2)+"\n"],{type:"application/json"}),exportBaseName()+"-layout.json");
+}
 function exportSvg(){
  var s=serializeSvg();if(!s)return;
  triggerDownload(new Blob([s.xml],{type:"image/svg+xml;charset=utf-8"}),exportBaseName()+".svg");
@@ -592,6 +625,7 @@ function wireExport(){
  document.addEventListener("keydown",function(e){if(e.key==="Escape")close();});
  var sv=$("pexpSvg");if(sv)sv.addEventListener("click",function(){close();exportSvg();});
  var pn=$("pexpPng");if(pn)pn.addEventListener("click",function(){close();exportPng();});
+ var lay=$("pexpLayout");if(lay)lay.addEventListener("click",function(){close();exportLayout();});
  var pr=$("pexpPrint");if(pr)pr.addEventListener("click",function(){close();window.print();});
 }
 function moveTip(ev){var st=$("stage").getBoundingClientRect(),t=$("etip");
@@ -615,6 +649,9 @@ function boot(model){
  setSkin((new URLSearchParams(location.search).get("skin"))||window.__C4_SKIN__||(M.meta&&M.meta.skin)||"holo");
  stack=[null];mode="now";POS={};
  draw(true);
+ // Minimal hook for embedders (the Cowork artifact re-verifies through its own MCP bridge and
+ // needs to push the result back in without forking the viewer).
+ window.__C4_API__={model:function(){return M;},redraw:function(){draw(false);},stamp:function(t){$("stamp").textContent=t;}};
 }
 function start(){
  // Pick language from URL/global up-front so header + errors render even if the model never loads.

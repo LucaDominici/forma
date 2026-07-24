@@ -262,7 +262,37 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok verify — WP-A5 closed→done with dated evidence, open untouched, idempotent, gh failure leaves the model intact')
 }
 
-// 9) viewer contract: the parts that are pure logic (no DOM) — arrow-label anchor + i18n parity.
+// 9) WP-A4 layout hints: curated coordinates ride from topology to model, and the viewer's
+// seeder pins them without ever letting an unhinted node land on top of a pinned one.
+{
+  const REPO = FIX('mini'), topo = join(tmp, 'ly-topo.json'), model = join(tmp, 'ly-model.json')
+  let r = run(['init', '--repo', REPO, '--out', topo, '--force']); if (r.status !== 0) die('layout init exit ' + r.status, r)
+  const t = readJson(topo)
+  const layout = { root: { [t.nodes[0].id]: { x: 40, y: 190, w: 190, h: 82 } } }
+  writeFileSync(topo, JSON.stringify({ ...t, layout }, null, 2))
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('layout gen exit ' + r.status, r)
+  if (JSON.stringify(readJson(model).meta.layout) !== JSON.stringify(layout)) die('WP-A4: topology layout did not reach meta.layout verbatim')
+
+  const html = readFileSync(join(HERE, '..', 'lib', 'viewer', 'c4-hologram.html'), 'utf-8')
+  const src = (html.match(/\nvar NW=[\s\S]*?(?=\nfunction layoutFor\()/) || [])[0]
+  if (!src) die('WP-A4: seedLayout/autoLayout not found in the viewer')
+  const seedLayout = new Function(src + '; return seedLayout')()
+  const kids = [{ id: 'pinned', kind: 'container' }, { id: 'free1', kind: 'container' }, { id: 'free2', kind: 'container' }]
+  const hint = { pinned: { x: 40, y: 190, w: 190, h: 82 } }
+  const lay = seedLayout(kids, hint)
+  const p = lay.pos.pinned
+  if (!(p.x === 40 && p.y === 190 && p.w === 190 && p.h === 82)) die('WP-A4: hinted node not placed at its coordinates: ' + JSON.stringify(p))
+  const hits = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+  for (const id of ['free1', 'free2']) {
+    if (!lay.pos[id]) die('WP-A4: unhinted node lost its slot: ' + id)
+    if (hits(p, lay.pos[id])) die(`WP-A4: unhinted ${id} overlaps the pinned node`)
+    if (lay.pos[id].x + lay.pos[id].w > lay.W || lay.pos[id].y + lay.pos[id].h > lay.H) die('WP-A4: viewBox does not cover the auto-placed nodes')
+  }
+  if (JSON.stringify(seedLayout(kids, null)) !== JSON.stringify(seedLayout(kids))) die('WP-A4: no-hint path changed shape')
+  console.log('  ok layout-hints — WP-A4 topology → meta.layout verbatim; pinned coords honoured, unhinted nodes placed clear of them')
+}
+
+// 10) viewer contract: the parts that are pure logic (no DOM) — arrow-label anchor + i18n parity.
 // The viewer is a single HTML file with no test seam, and the repo ships zero dependencies (no
 // jsdom), so the checkable parts are lifted out of our OWN tracked file and evaluated. Input is
 // lib/viewer/c4-hologram.html, never user data.
@@ -295,4 +325,4 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok viewer — edge label anchored on the curve; i18n parity (${Object.keys(S.en).length} keys, en/it)`)
 }
 
-console.log('OK — mini, flat-python, data-noise, attach-doc, enrich, scaffold, status-overlay, verify, viewer all green.')
+console.log('OK — mini, flat-python, data-noise, attach-doc, enrich, scaffold, status-overlay, verify, layout-hints, viewer all green.')
