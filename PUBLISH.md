@@ -48,12 +48,17 @@ npm **trusted publishing (OIDC) cannot perform a package's _first_ publish** —
 side requires the package to already exist before a Trusted Publisher can be attached.
 So bootstrap once, then hand off to the workflow:
 
-1. **Bootstrap (one time, local):** with the repo already **public**, publish the first
-   version manually using a granular npm token:
+1. **Bootstrap (one time, local) — DONE for 0.1.0 (2026-07-24):** publish the first version
+   manually. **Do not use an npm token** — npm's 2025 policy changes broke classic/automation
+   tokens. Log in with the web flow (a passkey / security key works in the browser; no OTP
+   needed) and publish:
    ```sh
-   npm publish --access public   # from a local checkout, authed with a granular token
+   npm login --auth-type=web      # browser -> passkey, then `npm whoami`
+   npm publish                     # completes 2FA via the auth/cli URL npm prints (passkey)
    ```
-   (Alternatively publish a throwaway `0.0.0` placeholder, then continue.)
+   Gotcha: use a clean npm — a corepack-corrupted npm 12 threw `Cannot find module 'sigstore'`;
+   `corepack prepare npm@11.16.0 --activate` fixes it. Run in a real TTY (npm's web-auth wait
+   does not work through non-interactive wrappers).
 2. **Attach the Trusted Publisher:** on npmjs.com → package → Settings → Trusted Publisher,
    point it at this repo's `release.yml` workflow. Requires npm CLI ≥ 11.5.1 (the workflow
    upgrades it).
