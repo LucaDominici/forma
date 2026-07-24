@@ -644,7 +644,8 @@ function boot(model){
  try{document.documentElement.setAttribute("lang",LANG);}catch(e){}
  applyStrings();
  if(!M||!M.nodes||!M.nodes.length){$("err").style.display="block";$("err").textContent=STR.errEmpty;return;}
- if(M.source&&M.source.repo)$("title").textContent="Forma · "+M.source.repo;
+ var ttl=(M.meta&&M.meta.title)||((M.source&&M.source.repo)?"Forma · "+M.source.repo:null);
+ if(ttl){$("title").textContent=ttl;try{document.title=ttl;}catch(e){}}
  stamp("");
  setSkin((new URLSearchParams(location.search).get("skin"))||window.__C4_SKIN__||(M.meta&&M.meta.skin)||"holo");
  stack=[null];mode="now";POS={};
