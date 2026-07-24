@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.3.0",
-  "generatedAt": "2026-07-24T20:16:01.653Z",
+  "generatedAt": "2026-07-24T20:32:27.304Z",
   "source": {
     "repo": "forma",
-    "commit": "d87321485e6c3d18ebbd5207c064df2996eb3f28",
+    "commit": "631d82fc4ea1e1fa064d37e4244edaf7360f0bfe",
     "branch": "fix/qa-r1-r5-attach-gate",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.3.0"
@@ -32,7 +32,6 @@
       "category": "system",
       "status2": "done",
       "completion": 100,
-      "current": "JavaScript (Node ESM, zero-dep)",
       "target": "",
       "func": "Forma — a stack-agnostic C4 architecture explorer plus a deterministic drift check. Walks a codebase into an interactive viewer kept true to the code.",
       "descSource": "curated"
@@ -56,7 +55,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "JavaScript",
       "target": "",
       "func": "CLI entrypoint — dispatches init | gen | check | doc | serve.",
       "descSource": "curated"
@@ -80,7 +78,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "JavaScript",
       "target": "",
       "func": "Engine — the five commands, the C4 JSON-schema contract, and the interactive viewer.",
       "descSource": "curated"
@@ -104,7 +101,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "JavaScript",
       "target": "",
       "func": "Zero-dependency gates — lint and the prepack .fuse_hidden clean-check.",
       "descSource": "curated"
@@ -128,7 +124,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "JavaScript",
       "target": "",
       "func": "Test runner — exercises init→gen→check on the mini fixture.",
       "descSource": "curated"
@@ -149,7 +144,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "Exists: bin/forma.mjs",
       "target": "",
       "func": "forma — present your architecture instead of slides. Thin CLI dispatcher over the lib/ engine. Every subcommand is a plain Node script, so any agent (or a human with no AI) drives the same contract. The engine is model-agnostic.",
       "descSource": "docstring"
@@ -170,7 +164,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "Exists: lib/check.mjs",
       "target": "",
       "func": "check-c4-model.mjs — NON-VACUOUS anti-drift gate for the C4 model. Fails LOUD (never SKIP). Asserts the committed model against INDEPENDENT ground truth in src/, and flags architecture-doc numbers that disagree with code (the \"14 vs 25 tabl",
       "descSource": "docstring"
@@ -191,7 +184,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "Exists: lib/cluster.mjs",
       "target": "",
       "func": "cluster.mjs — shared structural helpers for the C4 model. Pure, no side effects at import. containerOf: climb the parent chain to the enclosing CONTAINER. Leaves may be re-parented under synthetic component nodes (§2), so \"the container\" is",
       "descSource": "docstring"
@@ -212,7 +204,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "Exists: lib/describe.mjs",
       "target": "",
       "func": "describe.mjs — deterministic description resolver (§1a). Pure parsing, NO network. Fills a node's plain-language func from EXISTING docs (curated → docstring → README → arc42), so boxes show MEANING, not a bare filename. A generated string ",
       "descSource": "docstring"
@@ -233,7 +224,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "Exists: lib/doc.mjs",
       "target": "",
       "func": "forma doc — project an arc42 scaffold from c4-model.json. The DETERMINISTIC sections (context/building-block diagrams, container table, ADR index, stack) are filled from the model — so they can never drift from it. The JUDGMENT sections (go",
       "descSource": "docstring"
@@ -254,7 +244,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "Exists: lib/enrich.mjs",
       "target": "",
       "func": "enrich.mjs — OPTIONAL LLM prose enrichment for description holes (§7). OFF by default. Contract: fills ONLY nodes whose deterministic descSource is 'fallback'; never structure, never the gate. Output is cached+committed in c4-model.json wit",
       "descSource": "docstring"
@@ -275,7 +264,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "Exists: lib/gen.mjs",
       "target": "",
       "func": "gen-c4-model.mjs — emit docs/architecture/c4-model.json from real code + curated topology. Leaves are walked LIVE from src/ (always current). Topology/context/runtime-edges are curated. Usage: node gen-c4-model.mjs [--repo <path] [--topolog",
       "descSource": "docstring"
@@ -296,7 +284,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "Exists: lib/init.mjs",
       "target": "",
       "func": "forma init — seed a c4-topology.json from the repo's real source directories. BEST-EFFORT: gives a valid, non-empty starting point (no cold-start). The human/agent then curates groupings, context externals, and plain-language descriptions. ",
       "descSource": "docstring"
@@ -317,7 +304,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "Exists: lib/render.mjs",
       "target": "",
       "func": "render.mjs — pure, side-effect-free renderers for the arc42 projection. Shared by forma doc (writer) and forma check (attach-mode freshness gate) so both render the governed block identically. NO writeFileSync / console / process at module ",
       "descSource": "docstring"
@@ -338,7 +324,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "Exists: lib/serve.mjs",
       "target": "",
       "func": "forma serve — tiny static server for the interactive viewer + model. Local dev only.",
       "descSource": "docstring"
@@ -359,7 +344,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "Exists: scripts/check-clean.mjs",
       "target": "",
       "func": "prepack guard: refuse to publish if a stray/editor artifact lurks in shipped dirs.",
       "descSource": "docstring"
@@ -380,7 +364,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "Exists: scripts/lint.mjs",
       "target": "",
       "func": "Cross-platform syntax check: node --check over bin + lib.",
       "descSource": "docstring"
@@ -401,7 +384,6 @@
       "category": "container",
       "status2": "done",
       "completion": 100,
-      "current": "Exists: test/run.mjs",
       "target": "",
       "func": "Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.",
       "descSource": "docstring"

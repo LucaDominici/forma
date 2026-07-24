@@ -32,6 +32,15 @@ npx forma-arch <command>        # or: npm i -D forma-arch
 
 **Box text comes from your docs.** `gen` fills each box with the module's docstring (Python `"""…"""`, JS/TS leading block), else the directory `README.md`, else a mapped arc42 section — so the explorer shows meaning, not a list of symbols. On a flat directory of many `foo_*` files it also synthesizes a **component** layer, described from its children's docs (`--no-cluster` to disable; `--cluster-min <n>` = leaves before a container is clustered, default 8; `--group-min <n>` = files sharing a prefix before they become a component, default 3).
 
+**Programme state is curated, not guessed.** Code shows what exists, never how far along it is. Drop a `docs/architecture/c4-status.json` (`--status <path>` to move it) and `gen` decorates nodes by id with `status2`, `completion`, `statusWord`, `current`, `target`, `verify`, `issues` — never `func`, which belongs to the docs. `gen` validates the *form* (ids resolve, fields known, enums and issue numbers well-shaped) and never the prose; `forma check` fails if the overlay decorates a node the model no longer has.
+
+```json
+{ "nodes": { "engine": { "status2": "in-progress", "completion": 60, "statusWord": "v2 in progress",
+  "current": "Live on ACA: RAG + citations. Hardening this week.",
+  "target": "Multi-surface substrate with client-ready output.",
+  "verify": { "source": "ADR-040 on main" }, "issues": ["#534"] } } }
+```
+
 **One source of truth.** `forma doc --attach docs/architecture/arc42.md` injects the generated diagrams/tables between `<!-- forma:begin -->` / `<!-- forma:end -->` markers in your existing doc; your prose lives outside them, and `forma check` fails if that block drifts. Attached files are recorded in `source.attachedDocs`, so the gate governs **every** doc you attach — not just the model's `docPath`. Where a repo lacks docs, `forma gen --enrich` can fill the remaining box holes with an LLM (opt-in, cached, never on the deterministic gate; `--enricher anthropic|openai|ollama`).
 
 ## How it fits together

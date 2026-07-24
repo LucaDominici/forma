@@ -186,7 +186,44 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok scaffold — default forma doc unchanged')
 }
 
-// 7) viewer contract: the parts that are pure logic (no DOM) — arrow-label anchor + i18n parity.
+// 7) WP-A1 status overlay: curated programme state decorates nodes by id, form-validated only
+{
+  const repo = join(tmp, 'overlay-repo')
+  cpSync(FIX('mini'), repo, { recursive: true })
+  const topo = join(tmp, 'ov-topo.json'), model = join(tmp, 'ov-model.json')
+  let r = run(['init', '--repo', repo, '--out', topo, '--force']); if (r.status !== 0) die('overlay init exit ' + r.status, r)
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('overlay gen exit ' + r.status, r)
+  const target = readJson(model).nodes.find((n) => n.kind === 'container')
+  const ovFile = join(repo, 'docs/architecture/c4-status.json')
+  mkdirSync(dirname(ovFile), { recursive: true })
+  const overlay = (patch) => writeFileSync(ovFile, JSON.stringify({ nodes: { [target.id]: patch } }, null, 2))
+  // the default path is picked up with no flag at all
+  overlay({ status2: 'in-progress', completion: 60, statusWord: 'v2 in corso', current: 'Live on ACA.', target: 'Multi-surface.', verify: { source: 'ADR-040' }, issues: ['#534'] })
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('overlay gen (decorated) exit ' + r.status, r)
+  const dec = readJson(model).nodes.find((n) => n.id === target.id)
+  if (!(dec.status2 === 'in-progress' && dec.completion === 60 && dec.statusWord === 'v2 in corso' && dec.current === 'Live on ACA.')) die('WP-A1: overlay did not decorate the node: ' + JSON.stringify(dec))
+  if (dec.func !== target.func) die('WP-A1: overlay must not touch func (docs own it)')
+  if (readJson(model).source.statusPath !== 'docs/architecture/c4-status.json') die('WP-A1: statusPath not recorded in the model')
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo]); if (r.status !== 0) die('WP-A1: check should PASS with a valid overlay', r)
+  // `current` is no longer stuffed with "Exists: <path>" — undecorated nodes leave it to func
+  if (readJson(model).nodes.some((n) => /^Exists: /.test(n.current || ''))) die('WP-A1: the "Exists: <path>" filler is back in current')
+  // form errors fail LOUD at gen: forbidden field, bad enum, malformed issue, unknown id
+  for (const [label, patch] of [['func', { func: 'nope' }], ['status2', { status2: 'almost' }],
+                                ['completion', { completion: 140 }], ['issues', { issues: ['bug-12'] }]]) {
+    overlay(patch)
+    r = run(['gen', '--repo', repo, '--topology', topo, '--out', join(tmp, 'ov-bad.json')])
+    if (r.status === 0) die(`WP-A1: an invalid ${label} in the overlay must fail gen`)
+  }
+  writeFileSync(ovFile, JSON.stringify({ nodes: { ghost__node: { statusWord: 'x' } } }, null, 2))
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', join(tmp, 'ov-bad.json')])
+  if (r.status === 0) die('WP-A1: an unknown node id in the overlay must fail gen')
+  // and the gate catches it even without a regen (the model still points at the overlay)
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo])
+  if (r.status === 0) die('WP-A1: check stayed green on an overlay decorating a node that does not exist')
+  console.log('  ok status-overlay — WP-A1 decorates by id, refuses func/bad enums/orphan ids; gate catches a stale overlay')
+}
+
+// 8) viewer contract: the parts that are pure logic (no DOM) — arrow-label anchor + i18n parity.
 // The viewer is a single HTML file with no test seam, and the repo ships zero dependencies (no
 // jsdom), so the checkable parts are lifted out of our OWN tracked file and evaluated. Input is
 // lib/viewer/c4-hologram.html, never user data.
@@ -219,4 +256,4 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok viewer — edge label anchored on the curve; i18n parity (${Object.keys(S.en).length} keys, en/it)`)
 }
 
-console.log('OK — mini, flat-python, data-noise, attach-doc, enrich, scaffold, viewer all green.')
+console.log('OK — mini, flat-python, data-noise, attach-doc, enrich, scaffold, status-overlay, viewer all green.')

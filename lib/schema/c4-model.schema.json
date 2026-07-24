@@ -45,6 +45,10 @@
           "type": "string",
           "description": "The arc42 architecture doc this model derives from."
         },
+        "statusPath": {
+          "type": "string",
+          "description": "Repo-relative curated programme-status overlay applied by `forma gen` (c4-status.json). The gate fails if it decorates a node id the model no longer has."
+        },
         "attachedDocs": {
           "type": "array",
           "items": {
