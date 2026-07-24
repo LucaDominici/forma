@@ -60,8 +60,9 @@ The viewer is a live C4 map, not a static picture:
 - **Click any box** to read its explanation — what it does, current state, target, verification source — at *every* level, from context down to a leaf.
 - **Double-click a box** (or its `[+] DRILL`) to descend into it; **BACK**, the breadcrumb, or `ESC` climb back out.
 - **Drag boxes** to lay out the view your way; **RESET LAYOUT** restores the auto-arrangement.
-- **Hover an arrow** to reveal its relationship label.
-- **PRINT / EXPORT** to SVG or PNG for docs and slides.
+- **Arrow labels** are painted on the diagram while the level stays readable (≤14 arrows) and turn off above that; **LABELS** forces them on or off, and hovering an arrow always reveals its label.
+- **PRINT / EXPORT** to SVG or PNG for docs and slides — exported arrows carry their labels.
+- The breadcrumb names the C4 level you are on (`C4-L1 · CONTEXT` → `C4-L3 · COMPONENTS`).
 
 ## Skins
 

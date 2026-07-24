@@ -64,6 +64,7 @@ svg{width:100%;height:100%;display:block}
 .edge.plan{stroke:var(--edgeplan);stroke-dasharray:3 6;opacity:.6;marker-end:url(#arp)}
 .edge.hot{stroke:var(--cyan);stroke-width:2.6;opacity:1}
 .edgehit{stroke:transparent;stroke-width:14;fill:none;cursor:help}
+.elbl{font-size:8.2px;fill:var(--elbl);letter-spacing:.04em;pointer-events:none}
 @keyframes dash{to{stroke-dashoffset:-24}}
 .nd.pulse rect{animation:pul 2.4s ease-in-out infinite}
 @keyframes pul{0%,100%{filter:drop-shadow(0 0 8px rgba(62,231,255,.5))}50%{filter:drop-shadow(0 0 18px rgba(62,231,255,.95))}}
@@ -132,6 +133,7 @@ html[data-skin="blueprint"] button.on{text-shadow:none}
    <button id="bnow" class="on" type="button"></button>
    <button id="btgt" type="button"></button>
    <button id="brf" type="button"></button>
+   <button id="blbl" type="button"></button>
    <button id="brl" type="button"></button>
    <span class="menuwrap">
     <button id="pexp" type="button" aria-haspopup="true" aria-expanded="false"></button>
@@ -165,9 +167,10 @@ var STRINGS={
  en:{
   subhelp:"click = explain (any level) · double-click or [+] = drill in · drag to move · hover an arrow = label · ESC/BACK",
   back:"← BACK", now:"CURRENT STATE", tgt:"TARGET STATE", reverify:"RE-VERIFY",
+  labels:"LABELS", labelsTitle:"arrow labels (auto-off above 14 arrows)",
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"re-arrange",
   printExport:"PRINT / EXPORT", exportSvg:"Export SVG", exportPng:"Export PNG", print:"Print",
-  legDone:"DONE", legProg:"IN PROGRESS", legNext:"NEXT", legPlan:"PLAN ONLY", legProb:"PROBLEM",
+  legDone:"DONE (proven)", legProg:"IN PROGRESS", legNext:"NEXT", legPlan:"PLAN ONLY", legProb:"PROBLEM",
   legHint:"— animated arrow = active flow · dashed = to build",
   crumbRoot:"Context", crumbLevel:"C4", lvlContext:"CONTEXT",
   lvlNames:{context:"Context",container:"Container",component:"Components",leaf:"Leaves"},
@@ -183,9 +186,10 @@ var STRINGS={
  it:{
   subhelp:"click = spiega (ogni livello) · doppio-click o [+] = entra · trascina per spostare · hover su una freccia = etichetta · ESC/BACK",
   back:"← BACK", now:"STATO ATTUALE", tgt:"STATO FINITO", reverify:"RE-VERIFICA",
+  labels:"ETICHETTE", labelsTitle:"etichette sugli archi (spente sopra i 14 archi)",
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"ridisponi",
   printExport:"STAMPA / ESPORTA", exportSvg:"Esporta SVG", exportPng:"Esporta PNG", print:"Stampa",
-  legDone:"FATTO", legProg:"IN CORSO", legNext:"PROSSIMO", legPlan:"SOLO PROGETTO", legProb:"PROBLEMA",
+  legDone:"FATTO (provato)", legProg:"IN CORSO", legNext:"PROSSIMO", legPlan:"SOLO PROGETTO", legProb:"PROBLEMA",
   legHint:"— freccia animata = flusso attivo · tratteggio = da costruire",
   crumbRoot:"Contesto", crumbLevel:"C4", lvlContext:"CONTESTO",
   lvlNames:{context:"Contesto",container:"Container",component:"Componenti",leaf:"Foglie"},
@@ -207,6 +211,8 @@ function pickLang(model){
  return STRINGS[cand]?cand:"en";
 }
 var CATALOG_THRESHOLD=24; // group of same-category siblings above this collapses to one catalogue node
+var LABEL_AUTO_MAX=14;    // above this many arrows in the current level, fixed labels would knot the view
+var LABELS=null;          // null = auto (by arrow count); true/false = user override for this session
 var SKINS=[["holo","◆ holo"],["blueprint","▭ blueprint"]], SKIN_IDS=["holo","blueprint"];
 var STMAP={done:"done","in-progress":"prog",next:"next",planned:"plan",problem:"prob"};
 var M=null, stack=[null], mode="now", POS={}, drag=null, justDragged=false, CATNODES={};
@@ -261,7 +267,7 @@ function srcOf(n){if(n.verify){if(typeof n.verify==="string")return n.verify;if(
  var ev=(n.evidence||[]).filter(function(e){return e.type==="doc"||e.type==="path";})[0];return ev?ev.ref:((M.meta&&M.meta.verifyMethod)||"");}
 
 function seedLayout(kids){
- var NW=228,NH=106,pos={},i,hub=null;
+ var NW=228,NH=118,pos={},i,hub=null; // NH fits 3 description lines without hitting the [+] DRILL
  for(i=0;i<kids.length;i++)if(kids[i].kind==="system"){hub=kids[i];break;}
  if(hub&&kids.length<=10){
   var W=1080,H=660,cx=W/2,cy=H/2;
@@ -300,11 +306,17 @@ function draw(animate){
  var s='<svg viewBox="0 0 '+lay.W+' '+lay.H+'" preserveAspectRatio="xMidYMid meet" class="'+(mode==="target"?"mode-t":"")+'">'
   +'<defs><marker id="ar" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edge")+'"/></marker>'
   +'<marker id="arp" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edgeplan")+'"/></marker></defs>';
+ // fixed arrow labels: on by default while the level stays readable, else hover-only (the tooltip
+ // is always there). A level with 40 arrows would be unreadable with every label painted at once.
+ var showLbl=(LABELS===null)?(edges.length<=LABEL_AUTO_MAX):LABELS;
+ var blbl=$("blbl");if(blbl)blbl.className=showLbl?"on":"";
  for(var i=0;i<edges.length;i++){
   var a=pos[edges[i].from],b=pos[edges[i].to];if(!a||!b)continue;
-  var d=edgePath(a,b),cl=(edges[i].estatus==="to-build"?"plan":"flow");
-  s+='<path class="edge '+cl+'" data-e="'+i+'" d="'+d+'"/>';
-  s+='<path class="edgehit" data-e="'+i+'" data-label="'+esc(edges[i].label||"")+'" d="'+d+'"/>';
+  var e=edgePath(a,b),cl=(edges[i].estatus==="to-build"?"plan":"flow");
+  s+='<path class="edge '+cl+'" data-e="'+i+'" d="'+e.d+'"/>';
+  s+='<path class="edgehit" data-e="'+i+'" data-label="'+esc(edges[i].label||"")+'" d="'+e.d+'"/>';
+  if(showLbl&&edges[i].label){var lb=String(edges[i].label);if(lb.length>28)lb=lb.slice(0,27)+"…";
+   s+='<text class="elbl" x="'+e.mx+'" y="'+(e.my-4)+'" text-anchor="middle">'+esc(lb)+'</text>';}
  }
  for(var j=0;j<kids.length;j++){
   var n=kids[j],p=pos[n.id];
@@ -319,7 +331,9 @@ function draw(animate){
    +'<text class="kk" x="'+(p.x+13)+'" y="'+(p.y+16)+'">'+esc(n.category||n.kind||"")+'</text>'
    +'<text class="tt" x="'+(p.x+13)+'" y="'+(p.y+33)+'">'+esc(tt)+'</text>'
    +'<text class="pp" x="'+(p.x+p.w-13)+'" y="'+(p.y+16)+'" text-anchor="end">'+esc(badge)+'</text>';
-  var words=String(desc).split(" "),line="",ln=0,cpl=Math.floor((p.w-26)/5.4),MAXL=2;
+  // 3 description lines when the box is tall enough for them (last baseline y+76 must clear the
+  // [+] DRILL hit at h-25); 2 on shorter boxes — layout hints and catalogues may set their own h.
+  var words=String(desc).split(" "),line="",ln=0,cpl=Math.floor((p.w-26)/5.4),MAXL=p.h>=118?3:2;
   for(var k=0;k<words.length&&ln<MAXL;k++){
    if((line+words[k]).length>cpl){s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+ln*12.5)+'">'+esc(line.trim())+'</text>';line=words[k]+" ";ln++;}
    else line+=words[k]+" ";}
@@ -337,18 +351,23 @@ function draw(animate){
  st2.classList.toggle("anim",animate!==false);
  // breadcrumb
  var chain=[],c=pid;while(c){var nn=node(c);chain.unshift(nn);c=nn?nn.parent:null;}
- var lvl=pid?levelName(kids[0]&&kids[0].level):STR.lvlContext;
- var cb=STR.crumbLevel+" · "+lvl.toUpperCase()+"  &nbsp;&nbsp; <a data-d='-1'>"+esc(STR.crumbRoot)+"</a>";
+ var lvlKey=pid?(kids[0]&&kids[0].level):"context";
+ var lvl=pid?levelName(lvlKey):STR.lvlContext;
+ // C4 notation: number the level by its position in the model's own `levels` list (L1 = context).
+ var lvlIdx=((M.levels||[]).indexOf(lvlKey));
+ var cb=(lvlIdx>-1?STR.crumbLevel+"-L"+(lvlIdx+1):STR.crumbLevel)+" · "+lvl.toUpperCase()+"  &nbsp;&nbsp; <a data-d='-1'>"+esc(STR.crumbRoot)+"</a>";
  for(var w=0;w<chain.length;w++)cb+=" &rsaquo; "+(w===chain.length-1?"<b>"+esc(chain[w].name)+"</b>":"<a data-d='"+w+"'>"+esc(chain[w].name)+"</a>");
  $("crumb").innerHTML=cb;
  $("back").disabled=stack.length<2;
  $("detail").style.display="none";
 }
+// Returns the path plus the point ON the curve at t=0.5 — the label anchor. (The quadratic's
+// control point sits at twice the bow, so anchoring a label there would float it off the arrow.)
 function edgePath(a,b){
  var ax=a.x+a.w/2,ay=a.y+a.h/2,bx=b.x+b.w/2,by=b.y+b.h/2,dx=bx-ax,dy=by-ay,L=Math.sqrt(dx*dx+dy*dy)||1;
  var x1=ax+(a.w/2+10)*dx/L,y1=ay+(a.h/2+10)*dy/L,x2=bx-(b.w/2+12)*dx/L,y2=by-(b.h/2+12)*dy/L;
- var mx=(x1+x2)/2+(y2-y1)*.12,my=(y1+y2)/2-(x2-x1)*.12;
- return "M"+x1+","+y1+" Q"+mx+","+my+" "+x2+","+y2;
+ var cx=(x1+x2)/2+(y2-y1)*.12,cy=(y1+y2)/2-(x2-x1)*.12;
+ return {d:"M"+x1+","+y1+" Q"+cx+","+cy+" "+x2+","+y2, mx:(x1+2*cx+x2)/4, my:(y1+2*cy+y2)/4};
 }
 function levelName(l){return (STR.lvlNames&&STR.lvlNames[l])||l||"—";}
 function cssv(v){try{return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||"#2b6e8a";}catch(e){return "#2b6e8a";}}
@@ -457,6 +476,7 @@ function wire(){
  $("bnow").addEventListener("click",function(){mode="now";$("bnow").className="on";$("btgt").className="";draw(false);});
  $("btgt").addEventListener("click",function(){mode="target";$("btgt").className="on";$("bnow").className="";draw(false);});
  $("brf").addEventListener("click",function(){var m=(M&&M.meta)||{};$("stamp").textContent=STR.stampBase+" "+(m.verifiedAt||(M&&M.generatedAt)||(M&&M.source&&M.source.commit)||"—")+" · "+STR.stampMethod+" "+(m.verifyMethod||STR.stampVerify);});
+ $("blbl").addEventListener("click",function(){LABELS=!($("blbl").className==="on");draw(false);});
  $("brl").addEventListener("click",function(){delete POS[keyOf()];draw(true);});
  $("skin").innerHTML=SKINS.map(function(s){return '<option value="'+s[0]+'">'+s[1]+'</option>';}).join("");
  $("skin").addEventListener("change",function(e){setSkin(e.target.value);});
@@ -467,6 +487,7 @@ function applyStrings(){
  function set(id,txt){var e=$(id);if(e)e.textContent=txt;}
  set("subhelp",STR.subhelp);set("back",STR.back);set("bnow",STR.now);set("btgt",STR.tgt);
  set("brf",STR.reverify);set("brl",STR.resetLayout);var brl=$("brl");if(brl)brl.title=STR.resetLayoutTitle;
+ set("blbl",STR.labels);var bl=$("blbl");if(bl)bl.title=STR.labelsTitle;
  set("pexp",STR.printExport);set("pexpSvg",STR.exportSvg);set("pexpPng",STR.exportPng);set("pexpPrint",STR.print);
  set("lg-done",STR.legDone);set("lg-prog",STR.legProg);set("lg-next",STR.legNext);
  set("lg-plan",STR.legPlan);set("lg-prob",STR.legProb);set("lg-hint",STR.legHint);
@@ -486,7 +507,7 @@ function collectSvgCss(){
   if(!rules)continue;
   for(j=0;j<rules.length;j++){var r=rules[j],t=r.cssText||"";
    // keep rules that target svg-internal classes/elements + the color vars on :root/html
-   if(/\.(nd|edge|edgehit|s-done|s-prog|s-next|s-plan|s-prob|mode-t|tt|kk|dd|pp|plus|cat)\b/.test(t)
+   if(/\.(nd|edge|edgehit|elbl|s-done|s-prog|s-next|s-plan|s-prob|mode-t|tt|kk|dd|pp|plus|cat)\b/.test(t)
       ||/(^|[\s,])svg\b/.test(t)||/:root|html\[data-skin/.test(t)){
     // drop animations for a static export (keepdefs stable)
     out.push(t);

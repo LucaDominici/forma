@@ -186,4 +186,37 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok scaffold — default forma doc unchanged')
 }
 
-console.log('OK — mini, flat-python, data-noise, attach-doc, enrich, scaffold all green.')
+// 7) viewer contract: the parts that are pure logic (no DOM) — arrow-label anchor + i18n parity.
+// The viewer is a single HTML file with no test seam, and the repo ships zero dependencies (no
+// jsdom), so the checkable parts are lifted out of our OWN tracked file and evaluated. Input is
+// lib/viewer/c4-hologram.html, never user data.
+{
+  const html = readFileSync(join(HERE, '..', 'lib', 'viewer', 'c4-hologram.html'), 'utf-8')
+  // the label anchor must sit ON the curve: evaluate the shipped edgePath and compare against the
+  // quadratic Bezier at t=0.5, recomputed from the control point in the path string it returned.
+  const fn = (html.match(/\nfunction edgePath\(a,b\)\{[\s\S]*?\n\}/) || [])[0]
+  if (!fn) die('viewer: edgePath not found — did the signature change?')
+  const edgePath = new Function(fn + '; return edgePath')()
+  for (const [a, b] of [[{ x: 0, y: 0, w: 228, h: 118 }, { x: 600, y: 400, w: 228, h: 118 }],
+                        [{ x: 500, y: 40, w: 228, h: 118 }, { x: 60, y: 500, w: 228, h: 118 }]]) {
+    const r = edgePath(a, b)
+    const m = String(r.d).match(/^M([-\d.]+),([-\d.]+) Q([-\d.]+),([-\d.]+) ([-\d.]+),([-\d.]+)$/)
+    if (!m) die('viewer: unexpected edge path shape ' + r.d)
+    const [x1, y1, cx, cy, x2, y2] = m.slice(1).map(Number)
+    const at = (p0, p1, p2) => 0.25 * p0 + 0.5 * p1 + 0.25 * p2 // Bezier at t=0.5
+    if (Math.abs(r.mx - at(x1, cx, x2)) > 1e-9 || Math.abs(r.my - at(y1, cy, y2)) > 1e-9) {
+      die(`viewer: label anchor (${r.mx},${r.my}) is off the curve (want ${at(x1, cx, x2)},${at(y1, cy, y2)})`)
+    }
+    if (Math.abs(r.mx - cx) < 1e-9 && Math.abs(r.my - cy) < 1e-9) die('viewer: label anchored on the control point, not the curve')
+  }
+  // every UI string must exist in BOTH locales (repo rule: en is default, it must keep up)
+  const lit = (html.match(/\nvar STRINGS=\{[\s\S]*?\n\};/) || [])[0]
+  if (!lit) die('viewer: STRINGS literal not found')
+  const S = new Function(lit.replace(/;$/, '') + '; return STRINGS')()
+  const missing = Object.keys(S.en).filter((k) => !(k in S.it))
+  if (missing.length) die('viewer i18n: keys missing from `it`: ' + missing.join(', '))
+  if (!/labels:/.test(lit)) die('viewer i18n: the LABELS toggle string is not in STRINGS')
+  console.log(`  ok viewer — edge label anchored on the curve; i18n parity (${Object.keys(S.en).length} keys, en/it)`)
+}
+
+console.log('OK — mini, flat-python, data-noise, attach-doc, enrich, scaffold, viewer all green.')
