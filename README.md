@@ -25,10 +25,14 @@ npx forma-arch <command>        # or: npm i -D forma-arch
 | Command | What it does |
 |---|---|
 | `forma init` | Seed `docs/architecture/c4-topology.json` from your source dirs (best-effort; then curate) |
-| `forma gen` | Walk `src/` leaves + derive container edges from cross-references to exported symbol names → `c4-model.json` |
+| `forma gen` | Walk `src/` leaves + derive container edges from cross-references; fill box text from docstrings/READMEs; group flat containers into components → `c4-model.json` |
 | `forma check` | Deterministic drift check — **fails if the model no longer matches the code** |
-| `forma doc` | Project the arc42 scaffold (`ARCHITECTURE.scaffold.md`) from the model |
+| `forma doc` | Project the arc42 scaffold (`ARCHITECTURE.scaffold.md`), or `--attach <file>` to inject a governed block into an existing doc |
 | `forma serve` | Open the live explorer at `http://localhost:4173` |
+
+**Box text comes from your docs.** `gen` fills each box with the module's docstring (Python `"""…"""`, JS/TS leading block), else the directory `README.md`, else a mapped arc42 section — so the explorer shows meaning, not a list of symbols. On a flat directory of many `foo_*` files it also synthesizes a **component** layer (`--no-cluster` to disable).
+
+**One source of truth.** `forma doc --attach docs/architecture/arc42.md` injects the generated diagrams/tables between `<!-- forma:begin -->` / `<!-- forma:end -->` markers in your existing doc; your prose lives outside them, and `forma check` fails if that block drifts. Where a repo lacks docs, `forma gen --enrich` can fill the remaining box holes with an LLM (opt-in, cached, never on the deterministic gate; `--enricher anthropic|openai|ollama`).
 
 ## How it fits together
 

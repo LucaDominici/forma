@@ -203,6 +203,22 @@
           "func": {
             "type": "string",
             "description": "Plain-language 'what it does' for non-developers."
+          },
+          "descSource": {
+            "type": "string",
+            "enum": [
+              "curated",
+              "docstring",
+              "readme",
+              "arc42",
+              "fallback",
+              "llm"
+            ],
+            "description": "Provenance of func: how the description was resolved (§1a chain; 'llm' = optional enrichment)."
+          },
+          "descInputHash": {
+            "type": "string",
+            "description": "sha256 of the inputs that produced an LLM-enriched func; check recomputes it to flag stale prose."
           }
         }
       }

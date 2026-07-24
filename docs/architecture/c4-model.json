@@ -1,18 +1,18 @@
 {
-  "schemaVersion": "1.1.0",
-  "generatedAt": "2026-07-22T21:01:42.797Z",
+  "schemaVersion": "1.2.0",
+  "generatedAt": "2026-07-24T18:06:11.775Z",
   "source": {
     "repo": "forma",
-    "commit": "7607344a37ed35eea2dc3c0c63af5835692ad8d2",
-    "branch": "main",
+    "commit": "ec91e84a4a1ec02cb492f9b3f56424059102f193",
+    "branch": "feat/forma-doc-ingest-components",
     "docPath": "docs/architecture/ARCHITECTURE.md",
-    "generator": "gen-c4-model@1.1.0"
+    "generator": "gen-c4-model@1.2.0"
   },
   "meta": {
     "repo": "forma",
     "stack": "JavaScript (Node ESM, zero-dependency)",
     "seededBy": "forma init (curated)",
-    "verifiedAt": "2026-07-22T21:01:42.798Z",
+    "verifiedAt": "2026-07-24T18:06:11.775Z",
     "verifyMethod": "code+topology (gh re-verify optional)"
   },
   "levels": [
@@ -35,7 +35,8 @@
       "completion": 100,
       "current": "JavaScript (Node ESM, zero-dep)",
       "target": "",
-      "func": "Forma — a stack-agnostic C4 architecture explorer plus a deterministic drift check. Walks a codebase into an interactive viewer kept true to the code."
+      "func": "Forma — a stack-agnostic C4 architecture explorer plus a deterministic drift check. Walks a codebase into an interactive viewer kept true to the code.",
+      "descSource": "curated"
     },
     {
       "status": "current",
@@ -58,7 +59,8 @@
       "completion": 100,
       "current": "JavaScript",
       "target": "",
-      "func": "CLI entrypoint — dispatches init | gen | check | doc | serve."
+      "func": "CLI entrypoint — dispatches init | gen | check | doc | serve.",
+      "descSource": "curated"
     },
     {
       "status": "current",
@@ -73,7 +75,7 @@
         {
           "type": "glob",
           "ref": "lib",
-          "count": 5
+          "count": 9
         }
       ],
       "category": "container",
@@ -81,7 +83,8 @@
       "completion": 100,
       "current": "JavaScript",
       "target": "",
-      "func": "Engine — the five commands, the C4 JSON-schema contract, and the interactive viewer."
+      "func": "Engine — the five commands, the C4 JSON-schema contract, and the interactive viewer.",
+      "descSource": "curated"
     },
     {
       "status": "current",
@@ -104,7 +107,8 @@
       "completion": 100,
       "current": "JavaScript",
       "target": "",
-      "func": "Zero-dependency gates — lint and the prepack .fuse_hidden clean-check."
+      "func": "Zero-dependency gates — lint and the prepack .fuse_hidden clean-check.",
+      "descSource": "curated"
     },
     {
       "status": "current",
@@ -127,7 +131,8 @@
       "completion": 100,
       "current": "JavaScript",
       "target": "",
-      "func": "Test runner — exercises init→gen→check on the mini fixture."
+      "func": "Test runner — exercises init→gen→check on the mini fixture.",
+      "descSource": "curated"
     },
     {
       "id": "cli__forma_mjs",
@@ -147,7 +152,8 @@
       "completion": 100,
       "current": "Exists: bin/forma.mjs",
       "target": "",
-      "func": "Component of module cli."
+      "func": "forma — present your architecture instead of slides. Thin CLI dispatcher over the lib/ engine. Every subcommand is a plain Node script, so any agent (or a human with no AI) drives the same contract. The engine is model-agnostic.",
+      "descSource": "docstring"
     },
     {
       "id": "lib__check_mjs",
@@ -167,7 +173,50 @@
       "completion": 100,
       "current": "Exists: lib/check.mjs",
       "target": "",
-      "func": "Component of module lib."
+      "func": "check-c4-model.mjs — NON-VACUOUS anti-drift gate for the C4 model. Fails LOUD (never SKIP). Asserts the committed model against INDEPENDENT ground truth in src/, and flags architecture-doc numbers that disagree with code (the \"14 vs 25 tabl",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__cluster_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "cluster",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/cluster.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "Exists: lib/cluster.mjs",
+      "target": "",
+      "func": "cluster.mjs — shared structural helpers for the C4 model. Pure, no side effects at import. containerOf: climb the parent chain to the enclosing CONTAINER. Leaves may be re-parented under synthetic component nodes (§2), so \"the container\" is",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__describe_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "describe",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/describe.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "Exists: lib/describe.mjs",
+      "target": "",
+      "func": "describe.mjs — deterministic description resolver (§1a). Pure parsing, NO network. Fills a node's plain-language func from EXISTING docs (curated → docstring → README → arc42), so boxes show MEANING, not a bare filename. A generated string ",
+      "descSource": "docstring"
     },
     {
       "id": "lib__doc_mjs",
@@ -187,7 +236,29 @@
       "completion": 100,
       "current": "Exists: lib/doc.mjs",
       "target": "",
-      "func": "Component of module lib."
+      "func": "forma doc — project an arc42 scaffold from c4-model.json. The DETERMINISTIC sections (context/building-block diagrams, container table, ADR index, stack) are filled from the model — so they can never drift from it. The JUDGMENT sections (go",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__enrich_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "enrich",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/enrich.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "Exists: lib/enrich.mjs",
+      "target": "",
+      "func": "enrich.mjs — OPTIONAL LLM prose enrichment for description holes (§7). OFF by default. Contract: fills ONLY nodes whose deterministic descSource is 'fallback'; never structure, never the gate. Output is cached+committed in c4-model.json wit",
+      "descSource": "docstring"
     },
     {
       "id": "lib__gen_mjs",
@@ -207,7 +278,8 @@
       "completion": 100,
       "current": "Exists: lib/gen.mjs",
       "target": "",
-      "func": "Component of module lib."
+      "func": "gen-c4-model.mjs — emit docs/architecture/c4-model.json from real code + curated topology. Leaves are walked LIVE from src/ (always current). Topology/context/runtime-edges are curated. Usage: node gen-c4-model.mjs [--repo <path] [--topolog",
+      "descSource": "docstring"
     },
     {
       "id": "lib__init_mjs",
@@ -227,7 +299,29 @@
       "completion": 100,
       "current": "Exists: lib/init.mjs",
       "target": "",
-      "func": "Component of module lib."
+      "func": "forma init — seed a c4-topology.json from the repo's real source directories. BEST-EFFORT: gives a valid, non-empty starting point (no cold-start). The human/agent then curates groupings, context externals, and plain-language descriptions. ",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__render_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "render",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/render.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "current": "Exists: lib/render.mjs",
+      "target": "",
+      "func": "render.mjs — pure, side-effect-free renderers for the arc42 projection. Shared by forma doc (writer) and forma check (attach-mode freshness gate) so both render the governed block identically. NO writeFileSync / console / process at module ",
+      "descSource": "docstring"
     },
     {
       "id": "lib__serve_mjs",
@@ -247,7 +341,8 @@
       "completion": 100,
       "current": "Exists: lib/serve.mjs",
       "target": "",
-      "func": "Component of module lib."
+      "func": "forma serve — tiny static server for the interactive viewer + model. Local dev only.",
+      "descSource": "docstring"
     },
     {
       "id": "scripts__check_clean_mjs",
@@ -267,7 +362,8 @@
       "completion": 100,
       "current": "Exists: scripts/check-clean.mjs",
       "target": "",
-      "func": "Component of module scripts."
+      "func": "prepack guard: refuse to publish if a stray/editor artifact lurks in shipped dirs.",
+      "descSource": "docstring"
     },
     {
       "id": "scripts__lint_mjs",
@@ -287,7 +383,8 @@
       "completion": 100,
       "current": "Exists: scripts/lint.mjs",
       "target": "",
-      "func": "Component of module scripts."
+      "func": "Cross-platform syntax check: node --check over bin + lib.",
+      "descSource": "docstring"
     },
     {
       "id": "test__run_mjs",
@@ -307,7 +404,8 @@
       "completion": 100,
       "current": "Exists: test/run.mjs",
       "target": "",
-      "func": "Component of module test."
+      "func": "Fixture test: init → gen → check on a tiny repo. Deterministic, no deps.",
+      "descSource": "docstring"
     }
   ],
   "edges": [
