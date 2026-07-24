@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.3.0",
-  "generatedAt": "2026-07-24T20:41:38.805Z",
+  "generatedAt": "2026-07-24T21:10:53.636Z",
   "source": {
     "repo": "forma",
-    "commit": "4dc1a5382fd12ba5ca6f7aab8cbcc7264d262594",
+    "commit": "81c28473f21d85455bde9438a6f2ed34ac623860",
     "branch": "fix/qa-r1-r5-attach-gate",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.3.0"
@@ -44,7 +44,7 @@
       "parent": "forma",
       "name": "cli",
       "tech": "JavaScript",
-      "description": "CLI entrypoint — dispatches init | gen | check | doc | serve.",
+      "description": "CLI entrypoint — dispatches init | gen | check | doc | serve | verify.",
       "evidence": [
         {
           "type": "glob",
@@ -56,7 +56,7 @@
       "status2": "done",
       "completion": 100,
       "target": "",
-      "func": "CLI entrypoint — dispatches init | gen | check | doc | serve.",
+      "func": "CLI entrypoint — dispatches init | gen | check | doc | serve | verify.",
       "descSource": "curated"
     },
     {
@@ -67,7 +67,7 @@
       "parent": "forma",
       "name": "lib",
       "tech": "JavaScript",
-      "description": "Engine — the five commands, the C4 JSON-schema contract, and the interactive viewer.",
+      "description": "Engine — the six commands, the C4 JSON-schema contract, and the interactive viewer.",
       "evidence": [
         {
           "type": "glob",
@@ -79,7 +79,7 @@
       "status2": "done",
       "completion": 100,
       "target": "",
-      "func": "Engine — the five commands, the C4 JSON-schema contract, and the interactive viewer.",
+      "func": "Engine — the six commands, the C4 JSON-schema contract, and the interactive viewer.",
       "descSource": "curated"
     },
     {
@@ -113,7 +113,7 @@
       "parent": "forma",
       "name": "test",
       "tech": "JavaScript",
-      "description": "Test runner — exercises init→gen→check on the mini fixture.",
+      "description": "Test runner — exercises init→gen→check across the fixtures, plus a gh stub for verify.",
       "evidence": [
         {
           "type": "glob",
@@ -125,7 +125,7 @@
       "status2": "done",
       "completion": 100,
       "target": "",
-      "func": "Test runner — exercises init→gen→check on the mini fixture.",
+      "func": "Test runner — exercises init→gen→check across the fixtures, plus a gh stub for verify.",
       "descSource": "curated"
     },
     {
