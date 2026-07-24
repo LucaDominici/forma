@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.3.0",
-  "generatedAt": "2026-07-24T20:38:45.914Z",
+  "generatedAt": "2026-07-24T20:41:38.805Z",
   "source": {
     "repo": "forma",
-    "commit": "1665c26a03b146730356e8fae026a609575236df",
+    "commit": "4dc1a5382fd12ba5ca6f7aab8cbcc7264d262594",
     "branch": "fix/qa-r1-r5-attach-gate",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.3.0"

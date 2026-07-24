@@ -44,7 +44,14 @@ npx forma-arch <command>        # or: npm i -D forma-arch
 
 **Curated state, verified against reality.** `forma verify` asks your `gh` CLI for the state of every issue the model references (`--gh-repo owner/repo`, or `meta.ghRepo` in the topology), marks the nodes whose issues are closed as done, and prefixes their `current` with dated evidence. It touches state, never structure, and re-running it never stacks the evidence. It is opt-in and separate on purpose: `gen` and `check` never open a socket. In the served viewer, **RE-VERIFY** re-reads the model without losing your level, layout or mode.
 
-**One source of truth.** `forma doc --attach docs/architecture/arc42.md` injects the generated diagrams/tables between `<!-- forma:begin -->` / `<!-- forma:end -->` markers in your existing doc; your prose lives outside them, and `forma check` fails if that block drifts. Attached files are recorded in `source.attachedDocs`, so the gate governs **every** doc you attach — not just the model's `docPath`. Where a repo lacks docs, `forma gen --enrich` can fill the remaining box holes with an LLM (opt-in, cached, never on the deterministic gate; `--enricher anthropic|openai|ollama`).
+**One source of truth.** `forma doc --attach docs/architecture/arc42.md` injects the generated diagrams/tables between `<!-- forma:begin -->` / `<!-- forma:end -->` markers in your existing doc; your prose lives outside them, and `forma check` fails if that block drifts. Attached files are recorded in `source.attachedDocs`, so the gate governs **every** doc you attach — not just the model's `docPath`. Where a repo lacks docs, `forma gen --enrich` can fill the remaining box holes with an LLM — opt-in, cached, never on the deterministic gate:
+
+| `--enricher` | Use it when | Network |
+|---|---|---|
+| `agent` | **An agent is driving forma.** Writes `enrich-plan.json` with the holes; the agent writes the sentences (reading the sources if it wants) and `gen --enrich-apply <file>` applies them with the same cache and provenance. | none |
+| `anthropic` (default) | Headless / CI, with `ANTHROPIC_API_KEY`. | REST |
+| `openai` | Same, with `OPENAI_API_KEY`. | REST |
+| `ollama` | Sensitive repos: a local model, nothing leaves the machine. | localhost |
 
 ## How it fits together
 

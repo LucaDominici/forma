@@ -262,7 +262,46 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok verify — WP-A5 closed→done with dated evidence, open untouched, idempotent, gh failure leaves the model intact')
 }
 
-// 9) WP-A4 layout hints: curated coordinates ride from topology to model, and the viewer's
+// 9) WP-A6 enricher `agent`: no network, no API key — the agent driving forma writes the prose
+{
+  // mini has both: undocumented leaves (real holes, with a source path to offer the agent) and
+  // leaves carrying a leading comment (descSource docstring — must be refused by --enrich-apply)
+  const REPO = FIX('mini'), topo = join(tmp, 'ag-topo.json'), model = join(tmp, 'ag-model.json')
+  run(['init', '--repo', REPO, '--out', topo, '--force'])
+  let r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model, '--enrich', '--enricher', 'agent'])
+  if (r.status !== 0) die('WP-A6: agent plan gen exit ' + r.status, r)
+  const plan = readJson(join(tmp, 'enrich-plan.json'))
+  if (!plan.entries.length) die('WP-A6: the plan has no entries (fixture has no holes?)')
+  // holes are leaves and components — containers are described by the topology, not by an enricher
+  const holeIds = readJson(model).nodes.filter((n) => n.descSource === 'fallback' && (n.kind === 'leaf' || n.kind === 'component')).map((n) => n.id).sort()
+  if (JSON.stringify(plan.entries.map((e) => e.id).sort()) !== JSON.stringify(holeIds)) die('WP-A6: plan entries do not match the model holes')
+  if (!plan.entries.every((e) => e.prompt && e.descInputHash)) die('WP-A6: plan entry missing prompt/descInputHash')
+  if (!plan.entries.some((e) => /Read the file at .+ if you need certainty\./.test(e.prompt))) die('WP-A6: the agent prompt never offers the source path (that is the point of agent mode)')
+  // the model is still written with its deterministic fallbacks — the plan is additive
+  if (!holeIds.length) die('WP-A6: gen must still write the model when planning')
+
+  const fill = join(tmp, 'enrich-fill.json')
+  writeFileSync(fill, JSON.stringify({ fills: [{ id: holeIds[0], func: 'Written by the agent, not a REST call.' }] }))
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model, '--enrich-apply', fill])
+  if (r.status !== 0) die('WP-A6: --enrich-apply exit ' + r.status, r)
+  let applied = readJson(model).nodes.find((n) => n.id === holeIds[0])
+  if (!(applied.func === 'Written by the agent, not a REST call.' && applied.descSource === 'llm' && applied.descInputHash)) die('WP-A6: fill not applied with provenance: ' + JSON.stringify(applied))
+  // sticky across a plain regen, like any other enrichment
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('WP-A6 regen exit ' + r.status, r)
+  if (readJson(model).nodes.find((n) => n.id === holeIds[0]).descSource !== 'llm') die('WP-A6: applied prose lost on regen')
+  r = run(['check', '--repo', REPO, '--model', model, '--topology', topo]); if (r.status !== 0) die('WP-A6: check after agent enrichment', r)
+  // a fill aimed at a documented node is an error, never a silent overwrite
+  const documented = readJson(model).nodes.find((n) => n.descSource === 'docstring')
+  writeFileSync(fill, JSON.stringify({ fills: [{ id: documented.id, func: 'should be refused' }] }))
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', join(tmp, 'ag-bad.json'), '--enrich-apply', fill])
+  if (r.status === 0) die('WP-A6: --enrich-apply overwrote a docstring-described node')
+  writeFileSync(fill, JSON.stringify({ fills: [{ id: 'no__such__node', func: 'x' }] }))
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', join(tmp, 'ag-bad.json'), '--enrich-apply', fill])
+  if (r.status === 0) die('WP-A6: --enrich-apply accepted an unknown node id')
+  console.log(`  ok enrich-agent — WP-A6 plan (${plan.entries.length} holes) → fill → apply, offline; refuses documented nodes and unknown ids`)
+}
+
+// 10) WP-A4 layout hints: curated coordinates ride from topology to model, and the viewer's
 // seeder pins them without ever letting an unhinted node land on top of a pinned one.
 {
   const REPO = FIX('mini'), topo = join(tmp, 'ly-topo.json'), model = join(tmp, 'ly-model.json')
