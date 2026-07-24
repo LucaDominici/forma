@@ -1,0 +1,42 @@
+name: Pages
+# Deploy forma's self-C4 viewer (lib/viewer + committed docs/architecture model) to GitHub Pages
+# on every push to main. The viewer fetches ./c4-model.json (relative), so it works under the
+# /forma/ project subpath. Drift-check (forma check) is a local responsibility; this deploys the
+# committed model as-is. Runner: github-hosted (OIDC deploy-pages needs a hosted runner).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - id: build
+        name: Assemble site (viewer + committed model)
+        run: |
+          mkdir -p _site
+          cp lib/viewer/c4-hologram.html _site/index.html
+          cp docs/architecture/c4-model.json _site/c4-model.json
+          echo "path=_site" >> "$GITHUB_OUTPUT"
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+        with:
+          path: ${{ steps.build.outputs.path }}
+      - id: deployment
+        name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128  # v5.0.0
