@@ -355,17 +355,12 @@ function draw(animate){
    +'<text class="kk" x="'+(p.x+13)+'" y="'+(p.y+16)+'">'+esc(n.category||n.kind||"")+'</text>'
    +'<text class="tt" x="'+(p.x+13)+'" y="'+(p.y+33)+'">'+esc(tt)+'</text>'
    +'<text class="pp" x="'+(p.x+p.w-13)+'" y="'+(p.y+16)+'" text-anchor="end">'+esc(badge)+'</text>';
-  // Wrap everything, then keep as many lines as the box can hold. The last kept line carries the
-  // ellipsis instead of spending a whole line on it — on a short curated box that lone "…" was
-  // half the visible text. MAXL comes from the geometry: the deepest baseline (51+(MAXL-1)*12.5)
-  // must clear the footer control ([+] DRILL / [≡] roster at h-25), whatever height a hint sets.
+  // Description lines: how many fit comes from the geometry (text starts at y+51, 12.5px apart,
+  // and must clear the footer control at h-25), so a curated layout hint with short boxes cannot
+  // print through [+] DRILL. wrapDesc is pure and clamps every line to the box width.
   var floorY=p.h-((dr||isCat)?25:6),MAXL=Math.min(3,Math.floor((floorY-51)/12.5)+1);
-  var words=String(desc).split(" "),cpl=Math.floor((p.w-26)/5.4),all=[],line="",k;
-  for(k=0;k<words.length;k++){if(line&&(line+words[k]).length>cpl){all.push(line.trim());line="";}line+=words[k]+" ";}
-  if(line.trim())all.push(line.trim());
-  var lines2=MAXL>0?all.slice(0,MAXL):[];
-  if(all.length>lines2.length&&lines2.length){var lst=lines2[lines2.length-1];lines2[lines2.length-1]=(lst.length>cpl-1?lst.slice(0,cpl-1):lst)+"…";}
-  for(k=0;k<lines2.length;k++)s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+k*12.5)+'">'+esc(lines2[k])+'</text>';
+  var dlines=wrapDesc(desc,Math.floor((p.w-26)/5.4),MAXL);
+  for(var q=0;q<dlines.length;q++)s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+q*12.5)+'">'+esc(dlines[q])+'</text>';
   if(dr)s+='<rect class="drillhit" data-drill="1" x="'+(p.x+p.w-96)+'" y="'+(p.y+p.h-25)+'" width="88" height="20" rx="5"/>'
    +'<text class="plus" x="'+(p.x+p.w-13)+'" y="'+(p.y+p.h-9)+'" text-anchor="end">[+] DRILL</text>';
   else if(isCat)s+='<text class="plus" x="'+(p.x+p.w-13)+'" y="'+(p.y+p.h-9)+'" text-anchor="end">[≡] '+esc(String(n.count))+'</text>';
@@ -387,6 +382,20 @@ function draw(animate){
  $("crumb").innerHTML=cb;
  $("back").disabled=stack.length<2;
  $("detail").style.display="none";
+}
+// Greedy word wrap into at most `max` lines of `cpl` characters. Every returned line is clamped to
+// cpl — an unbreakable token (a long class name, a URL) would otherwise paint outside the box, and
+// there is no clip-path on the node. The last line carries the ellipsis when text was dropped,
+// rather than spending a whole line on it (on a short curated box that was half the visible text).
+function wrapDesc(desc,cpl,max){
+ if(max<1||cpl<2)return [];
+ var words=String(desc==null?"":desc).split(" "),all=[],line="",i;
+ for(i=0;i<words.length;i++){if(line&&(line+words[i]).length>cpl){all.push(line.trim());line="";}line+=words[i]+" ";}
+ if(line.trim())all.push(line.trim());
+ var out=all.slice(0,max),dropped=all.length>out.length;
+ if(dropped&&out.length)out[out.length-1]=out[out.length-1]+"…";
+ for(i=0;i<out.length;i++)if(out[i].length>cpl)out[i]=out[i].slice(0,cpl-1)+"…";
+ return out;
 }
 // Returns the path plus the point ON the curve at t=0.5 — the label anchor. (The quadratic's
 // control point sits at twice the bow, so anchoring a label there would float it off the arrow.)

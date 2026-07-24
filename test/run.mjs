@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -131,6 +131,14 @@ const diffPaths = (a, b, at = '') => {
   if (!/NOTES\.md/.test((r.stdout || '') + (r.stderr || ''))) die('R1: check failed but did not name the offending file')
   r = run(['doc', '--repo', repo, '--model', model, '--attach', other]); if (r.status !== 0) die('R1: re-attach exit ' + r.status, r)
   r = run(['check', '--repo', repo, '--model', model, '--topology', topo]); if (r.status !== 0) die('R1: check should PASS after re-attach', r)
+  // deleting BOTH markers must not un-govern the doc: registry membership proves a block was
+  // injected, and the now-frozen text keeps shipping to readers as if it were still generated
+  writeFileSync(other, readFileSync(other, 'utf-8').replace(/<!-- forma:(begin[^>]*|end) -->/g, ''))
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo])
+  if (r.status === 0) die('R1: check went green after the forma markers were deleted from a registered doc')
+  rmSync(other)
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo])
+  if (r.status === 0) die('R1: check went green after a registered doc was deleted')
   console.log('  ok attach-doc — §1b inject preserves prose; R1 gate governs attached docs ≠ docPath, survives regen')
 }
 
@@ -221,6 +229,33 @@ const diffPaths = (a, b, at = '') => {
   r = run(['check', '--repo', repo, '--model', model, '--topology', topo])
   if (r.status === 0) die('WP-A1: check stayed green on an overlay decorating a node that does not exist')
   console.log('  ok status-overlay — WP-A1 decorates by id, refuses func/bad enums/orphan ids; gate catches a stale overlay')
+}
+
+// 7b) a synthesized component composes its box from its CHILDREN's docs, so their prose is one of
+// its description inputs: a child gaining a docstring must mark the component's cached LLM text
+// stale, or the box freezes with no way back (regen restores it, --enrich sees no hole).
+{
+  const repo = join(tmp, 'comp-hash')
+  cpSync(FIX('flat-python'), repo, { recursive: true })
+  const topo = join(tmp, 'ch-topo.json'), model = join(tmp, 'ch-model.json')
+  run(['init', '--repo', repo, '--out', topo, '--force'])
+  let r = run(['gen', '--repo', repo, '--topology', topo, '--out', model, '--enrich', '--enricher', 'echo'])
+  if (r.status !== 0) die('comp-hash enrich exit ' + r.status, r)
+  const comp = readJson(model).nodes.find((n) => n.kind === 'component' && n.name === 'user')
+  if (!comp || comp.descSource !== 'llm') die('comp-hash precondition: the component was not enriched')
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo])
+  if (/enrichment stale/.test(r.stderr || '')) die('comp-hash: freshly enriched component reported stale')
+  // a child's documentation changes → the component's composed description would change with it
+  const kid = join(repo, 'src/services/user_service.py')
+  const q3 = '"'.repeat(3)
+  writeFileSync(kid, q3 + 'Rewritten: registers, authenticates and deletes user accounts.' + q3 + '\n')
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('comp-hash regen exit ' + r.status, r)
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo])
+  if (r.status !== 0) die('comp-hash: check must stay green (staleness is advisory)', r)
+  if (!new RegExp('enrichment stale for ' + comp.id).test(r.stderr || '')) die('comp-hash: a child gaining docs left the component prose frozen and unflagged')
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model, '--enrich', '--enricher', 'echo'])
+  if (!/filled 1\/1/.test(r.stdout || '')) die('comp-hash: --enrich could not re-admit the component as a hole: ' + (r.stdout || ''))
+  console.log('  ok component-hash — a child gaining documentation marks the component prose stale and refillable')
 }
 
 // 8) WP-A5 `forma verify`: live issue state, offline in the test via a gh stub
@@ -356,6 +391,25 @@ const diffPaths = (a, b, at = '') => {
     }
     if (Math.abs(r.mx - cx) < 1e-9 && Math.abs(r.my - cy) < 1e-9) die('viewer: label anchored on the control point, not the curve')
   }
+  // wrapDesc must never return a line wider than the box: an unbreakable token (long class name,
+  // URL) would paint outside the rounded rect, and there is no clip-path on the node.
+  const wfn = (html.match(/\nfunction wrapDesc\(desc,cpl,max\)\{[\s\S]*?\n\}/) || [])[0]
+  if (!wfn) die('viewer: wrapDesc not found')
+  const wrapDesc = new Function(wfn + '; return wrapDesc')()
+  const cpl = 37
+  for (const [desc, max, why] of [
+    ['Configures EmailNotificationDispatcherFactoryProvider.', 3, 'long token on a line that fits'],
+    ['a '.repeat(80), 2, 'plain overflow'],
+    ['short one', 3, 'no truncation'],
+    ['https://example.com/a/very/long/path/that/never/breaks/at/all', 1, 'unbreakable url'],
+  ]) {
+    const out = wrapDesc(desc, cpl, max)
+    if (out.length > max) die(`viewer wrapDesc: ${why} → ${out.length} lines, max ${max}`)
+    for (const l of out) if (l.length > cpl) die(`viewer wrapDesc: ${why} → line of ${l.length} chars exceeds ${cpl}: ${JSON.stringify(l)}`)
+  }
+  if (wrapDesc('anything at all', 37, 0).length) die('viewer wrapDesc: a box with no room must render no description')
+  if (wrapDesc('short one', 37, 3).join('|') !== 'short one') die('viewer wrapDesc: text that fits must not be altered')
+
   // every UI string must exist in BOTH locales (repo rule: en is default, it must keep up)
   const lit = (html.match(/\nvar STRINGS=\{[\s\S]*?\n\};/) || [])[0]
   if (!lit) die('viewer: STRINGS literal not found')
@@ -366,4 +420,4 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok viewer — edge label anchored on the curve; i18n parity (${Object.keys(S.en).length} keys, en/it)`)
 }
 
-console.log('OK — mini, flat-python, data-noise, attach-doc, enrich, scaffold, status-overlay, verify, layout-hints, viewer all green.')
+console.log('OK — mini, flat-python, data-noise, attach-doc, enrich, scaffold, status-overlay, component-hash, verify, layout-hints, viewer all green.')
