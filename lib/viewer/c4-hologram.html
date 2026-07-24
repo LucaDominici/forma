@@ -178,7 +178,7 @@ var STRINGS={
   detTgt:"Target state (project)", detSrc:"Verification source", detIssue:"Issue",
   detTarget:"TARGET",
   rosterSearch:"filter…", rosterCount:"members", rosterEmpty:"no match",
-  stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology",
+  stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology", staticSrc:"(static source)",
   errEmpty:"Model unreachable or empty.",
   errNotFound:"Model not found (./c4-model.json). Open via `forma serve` or inject window.__C4_MODEL__.",
   errUnavail:"Model unavailable."
@@ -197,7 +197,7 @@ var STRINGS={
   detTgt:"Stato finito (progetto)", detSrc:"Fonte verifica", detIssue:"Issue",
   detTarget:"TARGET",
   rosterSearch:"filtra…", rosterCount:"elementi", rosterEmpty:"nessun risultato",
-  stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology",
+  stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology", staticSrc:"(fonte statica)",
   errEmpty:"Modello non raggiungibile o vuoto.",
   errNotFound:"Modello non trovato (./c4-model.json). Apri via `forma serve` o inietta window.__C4_MODEL__.",
   errUnavail:"Modello non disponibile."
@@ -215,7 +215,7 @@ var LABEL_AUTO_MAX=14;    // above this many arrows in the current level, fixed 
 var LABELS=null;          // null = auto (by arrow count); true/false = user override for this session
 var SKINS=[["holo","◆ holo"],["blueprint","▭ blueprint"]], SKIN_IDS=["holo","blueprint"];
 var STMAP={done:"done","in-progress":"prog",next:"next",planned:"plan",problem:"prob"};
-var M=null, stack=[null], mode="now", POS={}, drag=null, justDragged=false, CATNODES={};
+var M=null, stack=[null], mode="now", POS={}, drag=null, justDragged=false, CATNODES={}, FETCHED=false;
 function $(i){return document.getElementById(i)}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;")}
 function setSkin(s){var k=SKIN_IDS.indexOf(s)>-1?s:"holo";document.documentElement.dataset.skin=k;var el=$("skin");if(el)el.value=k;}
@@ -475,7 +475,14 @@ function wire(){
  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&stack.length>1){stack.pop();draw(true);}});
  $("bnow").addEventListener("click",function(){mode="now";$("bnow").className="on";$("btgt").className="";draw(false);});
  $("btgt").addEventListener("click",function(){mode="target";$("btgt").className="on";$("bnow").className="";draw(false);});
- $("brf").addEventListener("click",function(){var m=(M&&M.meta)||{};$("stamp").textContent=STR.stampBase+" "+(m.verifiedAt||(M&&M.generatedAt)||(M&&M.source&&M.source.commit)||"—")+" · "+STR.stampMethod+" "+(m.verifyMethod||STR.stampVerify);});
+ $("brf").addEventListener("click",function(){
+  // Served model ⇒ actually re-read it (a `forma verify` run in the terminal shows up here without
+  // losing the level, the layout or the mode). Injected/offline ⇒ re-stamp, and say why.
+  if(!FETCHED){stamp(STR.staticSrc);return;}
+  fetch("./c4-model.json?ts="+(new Date()).getTime()).then(function(r){return r.json();})
+   .then(function(m){if(m&&m.nodes&&m.nodes.length){M=m;stamp("");draw(false);}else stamp(STR.staticSrc);})
+   .catch(function(){stamp(STR.staticSrc);});
+ });
  $("blbl").addEventListener("click",function(){LABELS=!($("blbl").className==="on");draw(false);});
  $("brl").addEventListener("click",function(){delete POS[keyOf()];draw(true);});
  $("skin").innerHTML=SKINS.map(function(s){return '<option value="'+s[0]+'">'+s[1]+'</option>';}).join("");
@@ -591,6 +598,12 @@ function moveTip(ev){var st=$("stage").getBoundingClientRect(),t=$("etip");
  var x=ev.clientX-st.left+12,y=ev.clientY-st.top+12;
  t.style.left=Math.min(x,st.width-t.offsetWidth-6)+"px";t.style.top=Math.min(y,st.height-t.offsetHeight-6)+"px";}
 
+// Fact-base line. `suffix` marks a RE-VERIFY that could not re-read the model (injected/offline).
+function stamp(suffix){
+ var m=(M&&M.meta)||{};
+ $("stamp").textContent=STR.stampBase+" "+(m.verifiedAt||(M&&M.generatedAt)||(M&&M.source&&M.source.commit)||"—")
+  +" · "+STR.stampMethod+" "+(m.verifyMethod||STR.stampVerify)+(suffix?" "+suffix:"");
+}
 function boot(model){
  M=model;
  LANG=pickLang(M);STR=STRINGS[LANG];
@@ -598,8 +611,8 @@ function boot(model){
  applyStrings();
  if(!M||!M.nodes||!M.nodes.length){$("err").style.display="block";$("err").textContent=STR.errEmpty;return;}
  if(M.source&&M.source.repo)$("title").textContent="Forma · "+M.source.repo;
- var m=M.meta||{};$("stamp").textContent=STR.stampBase+" "+(m.verifiedAt||M.generatedAt||(M.source&&M.source.commit)||"—")+" · "+(m.verifyMethod||STR.stampVerify);
- setSkin((new URLSearchParams(location.search).get("skin"))||window.__C4_SKIN__||(m.skin)||"holo");
+ stamp("");
+ setSkin((new URLSearchParams(location.search).get("skin"))||window.__C4_SKIN__||(M.meta&&M.meta.skin)||"holo");
  stack=[null];mode="now";POS={};
  draw(true);
 }
@@ -610,6 +623,7 @@ function start(){
  applyStrings();
  wire();
  if(window.__C4_MODEL__){boot(window.__C4_MODEL__);return;}
+ FETCHED=true; // the model has a live URL ⇒ RE-VERIFY can re-read it instead of only re-stamping
  try{fetch("./c4-model.json").then(function(r){return r.json();}).then(boot).catch(function(){
   $("err").style.display="block";$("err").textContent=STR.errNotFound;});}
  catch(e){$("err").style.display="block";$("err").textContent=STR.errUnavail;}

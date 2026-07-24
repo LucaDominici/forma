@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.3.0",
-  "generatedAt": "2026-07-24T20:32:27.304Z",
+  "generatedAt": "2026-07-24T20:36:29.453Z",
   "source": {
     "repo": "forma",
-    "commit": "631d82fc4ea1e1fa064d37e4244edaf7360f0bfe",
+    "commit": "86eedf85999f01ba9ac2cee0686c1147f97f6947",
     "branch": "fix/qa-r1-r5-attach-gate",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.3.0"
@@ -72,7 +72,7 @@
         {
           "type": "glob",
           "ref": "lib",
-          "count": 9
+          "count": 10
         }
       ],
       "category": "container",
@@ -118,7 +118,7 @@
         {
           "type": "glob",
           "ref": "test",
-          "count": 1
+          "count": 2
         }
       ],
       "category": "container",
@@ -329,6 +329,26 @@
       "descSource": "docstring"
     },
     {
+      "id": "lib__verify_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "verify",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/verify.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "target": "",
+      "func": "forma verify — refresh programme status from LIVE GitHub issues, through the user's gh CLI. This is the ONLY command that touches the network, and it is opt-in: gen and check stay deterministic and offline forever (that is the product). It ",
+      "descSource": "docstring"
+    },
+    {
       "id": "scripts__check_clean_mjs",
       "level": "leaf",
       "parent": "scripts",
@@ -387,6 +407,26 @@
       "target": "",
       "func": "Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.",
       "descSource": "docstring"
+    },
+    {
+      "id": "test__stub_gh_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "stub-gh",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/stub-gh.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "target": "",
+      "func": "Offline stand-in for the gh CLI, used via forma verify --gh-cmd \"node test/stub-gh.mjs\". Prints the same shape as gh issue list --json number,state. #7 closed, #8 open — nothing else.",
+      "descSource": "docstring"
     }
   ],
   "edges": [
@@ -427,7 +467,7 @@
       "estatus": "active",
       "from": "test",
       "to": "lib",
-      "label": "3×",
+      "label": "4×",
       "kind": "import"
     }
   ]

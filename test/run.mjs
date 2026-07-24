@@ -223,7 +223,46 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok status-overlay — WP-A1 decorates by id, refuses func/bad enums/orphan ids; gate catches a stale overlay')
 }
 
-// 8) viewer contract: the parts that are pure logic (no DOM) — arrow-label anchor + i18n parity.
+// 8) WP-A5 `forma verify`: live issue state, offline in the test via a gh stub
+{
+  const repo = join(tmp, 'verify-repo')
+  cpSync(FIX('mini'), repo, { recursive: true })
+  const topo = join(tmp, 'vf-topo.json'), model = join(tmp, 'vf-model.json')
+  let r = run(['init', '--repo', repo, '--out', topo, '--force']); if (r.status !== 0) die('verify init exit ' + r.status, r)
+  // the overlay is how issues reach the model (WP-A1): one node on a closed issue, one on an open one
+  const t = readJson(topo)
+  const [c1, c2] = t.nodes.filter((n) => n.kind === 'container')
+  mkdirSync(join(repo, 'docs/architecture'), { recursive: true })
+  writeFileSync(join(repo, 'docs/architecture/c4-status.json'), JSON.stringify({
+    nodes: { [c1.id]: { issues: ['#7'], current: 'Was in progress.' }, [c2.id]: { issues: ['#8'], current: 'Still open.' } },
+  }, null, 2))
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('verify gen exit ' + r.status, r)
+  const GH = process.execPath + ' ' + join(HERE, 'stub-gh.mjs')
+  const openBefore = JSON.stringify(readJson(model).nodes.find((n) => n.id === c2.id))
+  r = run(['verify', '--repo', repo, '--model', model, '--gh-repo', 'acme/thing', '--gh-cmd', GH])
+  if (r.status !== 0) die('WP-A5: verify exit ' + r.status, r)
+  let v = readJson(model)
+  const done = v.nodes.find((n) => n.id === c1.id), open = v.nodes.find((n) => n.id === c2.id)
+  if (!(done.status2 === 'done' && done.completion === 100)) die('WP-A5: node on a CLOSED issue not marked done')
+  if (!/^Closed with evidence \(#7 CLOSED, gh .*\)\. Was in progress\.$/.test(done.current)) die('WP-A5: evidence prefix missing/malformed: ' + done.current)
+  if (JSON.stringify(open) !== openBefore) die('WP-A5: node on an OPEN issue was modified: ' + JSON.stringify(open))
+  if (!(v.meta.verifiedAt && v.meta.verifyMethod === 'gh live')) die('WP-A5: fact base not stamped')
+  // structure is untouched and the gate is unaffected, before and after
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo]); if (r.status !== 0) die('WP-A5: check must stay green after verify', r)
+  // idempotent: a second run must not stack evidence prefixes
+  r = run(['verify', '--repo', repo, '--model', model, '--gh-repo', 'acme/thing', '--gh-cmd', GH])
+  if (r.status !== 0) die('WP-A5: second verify exit ' + r.status, r)
+  v = readJson(model)
+  if ((String(v.nodes.find((n) => n.id === c1.id).current).match(/Closed with evidence/g) || []).length !== 1) die('WP-A5: evidence prefix stacked on re-run')
+  // gh missing → loud failure, model byte-identical
+  const before = readFileSync(model, 'utf-8')
+  r = run(['verify', '--repo', repo, '--model', model, '--gh-repo', 'acme/thing', '--gh-cmd', 'forma-no-such-gh-binary'])
+  if (r.status === 0) die('WP-A5: a missing gh must fail loud')
+  if (readFileSync(model, 'utf-8') !== before) die('WP-A5: model was modified despite the gh failure')
+  console.log('  ok verify — WP-A5 closed→done with dated evidence, open untouched, idempotent, gh failure leaves the model intact')
+}
+
+// 9) viewer contract: the parts that are pure logic (no DOM) — arrow-label anchor + i18n parity.
 // The viewer is a single HTML file with no test seam, and the repo ships zero dependencies (no
 // jsdom), so the checkable parts are lifted out of our OWN tracked file and evaluated. Input is
 // lib/viewer/c4-hologram.html, never user data.
@@ -256,4 +295,4 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok viewer — edge label anchored on the curve; i18n parity (${Object.keys(S.en).length} keys, en/it)`)
 }
 
-console.log('OK — mini, flat-python, data-noise, attach-doc, enrich, scaffold, status-overlay, viewer all green.')
+console.log('OK — mini, flat-python, data-noise, attach-doc, enrich, scaffold, status-overlay, verify, viewer all green.')
