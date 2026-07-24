@@ -234,7 +234,7 @@ const diffPaths = (a, b, at = '') => {
   const [c1, c2] = t.nodes.filter((n) => n.kind === 'container')
   mkdirSync(join(repo, 'docs/architecture'), { recursive: true })
   writeFileSync(join(repo, 'docs/architecture/c4-status.json'), JSON.stringify({
-    nodes: { [c1.id]: { issues: ['#7'], current: 'Was in progress.' }, [c2.id]: { issues: ['#8'], current: 'Still open.' } },
+    nodes: { [c1.id]: { issues: ['#7'], current: 'Was in progress.', statusWord: 'NEXT' }, [c2.id]: { issues: ['#8'], current: 'Still open.', statusWord: 'NEXT' } },
   }, null, 2))
   r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('verify gen exit ' + r.status, r)
   const GH = process.execPath + ' ' + join(HERE, 'stub-gh.mjs')
@@ -244,6 +244,8 @@ const diffPaths = (a, b, at = '') => {
   let v = readJson(model)
   const done = v.nodes.find((n) => n.id === c1.id), open = v.nodes.find((n) => n.id === c2.id)
   if (!(done.status2 === 'done' && done.completion === 100)) die('WP-A5: node on a CLOSED issue not marked done')
+  // the badge renders statusWord over completion, so a curated word must not outlive the verdict
+  if (done.statusWord !== '100%') die('WP-A5: badge still reads "' + done.statusWord + '" on a node verified done')
   if (!/^Closed with evidence \(#7 CLOSED, gh .*\)\. Was in progress\.$/.test(done.current)) die('WP-A5: evidence prefix missing/malformed: ' + done.current)
   if (JSON.stringify(open) !== openBefore) die('WP-A5: node on an OPEN issue was modified: ' + JSON.stringify(open))
   if (!(v.meta.verifiedAt && v.meta.verifyMethod === 'gh live')) die('WP-A5: fact base not stamped')
