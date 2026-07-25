@@ -17,6 +17,11 @@ A hand-drawn architecture diagram is stale the moment code changes. Forma walks 
 real structure, infers relationships from cross-references to exported symbol names (heuristic, additive), and **fails a check** when the model
 and the code disagree. What you present is what actually exists.
 
+Where the language *declares* its architecture, forma reads the declaration instead of guessing. On
+**Go** the container and the leaf are the **package** (any directory with a non-test `.go`, however
+deeply nested), `_test.go` files are not architecture, and every edge comes from an `import` block —
+so the direction is right by construction. Every other stack uses the heuristic above.
+
 ## Install
 
 ```sh

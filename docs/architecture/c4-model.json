@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.4.0",
-  "generatedAt": "2026-07-25T22:31:05.851Z",
+  "generatedAt": "2026-07-25T23:15:32.116Z",
   "source": {
     "repo": "forma",
-    "commit": "e8372864cc682b5789f4ea66233454650a541e3d",
-    "branch": "release/v0.6.0",
+    "commit": "8af203c63829123fd6179e1457f4339242d415e6",
+    "branch": "main",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.4.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -245,7 +245,7 @@
         {
           "type": "glob",
           "ref": "lib",
-          "count": 10
+          "count": 11
         }
       ],
       "category": "container",
@@ -466,6 +466,25 @@
       "status2": "unknown",
       "target": "",
       "func": "forma init — seed a c4-topology.json from the repo's real source directories. BEST-EFFORT: gives a valid, non-empty starting point (no cold-start). The human/agent then curates groupings, context externals, and plain-language descriptions. ",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__lang_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "lang",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/lang.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "lang.mjs — per-language adapters for TOPOLOGY and EDGES. Pure, no side effects at import. The name-matching heuristic in gen.mjs is the fallback for stacks that never say what depends on what. Some languages do say it, and guessing where a ",
       "descSource": "docstring"
     },
     {
