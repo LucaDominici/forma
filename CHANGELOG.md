@@ -25,6 +25,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `test/fixtures/go-nested` — nested packages under a common directory, a `_test.go` sitting
   directly in that directory (the exact trap that stopped the seeder at `internal`), a per-package
   test file, and both `import` spellings.
+- **The model is validated against the schema it declares (`lib/validate.mjs`).** The architecture
+  doc had been claiming this since 0.1; no code path had ever loaded
+  `lib/schema/c4-model.schema.json`. `gen` now validates after writing and fails loud — curated
+  topology nodes are copied verbatim into the model, so a `kind` outside the enum used to sail
+  straight through — and `check` reports schema errors alongside its drift errors, prefixed
+  `SCHEMA:`. Zero dependencies (ADR-0001): a hand-written walker over the keyword subset the schema
+  uses (`type`, `required`, `properties`, `additionalProperties` where literally `false`, `items`,
+  `enum`, `minItems`, `minimum`/`maximum`, `pattern`). `format` remains an annotation, as ajv treats
+  it in draft-07 without `ajv-formats`; `oneOf`/`allOf`/`$ref`/`patternProperties`/tuple `items` are
+  unsupported and the module says so. Verified against an independent oracle — ajv 8.20 over the
+  committed model, the 5 fixture models and 47 mutations: **53 of 53 verdicts agree**.
+- **CI runs `forma check`.** The drift gate that is the product had never been applied to the
+  product: `ci.yml` ran lint and tests only, while `pages.yml` deployed the committed model to
+  GitHub Pages on every push to `main`. `pages.yml`'s comment claimed the check was "a local
+  responsibility"; it no longer is, and the comment no longer says so.
 
 ### Fixed
 - **`dir: "."` leaked a `./` prefix into leaf evidence.** A package at the module root was recorded
@@ -34,7 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A directory leaf took its parent's README.** `describe` called `dirname()` unconditionally, so a
   Go package leaf would be described by the README one level up. It now reads the README *inside* a
   directory-evidence node.
-- `npm pack` ships 18 files (was 17) — `lib/lang.mjs`.
+- `npm pack` ships 19 files (was 17) — `lib/lang.mjs`, `lib/validate.mjs`; `AGENTS.md` said 17 and
+  was already stale at 18.
+- `ARCHITECTURE.md` §5 counted 10 leaves under `lib` when the model had 11; it now says 12, and §8
+  describes the validation that actually happens instead of the one it wished for.
 
 ## [0.6.0] - 2026-07-26
 

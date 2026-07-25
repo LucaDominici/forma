@@ -24,7 +24,7 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
   networked paths, both opt-in — keep it that way.
 - The viewer is one HTML file in ES5 style (var/function); every new UI string goes in BOTH
   locales of `STRINGS`.
-- `npm pack --dry-run` must stay at the 17 shipped files, zero `.fuse_hidden` (the
+- `npm pack --dry-run` must stay at the 19 shipped files, zero `.fuse_hidden` (the
   `prepack` guard enforces this).
 - Architecture of Forma itself is modeled with Forma: see `docs/architecture/`
   (the dogfood). `forma check` fails if that model drifts from the code.
