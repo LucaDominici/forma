@@ -5,6 +5,7 @@ import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, st
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { validateModel } from '../lib/validate.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BIN = join(HERE, '..', 'bin', 'forma.mjs')
@@ -563,6 +564,9 @@ const diffPaths = (a, b, at = '') => {
   r = run(['gen', '--repo', REPO, '--topology', badTopo, '--out', badModel])
   const badGenOut = (r.stdout || '') + (r.stderr || '')
   if (r.status === 0 || !/kind/.test(badGenOut)) die('schema: gen wrote a model whose node kind is outside the schema enum', r)
+  // the dogfood: forma's own committed model is the one every reader of the Pages demo sees
+  const committed = validateModel(readJson(join(HERE, '..', 'docs/architecture/c4-model.json')))
+  if (committed.length) die('schema: this repo\'s committed c4-model.json does not validate:\n - ' + committed.join('\n - '))
   console.log('  ok schema — a conforming model passes; a missing required field and an out-of-enum kind are both rejected by name')
 }
 
