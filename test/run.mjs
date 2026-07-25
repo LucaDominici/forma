@@ -370,11 +370,20 @@ const diffPaths = (a, b, at = '') => {
   if (r.status !== 0) die('WP-A6: agent plan gen exit ' + r.status, r)
   const plan = readJson(join(tmp, 'enrich-plan.json'))
   if (!plan.entries.length) die('WP-A6: the plan has no entries (fixture has no holes?)')
-  // holes are leaves and components — containers are described by the topology, not by an enricher
-  const holeIds = readJson(model).nodes.filter((n) => n.descSource === 'fallback' && (n.kind === 'leaf' || n.kind === 'component')).map((n) => n.id).sort()
+  // F2: holes are leaves, components AND containers. Containers were excluded on the theory that
+  // the topology describes them; on an init-seeded repo they are the boxes still on a fallback.
+  const holeIds = readJson(model).nodes.filter((n) => n.descSource === 'fallback' && (n.kind === 'leaf' || n.kind === 'component' || n.kind === 'container')).map((n) => n.id).sort()
+  if (!holeIds.some((id) => readJson(model).nodes.find((n) => n.id === id).kind === 'container')) die('F2: precondition — this fixture has no undescribed container to plan for')
   if (JSON.stringify(plan.entries.map((e) => e.id).sort()) !== JSON.stringify(holeIds)) die('WP-A6: plan entries do not match the model holes')
   if (!plan.entries.every((e) => e.prompt && e.descInputHash)) die('WP-A6: plan entry missing prompt/descInputHash')
   if (!plan.entries.some((e) => /Read the file at .+ if you need certainty\./.test(e.prompt))) die('WP-A6: the agent prompt never offers the source path (that is the point of agent mode)')
+  // F2: a container's prompt must not be self-referential — containerOf(container) is itself, so
+  // unguarded it says "auth belongs to the container auth" and calls its own children siblings.
+  const cHole = readJson(model).nodes.find((n) => n.kind === 'container' && holeIds.includes(n.id))
+  const cPrompt = plan.entries.find((e) => e.id === cHole.id).prompt
+  if (new RegExp('belongs to the container "' + cHole.name + '"').test(cPrompt)) die('F2: the container prompt says it belongs to itself:\n' + cPrompt)
+  if (/Sibling modules/.test(cPrompt)) die('F2: the container prompt calls its own children siblings:\n' + cPrompt)
+  if (!/Read the sources under .+\/ if you need certainty\./.test(cPrompt)) die('F2: the container prompt has no filesystem pointer (its evidence is a glob, not a path):\n' + cPrompt)
   // the model is still written with its deterministic fallbacks — the plan is additive
   if (!holeIds.length) die('WP-A6: gen must still write the model when planning')
 
