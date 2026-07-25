@@ -374,7 +374,7 @@ function draw(animate){
   var st=STMAP[n.status2]||(n.status==="planned"?"plan":"done");
   var pulse=(st==="next"||st==="prog")&&mode!=="target"&&!n.__catalog;
   var isCat=!!n.__catalog,dr=!isCat&&hasKids(n.id),cls="nd s-"+st+(dr?" drill":"")+(isCat?" cat":"")+(pulse?" pulse":"");
-  var desc=isCat?(n.count+" "+STR.rosterCount):(mode==="target"?(n.target||n.func||""):(n.current||n.func||n.tech||""));
+  var desc=isCat?(n.count+" "+STR.rosterCount):(mode==="target"?(n.target||n.func||""):(n.current||n.func||""));
   var badge=isCat?String(n.count):(mode==="target"?STR.detTarget:(n.statusWord||(n.completion!=null?n.completion+"%":(n.tech||""))));
   // the title runs until the badge, so reserve the badge's actual width (9px text ≈ 5.4px/char)
   // instead of a flat 70px — a fixed reserve clipped names that had all the room they needed
@@ -461,7 +461,7 @@ function cssv(v){try{return getComputedStyle(document.documentElement).getProper
 
 function showDetail(n){
  if(n&&n.__catalog)return showRoster(n);
- var src=srcOf(n),cur=n.current||n.func||n.tech||"",showSrc=src&&String(cur).indexOf(src)<0;
+ var src=srcOf(n),cur=n.current||n.func||"",showSrc=src&&String(cur).indexOf(src)<0;
  $("detail").innerHTML='<span class="cl" id="dc">'+esc(STR.detClose)+'</span><h3>'+esc(n.name)+' <span class="cat">· '+esc(n.category||n.kind||"")+(n.tech?" · "+esc(n.tech):"")+'</span></h3>'
   +(n.func?'<div class="row"><span class="lbl">'+esc(STR.detFunc)+'</span><span class="func">'+esc(n.func)+'</span></div>':'')
   +(cur&&cur!==n.func?'<div class="row"><span class="lbl">'+esc(STR.detNow)+'</span><span class="now">'+esc(cur)+'</span></div>':'')
@@ -482,7 +482,7 @@ function showRoster(cat){
  $("detail").innerHTML=head;$("detail").style.display="block";
  var dc=$("dc");if(dc)dc.addEventListener("click",function(){$("detail").style.display="none";});
  function rowHtml(m){
-  var d=m.current||m.func||m.tech||"";
+  var d=m.current||m.func||"";
   var pct=m.completion!=null?(m.completion+"%"):(m.statusWord||"");
   return '<span class="ritem">'+(pct?'<span class="rp">'+esc(pct)+'</span>':'')
    +'<span class="rn">'+esc(m.name)+'</span>'
