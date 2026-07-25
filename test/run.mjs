@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -158,6 +158,51 @@ const diffPaths = (a, b, at = '') => {
   const ordLit = (vhtml.match(/ord=\[[^\]]*\]/) || [''])[0]
   if (!ordLit.includes('"' + STMAP.unknown + '"')) die('F4: the per-level tally cannot count unknown nodes — the pill renders empty')
   console.log(`  ok virgin-kebab — ${derived.length} derived edge(s), ${comps.length} component(s) (${comps}), every box described, state unknown until curated`)
+}
+
+// 3c) go-nested: a language that DECLARES its architecture. In Go the unit is the package (any
+// dir holding non-test *.go) and the dependency is the `import` block — both were ignored, so a
+// real Go repo came out as `internal` (one box for thirty packages), file leaves, `_test.go`
+// nodes and edges=0. The fixture reproduces the exact trap: the only .go file sitting directly in
+// internal/ is a test, which is what stopped the seeder there.
+{
+  const REPO = FIX('go-nested'), topo = join(tmp, 'go-topo.json'), model = join(tmp, 'go-model.json')
+  let r = run(['init', '--repo', REPO, '--out', topo, '--force']); if (r.status !== 0) die('go init exit ' + r.status, r)
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('go gen exit ' + r.status, r)
+  r = run(['check', '--repo', REPO, '--model', model, '--topology', topo]); if (r.status !== 0) die('go check exit ' + r.status, r)
+  const m = readJson(model)
+  const conts = m.nodes.filter((n) => n.kind === 'container')
+  const cnames = conts.map((n) => n.name).sort()
+
+  // G1 — the package is the unit of architecture: two packages nested under a common directory
+  // are two containers, and the directory that merely holds them is not one.
+  for (const want of ['internal/store', 'internal/server', 'cmd/app']) if (!cnames.includes(want)) die(`G1: package ${want} is not a container, got [${cnames}]`)
+  if (cnames.includes('internal')) die('G1: `internal` is still one container swallowing its packages, got [' + cnames + ']')
+
+  // G2 — a test file is not architecture. Nothing in the model may come from a *_test.go.
+  const testish = m.nodes.filter((n) => /_test$/.test(String(n.name)) || (n.evidence || []).some((e) => /_test\.go$/.test(e.ref)))
+  if (testish.length) die('G2: _test.go files became nodes: ' + testish.map((n) => n.id))
+
+  // G3 — the leaf is the package; the files inside it are internal detail nobody presents.
+  const leaves = m.nodes.filter((n) => n.kind === 'leaf')
+  if (leaves.length !== 3) die(`G3: expected one leaf per package (3), got ${leaves.length}: ${leaves.map((n) => n.id)}`)
+  for (const l of leaves) {
+    const ev = (l.evidence || []).find((e) => e.type === 'path')
+    if (!ev) die('G3: leaf ' + l.id + ' has no path evidence')
+    if (/\.go$/.test(ev.ref) || !statSync(join(REPO, ev.ref)).isDirectory()) die(`G3: leaf ${l.id} is a file, not a package: ${ev.ref}`)
+  }
+
+  // G4 — edges derived from the `import` block: deterministic, and the direction is right by
+  // construction (the importer depends on the imported, never the reverse).
+  const derived = m.edges.filter((e) => e.kind === 'import')
+  const idOf = (name) => (conts.find((c) => c.name === name) || {}).id
+  const store = idOf('internal/store'), server = idOf('internal/server'), app = idOf('cmd/app')
+  const has = (from, to) => derived.some((e) => e.from === from && e.to === to)
+  if (!has(server, store)) die('G4: `import "example.com/nested/internal/store"` derived no server→store edge, got ' + JSON.stringify(derived))
+  if (has(store, server)) die('G4: edge direction inverted — store never imports server')
+  if (!has(app, server)) die('G4: the single-line `import "…/internal/server"` form derived no cmd/app→internal/server edge')
+  if (derived.length !== 2) die(`G4: expected exactly the 2 declared imports (stdlib "fmt" is outside the module), got ${derived.length}: ${JSON.stringify(derived)}`)
+  console.log(`  ok go-nested — ${conts.length} package containers (${cnames}), ${leaves.length} package leaves, ${derived.length} import edge(s), zero test nodes`)
 }
 
 // 4) §1b attach-mode + check freshness, end-to-end on a copy of the self-repo

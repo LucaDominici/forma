@@ -6,6 +6,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Per-language adapters for topology and edges (`lib/lang.mjs`), with Go as the first case.**
+  `forma init` already detected the language and then applied a heuristic designed for JS anyway.
+  On a real Go repo (~38 sources) that produced `nodes=44 leaves=38 edges=0`: `internal/` was one
+  container hiding thirty packages, the leaves were files, the `_test.go` files were architecture,
+  and the graph was empty. Four defects, one root cause — the language declares all of this and
+  forma was guessing. Go now seeds one container per **package** (any directory holding a non-test
+  `.go`, recursing past the first level), makes the **package** the leaf, drops `_test.go`
+  everywhere, and derives edges from the **`import` blocks** instead of from name collisions, so
+  the direction is right by construction. Same repo: `nodes=107 leaves=53 edges=189`.
+  Verified against an independent oracle — `go list -f '{{.ImportPath}} {{join .Imports " "}}'` —
+  **187 of 187 intra-module edges agree, 0 missing.** The 2 extra come from a `//go:build ignore`
+  file whose imports are real source that `go list` excludes from the build; the 5 packages
+  `go list` reports and forma does not are test-only directories, which is the point of the fix.
+  Every other stack keeps the name-matching heuristic unchanged (`mini`, `flat-python`,
+  `data-noise`, `virgin-kebab` are all green), and a curated topology opts in with `meta.stack: "Go"`.
+- `test/fixtures/go-nested` — nested packages under a common directory, a `_test.go` sitting
+  directly in that directory (the exact trap that stopped the seeder at `internal`), a per-package
+  test file, and both `import` spellings.
+
+### Fixed
+- **`dir: "."` leaked a `./` prefix into leaf evidence.** A package at the module root was recorded
+  as `./migrations`, which the Go adapter could not map back to the import path
+  `<module>/migrations` — one real edge silently missing. Found by the `go list` comparison, not by
+  a test. Evidence refs are now plain repo-relative keys for every stack.
+- **A directory leaf took its parent's README.** `describe` called `dirname()` unconditionally, so a
+  Go package leaf would be described by the README one level up. It now reads the README *inside* a
+  directory-evidence node.
+- `npm pack` ships 18 files (was 17) — `lib/lang.mjs`.
+
 ## [0.6.0] - 2026-07-26
 
 Pointed at a **virgin repo** — kebab-case, no docstrings, no directory READMEs, no curated overlay
