@@ -78,6 +78,10 @@ One source of truth (`c4-model.json`); two renderings (the interactive viewer an
 one deterministic check that keeps them honest. The file contract is
 [`lib/schema/c4-model.schema.json`](lib/schema/c4-model.schema.json).
 
+Working on forma itself? [`docs/ORIENTATION.md`](docs/ORIENTATION.md) walks what each pass of
+`gen`/`check` actually decides, with `path:line`, and audits which mechanisms nothing in the repo
+currently feeds.
+
 ## Model-agnostic by design
 
 The engine is plain Node — no LLM required. Structure is auto-walked, relationships are derived from
