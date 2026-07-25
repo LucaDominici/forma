@@ -52,9 +52,14 @@ npx forma-arch <command>        # or: npm i -D forma-arch
 | `--enricher` | Use it when | Network |
 |---|---|---|
 | `agent` | **An agent is driving forma.** Writes `enrich-plan.json` with the holes; the agent writes the sentences (reading the sources if it wants) and `gen --enrich-apply <file>` applies them with the same cache and provenance. | none |
-| `anthropic` (default) | Headless / CI, with `ANTHROPIC_API_KEY`. | REST |
+| `anthropic` | Headless / CI, with `ANTHROPIC_API_KEY`. | REST |
 | `openai` | Same, with `OPENAI_API_KEY`. | REST |
 | `ollama` | Sensitive repos: a local model, nothing leaves the machine. | localhost |
+
+`--enricher` has **no default**: `forma gen --enrich` on its own fails loud and lists the four. A
+default provider is a silent choice about your network and your API keys — and the old default
+(`anthropic`) meant that anyone without `ANTHROPIC_API_KEY` exported got a skip line, exit 0 and the
+same empty boxes they ran `--enrich` to fill.
 
 ## How it fits together
 
