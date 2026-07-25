@@ -121,6 +121,10 @@ const diffPaths = (a, b, at = '') => {
   if (!comps.length) die('F7: 9 kebab leaves in one container produced 0 components — no component level at all')
   if (!(comps.includes('session') && comps.includes('rate'))) die('F7: expected session/rate components, got ' + comps)
 
+  // the fixture must STAY virgin: one stray leading comment would give a leaf a docstring and the
+  // assertions below would start passing for a reason that has nothing to do with the fix.
+  if (m.nodes.some((n) => n.kind === 'leaf' && n.descSource !== 'fallback')) die('F5: a leaf grew a docstring or a directory README — the fixture is no longer virgin')
+
   // F3 — no box may be described by the name of its programming language.
   for (const n of m.nodes) {
     if (!String(n.func || '').trim()) die(`F3: node ${n.id} (${n.kind}) has no description — the box falls back to its language`)
