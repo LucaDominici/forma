@@ -5,6 +5,7 @@ import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, st
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { validateModel } from '../lib/validate.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BIN = join(HERE, '..', 'bin', 'forma.mjs')
@@ -539,4 +540,34 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok viewer — edge label anchored on the curve; i18n parity (${Object.keys(S.en).length} keys, en/it)`)
 }
 
-console.log('OK — mini, flat-python, data-noise, virgin-kebab, attach-doc, enrich, scaffold, status-overlay, component-hash, verify, layout-hints, viewer all green.')
+// 11) schema contract: `lib/schema/c4-model.schema.json` is the declared contract, so both writers
+// of the model must be held to it. Driven through the CLI on purpose — the assertion is that the
+// COMMANDS reject a non-conforming model, not that some helper returns an array.
+{
+  const REPO = FIX('mini'), topo = join(tmp, 'schema-topo.json'), model = join(tmp, 'schema-model.json')
+  const badTopo = join(tmp, 'schema-topo-bad.json'), badModel = join(tmp, 'schema-model-bad.json')
+  let r = run(['init', '--repo', REPO, '--out', topo, '--force']); if (r.status !== 0) die('schema init exit ' + r.status, r)
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('schema gen exit ' + r.status, r)
+  r = run(['check', '--repo', REPO, '--model', model, '--topology', topo]); if (r.status !== 0) die('schema check exit ' + r.status, r)
+  // a required field removed by hand: check must fail AND name the field, or the report is useless
+  const missingKind = readJson(model)
+  delete missingKind.nodes[0].kind
+  writeFileSync(model, JSON.stringify(missingKind, null, 2) + '\n')
+  r = run(['check', '--repo', REPO, '--model', model, '--topology', topo])
+  const missOut = (r.stdout || '') + (r.stderr || '')
+  if (r.status === 0 || !(/kind/.test(missOut) && /SCHEMA/.test(missOut))) die('schema: check accepted a node with no "kind" (or never named the field)', r)
+  // topo.nodes are copied verbatim into the model, so a curated kind outside the enum is the one
+  // way a plain `gen` can emit a non-conforming model — it must refuse instead of writing it.
+  const topoBad = readJson(topo)
+  topoBad.nodes[0].kind = 'widget'
+  writeFileSync(badTopo, JSON.stringify(topoBad, null, 2) + '\n')
+  r = run(['gen', '--repo', REPO, '--topology', badTopo, '--out', badModel])
+  const badGenOut = (r.stdout || '') + (r.stderr || '')
+  if (r.status === 0 || !/kind/.test(badGenOut)) die('schema: gen wrote a model whose node kind is outside the schema enum', r)
+  // the dogfood: forma's own committed model is the one every reader of the Pages demo sees
+  const committed = validateModel(readJson(join(HERE, '..', 'docs/architecture/c4-model.json')))
+  if (committed.length) die('schema: this repo\'s committed c4-model.json does not validate:\n - ' + committed.join('\n - '))
+  console.log('  ok schema — a conforming model passes; a missing required field and an out-of-enum kind are both rejected by name')
+}
+
+console.log('OK — mini, flat-python, data-noise, virgin-kebab, attach-doc, enrich, scaffold, status-overlay, component-hash, verify, layout-hints, viewer, schema all green.')

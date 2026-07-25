@@ -65,7 +65,7 @@ C4Context
 | Container | Tech | Leaves | What it does |
 |---|---|---|---|
 | cli | JavaScript | 1 | CLI entrypoint — dispatches init | gen | check | doc | serve | verify. |
-| lib | JavaScript | 10 | Engine — the six commands, the C4 JSON-schema contract, and the interactive viewer. |
+| lib | JavaScript | 12 | Engine — the six commands, the C4 JSON-schema contract, and the interactive viewer. |
 | scripts | JavaScript | 2 | Zero-dependency gates — lint and the prepack .fuse_hidden clean-check. |
 | test | JavaScript | 2 | Test runner — exercises init→gen→check across the fixtures, plus a gh stub for verify. |
 
@@ -105,7 +105,11 @@ hosts the static viewer at `http://localhost:4173`. There is no server component
 
 ## 8. Cross-cutting Concepts
 
-- **Validation:** the model is validated against `lib/schema/c4-model.schema.json` (JSON Schema).
+- **Validation:** `gen` (after writing) and `check` both validate the model against
+  `lib/schema/c4-model.schema.json`, via `lib/validate.mjs` — a zero-dependency walker over the
+  keyword subset that schema uses (`type`, `required`, `properties`, `additionalProperties`,
+  `items`, `enum`, `minItems`, `minimum`/`maximum`, `pattern`). `format` stays an annotation, as in
+  draft-07; it is not a general JSON Schema engine.
 - **Security:** no network calls, no `eval`, no deps; the review surface is the lib itself.
 - **Persistence:** files only (`c4-topology.json` curated, `c4-model.json` generated, `ARCHITECTURE.md`).
 - **Error handling:** scripts fail closed (`process.exit(1)` with a `[forma …]`/`[gen-c4]` message).
