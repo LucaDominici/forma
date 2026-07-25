@@ -98,6 +98,68 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok data-noise — api seeded; demo/fixtures skipped, and ignored by language detection')
 }
 
+// 3b) virgin-kebab: the repo forma actually lands on. kebab-case (the dominant JS/TS convention),
+// zero docstrings, zero directory READMEs, zero curated status overlay — none of the gifts the
+// other fixtures happen to hand it. Every defect that hides behind snake_case names, module docs
+// or a hand-written overlay surfaces here, which is why this fixture had to exist.
+{
+  const REPO = FIX('virgin-kebab'), topo = join(tmp, 'vk-topo.json'), model = join(tmp, 'vk-model.json')
+  let r = run(['init', '--repo', REPO, '--out', topo, '--force']); if (r.status !== 0) die('vk init exit ' + r.status, r)
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('vk gen exit ' + r.status, r)
+  r = run(['check', '--repo', REPO, '--model', model, '--topology', topo]); if (r.status !== 0) die('vk check exit ' + r.status, r)
+  const m = readJson(model)
+
+  // F6 — a kebab name must still derive an edge (the auto-edge regex used to DELETE the hyphen,
+  // producing \bsessionstore\b, which matches nothing: every kebab repo rendered edges=0).
+  const derived = m.edges.filter((e) => e.kind === 'import')
+  if (!derived.length) die('F6: kebab-case cross-container references derived 0 edges — the graph is empty')
+  if (!derived.some((e) => e.from === 'api' && e.to === 'core')) die('F6: expected the api→core edge, got ' + JSON.stringify(derived))
+  if (derived.some((e) => e.from === 'core' && e.to === 'api')) die('F6: edge direction inverted — core never references api')
+
+  // F7 — the component level must exist for kebab/camel/dot repos, not only for snake_case ones.
+  const comps = m.nodes.filter((n) => n.kind === 'component').map((n) => n.name).sort()
+  if (!comps.length) die('F7: 9 kebab leaves in one container produced 0 components — no component level at all')
+  if (!(comps.includes('session') && comps.includes('rate'))) die('F7: expected session/rate components, got ' + comps)
+
+  // the fixture must STAY virgin: one stray leading comment would give a leaf a docstring and the
+  // assertions below would start passing for a reason that has nothing to do with the fix.
+  if (m.nodes.some((n) => n.kind === 'leaf' && n.descSource !== 'fallback')) die('F5: a leaf grew a docstring or a directory README — the fixture is no longer virgin')
+
+  // F3 — no box may be described by the name of its programming language.
+  for (const n of m.nodes) {
+    if (!String(n.func || '').trim()) die(`F3: node ${n.id} (${n.kind}) has no description — the box falls back to its language`)
+    if (n.tech && String(n.func).trim() === String(n.tech).trim()) die(`F3: node ${n.id} is described by its language ("${n.tech}")`)
+  }
+
+  // F4 — with no curated overlay the programme state is UNKNOWN, and it must say so.
+  const invented = m.nodes.filter((n) => n.completion != null)
+  if (invented.length) die(`F4: ${invented.length}/${m.nodes.length} node(s) carry an invented completion with no status overlay (e.g. ${invented[0].id}=${invented[0].completion})`)
+  const states = [...new Set(m.nodes.map((n) => n.status2))].sort()
+  if (states.join() !== 'unknown') die('F4: undecorated nodes must be status2=unknown, got [' + states + ']')
+
+  // F1 — `--enrich` must never reach for an API key by default; the keyless path must still work.
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', join(tmp, 'vk-bad.json'), '--enrich'])
+  if (r.status === 0) die('F1: `--enrich` with no explicit --enricher must fail loud instead of defaulting to the API-key provider')
+  if (!/--enricher/.test((r.stderr || '') + (r.stdout || ''))) die('F1: the blocking message never names --enricher')
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model, '--enrich', '--enricher', 'agent'])
+  if (r.status !== 0) die('F1: the keyless agent enricher must still work', r)
+
+  // the viewer half of F3/F4: the box chain must not reach the language, and an unknown state
+  // needs a sixth, neutral rendering — otherwise the model is honest and the screen still lies.
+  const vhtml = readFileSync(join(HERE, '..', 'lib', 'viewer', 'c4-hologram.html'), 'utf-8')
+  if (/\|\|\s*[nm]\.tech/.test(vhtml)) die('F3: the viewer still falls back to `tech` when a box has no description')
+  const badgeLine = (vhtml.match(/\n\s*var badge=[^\n]*/) || [''])[0]
+  if (!badgeLine) die('viewer: the badge expression was not found — did it move?')
+  if (/tech/.test(badgeLine)) die('F3: the badge still falls back to the language: ' + badgeLine.trim())
+  if (/\?"plan":"done"/.test(vhtml)) die('F4: a node with no status2 still defaults to done (green by default)')
+  const STMAP = new Function((vhtml.match(/\nvar STMAP=\{[^\n]*/) || [''])[0].replace(/;\s*$/, '') + '; return STMAP')()
+  if (!STMAP.unknown) die('F4: STMAP has no neutral sixth state — an unknown node renders as done')
+  if (!new RegExp('\\.s-' + STMAP.unknown + '\\b').test(vhtml)) die('F4: the neutral state has no CSS class .s-' + STMAP.unknown)
+  const ordLit = (vhtml.match(/ord=\[[^\]]*\]/) || [''])[0]
+  if (!ordLit.includes('"' + STMAP.unknown + '"')) die('F4: the per-level tally cannot count unknown nodes — the pill renders empty')
+  console.log(`  ok virgin-kebab — ${derived.length} derived edge(s), ${comps.length} component(s) (${comps}), every box described, state unknown until curated`)
+}
+
 // 4) §1b attach-mode + check freshness, end-to-end on a copy of the self-repo
 {
   const repo = join(tmp, 'selfrepo')
@@ -312,11 +374,20 @@ const diffPaths = (a, b, at = '') => {
   if (r.status !== 0) die('WP-A6: agent plan gen exit ' + r.status, r)
   const plan = readJson(join(tmp, 'enrich-plan.json'))
   if (!plan.entries.length) die('WP-A6: the plan has no entries (fixture has no holes?)')
-  // holes are leaves and components — containers are described by the topology, not by an enricher
-  const holeIds = readJson(model).nodes.filter((n) => n.descSource === 'fallback' && (n.kind === 'leaf' || n.kind === 'component')).map((n) => n.id).sort()
+  // F2: holes are leaves, components AND containers. Containers were excluded on the theory that
+  // the topology describes them; on an init-seeded repo they are the boxes still on a fallback.
+  const holeIds = readJson(model).nodes.filter((n) => n.descSource === 'fallback' && (n.kind === 'leaf' || n.kind === 'component' || n.kind === 'container')).map((n) => n.id).sort()
+  if (!holeIds.some((id) => readJson(model).nodes.find((n) => n.id === id).kind === 'container')) die('F2: precondition — this fixture has no undescribed container to plan for')
   if (JSON.stringify(plan.entries.map((e) => e.id).sort()) !== JSON.stringify(holeIds)) die('WP-A6: plan entries do not match the model holes')
   if (!plan.entries.every((e) => e.prompt && e.descInputHash)) die('WP-A6: plan entry missing prompt/descInputHash')
   if (!plan.entries.some((e) => /Read the file at .+ if you need certainty\./.test(e.prompt))) die('WP-A6: the agent prompt never offers the source path (that is the point of agent mode)')
+  // F2: a container's prompt must not be self-referential — containerOf(container) is itself, so
+  // unguarded it says "auth belongs to the container auth" and calls its own children siblings.
+  const cHole = readJson(model).nodes.find((n) => n.kind === 'container' && holeIds.includes(n.id))
+  const cPrompt = plan.entries.find((e) => e.id === cHole.id).prompt
+  if (new RegExp('belongs to the container "' + cHole.name + '"').test(cPrompt)) die('F2: the container prompt says it belongs to itself:\n' + cPrompt)
+  if (/Sibling modules/.test(cPrompt)) die('F2: the container prompt calls its own children siblings:\n' + cPrompt)
+  if (!/Read the sources under .+\/ if you need certainty\./.test(cPrompt)) die('F2: the container prompt has no filesystem pointer (its evidence is a glob, not a path):\n' + cPrompt)
   // the model is still written with its deterministic fallbacks — the plan is additive
   if (!holeIds.length) die('WP-A6: gen must still write the model when planning')
 
@@ -423,4 +494,4 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok viewer — edge label anchored on the curve; i18n parity (${Object.keys(S.en).length} keys, en/it)`)
 }
 
-console.log('OK — mini, flat-python, data-noise, attach-doc, enrich, scaffold, status-overlay, component-hash, verify, layout-hints, viewer all green.')
+console.log('OK — mini, flat-python, data-noise, virgin-kebab, attach-doc, enrich, scaffold, status-overlay, component-hash, verify, layout-hints, viewer all green.')

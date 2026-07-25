@@ -179,9 +179,10 @@
               "in-progress",
               "next",
               "planned",
-              "problem"
+              "problem",
+              "unknown"
             ],
-            "description": "Hologram completion status (colour)."
+            "description": "Hologram completion status (colour). `unknown` is the default for a node no curated overlay has ruled on — code proves existence, never completion."
           },
           "completion": {
             "type": "integer",

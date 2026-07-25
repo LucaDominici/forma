@@ -6,6 +6,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Pointed at a **virgin repo** — kebab-case, no docstrings, no directory READMEs, no curated overlay
+— forma produced an empty graph and a board claiming the project was finished. Six fixes, one
+missing test.
+
+### Fixed
+- **Auto-edges on kebab/dotted names.** The matcher built its regex by *deleting* every non-word
+  character instead of escaping it, so `session-store` became `/\bsessionstore\b/` and matched
+  nothing: every kebab-case repo (i.e. most JS/TS ones) rendered `edges=0`. Metacharacters are now
+  escaped and the boundary is `(^|[^\w-])…([^\w-]|$)`, since `\b` sits *inside* a hyphenated name.
+  Side effect, deliberate: a name matched inside a longer hyphenated token (`cluster` in
+  `--cluster-min`) no longer counts, which is what the label meant all along.
+- **Component synthesis for kebab/camel/dot repos.** Grouping split on `_` only, so a container of
+  12 kebab files produced zero components and the C4 component level did not exist. Splits on
+  `/[-_.]/`.
+- **Boxes described by their programming language.** The viewer's description chain ended in
+  `|| n.tech`, printing "TypeScript" wherever a description was missing; removed at all three
+  sites. And a container's own directory README now actually reaches it (`describe` only followed
+  `path` evidence, while containers carry a `glob`), with a **measured** last resort — what the
+  node holds, counted — instead of nothing.
+- **Every node reported done at 100%.** `gen` stamped `status2:'done'` + `completion:100` on every
+  non-planned node, so an unmeasured repo showed a fully complete programme. Without a
+  `c4-status.json` overlay the state is now **`unknown`** with no completion at all, and the viewer
+  gained a sixth neutral state to render it: `.s-unk`, a `?` badge, a legend entry (en/it), tally
+  counting, catalogue aggregation and SVG export.
+- **`--enrich` reaching for an API key by default.** `--enricher` had a default (`anthropic`), so
+  users without `ANTHROPIC_API_KEY` got a skip line, exit 0 and the same empty boxes. The flag is
+  now required whenever `--enrich` is passed, and the error names all four providers.
+- **Containers excluded from enrichment.** `holesIn` admitted only leaves and components — exactly
+  not the boxes that stay empty. Their prompt also had to stop being self-referential (a container
+  *is* its own container: it claimed to belong to itself and called its children siblings) and now
+  offers `Read the sources under <dir>/`.
+
+### Added
+- `test/fixtures/virgin-kebab` + assertions: the test whose absence let all of the above ship.
+  kebab-case, 9 leaves in one container, zero docstrings, zero READMEs, zero overlay.
+
+### Changed
+- `schemaVersion` 1.3.0 → **1.4.0**: `status2` gains `unknown` (additive enum value).
+
 ## [0.5.0] - 2026-07-25
 
 The self-model stops being a lonely box in an empty canvas: the viewer shrink-wraps the level it

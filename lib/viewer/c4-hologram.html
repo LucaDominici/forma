@@ -9,7 +9,7 @@
  --bg:#050d14; --grid:rgba(62,231,255,.04); --halo:rgba(62,231,255,.10);
  --cyan:#3ee7ff; --sec:#6fa8bc; --ter:#4c7f94; --ter2:#41738a; --nm:#bfe9f7;
  --stagebg:rgba(4,12,19,.72); --stageborder:#143547; --nodebg:rgba(8,26,38,.92); --detailbg:rgba(6,20,30,.97);
- --border:#1e4a5e; --done:#2fe08a; --prog:#ffc74d; --next:#3ee7ff; --plan:#2d5a72; --planTxt:#7fb3c6; --prob:#ff5d5d;
+ --border:#1e4a5e; --done:#2fe08a; --prog:#ffc74d; --next:#3ee7ff; --plan:#2d5a72; --planTxt:#7fb3c6; --prob:#ff5d5d; --unk:#7d8f99;
  --edge:#2b6e8a; --edgeplan:#264d61; --elbl:#3d7f9c; --ddtxt:#7fb3c6; --now:#cfeefb; --tgt:#8fd8ec; --src:#4fbf8d;}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"SF Mono",Menlo,Consolas,ui-monospace,monospace;background:var(--bg);color:var(--nm);overflow-x:hidden}
@@ -60,6 +60,8 @@ svg{width:100%;height:100%;display:block}
 .s-plan .tt,.s-plan .pp{fill:var(--planTxt)}
 .s-prob rect{stroke:var(--prob);filter:drop-shadow(0 0 8px rgba(255,93,93,.6))}
 .s-prob .tt,.s-prob .pp{fill:var(--prob)}
+.s-unk rect{stroke:var(--unk);stroke-dasharray:1 3}
+.s-unk .tt,.s-unk .pp{fill:var(--unk)}
 .mode-t .nd rect{stroke:var(--next)!important;stroke-dasharray:none!important;filter:drop-shadow(0 0 8px rgba(62,231,255,.5))!important}
 .mode-t .nd .tt,.mode-t .nd .pp{fill:var(--next)!important}
 .edge{stroke:var(--edge);stroke-width:1.3;fill:none;marker-end:url(#ar);cursor:help}
@@ -119,7 +121,7 @@ svg{width:100%;height:100%;display:block}
 html[data-skin="blueprint"]{--bg:#eef3f9;--grid:rgba(31,119,180,.10);--halo:rgba(31,119,180,.08);
  --cyan:#1f77b4;--sec:#5a6b7d;--ter:#6b7b8c;--ter2:#5a6b7d;--nm:#16273a;
  --stagebg:#ffffff;--stageborder:rgba(31,119,180,.25);--nodebg:#ffffff;--detailbg:#ffffff;--border:rgba(31,119,180,.35);
- --done:#1f9d57;--prog:#c07a12;--next:#1f77b4;--plan:#8592a3;--planTxt:#5a6b7d;--prob:#d1453b;
+ --done:#1f9d57;--prog:#c07a12;--next:#1f77b4;--plan:#8592a3;--planTxt:#5a6b7d;--prob:#d1453b;--unk:#8a97a3;
  --edge:#8aa0b4;--edgeplan:#b9c6d3;--elbl:#5a6b7d;--ddtxt:#40536a;--now:#16273a;--tgt:#1f5f8a;--src:#1f9d57}
 html[data-skin="blueprint"] h1{text-shadow:none}
 html[data-skin="blueprint"] .s-done rect,html[data-skin="blueprint"] .s-prog rect,html[data-skin="blueprint"] .s-next rect,html[data-skin="blueprint"] .s-prob rect{filter:none}
@@ -160,6 +162,7 @@ html[data-skin="blueprint"] button.on{text-shadow:none}
   <span><i style="background:#3ee7ff"></i><span id="lg-next"></span></span>
   <span><i style="background:#2d5a72"></i><span id="lg-plan"></span></span>
   <span><i style="background:#ff5d5d"></i><span id="lg-prob"></span></span>
+  <span><i style="background:#7d8f99"></i><span id="lg-unk"></span></span>
   <span class="hint" id="lg-hint"></span>
  </div>
  <div id="detail"></div>
@@ -176,6 +179,7 @@ var STRINGS={
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"re-arrange",
   printExport:"PRINT / EXPORT", exportSvg:"Export SVG", exportPng:"Export PNG", exportLayout:"Export layout JSON", print:"Print",
   legDone:"DONE (proven)", legProg:"IN PROGRESS", legNext:"NEXT", legPlan:"PLAN ONLY", legProb:"PROBLEM",
+  legUnk:"UNKNOWN (no curated state)", stUnk:"?",
   legHint:"— animated arrow = active flow · dashed = to build",
   crumbRoot:"Context", crumbLevel:"C4", lvlContext:"CONTEXT",
   lvlNames:{context:"Context",container:"Container",component:"Components",leaf:"Leaves"},
@@ -195,6 +199,7 @@ var STRINGS={
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"ridisponi",
   printExport:"STAMPA / ESPORTA", exportSvg:"Esporta SVG", exportPng:"Esporta PNG", exportLayout:"Esporta layout JSON", print:"Stampa",
   legDone:"FATTO (provato)", legProg:"IN CORSO", legNext:"PROSSIMO", legPlan:"SOLO PROGETTO", legProb:"PROBLEMA",
+  legUnk:"IGNOTO (stato non curato)", stUnk:"?",
   legHint:"— freccia animata = flusso attivo · tratteggio = da costruire",
   crumbRoot:"Contesto", crumbLevel:"C4", lvlContext:"CONTESTO",
   lvlNames:{context:"Contesto",container:"Container",component:"Componenti",leaf:"Foglie"},
@@ -219,7 +224,7 @@ var CATALOG_THRESHOLD=24; // group of same-category siblings above this collapse
 var LABEL_AUTO_MAX=14;    // above this many arrows in the current level, fixed labels would knot the view
 var LABELS=null;          // null = auto (by arrow count); true/false = user override for this session
 var SKINS=[["holo","◆ holo"],["blueprint","▭ blueprint"]], SKIN_IDS=["holo","blueprint"];
-var STMAP={done:"done","in-progress":"prog",next:"next",planned:"plan",problem:"prob"};
+var STMAP={done:"done","in-progress":"prog",next:"next",planned:"plan",problem:"prob",unknown:"unk"};
 var M=null, stack=[null], mode="now", POS={}, drag=null, justDragged=false, CATNODES={}, FETCHED=false
 var VBOX={}; // last fitted viewBox per level — frozen while dragging so the canvas does not rescale
 function $(i){return document.getElementById(i)}
@@ -258,9 +263,9 @@ function collapseCatalogs(pid,kids){
 }
 function makeCatalogNode(pid,g){
  // Aggregate status: worst-of-a-few heuristic — problem > next > in-progress > planned > done.
- var rank={problem:5,next:4,"in-progress":3,planned:2,done:1},best=0,bestKey="done",done=0,tot=g.members.length;
+ var rank={problem:5,next:4,"in-progress":3,planned:2,unknown:1.5,done:1},best=0,bestKey="unknown",done=0,tot=g.members.length;
  for(var i=0;i<g.members.length;i++){
-  var s2=g.members[i].status2||(g.members[i].status==="planned"?"planned":"done");
+  var s2=g.members[i].status2||(g.members[i].status==="planned"?"planned":"unknown");
   if((rank[s2]||0)>best){best=rank[s2]||0;bestKey=s2;}
   if(s2==="done")done++;
  }
@@ -371,11 +376,11 @@ function draw(animate){
  }
  for(var j=0;j<kids.length;j++){
   var n=kids[j],p=pos[n.id];
-  var st=STMAP[n.status2]||(n.status==="planned"?"plan":"done");
+  var st=STMAP[n.status2]||(n.status==="planned"?"plan":"unk");
   var pulse=(st==="next"||st==="prog")&&mode!=="target"&&!n.__catalog;
   var isCat=!!n.__catalog,dr=!isCat&&hasKids(n.id),cls="nd s-"+st+(dr?" drill":"")+(isCat?" cat":"")+(pulse?" pulse":"");
-  var desc=isCat?(n.count+" "+STR.rosterCount):(mode==="target"?(n.target||n.func||""):(n.current||n.func||n.tech||""));
-  var badge=isCat?String(n.count):(mode==="target"?STR.detTarget:(n.statusWord||(n.completion!=null?n.completion+"%":(n.tech||""))));
+  var desc=isCat?(n.count+" "+STR.rosterCount):(mode==="target"?(n.target||n.func||""):(n.current||n.func||""));
+  var badge=isCat?String(n.count):(mode==="target"?STR.detTarget:(n.statusWord||(n.completion!=null?n.completion+"%":STR.stUnk)));
   // the title runs until the badge, so reserve the badge's actual width (9px text ≈ 5.4px/char)
   // instead of a flat 70px — a fixed reserve clipped names that had all the room they needed
   var tmax=Math.floor((p.w-34-String(badge).length*5.4)/6.7),tt=n.name;
@@ -414,12 +419,12 @@ function draw(animate){
  // its members), so the tally never changes when the catalogue threshold does.
  var cnt={},tot=0,sum=0,nc=0,st3;
  for(j=0;j<realKids.length;j++){
-  st3=STMAP[realKids[j].status2]||(realKids[j].status==="planned"?"plan":"done");
+  st3=STMAP[realKids[j].status2]||(realKids[j].status==="planned"?"plan":"unk");
   cnt[st3]=(cnt[st3]||0)+1;tot++;
   if(realKids[j].completion!=null){sum+=(+realKids[j].completion||0);nc++;}
  }
  if(tot){
-  var DOT={done:"#2fe08a",prog:"#ffc74d",next:"#3ee7ff",plan:"#2d5a72",prob:"#ff5d5d"},ord=["done","prog","next","plan","prob"],agg="";
+  var DOT={done:"#2fe08a",prog:"#ffc74d",next:"#3ee7ff",plan:"#2d5a72",prob:"#ff5d5d",unk:"#7d8f99"},ord=["done","prog","next","plan","prob","unk"],agg="";
   for(j=0;j<ord.length;j++)if(cnt[ord[j]])agg+='<i style="background:'+DOT[ord[j]]+'"></i>'+cnt[ord[j]];
   if(nc)agg+=' &nbsp;'+esc(STR.aggProgress)+' <b>'+Math.round(sum/nc)+'%</b>';
   cb='<span class="agg">'+agg+'</span>'+cb;
@@ -461,7 +466,7 @@ function cssv(v){try{return getComputedStyle(document.documentElement).getProper
 
 function showDetail(n){
  if(n&&n.__catalog)return showRoster(n);
- var src=srcOf(n),cur=n.current||n.func||n.tech||"",showSrc=src&&String(cur).indexOf(src)<0;
+ var src=srcOf(n),cur=n.current||n.func||"",showSrc=src&&String(cur).indexOf(src)<0;
  $("detail").innerHTML='<span class="cl" id="dc">'+esc(STR.detClose)+'</span><h3>'+esc(n.name)+' <span class="cat">· '+esc(n.category||n.kind||"")+(n.tech?" · "+esc(n.tech):"")+'</span></h3>'
   +(n.func?'<div class="row"><span class="lbl">'+esc(STR.detFunc)+'</span><span class="func">'+esc(n.func)+'</span></div>':'')
   +(cur&&cur!==n.func?'<div class="row"><span class="lbl">'+esc(STR.detNow)+'</span><span class="now">'+esc(cur)+'</span></div>':'')
@@ -482,7 +487,7 @@ function showRoster(cat){
  $("detail").innerHTML=head;$("detail").style.display="block";
  var dc=$("dc");if(dc)dc.addEventListener("click",function(){$("detail").style.display="none";});
  function rowHtml(m){
-  var d=m.current||m.func||m.tech||"";
+  var d=m.current||m.func||"";
   var pct=m.completion!=null?(m.completion+"%"):(m.statusWord||"");
   return '<span class="ritem">'+(pct?'<span class="rp">'+esc(pct)+'</span>':'')
    +'<span class="rn">'+esc(m.name)+'</span>'
@@ -587,7 +592,7 @@ function applyStrings(){
  set("pexp",STR.printExport);set("pexpSvg",STR.exportSvg);set("pexpPng",STR.exportPng);
  set("pexpLayout",STR.exportLayout);set("pexpPrint",STR.print);
  set("lg-done",STR.legDone);set("lg-prog",STR.legProg);set("lg-next",STR.legNext);
- set("lg-plan",STR.legPlan);set("lg-prob",STR.legProb);set("lg-hint",STR.legHint);
+ set("lg-plan",STR.legPlan);set("lg-prob",STR.legProb);set("lg-unk",STR.legUnk);set("lg-hint",STR.legHint);
 }
 // ---- FEATURE #2: PRINT / EXPORT (all client-side, offline) ----
 function exportBaseName(){
@@ -604,7 +609,7 @@ function collectSvgCss(){
   if(!rules)continue;
   for(j=0;j<rules.length;j++){var r=rules[j],t=r.cssText||"";
    // keep rules that target svg-internal classes/elements + the color vars on :root/html
-   if(/\.(nd|edge|edgehit|elbl|s-done|s-prog|s-next|s-plan|s-prob|mode-t|tt|kk|dd|pp|plus|cat)\b/.test(t)
+   if(/\.(nd|edge|edgehit|elbl|s-done|s-prog|s-next|s-plan|s-prob|s-unk|mode-t|tt|kk|dd|pp|plus|cat)\b/.test(t)
       ||/(^|[\s,])svg\b/.test(t)||/:root|html\[data-skin/.test(t)){
     // drop animations for a static export (keepdefs stable)
     out.push(t);
@@ -617,7 +622,7 @@ function collectSvgCss(){
 // with the on-screen palette. Returns a "--k:v;--k:v" inline-style string.
 var SVG_VARS=["--bg","--grid","--halo","--cyan","--sec","--ter","--ter2","--nm",
  "--stagebg","--stageborder","--nodebg","--detailbg","--border","--done","--prog",
- "--next","--plan","--planTxt","--prob","--edge","--edgeplan","--elbl","--ddtxt",
+ "--next","--plan","--planTxt","--prob","--unk","--edge","--edgeplan","--elbl","--ddtxt",
  "--now","--tgt","--src"];
 function resolvedVars(){
  var cs;try{cs=getComputedStyle(document.documentElement);}catch(e){return "";}
