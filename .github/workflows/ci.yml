@@ -22,6 +22,9 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm run lint
       - run: npm test
+      # dogfood: the product's own gate, on the product. The committed model is deployed to Pages
+      # on every push to main — nothing else would notice if it stopped matching the code.
+      - run: node bin/forma.mjs check
   ci-required:
     # fail-closed aggregate: one required status check that gates the whole matrix, so branch
     # protection lists a single context instead of one per matrix node version.

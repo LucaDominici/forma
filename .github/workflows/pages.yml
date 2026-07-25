@@ -1,8 +1,10 @@
 name: Pages
 # Deploy forma's self-C4 viewer (lib/viewer + committed docs/architecture model) to GitHub Pages
 # on every push to main. The viewer fetches ./c4-model.json (relative), so it works under the
-# /forma/ project subpath. Drift-check (forma check) is a local responsibility; this deploys the
-# committed model as-is. Runner: github-hosted (OIDC deploy-pages needs a hosted runner).
+# /forma/ project subpath. This deploys the committed model as-is: the drift-check (`forma check`)
+# runs in ci.yml on every push and PR — it does not gate this job, but a model that stopped
+# matching the code fails CI on the same commit, in public.
+# Runner: github-hosted (OIDC deploy-pages needs a hosted runner).
 on:
   push:
     branches: [main]
