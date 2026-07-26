@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.5.0",
-  "generatedAt": "2026-07-26T16:25:35.766Z",
+  "generatedAt": "2026-07-26T16:36:42.728Z",
   "source": {
     "repo": "forma",
-    "commit": "0d342924655d58f2d70e4cfec0c2a793d580e8d7",
-    "branch": "main",
+    "commit": "0928825f7f7cfdf6bf0954aea19a84d6a60b5bed",
+    "branch": "scope/confine-di-finito",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.5.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -273,7 +273,7 @@
         {
           "type": "glob",
           "ref": "scripts",
-          "count": 2
+          "count": 3
         }
       ],
       "category": "container",
@@ -618,6 +618,25 @@
       "status2": "unknown",
       "target": "",
       "func": "Cross-platform syntax check: node --check over bin + lib.",
+      "descSource": "docstring"
+    },
+    {
+      "id": "scripts__presentable_mjs",
+      "level": "leaf",
+      "parent": "scripts",
+      "kind": "leaf",
+      "name": "presentable",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "scripts/presentable.mjs"
+        }
+      ],
+      "category": "scripts",
+      "status2": "unknown",
+      "target": "",
+      "func": "presentable.mjs — the acceptance instrument for docs/SCOPE.md. forma check answers \"is the model still true to the code?\". This answers a different and narrower question: \"would this model survive being projected in front of a stakeholder?\"",
       "descSource": "docstring"
     },
     {
