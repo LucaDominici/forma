@@ -52,6 +52,12 @@ svg{width:100%;height:100%;display:block}
 .nd .drillhit:hover{fill:rgba(62,231,255,.12)}
 .s-done rect{stroke:var(--done);filter:drop-shadow(0 0 7px rgba(47,224,138,.55))}
 .s-done .tt,.s-done .pp{fill:var(--done)}
+/* The hollow green the legend has promised since #38: a done a repo document DECLARES is not a
+   done a closed issue PROVES, and until now the canvas drew them identically. Hollow = the glow
+   comes off, which is exactly what the legend swatch says (filled pill vs outline).
+   ponytail: the blueprint skin zeroes every filter, so there the two greens still read alike —
+   upgrade path is a second, skin-independent mark if anyone actually presents in blueprint. */
+.s-done.decl rect{filter:none}
 .s-prog rect{stroke:var(--prog);filter:drop-shadow(0 0 7px rgba(255,199,77,.5))}
 .s-prog .tt,.s-prog .pp{fill:var(--prog)}
 .s-next rect{stroke:var(--next);stroke-width:2.2;filter:drop-shadow(0 0 11px rgba(62,231,255,.75))}
@@ -60,7 +66,10 @@ svg{width:100%;height:100%;display:block}
 .s-plan .tt,.s-plan .pp{fill:var(--planTxt)}
 .s-prob rect{stroke:var(--prob);filter:drop-shadow(0 0 8px rgba(255,93,93,.6))}
 .s-prob .tt,.s-prob .pp{fill:var(--prob)}
-.s-unk rect{stroke:var(--unk);stroke-dasharray:1 3}
+/* NO dash. legHint teaches the reader that a dashed box is `da costruire`, and wearing that dash
+   made "nobody has ruled on this" read as "this does not exist" — on a repo where the module was
+   right there. Not-ruled is now a plain grey outline: no dash (planned), no glow (done). */
+.s-unk rect{stroke:var(--unk)}
 .s-unk .tt,.s-unk .pp{fill:var(--unk)}
 .mode-t .nd rect{stroke:var(--next)!important;stroke-dasharray:none!important;filter:drop-shadow(0 0 8px rgba(62,231,255,.5))!important}
 .mode-t .nd .tt,.mode-t .nd .pp{fill:var(--next)!important}
@@ -270,19 +279,32 @@ var STMAP={done:"done","in-progress":"prog",next:"next",planned:"plan",problem:"
 // decoration, it is half the claim. Same shape as the level tally and the docmap coverage.
 // Returns null when the box has its own verdict (it speaks for itself) or when nothing below it
 // was ruled (there is no fact to report).
+// A VERDICT is what counts as ruled, not a percentage: a document declares a capability finished,
+// it does not measure it, so those nodes carry `done` with no completion at all. Counting only the
+// numbers put `?` back on a domain holding nine packages a document calls finished — the same
+// silence #42 closed. The mean is null when nobody below carries one; the coverage is not.
 function rollStatus(node,kidsOf){
  if(node.completion!=null||node.statusWord)return null;
  var lv=[],q=[node],n,k,i,guard=0;
  while(q.length&&guard++<4096){n=q.pop();k=kidsOf(n.id);if(k.length){for(i=0;i<k.length;i++)q.push(k[i]);}else if(n!==node)lv.push(n);}
  if(!lv.length)return null;
- var sum=0,nc=0,rank={problem:5,next:4,"in-progress":3,planned:2,unknown:1.5,done:1},best=0,key="unknown",s2;
+ var sum=0,nc=0,nr=0,rank={problem:5,next:4,"in-progress":3,planned:2,unknown:1.5,done:1},best=0,key="unknown",s2;
  for(i=0;i<lv.length;i++){
   if(lv[i].completion!=null){sum+=(+lv[i].completion||0);nc++;}
   s2=lv[i].status2||(lv[i].status==="planned"?"planned":"unknown");
+  if(s2!=="unknown")nr++;
   if((rank[s2]||0)>best){best=rank[s2]||0;key=s2;}
  }
- if(!nc)return null;
- return {status2:key,mean:Math.round(sum/nc),ruled:nc,total:lv.length};
+ if(!nr)return null;
+ return {status2:key,mean:nc?Math.round(sum/nc):null,ruled:nr,total:lv.length};
+}
+// The badge: the first number a stakeholder reads, so it is a function like everything else that
+// makes a claim. Order of authority: a curated word, the node's own measurement, the roll-up, then
+// nothing. `?` is reserved for a box NOBODY ruled on — printing it over a box a document declares
+// finished made the badge contradict its own colour. A declaration has no number, and inventing
+// one for it is the whole defect this file is being corrected for.
+function badgeOf(n,roll){
+ return n.statusWord||(n.completion!=null?n.completion+"%":roll?(roll.mean!=null?roll.mean+"% ":"")+roll.ruled+"/"+roll.total:(n.status2&&n.status2!=="unknown"?"":STR.stUnk))
 }
 function tallyOf(kids,kidsOf){
  var cnt={},tot=0,sum=0,nc=0,st3,i,j,k,q,lv,use,n;
@@ -476,7 +498,10 @@ function draw(animate){
   var roll=(n.__catalog||mode==="target")?null:rollStatus(n,childrenOf);
   var st=STMAP[(roll?roll.status2:n.status2)]||(n.status==="planned"?"plan":"unk");
   var pulse=(st==="next"||st==="prog")&&mode!=="target"&&!n.__catalog;
-  var isCat=!!n.__catalog,dr=!isCat&&hasKids(n.id),cls="nd s-"+st+(dr?" drill":"")+(isCat?" cat":"")+(pulse?" pulse":"");
+  // `decl`: this verdict was DERIVED from a repo document, not proven. The legend has carried a
+  // hollow green for it since #38 and the canvas never drew one, so every declared done shipped
+  // dressed as proof.
+  var isCat=!!n.__catalog,dr=!isCat&&hasKids(n.id),cls="nd s-"+st+((n.verify&&n.verify.derived&&!roll)?" decl":"")+(dr?" drill":"")+(isCat?" cat":"")+(pulse?" pulse":"");
   var desc=isCat?(n.count+" "+STR.rosterCount):(mode==="target"?(n.target||n.func||""):(n.current||n.func||""));
   // 26 of a real repo's 53 boxes printed "1 file: advisor." under a box titled "internal/advisor".
   // A description that only restates the title is ink, not information: drop it and let the box
@@ -485,7 +510,7 @@ function draw(animate){
   if(!isCat&&echoesName(desc,n.name))desc="";
   // The coverage rides WITH the mean, never without it: `100%` on a domain where 14 of 22 packages
   // were ruled is the invented green, and this is the badge a stakeholder reads first.
-  var badge=isCat?String(n.count):(mode==="target"?STR.detTarget:(n.statusWord||(n.completion!=null?n.completion+"%":(roll?roll.mean+"% "+roll.ruled+"/"+roll.total:STR.stUnk))));
+  var badge=isCat?String(n.count):(mode==="target"?STR.detTarget:badgeOf(n,roll));
   // the title runs until the badge, so reserve the badge's actual width (9px text ≈ 5.4px/char)
   // instead of a flat 70px — a fixed reserve clipped names that had all the room they needed
   var tmax=Math.floor((p.w-34-String(badge).length*5.4)/6.7),tt=n.name;
