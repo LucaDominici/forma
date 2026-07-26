@@ -89,7 +89,7 @@ svg.dense .edge.hot{opacity:1;stroke-width:2.6}
 #etip{position:absolute;pointer-events:none;display:none;z-index:6;background:var(--detailbg);border:1px solid var(--border);
  color:var(--nm);font-size:10px;letter-spacing:.03em;padding:3px 8px;border-radius:5px;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,.45)}
 #legend{display:flex;gap:13px;font-size:9.5px;color:var(--sec);margin:10px 0 0;flex-wrap:wrap}
-#legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+#legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;box-sizing:border-box}
 .hint{color:var(--ter2)}
 #detail{margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:13px;background:var(--detailbg);display:none}
 #detail h3{color:var(--cyan);font-size:12.5px;margin-bottom:8px;letter-spacing:.05em}
@@ -165,6 +165,10 @@ html[data-skin="blueprint"] button.on{text-shadow:none}
  <div id="stage"><div id="etip"></div><div id="err" style="display:none"></div></div>
  <div id="legend">
   <span><i style="background:#2fe08a"></i><span id="lg-done"></span></span>
+  <!-- Same colour, hollow: a green derived from a repo document saying it is finished is not the
+       same evidence as a green from a closed issue, and the legend is where a reader learns that
+       one mark means two things. -->
+  <span><i style="border:1.5px solid #2fe08a"></i><span id="lg-decl"></span></span>
   <span><i style="background:#ffc74d"></i><span id="lg-prog"></span></span>
   <span><i style="background:#3ee7ff"></i><span id="lg-next"></span></span>
   <span><i style="background:#2d5a72"></i><span id="lg-plan"></span></span>
@@ -185,8 +189,10 @@ var STRINGS={
   labels:"LABELS", labelsTitle:"arrow labels (auto-off above 14 arrows)",
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"re-arrange",
   printExport:"PRINT / EXPORT", exportSvg:"Export SVG", exportPng:"Export PNG", exportLayout:"Export layout JSON", print:"Print",
-  legDone:"DONE (proven)", legProg:"IN PROGRESS", legNext:"NEXT", legPlan:"PLAN ONLY", legProb:"PROBLEM",
+  legDone:"DONE (proven)", legDecl:"DONE (declared)", legProg:"IN PROGRESS", legNext:"NEXT", legPlan:"PLAN ONLY", legProb:"PROBLEM",
   legUnk:"UNKNOWN (no curated state)", stUnk:"?",
+  detDecl:"Declared in", detCover:"Coverage", coverWhole:"the document names this module itself",
+  coverPart:"{n} of {t} units named by the document",
   legHint:"— animated arrow = active flow · dashed = to build",
   crumbRoot:"Context", crumbLevel:"C4", lvlContext:"CONTEXT",
   lvlNames:{context:"Context",container:"Container",component:"Components",leaf:"Leaves"},
@@ -205,8 +211,10 @@ var STRINGS={
   labels:"ETICHETTE", labelsTitle:"etichette sugli archi (spente sopra i 14 archi)",
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"ridisponi",
   printExport:"STAMPA / ESPORTA", exportSvg:"Esporta SVG", exportPng:"Esporta PNG", exportLayout:"Esporta layout JSON", print:"Stampa",
-  legDone:"FATTO (provato)", legProg:"IN CORSO", legNext:"PROSSIMO", legPlan:"SOLO PROGETTO", legProb:"PROBLEMA",
+  legDone:"FATTO (provato)", legDecl:"FATTO (dichiarato)", legProg:"IN CORSO", legNext:"PROSSIMO", legPlan:"SOLO PROGETTO", legProb:"PROBLEMA",
   legUnk:"IGNOTO (stato non curato)", stUnk:"?",
+  detDecl:"Dichiarato in", detCover:"Copertura", coverWhole:"il documento nomina il modulo stesso",
+  coverPart:"{n} unità su {t} nominate dal documento",
   legHint:"— freccia animata = flusso attivo · tratteggio = da costruire",
   crumbRoot:"Contesto", crumbLevel:"C4", lvlContext:"CONTESTO",
   lvlNames:{context:"Contesto",container:"Container",component:"Componenti",leaf:"Foglie"},
@@ -491,6 +499,13 @@ function echoesName(desc,name){
  for(i=0;i<w.length;i++){if(!w[i]||own[w[i]]||DESC_NOISE[w[i]]||/^\d+$/.test(w[i]))continue;return false;}
  return true;
 }
+// Pure, so it is testable without a DOM. Empty when nothing was derived — a curated or a
+// gh-verified state has no document reach to report.
+function coverText(n){
+ var c=n&&n.verify&&n.verify.coverage;if(!c)return "";
+ if(c.whole)return STR.coverWhole;
+ return STR.coverPart.replace("{n}",c.named).replace("{t}",c.total);
+}
 function wrapDesc(desc,cpl,max){
  if(max<1||cpl<2)return [];
  var words=String(desc==null?"":desc).split(" "),all=[],line="",i;
@@ -525,7 +540,12 @@ function showDetail(n){
   +(n.func?'<div class="row"><span class="lbl">'+esc(STR.detFunc)+'</span><span class="func">'+esc(n.func)+'</span></div>':'')
   +(cur&&cur!==n.func?'<div class="row"><span class="lbl">'+esc(STR.detNow)+'</span><span class="now">'+esc(cur)+'</span></div>':'')
   +((n.target&&n.target!=="—")?'<div class="row"><span class="lbl">'+esc(STR.detTgt)+'</span><span class="tgt">'+esc(n.target)+'</span></div>':'')
-  +(showSrc?'<div class="row"><span class="lbl">'+esc(STR.detSrc)+'</span><span class="src">'+esc(src)+'</span></div>':'')
+  // A number DERIVED from a repo document is a declaration, not a verification: the label says which
+  // one, and the coverage says how much of this module the citation actually reaches. "3 of 3 rows
+  // declared done" and "this module is done" are not the same sentence when the module holds 22
+  // files and the document names 3 of them.
+  +(showSrc?'<div class="row"><span class="lbl">'+esc((n.verify&&n.verify.derived)?STR.detDecl:STR.detSrc)+'</span><span class="src">'+esc(src)+'</span></div>':'')
+  +(coverText(n)?'<div class="row"><span class="lbl">'+esc(STR.detCover)+'</span><span class="now">'+esc(coverText(n))+'</span></div>':'')
   +((n.issues&&n.issues.length)?'<div class="row"><span class="lbl">'+esc(STR.detIssue)+'</span><span class="now">'+esc(n.issues.join(", "))+'</span></div>':'');
  $("detail").style.display="block";
  var dc=$("dc");if(dc)dc.addEventListener("click",function(){$("detail").style.display="none";});
@@ -645,7 +665,7 @@ function applyStrings(){
  set("blbl",STR.labels);var bl=$("blbl");if(bl)bl.title=STR.labelsTitle;
  set("pexp",STR.printExport);set("pexpSvg",STR.exportSvg);set("pexpPng",STR.exportPng);
  set("pexpLayout",STR.exportLayout);set("pexpPrint",STR.print);
- set("lg-done",STR.legDone);set("lg-prog",STR.legProg);set("lg-next",STR.legNext);
+ set("lg-done",STR.legDone);set("lg-decl",STR.legDecl);set("lg-prog",STR.legProg);set("lg-next",STR.legNext);
  set("lg-plan",STR.legPlan);set("lg-prob",STR.legProb);set("lg-unk",STR.legUnk);set("lg-hint",STR.legHint);
 }
 // ---- FEATURE #2: PRINT / EXPORT (all client-side, offline) ----
