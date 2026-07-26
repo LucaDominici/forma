@@ -246,12 +246,34 @@ var STMAP={done:"done","in-progress":"prog",next:"next",planned:"plan",problem:"
 // reads first. Dividing by every child instead would be the mirror lie: a node with no verdict is
 // not 0% done, which is exactly why `gen` refuses to write a completion nobody curated. So the
 // percentage keeps its honest denominator and shows it.
-function tallyOf(kids){
- var cnt={},tot=0,sum=0,nc=0,st3,j;
- for(j=0;j<kids.length;j++){
-  st3=STMAP[kids[j].status2]||(kids[j].status==="planned"?"plan":"unk");
-  cnt[st3]=(cnt[st3]||0)+1;tot++;
-  if(kids[j].completion!=null){sum+=(+kids[j].completion||0);nc++;}
+//
+// It counts UNITS, not boxes: grouping is the only cure for a 53-box wall, and the invariant that
+// makes grouping safe is that it must not change this line. The same repo read 25/53 flat and 2/6
+// once six domains were curated over it — the act of drawing fewer boxes silently deleted 23
+// verdicts, in the number a stakeholder reads first.
+// So a box stands for its childless descendants, and it keeps its own voice in exactly one case:
+// nobody ruled on those descendants AND the box itself carries a verdict. Descending
+// unconditionally is the mirror mistake — this repo's own board curates a verdict on each
+// container and none on the files inside, and it went from `4/4 100%` to `0/19` with no
+// percentage at all, inventing grey where a human had written an answer. Falling back to the box
+// unconditionally is the third mistake, and the worst: a domain of 9 packages nobody ruled on
+// would contribute ONE unknown instead of nine, so 25/53 would print as 25/45 and the coverage
+// would read better than it is — which is the number this whole function exists to keep honest.
+// One consequence, deliberate: on a grouped level the dots count units (53), not boxes (6).
+function tallyOf(kids,kidsOf){
+ var cnt={},tot=0,sum=0,nc=0,st3,i,j,k,q,lv,use,n;
+ for(i=0;i<kids.length;i++){
+  lv=[];q=[kids[i]];
+  while(q.length){n=q.pop();k=kidsOf(n.id);if(k.length){for(j=0;j<k.length;j++)q.push(k[j]);}else lv.push(n);}
+  use=null;
+  for(j=0;j<lv.length;j++)if(lv[j].completion!=null){use=lv;break;} // a finer answer exists
+  if(!use)use=kids[i].completion!=null?[kids[i]]:lv;                // else the box speaks, if it can
+  for(j=0;j<use.length;j++){
+   n=use[j];
+   st3=STMAP[n.status2]||(n.status==="planned"?"plan":"unk");
+   cnt[st3]=(cnt[st3]||0)+1;tot++;
+   if(n.completion!=null){sum+=(+n.completion||0);nc++;}
+  }
  }
  return {cnt:cnt,tot:tot,ruled:nc,mean:nc?Math.round(sum/nc):null};
 }
@@ -376,12 +398,13 @@ function draw(animate){
  var kids=collapseCatalogs(pid,realKids);
  CATNODES={};for(var ci=0;ci<kids.length;ci++)if(kids[ci].__catalog)CATNODES[kids[ci].id]=kids[ci];
  var lay=layoutFor(kids),pos=lay.pos;
- var idset={},memberMap={};
- for(var z=0;z<kids.length;z++){idset[kids[z].id]=1;
-  if(kids[z].__catalog)for(var mm=0;mm<kids[z].members.length;mm++)memberMap[kids[z].members[mm].id]=kids[z].id;}
- function mapId(id){return memberMap[id]||id;}
- var edges=(M.edges||[]).map(function(e){return {from:mapId(e.from),to:mapId(e.to),label:e.label,estatus:e.estatus};})
-  .filter(function(e){return idset[e.from]&&idset[e.to]&&e.from!==e.to;});
+ // `vis` = which box stands for a node on THIS screen (itself, or the catalogue that swallowed it);
+ // everything else reaches the screen through an ancestor. See rollEdges.
+ var vis={},parent={},z,mm;
+ for(z=0;z<M.nodes.length;z++)parent[M.nodes[z].id]=M.nodes[z].parent||null;
+ for(z=0;z<kids.length;z++){vis[kids[z].id]=kids[z].id;
+  if(kids[z].__catalog)for(mm=0;mm<kids[z].members.length;mm++)vis[kids[z].members[mm].id]=kids[z].id;}
+ var edges=rollEdges(M.edges||[],vis,parent);
  // fixed arrow labels: on by default while the level stays readable, else hover-only (the tooltip
  // is always there). A level with 40 arrows would be unreadable with every label painted at once.
  var showLbl=(LABELS===null)?(edges.length<=LABEL_AUTO_MAX):LABELS;
@@ -469,8 +492,9 @@ function draw(animate){
  for(var w=0;w<chain.length;w++)cb+=" &rsaquo; "+(w===chain.length-1?"<b>"+esc(chain[w].name)+"</b>":"<a data-d='"+w+"'>"+esc(chain[w].name)+"</a>");
  // Per-level programme tally — the status-board essence in one glance. Counts use the real
  // children (a collapsed catalogue still counts its members), so the tally never changes when the
- // catalogue threshold does.
- var T=tallyOf(realKids);
+ // catalogue threshold does — nor when someone groups those children into domains, which is what
+ // `childrenOf` is doing here. See tallyOf.
+ var T=tallyOf(realKids,childrenOf);
  if(T.tot){
   var DOT={done:"#2fe08a",prog:"#ffc74d",next:"#3ee7ff",plan:"#2d5a72",prob:"#ff5d5d",unk:"#7d8f99"},ord=["done","prog","next","plan","prob","unk"],agg="";
   for(j=0;j<ord.length;j++)if(T.cnt[ord[j]])agg+='<i style="background:'+DOT[ord[j]]+'"></i>'+T.cnt[ord[j]];
@@ -514,6 +538,34 @@ function wrapDesc(desc,cpl,max){
  var out=all.slice(0,max),dropped=all.length>out.length;
  if(dropped&&out.length)out[out.length-1]=out[out.length-1]+"…";
  for(i=0;i<out.length;i++)if(out[i].length>cpl)out[i]=out[i].slice(0,cpl-1)+"…";
+ return out;
+}
+// Project every edge onto the boxes actually on screen, then merge the duplicates. `vis` maps a
+// node id to the id of the box that stands for it here (itself, or the catalogue that swallowed
+// it); `parent` maps every node id to its parent. An endpoint that is not on screen climbs to the
+// ancestor that is — which is the whole point: before this, an edge whose ends were one level
+// deeper simply was not drawn, so the domain level a stakeholder is shown had 189 relationships
+// underneath it and zero arrows on it. Grouping was the only cure for a 53-box wall and it cost
+// the entire graph.
+// An edge landing on the SAME box at both ends is internal detail, not a relationship — it is
+// drawn one level down, where both ends are boxes of their own.
+// The count is summed because the arrow now stands for many: `label` carries "N×" from the Go
+// adapter, so parse it and re-emit the total. A single contributing edge keeps its label VERBATIM,
+// or a curated "reads from" would turn into "1×" the moment this ran.
+// Pure, so it is testable without a DOM — and `scripts/presentable.mjs` grades the model by
+// evaluating this very function, so the instrument cannot drift from what the reader sees.
+function rollEdges(edges,vis,parent){
+ var out=[],ix={},i,e,f,t,c,k,cur,guard,g;
+ for(i=0;i<edges.length;i++){
+  e=edges[i];
+  f=null;cur=e.from;guard=0;while(cur!=null&&guard++<64){if(vis[cur]){f=vis[cur];break;}cur=parent[cur];}
+  t=null;cur=e.to;guard=0;while(cur!=null&&guard++<64){if(vis[cur]){t=vis[cur];break;}cur=parent[cur];}
+  if(!f||!t||f===t)continue;
+  c=parseInt(String(e.label),10);if(!(c>0))c=1;
+  k=f+"|"+t;
+  if(ix[k]==null){ix[k]=out.length;out.push({from:f,to:t,label:e.label,estatus:e.estatus,n:c});}
+  else{g=out[ix[k]];g.n+=c;g.label=g.n+"×";if(e.estatus!=="to-build")g.estatus=e.estatus;}
+ }
  return out;
 }
 // Returns the path plus the point ON the curve at t=0.5 — the label anchor. (The quadratic's
