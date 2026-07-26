@@ -222,7 +222,7 @@ Five verdicts, because the owner's three do not cover everything found:
 Counts below are from the repo root at `8af203c`. `lib+bin` counts quoted-literal occurrences in
 `lib/` and `bin/`; `test` counts them in `test/run.mjs`; `README` counts them in `README.md`.
 
-### 3.1 Exported symbols (`grep -rn "^export " lib/*.mjs` → 18)
+### 3.1 Exported symbols (`grep -c "^export " lib/*.mjs | awk -F: '{s+=$2} END {print s}'` → 28)
 
 `package.json:30` exposes only `./package.json`, so nothing outside the repo can import `lib/*`.
 An export with no sibling importer is therefore pure surface.
@@ -237,6 +237,15 @@ An export with no sibling importer is therefore pure surface.
 | **`holesIn`** | `enrich.mjs:115` | **0** | 2, both inside `enrich.mjs` | **export with no importer** |
 | **`BEGIN`, `END`** | `render.mjs:9-10` | **0** | 3 each, all inside `render.mjs` | **export with no importer** |
 | `renderParts`, `renderBlock`, `norm`, `extractBetween`, `replaceBetween` | `render.mjs:13-67` | `doc` and/or `check` | 1-2 each | wired |
+| `loadDocRows`, `indexByNode`, `describingRows`, `statusFor` | `docmap.mjs:79-151` | `gen`, `check`, and `init`/`describe` respectively | 1-3 each | wired (PR #21) |
+| **`MAX_ROWS`** | `docmap.mjs:21` | **0** | 3, all inside `docmap.mjs` | **export with no importer** (PR #21) |
+| `isGo`, `goPackages`, `goEdges` | `lang.mjs:12,24,73` | `gen` / `init` / both | 1-2 each | wired (PR #18) |
+| **`goImports`** | `lang.mjs:45` | **0** | 2, both inside `lang.mjs` — `goEdges` is its only caller | **export with no importer** (PR #18) |
+| `validateModel` | `validate.mjs:60` | 2 (`gen`, `check`) | 1 each | wired (PR #20) |
+
+The three modules added since the audit commit bring the export count from 18 to 28 and **two new
+instances of the same finding**: `MAX_ROWS` and `goImports` are exported and imported by nobody,
+joining `holesIn`, `BEGIN` and `END`. Five of 28 exports are surface.
 
 Note: `render.mjs:57` exports `norm` (whitespace normalizer for block comparison) and
 `describe.mjs:8` defines a *private, different* `norm` (lowercase+trim for heading lookup). Same
