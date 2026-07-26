@@ -1015,7 +1015,12 @@ const diffPaths = (a, b, at = '') => {
   // four capabilities into one sentence would invent a claim; falling through is the honest answer.
   const core = at('core')
   if (core.descSource === 'docmap') die('docmap: a node touched by 4 rows was described anyway: ' + core.func)
-  if (core.status2 !== 'unknown' || core.completion != null) die(`docmap: over-cap node got state ${core.status2}/${core.completion}`)
+  // #43: the cap used to withhold the VERDICT too, so the more rows named a module the less it was
+  // judged — `internal_budget` on the real demo, named by four DONE rows, rendered as unassessed.
+  // The two halves part company: the verdict is still something the document says; a percentage
+  // over a reach nobody can state is not.
+  if (core.status2 !== 'in-progress') die(`docmap: over-cap node lost its verdict: ${core.status2}`)
+  if (core.completion != null) die(`docmap: over-cap node got a percentage over an unstatable reach: ${core.completion}`)
 
   // DoD 4 — a container the matrix never names stays honestly blank. This is the 0.6.0 guarantee.
   const plumbing = at('plumbing')
