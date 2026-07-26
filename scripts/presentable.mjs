@@ -3,8 +3,7 @@
 //
 // `forma check` answers "is the model still true to the code?". This answers a different and
 // narrower question: "would this model survive being projected in front of a stakeholder?".
-// Four predicates, measured exactly as a reader sees them on screen — not as the model could
-// be read if something rolled things up. Zero-dep, read-only, no network.
+// Four predicates, measured exactly as a reader sees them on screen. Zero-dep, read-only, no network.
 //
 //   node scripts/presentable.mjs <path/to/c4-model.json>
 //
@@ -18,6 +17,14 @@ const path = process.argv[2]
 if (!path) { console.error('usage: node scripts/presentable.mjs <c4-model.json>'); process.exit(2) }
 const m = JSON.parse(readFileSync(path, 'utf-8'))
 
+// "As a reader sees them" has to mean the SHIPPED viewer, not a second implementation of its rules
+// that drifts the first time one of them changes. So the arrow rule is lifted out of our own
+// tracked HTML and evaluated — the same seam `test/run.mjs` uses, and the input is never user data.
+const viewer = readFileSync(new URL('../lib/viewer/c4-hologram.html', import.meta.url), 'utf-8')
+const src = (viewer.match(/\nfunction rollEdges\(edges,vis,parent\)\{[\s\S]*?\n\}/) || [])[0]
+if (!src) { console.error('presentable: rollEdges not found in lib/viewer/c4-hologram.html — did it move?'); process.exit(2) }
+const rollEdges = new Function(src + '; return rollEdges')()
+
 const parents = new Set(m.nodes.map((n) => n.parent).filter(Boolean))
 const kids = (p) => m.nodes.filter((n) => (p == null ? !n.parent : n.parent === p))
 // A "screen" is a level the viewer actually draws: the children of one parent. A screen with a
@@ -28,12 +35,12 @@ const widest = Math.max(...screens.map((k) => k.length))
 const bare = m.nodes.filter((n) => n.parent).filter((n) =>
   !/[a-z]{4}/.test(String(n.func || n.description || '')) ||
   /^\d+ (source file|file|component)/.test(String(n.func || '')))
-// Counted as the viewer draws them: both endpoints must BE two of the boxes on this screen.
-// An edge between two grandchildren is not an arrow the reader sees.
-const drawn = screens.map((k) => {
-  const s = new Set(k.map((n) => n.id))
-  return m.edges.filter((e) => s.has(e.from) && s.has(e.to)).length
-})
+// Counted as the viewer draws them: each endpoint climbs to the box on this screen that contains
+// it, duplicates merge into one arrow, and an edge landing inside a single box is not an arrow the
+// reader sees. The catalogue collapse is ignored on purpose — it only fires above 24 siblings, and
+// predicate 2 has already failed that screen.
+const parent = Object.fromEntries(m.nodes.map((n) => [n.id, n.parent || null]))
+const drawn = screens.map((k) => rollEdges(m.edges, Object.fromEntries(k.map((n) => [n.id, n.id])), parent).length)
 
 const predicates = [
   ['context carries at least one external actor besides the system',

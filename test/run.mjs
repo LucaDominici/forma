@@ -215,6 +215,87 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok go-nested — ${conts.length} package containers (${cnames}), ${leaves.length} package leaves, ${derived.length} import edge(s), zero test nodes`)
 }
 
+// 3d) go-grouped: the curation a 53-box wall forces, and the two things it used to cost in silence.
+// Grouping packages into domains is the ONLY cure for a level no projector can show — and the
+// grouped level drew zero arrows and tallied the domains instead of the packages, so the one screen
+// a stakeholder is shown was the one screen with no relationships and a made-up denominator.
+// The fixture is shaped so none of the three assertions can pass by accident: two platform packages
+// import into money (so the rolled count is a real SUM, not a 1), and each domain holds an internal
+// import (so the self-loop drop is exercised on both screens).
+{
+  const REPO = FIX('go-grouped'), topo = join(tmp, 'gg-topo.json'), model = join(tmp, 'gg-model.json')
+  const status = join(tmp, 'gg-status.json')
+  let r = run(['init', '--repo', REPO, '--out', topo, '--force']); if (r.status !== 0) die('gg init exit ' + r.status, r)
+  const t = readJson(topo)
+  const DOM = { money: ['internal/account', 'internal/ledger'], platform: ['cmd/app', 'internal/server', 'internal/worker'] }
+  const domainOf = new Map(Object.entries(DOM).flatMap(([d, ps]) => ps.map((p) => [p, d])))
+  const sys = t.nodes[0].id
+  // THE curation, exactly as a human must write it: level and parent move, `kind` does NOT.
+  for (const n of t.nodes) { if (!domainOf.has(n.name)) continue; n.level = 'component'; n.parent = domainOf.get(n.name) }
+  t.nodes.push(
+    { id: 'money', level: 'container', kind: 'container', parent: sys, name: 'Money', tech: 'Go', description: 'What a customer owns and what moved.' },
+    { id: 'platform', level: 'container', kind: 'container', parent: sys, name: 'Platform', tech: 'Go', description: 'The service that exposes the money domain.' })
+  writeFileSync(topo, JSON.stringify(t, null, 2) + '\n')
+  // a verdict on the PACKAGES only — the domains stay unruled, which is the whole point of the tally
+  writeFileSync(status, JSON.stringify({ nodes: {
+    internal_account: { status2: 'done', completion: 100 }, internal_ledger: { status2: 'done', completion: 100 },
+    internal_server: { status2: 'in-progress', completion: 40 } } }, null, 2))
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model, '--status', status])
+  if (r.status !== 0) die('gg gen exit ' + r.status, r)
+  r = run(['check', '--repo', REPO, '--model', model, '--topology', topo]); if (r.status !== 0) die('gg check exit ' + r.status, r)
+  const m = readJson(model)
+
+  // P0 — the premise: keeping kind:"container" preserves every import edge across the regrouping.
+  if (m.edges.filter((e) => e.kind === 'import').length !== 5) die('gg precondition: grouping cost import edges, got ' + JSON.stringify(m.edges))
+
+  const html = readFileSync(join(HERE, '..', 'lib', 'viewer', 'c4-hologram.html'), 'utf-8')
+  const rfn = (html.match(/\nfunction rollEdges\(edges,vis,parent\)\{[\s\S]*?\n\}/) || [])[0]
+  if (!rfn) die('viewer: rollEdges not found — did the roll-up move back inline?')
+  const rollEdges = new Function(rfn + '; return rollEdges')()
+  const parent = Object.fromEntries(m.nodes.map((n) => [n.id, n.parent || null]))
+  const screen = (ids) => rollEdges(m.edges, Object.fromEntries(ids.map((i) => [i, i])), parent)
+
+  // P1 — the domain level draws its children's relationships, with the count SUMMED. Three model
+  // edges (server→account 2×, server→ledger 1×, worker→account 1×) become ONE arrow reading 4×.
+  const dom = screen(['money', 'platform'])
+  if (dom.length !== 1) die(`P1: the grouped level drew ${dom.length} arrow(s), want exactly platform→money: ` + JSON.stringify(dom))
+  if (!(dom[0].from === 'platform' && dom[0].to === 'money')) die('P1: arrow direction inverted — money never imports platform: ' + JSON.stringify(dom[0]))
+  if (dom[0].n !== 4) die(`P1: the rolled count is ${dom[0].n}, not the sum 2+1+1=4 — the arrow under-reports what it stands for`)
+  if (!/^4/.test(String(dom[0].label))) die('P1: the summed count never reached the label: ' + dom[0].label)
+
+  // P2 — an edge whose ends sit inside the SAME box is not an arrow: account→ledger and
+  // app→server are internal detail at the domain level, and both are drawn one level down.
+  if (screen(['money', 'platform']).some((e) => e.from === e.to)) die('P2: a box drew an arrow to itself')
+  const insideMoney = screen(['internal_account', 'internal_ledger'])
+  if (!(insideMoney.length === 1 && insideMoney[0].from === 'internal_account')) die('P2: drilling into a domain lost its internal arrow: ' + JSON.stringify(insideMoney))
+  if (String(insideMoney[0].label) !== '1×') die('P2: a single contributing edge must keep its label verbatim, got ' + insideMoney[0].label)
+  if (!screen(['cmd_app', 'internal_server', 'internal_worker']).length) die('P2: the platform screen lost its internal arrow')
+
+  // P3 — the tally reports the PACKAGES, not the domains. 3 of 5 packages carry a verdict; the two
+  // domain boxes carry none. Before the roll-up this level read 0/2 and the 3 verdicts vanished.
+  const tfn2 = (html.match(/\nfunction tallyOf\(kids,kidsOf\)\{[\s\S]*?\n\}/) || [])[0]
+  const tallyOf2 = new Function('var STMAP={done:"done","in-progress":"prog",next:"next",planned:"plan",problem:"prob",unknown:"unk"};' + tfn2 + '; return tallyOf')()
+  const kidsOf = (id) => m.nodes.filter((n) => n.parent === id)
+  const T = tallyOf2(m.nodes.filter((n) => n.parent === sys), kidsOf)
+  if (!(T.ruled === 3 && T.tot === 5)) die(`P3: the grouped level tallies ${T.ruled}/${T.tot}, want 3/5 — the packages' verdicts do not reach the box that groups them`)
+  if (T.mean !== 80) die(`P3: mean over the ruled packages is ${T.mean}, want 80 ((100+100+40)/3)`)
+  if ((T.cnt.done || 0) !== 2 || (T.cnt.unk || 0) !== 2) die('P3: the status dots count boxes, not units: ' + JSON.stringify(T.cnt))
+
+  // P4 — the curation that WOULD cost the graph must say so. `kind: "component"` is the intuitive
+  // thing to write and it takes 189 edges to 13 on a real repo, silently.
+  const badTopo = join(tmp, 'gg-topo-bad.json'), badModel = join(tmp, 'gg-model-bad.json')
+  const bad = readJson(topo)
+  for (const n of bad.nodes) if (domainOf.has(n.name)) n.kind = 'component'
+  writeFileSync(badTopo, JSON.stringify(bad, null, 2) + '\n')
+  r = run(['gen', '--repo', REPO, '--topology', badTopo, '--out', badModel, '--status', status])
+  if (r.status !== 0) die('P4 gen exit ' + r.status, r)
+  if (readJson(badModel).edges.filter((e) => e.kind === 'import').length) die('P4 precondition: kind:"component" no longer drops the edges — retune this assertion')
+  if (!/WARNING/.test(r.stderr || '')) die('P4: gen dropped every import edge without a word on stderr:\n' + (r.stderr || '<empty>'))
+  if (!/\b5 node\(s\)/.test(r.stderr || '')) die('P4: the warning does not carry the count: ' + (r.stderr || ''))
+  if (!/kind/.test(r.stderr || '')) die('P4: the warning never names the field that caused it: ' + (r.stderr || ''))
+  console.log(`  ok go-grouped — a grouping box draws its children's arrows (platform→money ${dom[0].label}, self-loops dropped), tallies their verdicts (${T.ruled}/${T.tot}), and a curation that would lose edges warns loud`)
+}
+
 // 4) §1b attach-mode + check freshness, end-to-end on a copy of the self-repo
 {
   const repo = join(tmp, 'selfrepo')
@@ -636,19 +717,47 @@ const diffPaths = (a, b, at = '') => {
 
   // the headline percentage must never claim more coverage than it has. This is the flagship
   // promise ("mai un 100% inventato") and it lives in the one number read first.
-  const tfn = (html.match(/\nfunction tallyOf\(kids\)\{[\s\S]*?\n\}/) || [])[0]
+  const tfn = (html.match(/\nfunction tallyOf\(kids,kidsOf\)\{[\s\S]*?\n\}/) || [])[0]
   if (!tfn) die('viewer: tallyOf not found — did the tally move back inline?')
   const tallyOf = new Function('var STMAP={done:"done","in-progress":"prog",next:"next",planned:"plan",problem:"prob",unknown:"unk"};' + tfn + '; return tallyOf')()
+  const flat = () => [] // a board of childless boxes: every kid IS its own unit
   // the shape that produced "progress 100%" on a board where half the containers had no verdict
-  const half = [...Array(25)].map(() => ({ status2: 'done', completion: 100 })).concat([...Array(28)].map(() => ({ status2: 'unknown' })))
-  const t = tallyOf(half)
+  const half = [...Array(25)].map((_, i) => ({ id: 'd' + i, status2: 'done', completion: 100 })).concat([...Array(28)].map((_, i) => ({ id: 'u' + i, status2: 'unknown' })))
+  const t = tallyOf(half, flat)
   if (t.mean !== 100) die('viewer tally: the mean over the ruled nodes should stay 100, got ' + t.mean)
   if (t.ruled !== 25 || t.tot !== 53) die(`viewer tally: coverage should be 25/53, got ${t.ruled}/${t.tot}`)
   if (t.ruled === t.tot) die('viewer tally: a partially-ruled board must not report full coverage')
   // a node with no verdict is not 0% done — the mean must not be dragged toward zero either
-  if (tallyOf([{ status2: 'done', completion: 100 }, { status2: 'unknown' }]).mean !== 100) die('viewer tally: an unruled node was counted as 0%')
+  if (tallyOf([{ status2: 'done', completion: 100 }, { status2: 'unknown' }], flat).mean !== 100) die('viewer tally: an unruled node was counted as 0%')
   // nothing ruled at all ⇒ no percentage to print
-  if (tallyOf([{ status2: 'unknown' }, { status2: 'unknown' }]).mean !== null) die('viewer tally: a board nobody ruled on must print no percentage')
+  if (tallyOf([{ status2: 'unknown' }, { status2: 'unknown' }], flat).mean !== null) die('viewer tally: a board nobody ruled on must print no percentage')
+  // …and grouping those same 53 under 6 domain boxes must not change one digit of that line: the
+  // domains are drawn, the packages are counted. Anything else means curating the wall away
+  // silently deletes verdicts, which is how `2/7` came to stand for 25/53.
+  const domains = [...Array(6)].map((_, i) => ({ id: 'dom' + i }))
+  const grouped = tallyOf(domains, (id) => half.filter((_, i) => 'dom' + (i % 6) === id))
+  if (!(grouped.ruled === t.ruled && grouped.tot === t.tot && grouped.mean === t.mean)) {
+    die(`viewer tally: grouping changed the board — flat ${t.ruled}/${t.tot} @${t.mean}% became ${grouped.ruled}/${grouped.tot} @${grouped.mean}%`)
+  }
+  // …and the mirror mistake: descending into children NOBODY ruled on invents grey where a human
+  // wrote an answer. This repo's own board is exactly that shape — a verdict per container, none on
+  // the files inside — and descending unconditionally took it from `4/4 100%` to `0/19`, no
+  // percentage at all. A box speaks for itself when the finer answer does not exist.
+  const box = { id: 'lib', status2: 'done', completion: 100 }
+  const files = [...Array(13)].map((_, i) => ({ id: 'f' + i, status2: 'unknown' }))
+  const kept = tallyOf([box], (id) => (id === 'lib' ? files : []))
+  if (!(kept.ruled === 1 && kept.tot === 1 && kept.mean === 100)) {
+    die(`viewer tally: a curated verdict was discarded for ${files.length} children nobody ruled on — got ${kept.ruled}/${kept.tot} @${kept.mean}%`)
+  }
+  // but one ruled child IS a finer answer, and then the children are what the box stands for
+  const oneRuled = files.slice(0, 12).concat([{ id: 'f12', status2: 'done', completion: 100 }])
+  const dropped = tallyOf([box], (id) => (id === 'lib' ? oneRuled : []))
+  if (!(dropped.ruled === 1 && dropped.tot === 13)) die(`viewer tally: a ruled child did not outrank the box's own verdict — got ${dropped.ruled}/${dropped.tot}`)
+  // and the third mistake, the worst of the three: when NOBODY has ruled — not the box, not one
+  // child — the box may not stand in for its subtree. Nine unknowns collapsing to one unknown
+  // shrinks the denominator, and 25/53 would print as 25/45: coverage reading better than it is.
+  const silent = tallyOf([{ id: 'dom', status2: 'unknown' }], (id) => (id === 'dom' ? files.slice(0, 9) : []))
+  if (silent.tot !== 9) die(`viewer tally: ${silent.tot} unit(s) for 9 packages nobody ruled on — the denominator shrank, so the coverage reads better than it is`)
 
   // every UI string must exist in BOTH locales (repo rule: en is default, it must keep up)
   const lit = (html.match(/\nvar STRINGS=\{[\s\S]*?\n\};/) || [])[0]
@@ -805,4 +914,4 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok doc-drift — a dead code_ref fails gen; a deleted document, a rewritten row and a silent derivation all fail check; the system box stays unknown')
 }
 
-console.log('OK — mini, flat-python, data-noise, virgin-kebab, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, docmap all green.')
+console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, docmap all green.')
