@@ -6,6 +6,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.9.0] - 2026-07-26
 
+### Fixed — the first five minutes of a stranger
+
+- **The first screen is no longer one empty box (#33).** `init` seeded a single context node with a
+  generated sentence in it, and the README's "best-effort; then curate" never said that for *this*
+  screen the curation is not optional — without it there is no big picture at all. `init` now seeds
+  the two roles every system has, `kind: "person"` and `kind: "external"`, with an arrow each to the
+  system and names that cannot be mistaken for curation: `TODO: who uses it`,
+  `TODO: what it depends on`. Inventing plausible ones ("End user") was rejected for exactly that
+  reason. While a `TODO:` name survives, `gen` prints the names back on stderr in one line and
+  carries on — the model is valid, only its first screen is unfinished. The closing line of `init`
+  now leads with the context instead of listing it as one chore of three. Measured on a foreign
+  53-package repo: `scripts/presentable.mjs` predicate 1 goes FAIL (1 box) → PASS (3 boxes) and
+  predicate 4 stays PASS (`2,189`) on a bare `init`, with no hand curation anywhere.
+- **A two-stack repo says so instead of showing one stack (#34).** `init` models ONE language per
+  run — the container pass keys on a single `match` — and it used to walk past everything else in
+  silence: on a Go + React monorepo it seeded 53 Go packages and left out the application the users
+  actually open, with no line admitting it. Every stack it saw and did not seed is now named with
+  its file and directory counts, and the topology carries `_unseeded`: ready-made `nodes` +
+  `leafSources` pairs, one per directory, ids already de-duplicated against the seeded ones.
+  Pasting them is a cut, not a rewrite: the fixture proves `gen` and `check` both accept the entries
+  verbatim. Seeding them automatically was measured on that repo and
+  rejected: it takes the container level from 53 boxes to 92, prose-less boxes from 28 to 55, and
+  flips predicate 4 from PASS to FAIL — and the shallowest-directory rule would model the frontend
+  as its two build config files, because `frontend/` holds `knip.config.ts` and `vite.config.ts`
+  while the 302-file application lives one level down under `frontend/src`.
+- **One `match` per language, not per extension.** A React repo where `*.tsx` outnumbered `*.ts` was
+  modelled from the `.tsx` half alone and the `.ts` half was neither seeded nor mentioned; `init`
+  now seeds `\.(ts|tsx)$`. The same rule governs what gets reported: the report keys on the
+  directories the container pass did not reach — per language, so `scripts/` can be a Go package and
+  still be named for the 160 `*.mjs` nothing models — and counts each candidate the way `gen` walks
+  it, match and exclusion included. Without that last part six directories of a real Go repo, holding
+  nothing but `_test.go`, came back as entries that would have seeded twenty boxes of test files.
+- **`--include` stopped promising what it cannot do.** The flag un-skips a data/doc directory **by
+  name** (`docs`, `fixtures`, `testdata`, …); it never took a path, so the `--include <dir,...>` in
+  `init`'s error message read as "point me at the sources" and did nothing on a Go repo. The message
+  now names the directories the flag actually accepts, and that error is no longer fatal: `init` is
+  best-effort, and since #33 it always has something true to write. A repo with no recognised source
+  at all is now a warning and a valid context-only topology, not exit 1.
+
 ### Changed
 
 - **A number derived from a repo document now discloses what it rests on.** Two things were true at
