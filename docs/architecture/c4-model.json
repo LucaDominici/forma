@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.5.0",
-  "generatedAt": "2026-07-26T08:37:52.852Z",
+  "generatedAt": "2026-07-26T08:39:17.284Z",
   "source": {
     "repo": "forma",
-    "commit": "e79b0deb07ea5d7303326360f8d3780e5d1feee9",
+    "commit": "321657d3853e6f05f07f36354dafb3c7cb8f8d18",
     "branch": "feat/17-status-channel",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.5.0",
