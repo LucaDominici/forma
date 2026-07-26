@@ -296,7 +296,12 @@ function rollStatus(node,kidsOf){
   if((rank[s2]||0)>best){best=rank[s2]||0;key=s2;}
  }
  if(!nr)return null;
- return {status2:key,mean:nc?Math.round(sum/nc):null,ruled:nr,total:lv.length};
+ // #43: the mean and the coverage must share a denominator or the badge lies twice in one string.
+ // Averaging over the children that carry a number while claiming coverage over the children that
+ // carry a verdict printed "100% 25/53" from a SINGLE measured child - the owner's complaint,
+ // verbatim. A mean is emitted only when every ruled child carries a number; otherwise the badge
+ // shows coverage alone, which is the thing actually known.
+ return {status2:key,mean:(nc&&nc===nr)?Math.round(sum/nc):null,ruled:nr,measured:nc,total:lv.length};
 }
 // The badge: the first number a stakeholder reads, so it is a function like everything else that
 // makes a claim. Order of authority: a curated word, the node's own measurement, the roll-up, then
@@ -307,7 +312,7 @@ function badgeOf(n,roll){
  return n.statusWord||(n.completion!=null?n.completion+"%":roll?(roll.mean!=null?roll.mean+"% ":"")+roll.ruled+"/"+roll.total:(n.status2&&n.status2!=="unknown"?"":STR.stUnk))
 }
 function tallyOf(kids,kidsOf){
- var cnt={},tot=0,sum=0,nc=0,st3,i,j,k,q,lv,use,n;
+ var cnt={},tot=0,sum=0,nc=0,nr=0,st3,i,j,k,q,lv,use,n;
  for(i=0;i<kids.length;i++){
   lv=[];q=[kids[i]];
   while(q.length){n=q.pop();k=kidsOf(n.id);if(k.length){for(j=0;j<k.length;j++)q.push(k[j]);}else lv.push(n);}
@@ -319,9 +324,13 @@ function tallyOf(kids,kidsOf){
    st3=STMAP[n.status2]||(n.status==="planned"?"plan":"unk");
    cnt[st3]=(cnt[st3]||0)+1;tot++;
    if(n.completion!=null){sum+=(+n.completion||0);nc++;}
+   if(st3!=="unk")nr++;
   }
  }
- return {cnt:cnt,tot:tot,ruled:nc,mean:nc?Math.round(sum/nc):null};
+ // #43: `ruled` must mean the same thing here as in rollStatus - how many boxes somebody judged -
+ // or the breadcrumb and the badge contradict each other on the same screen. The mean stays
+ // subject to the same rule: it is emitted only when every judged box carries a number.
+ return {cnt:cnt,tot:tot,ruled:nr,measured:nc,mean:(nc&&nc===nr)?Math.round(sum/nc):null};
 }
 var M=null, stack=[null], mode="now", POS={}, drag=null, justDragged=false, CATNODES={}, FETCHED=false
 var VBOX={}; // last fitted viewBox per level — frozen while dragging so the canvas does not rescale

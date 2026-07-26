@@ -660,9 +660,13 @@ const diffPaths = (a, b, at = '') => {
   if (r.status !== 0) die('WP-A5: verify exit ' + r.status, r)
   let v = readJson(model)
   const done = v.nodes.find((n) => n.id === c1.id), open = v.nodes.find((n) => n.id === c2.id)
-  if (!(done.status2 === 'done' && done.completion === 100)) die('WP-A5: node on a CLOSED issue not marked done')
-  // the badge renders statusWord over completion, so a curated word must not outlive the verdict
-  if (done.statusWord !== '100%') die('WP-A5: badge still reads "' + done.statusWord + '" on a node verified done')
+  // #43: this used to assert completion === 100, which encoded the defect rather than preventing
+  // it — a closed issue justifies a VERDICT, never a percentage, and the number it wrote carried
+  // no citation, so the publication gate read it as a measurement.
+  if (done.status2 !== 'done') die('WP-A5: node on a CLOSED issue not marked done')
+  if (done.completion != null) die('WP-A5: a closed issue produced a percentage (' + done.completion + '%) — nothing here measured anything')
+  // the badge renders statusWord over the verdict, so a curated word must not outlive it
+  if (done.statusWord != null) die('WP-A5: badge still reads "' + done.statusWord + '" on a node verified done')
   if (!/^Closed with evidence \(#7 CLOSED, gh .*\)\. Was in progress\.$/.test(done.current)) die('WP-A5: evidence prefix missing/malformed: ' + done.current)
   if (JSON.stringify(open) !== openBefore) die('WP-A5: node on an OPEN issue was modified: ' + JSON.stringify(open))
   if (!(v.meta.verifiedAt && v.meta.verifyMethod === 'gh live')) die('WP-A5: fact base not stamped')

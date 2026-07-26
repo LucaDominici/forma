@@ -52,7 +52,15 @@ const drawn = screens.map((k) => rollEdges(m.edges, Object.fromEntries(k.map((n)
 // survive, and it is the badge a stakeholder reads first. `forma verify` marks a node done from a
 // closed issue WITHOUT restamping its citation, so a node proven that way trips this too — and
 // that complaint is correct: the board's provenance for that number still names a document.
-const declaimed = m.nodes.filter((n) => n.completion != null && (n.verify || {}).derived === true)
+// #43: the filter used to require `verify.derived === true`, which made this predicate grade a
+// LABEL rather than a number — and a label is writable and erasable. A percentage with no citation
+// at all sailed through, and `forma verify` writes exactly that shape (lib/verify.mjs: completion
+// = 100, node.verify untouched). So the burden is inverted: a percentage is a declaration UNLESS
+// its citation says, positively, that something measured it. Nothing in forma measures completion
+// today — a doc row count is a declaration, a closed issue is a declaration — so today this
+// blocks every percentage, and that is the correct answer rather than an oversight.
+const measured = (n) => (n.verify || {}).measured === true
+const declaimed = m.nodes.filter((n) => n.completion != null && !measured(n))
 
 const predicates = [
   ['context carries at least one external actor besides the system',
