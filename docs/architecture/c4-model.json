@@ -1,12 +1,12 @@
 {
-  "schemaVersion": "1.4.0",
-  "generatedAt": "2026-07-25T23:37:59.834Z",
+  "schemaVersion": "1.5.0",
+  "generatedAt": "2026-07-26T08:21:46.949Z",
   "source": {
     "repo": "forma",
-    "commit": "4caf04991f5ce4ff194446a38eea3b18b458fad0",
-    "branch": "task/schema-validation",
+    "commit": "7892d16cb005e8496c7d300e8e5d43b67cd02075",
+    "branch": "task/17-docmap",
     "docPath": "docs/architecture/ARCHITECTURE.md",
-    "generator": "gen-c4-model@1.4.0",
+    "generator": "gen-c4-model@1.5.0",
     "statusPath": "docs/architecture/c4-status.json"
   },
   "meta": {
@@ -245,7 +245,7 @@
         {
           "type": "glob",
           "ref": "lib",
-          "count": 12
+          "count": 13
         }
       ],
       "category": "container",
@@ -409,6 +409,25 @@
       "status2": "unknown",
       "target": "",
       "func": "forma doc — project an arc42 scaffold from c4-model.json. The DETERMINISTIC sections (context/building-block diagrams, container table, ADR index, stack) are filled from the model — so they can never drift from it. The JUDGMENT sections (go",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__docmap_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "docmap",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/docmap.mjs"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "docmap.mjs — the DOCUMENTARY source of the description chain (§1a), and the only deterministic producer of programme state. Pure parsing, NO network, NO invention. A governed repo already writes, in prose, what each part of it does for the ",
       "descSource": "docstring"
     },
     {
@@ -718,7 +737,7 @@
       "estatus": "active",
       "from": "test",
       "to": "lib",
-      "label": "5×",
+      "label": "6×",
       "kind": "import"
     }
   ]

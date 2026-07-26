@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **The feature matrix now outranks the code above the leaf (`lib/docmap.mjs`), and it can generate
+  the progress bar (issue #17, first slice).** The description chain was code-first at every level:
+  right for a file, wrong for a container, where a stakeholder asks what that part of the product
+  does for the user — a sentence a governed repo has already written in a capability table.
+  `forma init` now detects those tables and lists them under `docSources`; `gen` joins each row to
+  the nodes its code references name and quotes the row **verbatim** (`descSource: "docmap"`).
+  Where the rows carry a status, `status2` and `completion` are **derived** from them (one of two
+  capabilities shipped ⇒ `in-progress`, 50%) with `verify.source` naming the document and the
+  tally — the first producer of programme state that is not a hand-written overlay. Because it is
+  derived it is never trusted: `forma check` re-reads the document and **fails** if the committed
+  model claims a number the document no longer supports, per field, skipping fields the curated
+  overlay owns. Three guards keep the "invents nothing" rule intact: a node named by **more than
+  three rows** is only *touched* by the matrix, not described by it, so it yields nothing and the
+  code chain runs (on haben `internal/store` is named by 12 rows, `internal/server` by 20);
+  auto-detection additionally **requires a status column**, because "feature + file" is also the
+  shape of a refactor plan and a task line does not belong in a stakeholder's box; and a node no
+  document names stays `unknown` rather than getting a made-up zero.
+  Measured on haben (107 nodes): `descSource` went from `{curated 1, fallback 104, readme 2}` with
+  every node `unknown`, to `{curated 1, docmap 50, fallback 54, readme 2}` with **50 nodes carrying
+  derived progress** and **25 of 53 containers** reading their own capability sentence.
+  Schema `1.4.0` → `1.5.0` (`descSource` enum += `docmap`).
+
+### Fixed
+- **A README opening with YAML front matter put `--- title: '…' docversion: '2.1.0'` in a box.**
+  `firstPara` stripped markdown headings but not front matter, so on any repo whose docs carry it
+  the first "paragraph" was the metadata block. Two of haben's containers rendered exactly that.
+
+### Added
 - **Per-language adapters for topology and edges (`lib/lang.mjs`), with Go as the first case.**
   `forma init` already detected the language and then applied a heuristic designed for JS anyway.
   On a real Go repo (~38 sources) that produced `nodes=44 leaves=38 edges=0`: `internal/` was one
