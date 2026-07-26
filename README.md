@@ -39,7 +39,22 @@ npx forma-arch <command>        # or: npm i -D forma-arch
 | `forma serve` | Open the live explorer at `http://localhost:4173` |
 | `forma verify` | Refresh status from live GitHub issues through your `gh` CLI — the **only** networked command |
 
-**Box text comes from your docs.** `gen` fills each box with the module's docstring (Python `"""…"""`, JS/TS leading block), else the directory `README.md`, else a mapped arc42 section — so the explorer shows meaning, not a list of symbols. On a flat directory of many `foo_*` files it also synthesizes a **component** layer, described from its children's docs (`--no-cluster` to disable; `--cluster-min <n>` = leaves before a container is clustered, default 8; `--group-min <n>` = files sharing a prefix before they become a component, default 3).
+**Box text comes from your docs.** The description chain is:
+
+Container chain: curated topology (`topo.descriptions` + `node.description`) — key format is `<containerId>/<stem>`,
+where `stem` is the box name without extension and a container maps to itself (`core/core`), then `featurematrix`
+from `topo.featureDocs` (seeded by `forma init`), then module docstring / README / arc42 / fallback.
+
+Leaf chain: curated topology first, then module docstring, then directory README, then `featurematrix`, then arc42
+fallback.
+
+On a flat directory of many `foo_*` files it also synthesizes a **component** layer, described from its
+children's docs (`--no-cluster` to disable; `--cluster-min <n>` = leaves before a container is clustered,
+default 8; `--group-min <n>` = files sharing a prefix before they become a component, default 3).
+
+`featureDocs` are markdown files under `docs/` that define capabilities as tables. A row names one or more
+code paths inside inline code fences (like `` `src/services` `` or `` `src/services/report.js` ``), and that row
+becomes the resolver input for the featurematrix step.
 
 **Programme state is curated, not guessed.** Code shows what exists, never how far along it is. Drop a `docs/architecture/c4-status.json` (`--status <path>` to move it) and `gen` decorates nodes by id with `status2`, `completion`, `statusWord`, `current`, `target`, `verify`, `issues` — never `func`, which belongs to the docs. `gen` validates the *form* (ids resolve, fields known, enums and issue numbers well-shaped) and never the prose; `forma check` fails if the overlay decorates a node the model no longer has.
 

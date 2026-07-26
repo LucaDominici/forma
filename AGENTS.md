@@ -22,6 +22,8 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
 - No runtime deps, no build step. Run gates with `npm run lint` and `npm test`.
 - `gen` and `check` never touch the network. `verify` (gh) and `gen --enrich` (LLM) are the only
   networked paths, both opt-in — keep it that way.
+- `init` now seeds `featureDocs`; description keys are `topo.descriptions[<containerId>/<stem>]`, and
+  `descSource` now includes `featurematrix`.
 - The viewer is one HTML file in ES5 style (var/function); every new UI string goes in BOTH
   locales of `STRINGS`.
 - `npm pack --dry-run` must stay at the 19 shipped files, zero `.fuse_hidden` (the

@@ -1,12 +1,12 @@
 {
-  "schemaVersion": "1.4.0",
-  "generatedAt": "2026-07-25T23:37:59.834Z",
+  "schemaVersion": "1.5.0",
+  "generatedAt": "2026-07-26T08:17:54.011Z",
   "source": {
     "repo": "forma",
-    "commit": "4caf04991f5ce4ff194446a38eea3b18b458fad0",
-    "branch": "task/schema-validation",
+    "commit": "7892d16cb005e8496c7d300e8e5d43b67cd02075",
+    "branch": "feat/17-featurematrix",
     "docPath": "docs/architecture/ARCHITECTURE.md",
-    "generator": "gen-c4-model@1.4.0",
+    "generator": "gen-c4-model@1.5.0",
     "statusPath": "docs/architecture/c4-status.json"
   },
   "meta": {
@@ -389,7 +389,7 @@
       "category": "container",
       "status2": "unknown",
       "target": "",
-      "func": "describe.mjs — deterministic description resolver (§1a). Pure parsing, NO network. Fills a node's plain-language func from EXISTING docs (curated → docstring → README → arc42), so boxes show MEANING, not a bare filename. A generated string ",
+      "func": "describe.mjs — deterministic description resolver (§1a). Pure parsing, NO network. Fills a node's plain-language func from EXISTING docs (curated → docstring → README → arc42 → generated fallback), so boxes show MEANING, not a bare filename",
       "descSource": "docstring"
     },
     {
@@ -718,7 +718,7 @@
       "estatus": "active",
       "from": "test",
       "to": "lib",
-      "label": "5×",
+      "label": "6×",
       "kind": "import"
     }
   ]

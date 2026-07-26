@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, statSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, statSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { validateModel } from '../lib/validate.mjs'
+import { parseFeatureDoc } from '../lib/describe.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BIN = join(HERE, '..', 'bin', 'forma.mjs')
@@ -32,6 +33,7 @@ const diffPaths = (a, b, at = '') => {
   r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('gen exit ' + r.status, r)
   r = run(['check', '--repo', REPO, '--model', model, '--topology', topo]); if (r.status !== 0) die('check exit ' + r.status, r)
   const m = readJson(model)
+  if ((readJson(topo).featureDocs || []).length) die(`§1: init unexpectedly seeded featureDocs on mini: ${JSON.stringify(readJson(topo).featureDocs)}`)
   const containers = m.nodes.filter((n) => n.kind === 'container').length
   const leaves = m.nodes.filter((n) => n.kind === 'leaf').length
   const derived = m.edges.filter((e) => e.kind === 'import').length
@@ -53,7 +55,39 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok mini — ${containers} containers, ${leaves} leaves, ${derived} derived edge(s); one volatile field (generatedAt)`)
 }
 
-// 2) flat-python: §2 prefix clustering + §1a docstring/README resolution
+// 2) feature-matrix: seeded matrices and featurematrix chain precedence
+{
+  const REPO = FIX('feature-matrix'), topo = join(tmp, 'fm-topo.json'), model = join(tmp, 'fm-model.json')
+  let r = run(['init', '--repo', REPO, '--out', topo, '--force']); if (r.status !== 0) die('fm init exit ' + r.status, r)
+  const t = readJson(topo)
+  if (!((t.featureDocs || []).includes('docs/FEATURE_MATRIX.md'))) die('FM0: init did not seed featureDocs with docs/FEATURE_MATRIX.md')
+  const matrix = parseFeatureDoc(readFileSync(join(REPO, 'docs', 'FEATURE_MATRIX.md'), 'utf-8'))
+  if (!matrix.some((r) => r.paths.length === 1 && r.paths[0] === 'src/report/missing.js')) die('FM1: parseFeatureDoc did not keep the non-existing-path-only row')
+  if (existsSync(join(REPO, 'src/report/missing.js'))) die('FM1: the non-existing-path-only row in FEATURE_MATRIX.md does exist on disk')
+
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('fm gen exit ' + r.status, r)
+  const m = readJson(model)
+  const billing = m.nodes.find((n) => n.kind === 'container' && n.name === 'billing')
+  if (!billing) die('FM2: no billing container found')
+  if (billing.descSource !== 'featurematrix') die('FM2: billing container not from featurematrix: ' + billing.descSource)
+  if (!/Billing core workflows/.test(billing.func)) die('FM2: billing container func not from matrix row')
+
+  const report = m.nodes.find((n) => n.kind === 'container' && n.name === 'report')
+  if (!report) die('FM3: no report container found')
+  if (report.descSource !== 'featurematrix') die('FM3: report container not from featurematrix: ' + report.descSource)
+
+  const commented = m.nodes.find((n) => n.kind === 'leaf' && n.name === 'invoice')
+  if (!commented) die('FM4: no invoice leaf found')
+  if (commented.descSource !== 'docstring') die('FM4: leaf with leading comment was not documented by docstring: ' + commented.descSource)
+
+  const matrixLeaf = m.nodes.find((n) => n.kind === 'leaf' && n.name === 'exporter')
+  if (!matrixLeaf) die('FM5: no exporter leaf found')
+  if (matrixLeaf.descSource !== 'featurematrix') die('FM5: leaf without docstring or README was not resolved by featurematrix: ' + matrixLeaf.descSource)
+  if (!/Usage reports are exported/.test(matrixLeaf.func)) die('FM5: leaf featurematrix description not applied: ' + matrixLeaf.func)
+  console.log('  ok feature-matrix — seeded featureDocs, matrix precedence, container/leaf chain checks')
+}
+
+// 2a) flat-python: §2 prefix clustering + §1a docstring/README resolution
 {
   const REPO = FIX('flat-python'), topo = join(tmp, 'fp-topo.json'), model = join(tmp, 'fp-model.json')
   let r = run(['init', '--repo', REPO, '--out', topo, '--force']); if (r.status !== 0) die('fp init exit ' + r.status, r)
@@ -570,4 +604,4 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok schema — a conforming model passes; a missing required field and an out-of-enum kind are both rejected by name')
 }
 
-console.log('OK — mini, flat-python, data-noise, virgin-kebab, attach-doc, enrich, scaffold, status-overlay, component-hash, verify, layout-hints, viewer, schema all green.')
+console.log('OK — mini, feature-matrix, flat-python, data-noise, virgin-kebab, attach-doc, enrich, scaffold, status-overlay, component-hash, verify, layout-hints, viewer, schema all green.')
