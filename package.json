@@ -1,6 +1,6 @@
 {
   "name": "forma-arch",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Forma — present your architecture instead of slides. An interactive, stack-agnostic C4 explorer (context → container → component → leaf) generated from your code and kept true to it by a deterministic drift check.",
   "keywords": [
     "architecture",

@@ -4,6 +4,31 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-07-26
+
+Three holes 0.7.0 left around the curated overlay — the channel it declares to be the authority.
+
+### Added
+- **`forma gen --status-apply <file>` — the writer `c4-status.json` never had.** The overlay outranks
+  every derived number, `gen` validates it and `check` governs it, and no command in the repo had
+  ever written one: on a fresh repo the authority channel was reachable only by hand-editing JSON.
+  The apply merges `{"nodes":{"<id>":{…}}}` into the curated file through the **same** validator the
+  read path uses — one function now, because a writer that validated differently from the reader
+  would commit a file the very next `gen` rejects. It validates **everything before touching disk**,
+  so any rejected fill leaves the committed overlay byte-identical, and it creates
+  `docs/architecture/` when the first apply on a repo is also the one that creates the overlay.
+- **`forma init` seeds `meta.ghRepo` from the `origin` remote.** `forma verify` is the one command
+  that derives progress from a fact rather than a claim in a document, and it needs that field to
+  know where to look; `init` never wrote it, so on every freshly seeded repo verify had nowhere to
+  point. A directory with no git remote still gets no `ghRepo` — a fabricated one would send
+  `verify` at the wrong repository.
+
+### Fixed
+- **A leaf's `category` was its parent's `category`, not its container.** Every leaf in a model
+  therefore carried the literal string `"container"` — 53 of 53 on a real Go repo — and the viewer's
+  catalogue collapse groups childless siblings *by category*, so drilling into a container showed
+  one box labelled `container` instead of the leaves. Leaves now carry their container's name.
+
 ## [0.7.0] - 2026-07-26
 
 Two things a diagram generator should have been doing all along, and was not: reading the
