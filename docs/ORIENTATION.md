@@ -13,11 +13,11 @@ Read this before changing anything under `lib/`.
 >   `STATUS_FIELDS` now `:165`), `describe.mjs` +3 from line 87.
 > - **Two rows of §3.3 gain a producer** — `init` now emits `leafSources[].filesOnly`, and
 >   `leafSources[].exclude` for Go. They are no longer "wired, never fed".
-> - **Everything else holds.** The description chain (§2.3) gained **no** documentary source — zero
->   `descSource` lines changed — so §4's analysis of DoD 1-3 stands as written. `descriptions` is
->   still seeded `{}`; the five unwired flags are still untested and undocumented; nothing validates
->   the schema (`git grep "c4-model.schema" -- lib bin scripts test` → the help text and the schema's
->   own `$id`); CI still never runs the gate.
+> - **Everything else holds at the time of PR #18.** The description chain (§2.3) gained **no**
+>   documentary source — zero `descSource` lines changed — so §4's analysis of DoD 1-3 stands as
+>   written. `descriptions` is still seeded `{}`; the five unwired flags are still untested and
+>   undocumented; nothing validates the schema; CI still never runs the gate. **The last two are no
+>   longer true — see part 3 below.**
 >
 > **Delta since, part 2 — `docmap` (issue #17, first slice).** `lib/docmap.mjs` added the
 > documentary source the audit says does not exist, and with it the first deterministic producer of
@@ -42,6 +42,26 @@ Read this before changing anything under `lib/`.
 > with **50 nodes carrying derived progress**, **25 of 53 containers** reading their own capability
 > sentence. `internal/store` (12 rows) and `internal/server` (20) stay on the fallback on purpose —
 > see the cap in §2.3.
+>
+> **Delta since, part 3 — schema validation and the CI gate (PR #20, `7892d16`).** Two of this
+> audit's headline findings are **closed**, and the sentences asserting them below are no longer
+> true. Corrected in place at §3.5 and §5, and restated here so nobody quotes the stale version:
+>
+> - **`lib/validate.mjs` exists and both `gen` and `check` call it.** §5 item 1 said *"Nothing
+>   validates anything. The schema is never read by any code path in the repo."* — false since
+>   `7892d16`. `gen` validates after writing and fails loud; `check` reports schema errors prefixed
+>   `SCHEMA:`. It is a hand-written walker over the keyword subset the schema uses, not a general
+>   JSON Schema engine (ADR-0001, zero deps).
+> - **CI runs the gate.** §3.5 said `ci.yml` *"never runs `forma gen` or `forma check`"* and §5
+>   item 3 said *"no automation runs it"* — false since `7892d16`: `ci.yml:27` is
+>   `node bin/forma.mjs check`.
+> - §3.5 and §5 item 4 quote `AGENTS.md` as claiming *"17 shipped files"*. That quote is stale:
+>   `AGENTS.md` says **20**, which is the true count. The finding itself stands — nothing
+>   *enforces* the number; `check-clean.mjs` only greps for editor artifacts.
+> - **Still open, unchanged by 0.7.0:** `c4-status.json` has no producer (§3.4) — the overlay is
+>   still hand-written, and the writer lives on an unmerged branch (see issue #17);
+>   `ARCHITECTURE.md` still carries no `forma:begin/end` markers, so forma's own architecture doc
+>   is still ungoverned (§3.5); a leaf still inherits its parent's `category` (§3.6).
 
 ---
 
@@ -333,12 +353,12 @@ never loaded by any code path. See §5.1.
 |---|---|---|
 | `adapters/claude/SKILL.md` | `README.md:81`, `c4-status.json` `verify.source` | **not wired for distribution** — excluded by both `.npmignore` and `package.json:33 files`, so no npm consumer can install it; usable only from a clone. No installer, no `skills/` path. |
 | `scripts/lint.mjs` | `npm run lint`, CI | wired — but its file list (`lint.mjs:8`) is `bin/forma.mjs` + `lib/*.mjs` + `scripts/lint.mjs` + `test/run.mjs`, which **omits `scripts/check-clean.mjs` and `test/stub-gh.mjs`**: two shipped-adjacent scripts the syntax check never sees |
-| `scripts/check-clean.mjs` | `prepack` only | wired. `AGENTS.md:27` claims *"`npm pack --dry-run` must stay at the 17 shipped files"* — that count is **not enforced** by anything (it happens to be 17 today) |
+| `scripts/check-clean.mjs` | `prepack` only | wired. `AGENTS.md:27` pins a shipped-file count (17 when audited, **20** today) — that count is **not enforced** by anything; it is hand-maintained prose |
 | `docs/architecture/ARCHITECTURE.md` | `model.source.docPath` | **wired, never fed.** It contains **zero** `forma:begin/end` markers, so `source.attachedDocs` is empty and `check.mjs:84-101` skips it entirely. Its container table (`ARCHITECTURE.md:65-70`) is hand-maintained and ungoverned — forma's flagship "one source of truth" feature is not applied to forma's own architecture doc. |
 | `docs/architecture/ARCHITECTURE.scaffold.md` | — | gitignored, present on disk; the untracked output of `forma doc` |
 | `docs/social-preview.png` | nothing | tracked but unreferenced — `LAUNCH.md:8` points at `forma-social-preview.png`, an *untracked* file at the repo root |
 | `LAUNCH.md` | nothing | references `GITHUB_ABOUT.md` (does not exist), a README GIF and README badges (the README has neither) |
-| `.github/workflows/ci.yml` | GitHub | runs `npm run lint` + `npm test`. **It never runs `forma gen` or `forma check`.** `grep -rn "forma check\|check\.mjs\|bin/forma" .github` → 2 hits, both prose in comments |
+| `.github/workflows/ci.yml` | GitHub | ~~runs `npm run lint` + `npm test`. **It never runs `forma gen` or `forma check`.**~~ **Closed by PR #20** — `ci.yml:27` is `node bin/forma.mjs check`, so the drift gate now runs on every push and PR |
 
 **On the dogfood gate.** The committed model is *currently* fresh — regenerating it to a scratch path
 and diffing yields exactly three paths, all volatile:
@@ -449,17 +469,20 @@ Its problem is **reach**, not strength:
 
 ## 5. Where the code contradicts the stated intent
 
-1. **`docs/architecture/ARCHITECTURE.md:108`** — *"**Validation:** the model is validated against
+1. ~~**`docs/architecture/ARCHITECTURE.md:108`** — *"**Validation:** the model is validated against
    `lib/schema/c4-model.schema.json` (JSON Schema)."* Nothing validates anything. The schema is
    never read by any code path in the repo. This is the flattest documented-intent-vs-code
    contradiction in the project, and it sits in the architecture document forma generates about
-   itself.
+   itself.~~ **Closed by PR #20** — `lib/validate.mjs` now backs the claim; `gen` validates after
+   writing and `check` reports `SCHEMA:` errors. The doc stopped wishing and started describing.
 2. **`lib/schema/c4-model.schema.json:162`** — `evidence[].count` is described as a *"drift anchor"*.
    It is written on every run and read by nothing; `check` re-walks the filesystem instead.
-3. **`AGENTS.md:30`** — *"`forma check` fails if that model drifts from the code."* True of the
-   command, false of the repo: no automation runs it (§3.5).
-4. **`AGENTS.md:27`** — *"`npm pack --dry-run` must stay at the 17 shipped files"* — unenforced;
-   `check-clean.mjs` only greps for editor artifacts.
+3. ~~**`AGENTS.md:30`** — *"`forma check` fails if that model drifts from the code."* True of the
+   command, false of the repo: no automation runs it (§3.5).~~ **Closed by PR #20** — `ci.yml:27`
+   runs it.
+4. **`AGENTS.md:27`** — the shipped-file count (17 when this was audited, 20 today) is **unenforced**;
+   `check-clean.mjs` only greps for editor artifacts. Still open — the number is hand-maintained and
+   has already been stale twice.
 5. **`CONTRIBUTING.md`** — *"Nothing may hardcode one project's node ids, dirs, or stack"* vs
    `gen.mjs:288`, which hardcodes `docs/project-status.md` and a milestone-table regex.
 6. **`README.md:37`** — *"…else a mapped arc42 section"* is listed as a normal step of the chain. It
