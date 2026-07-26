@@ -220,13 +220,14 @@
             "type": "string",
             "enum": [
               "curated",
+              "docmap",
               "docstring",
               "readme",
               "arc42",
               "fallback",
               "llm"
             ],
-            "description": "Provenance of func: how the description was resolved (§1a chain; 'llm' = optional enrichment)."
+            "description": "Provenance of func: how the description was resolved (§1a chain; 'docmap' = a capability row in a repo document; 'llm' = optional enrichment)."
           },
           "descInputHash": {
             "type": "string",

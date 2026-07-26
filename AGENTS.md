@@ -10,7 +10,8 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
 - `bin/forma.mjs` — CLI entry; dispatches `init | gen | check | doc | serve | verify`.
 - `lib/` — the engine: `init.mjs`, `gen.mjs`, `check.mjs`, `doc.mjs`, `serve.mjs`, `verify.mjs`,
   plus the shared pieces `cluster.mjs` (component synthesis), `describe.mjs` (§1a description
-  resolution), `enrich.mjs` (opt-in LLM prose), `render.mjs` (arc42 renderers shared by doc+check).
+  resolution), `docmap.mjs` (capability tables → box text + derived progress), `enrich.mjs`
+  (opt-in LLM prose), `render.mjs` (arc42 renderers shared by doc+check).
 - `lib/schema/c4-model.schema.json` — the JSON contract (single source of truth for the model).
 - `lib/viewer/c4-hologram.html` — the interactive viewer (swappable skins).
 - `scripts/` — `lint.mjs` (zero-dep lint), `check-clean.mjs` (prepack `.fuse_hidden` guard).
@@ -24,7 +25,7 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
   networked paths, both opt-in — keep it that way.
 - The viewer is one HTML file in ES5 style (var/function); every new UI string goes in BOTH
   locales of `STRINGS`.
-- `npm pack --dry-run` must stay at the 19 shipped files, zero `.fuse_hidden` (the
+- `npm pack --dry-run` must stay at the 20 shipped files, zero `.fuse_hidden` (the
   `prepack` guard enforces this).
 - Architecture of Forma itself is modeled with Forma: see `docs/architecture/`
   (the dogfood). `forma check` fails if that model drifts from the code.

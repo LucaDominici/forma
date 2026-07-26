@@ -18,6 +18,30 @@ Read this before changing anything under `lib/`.
 >   still seeded `{}`; the five unwired flags are still untested and undocumented; nothing validates
 >   the schema (`git grep "c4-model.schema" -- lib bin scripts test` → the help text and the schema's
 >   own `$id`); CI still never runs the gate.
+>
+> **Delta since, part 2 — `docmap` (issue #17, first slice).** `lib/docmap.mjs` added the
+> documentary source the audit says does not exist, and with it the first deterministic producer of
+> programme state. What this changes in the text below:
+>
+> - **§2.3** gains a step between `node.description` and the docstring for non-leaf nodes, and one
+>   between the READMEs and arc42 for leaves: `descSource: 'docmap'`, quoting a capability row from
+>   a doc listed in `topo.docSources`. **§4 DoD 1 and DoD 2 are closed** — measured on haben below.
+> - **§4 DoD 3 is closed only for repos whose capability table carries a status column.** `gen`
+>   derives `status2`/`completion` from those rows; the keyless *agent* channel the section
+>   analyses is untouched and still cannot carry state. §3.4 and §5 are otherwise unchanged.
+> - **§2.4** gains assertion 8: `check` re-derives the doc-based state and fails on drift, per
+>   field, skipping fields the overlay owns.
+> - **§3.3** — `descriptions`' key format is now documented (`README.md`), and `docSources` is
+>   seeded by `init` from real detection, so it is *not* a new "wired, never fed" row.
+> - `firstPara` now strips YAML front matter: haben's `migrations`/`scripts` boxes read prose
+>   instead of `--- title: 'haben — README' docversion: '2.1.0'`.
+> - Schema `1.4.0` → `1.5.0` (`descSource` enum += `docmap`); shipped files 19 → 20.
+>
+> **Measured on haben** (`init` → `gen`, 107 nodes): `descSource` was `{curated 1, fallback 104,
+> readme 2}` and every node `unknown`. It is now `{curated 1, docmap 50, fallback 54, readme 2}`
+> with **50 nodes carrying derived progress**, **25 of 53 containers** reading their own capability
+> sentence. `internal/store` (12 rows) and `internal/server` (20) stay on the fallback on purpose —
+> see the cap in §2.3.
 
 ---
 
@@ -110,14 +134,23 @@ kind, first hit wins:
 |---|---|---|---|
 | 1 | `topo.descriptions[<containerId>/<stem>]` | `describe.mjs:85` | `curated` |
 | 2 | `node.description` (from the topology) | `describe.mjs:86` | `curated` |
+| 2b | **capability rows from `topo.docSources`, non-leaf only** | `describe.mjs` (`fromDocs`) | `docmap` |
 | 3 | module docstring — Python `"""…"""`, JS/TS leading block or `//` run | `describe.mjs:87-91` | `docstring` |
 | 4 | `README.md` in the file's directory | `describe.mjs:92-93` | `readme` |
 | 5 | `README.md` in the container's glob directory | `describe.mjs:97-101` | `readme` |
+| 5b | **the same capability rows, now for leaves** | `describe.mjs` (`fromDocs`) | `docmap` |
 | 6 | arc42 section whose heading normalizes to the node's name or id | `describe.mjs:102` | `arc42` |
 | 7 | `Component of module X.` for leaves (`:106`); a measured child count otherwise (`:108`) | `describe.mjs:104-108` | `fallback` |
 
-The chain is **code-first from step 3 onward**. For a leaf that is right. For a container or a
-context node it answers a question no stakeholder asked.
+Steps 2b and 5b are **the same source at two priorities**, and that asymmetry is the whole point:
+above the leaf the document outranks the code, at the leaf the code outranks the document. Steps
+3-5 are code-first, which is right for a file and wrong for a container.
+
+`docmap.MAX_ROWS = 3` guards the join. A node named by more rows than that is not described by the
+matrix, only touched by it — on haben `internal/store` is referenced by 12 rows and
+`internal/server` by 20, and stitching their first sentences together would state a purpose no
+document states. Past the cap the step yields nothing, for the text and for the derived state
+alike, and the rest of the chain runs.
 
 ### 2.4 `check` — what the gate actually asserts
 
@@ -132,7 +165,8 @@ context node it answers a question no stakeholder asked.
 | 5 | `check.mjs:71-74` | `plannedLeaves` premises still hold |
 | 6 | `check.mjs:84-101` | the injected `forma:begin/end` block in `docPath` **and every doc in `source.attachedDocs`** matches a fresh render |
 | 7 | `check.mjs:105-109` | the status overlay decorates no id the model has lost |
-| 8 | `check.mjs:113-117` | *soft warning only* — LLM prose whose input hash moved |
+| 8 | `check.mjs` (doc drift) | doc-derived `status2`/`completion` are **re-derived from the document** and must match the model, per field, except where the overlay owns the field |
+| 9 | `check.mjs:113-117` | *soft warning only* — LLM prose whose input hash moved |
 
 Assertion 2 is the real gate: it does not trust the model, it recomputes the truth. Note what is
 **not** here: the model is never validated against `lib/schema/c4-model.schema.json` (§5.1).

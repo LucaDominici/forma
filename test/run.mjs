@@ -570,4 +570,71 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok schema — a conforming model passes; a missing required field and an out-of-enum kind are both rejected by name')
 }
 
-console.log('OK — mini, flat-python, data-noise, virgin-kebab, attach-doc, enrich, scaffold, status-overlay, component-hash, verify, layout-hints, viewer, schema all green.')
+// 16) docmap: the documentary source of the chain (§17-1) and the only deterministic producer of
+// programme state (§17-2). The fixture is shaped so that every rule has to hold at once — a
+// container the matrix describes, one it merely touches, one it never names, and a leaf whose own
+// code outranks it.
+{
+  const REPO = FIX('docmap'), topo = join(tmp, 'dm-topo.json'), model = join(tmp, 'dm-model.json')
+  let r = run(['init', '--repo', REPO, '--out', topo, '--force']); if (r.status !== 0) die('dm init exit ' + r.status, r)
+  const t = readJson(topo)
+  // auto-detection: the inventory is adopted, the refactor PLAN (Feature|File, no status column)
+  // is not — auto-adopting one would put "C1 move the helper" in a stakeholder's box.
+  if (!(t.docSources || []).includes('docs/FEATURES.md')) die('docmap: init did not detect docs/FEATURES.md, got ' + JSON.stringify(t.docSources))
+  if ((t.docSources || []).some((d) => /plan\.md/.test(d))) die('docmap: init adopted a change plan as a capability table — ' + JSON.stringify(t.docSources))
+
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('dm gen exit ' + r.status, r)
+  r = run(['check', '--repo', REPO, '--model', model, '--topology', topo]); if (r.status !== 0) die('dm check exit ' + r.status, r)
+  const at = (id) => readJson(model).nodes.find((n) => n.id === id) || die('docmap: no node ' + id)
+  const m = readJson(model)
+
+  // DoD 1/2 — a CONTAINER's box quotes the capability table, verbatim, ahead of any code.
+  const billing = at('billing')
+  if (billing.descSource !== 'docmap') die('docmap: container billing descSource=' + billing.descSource + ' (want docmap)')
+  if (!/Bill a customer/.test(billing.func) || !/Chase an invoice/.test(billing.func)) die('docmap: billing box does not quote its two rows: ' + billing.func)
+  // DoD 3 — progress the DOCUMENT states: 1 of billing's 2 capabilities is DONE.
+  if (billing.status2 !== 'in-progress' || billing.completion !== 50) die(`docmap: billing state ${billing.status2}/${billing.completion} (want in-progress/50)`)
+  if (!/FEATURES\.md/.test((billing.verify || {}).source || '')) die('docmap: no provenance on a derived state: ' + JSON.stringify(billing.verify))
+  const reporting = at('reporting')
+  if (reporting.status2 !== 'done' || reporting.completion !== 100) die(`docmap: reporting ${reporting.status2}/${reporting.completion} (want done/100)`)
+
+  // The cap — `core` is referenced by all four rows, so the matrix does not DESCRIBE it. Stitching
+  // four capabilities into one sentence would invent a claim; falling through is the honest answer.
+  const core = at('core')
+  if (core.descSource === 'docmap') die('docmap: a node touched by 4 rows was described anyway: ' + core.func)
+  if (core.status2 !== 'unknown' || core.completion != null) die(`docmap: over-cap node got state ${core.status2}/${core.completion}`)
+
+  // DoD 4 — a container the matrix never names stays honestly blank. This is the 0.6.0 guarantee.
+  const plumbing = at('plumbing')
+  if (plumbing.descSource !== 'fallback' || plumbing.status2 !== 'unknown') die(`docmap: undocumented container reads ${plumbing.descSource}/${plumbing.status2} — the honest default broke`)
+
+  // The chain is document-first ABOVE the leaf and code-first AT it: invoice.js has a docstring and
+  // must keep it; dunning.js has none and reaches the matrix row instead of "Component of module".
+  if (at('billing__invoice_js').descSource !== 'docstring') die('docmap: a leaf with a docstring lost it to the matrix')
+  if (at('billing__dunning_js').descSource !== 'docmap') die('docmap: an undocumented leaf did not reach the matrix row')
+
+  // Precedence — the hand-curated overlay is still the authority over anything derived.
+  const status = join(tmp, 'dm-status.json'), model2 = join(tmp, 'dm-model2.json')
+  writeFileSync(status, JSON.stringify({ nodes: { billing: { status2: 'problem', completion: 10 } } }, null, 2))
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model2, '--status', status]); if (r.status !== 0) die('dm gen --status exit ' + r.status, r)
+  const over = readJson(model2).nodes.find((n) => n.id === 'billing')
+  if (over.status2 !== 'problem' || over.completion !== 10) die(`docmap: the curated overlay lost to the derived state (${over.status2}/${over.completion})`)
+  r = run(['check', '--repo', REPO, '--model', model2, '--topology', topo])
+  if (r.status !== 0) die('docmap: check flagged an overlay-owned field as doc drift', r)
+
+  // The gate — a derived percentage nobody re-derives is a false green. Tamper with the committed
+  // model and `check` must recompute the truth from the document, exactly as it does for src/.
+  const stale = join(tmp, 'dm-stale.json')
+  const tampered = readJson(model)
+  Object.assign(tampered.nodes.find((n) => n.id === 'reporting'), { status2: 'done', completion: 100 })
+  Object.assign(tampered.nodes.find((n) => n.id === 'billing'), { status2: 'done', completion: 100 })
+  writeFileSync(stale, JSON.stringify(tampered, null, 2) + '\n')
+  r = run(['check', '--repo', REPO, '--model', stale, '--topology', topo])
+  if (r.status === 0) die('docmap: check passed a model claiming 100% where the document says 50%')
+  if (!/DOC DRIFT: billing/.test((r.stdout || '') + (r.stderr || ''))) die('docmap: drift reported without naming the node', r)
+
+  const described = m.nodes.filter((n) => n.descSource === 'docmap').length
+  console.log(`  ok docmap — §17 ${described} node(s) described from docs/FEATURES.md; billing 50% derived, core over-cap, plumbing honest; overlay wins; drift gated`)
+}
+
+console.log('OK — mini, flat-python, data-noise, virgin-kebab, attach-doc, enrich, scaffold, status-overlay, component-hash, verify, layout-hints, viewer, schema, docmap all green.')
