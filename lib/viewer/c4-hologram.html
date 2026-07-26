@@ -501,7 +501,7 @@ function draw(animate){
   // `decl`: this verdict was DERIVED from a repo document, not proven. The legend has carried a
   // hollow green for it since #38 and the canvas never drew one, so every declared done shipped
   // dressed as proof.
-  var isCat=!!n.__catalog,dr=!isCat&&hasKids(n.id),cls="nd s-"+st+((n.verify&&n.verify.derived&&!roll)?" decl":"")+(dr?" drill":"")+(isCat?" cat":"")+(pulse?" pulse":"");
+  var isCat=!!n.__catalog,dr=!isCat&&hasKids(n.id),cls="nd s-"+st+((n.verify&&n.verify.derived)?" decl":"")+(dr?" drill":"")+(isCat?" cat":"")+(pulse?" pulse":"");
   var desc=isCat?(n.count+" "+STR.rosterCount):(mode==="target"?(n.target||n.func||""):(n.current||n.func||""));
   // 26 of a real repo's 53 boxes printed "1 file: advisor." under a box titled "internal/advisor".
   // A description that only restates the title is ink, not information: drop it and let the box
