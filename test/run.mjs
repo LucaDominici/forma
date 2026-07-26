@@ -342,6 +342,62 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok status-overlay — WP-A1 decorates by id, refuses func/bad enums/orphan ids; gate catches a stale overlay')
 }
 
+// 7a) WP-A7 --status-apply: the writer the overlay never had. It merges into the CURATED file that
+// the overlay pass validates and `check` governs, so a patch that pass would reject must be refused
+// BEFORE anything reaches disk — otherwise an apply corrupts a committed file and the next `gen`
+// is the one that finds out.
+{
+  const repo = join(tmp, 'sa-repo')
+  cpSync(FIX('mini'), repo, { recursive: true })
+  const topo = join(tmp, 'sa-topo.json'), model = join(tmp, 'sa-model.json')
+  const ovFile = join(repo, 'docs/architecture/c4-status.json')
+  const fill = join(tmp, 'sa-fill.json')
+  let r = run(['init', '--repo', repo, '--out', topo, '--force']); if (r.status !== 0) die('A7 init exit ' + r.status, r)
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('A7 gen exit ' + r.status, r)
+  const cont = readJson(model).nodes.find((n) => n.kind === 'container'); if (!cont) die('A7: no container in the model')
+  if (cont.status2 !== 'unknown') die('A7 precondition: mini should have no verdict before the apply, got ' + cont.status2)
+
+  // mini has no docs/architecture/ at all: the FIRST apply is the one that creates the overlay
+  writeFileSync(fill, JSON.stringify({ nodes: { [cont.id]: { status2: 'in-progress', completion: 40, current: 'Two of five modules landed.' } } }))
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model, '--status-apply', fill])
+  if (r.status !== 0) die('A7 apply exit ' + r.status, r)
+  const dec = readJson(model).nodes.find((n) => n.id === cont.id)
+  if (!(dec.status2 === 'in-progress' && dec.completion === 40)) die('A7: applied state did not reach the model: ' + JSON.stringify(dec))
+  if (!readJson(ovFile).nodes[cont.id]) die('A7: --status-apply did not write the curated overlay file')
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo]); if (r.status !== 0) die('A7: check must pass on an applied overlay', r)
+
+  // merge, not overwrite: a second apply touching another field keeps the first
+  writeFileSync(fill, JSON.stringify({ nodes: { [cont.id]: { statusWord: '40%' } } }))
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model, '--status-apply', fill]); if (r.status !== 0) die('A7 merge exit ' + r.status, r)
+  const merged = readJson(ovFile).nodes[cont.id]
+  if (!(merged.statusWord === '40%' && merged.status2 === 'in-progress')) die('A7: the second apply overwrote the first instead of merging: ' + JSON.stringify(merged))
+
+  // every refusal must leave the committed overlay byte-identical
+  const before = readFileSync(ovFile, 'utf-8')
+  for (const [label, patch] of [['a bad enum', { status2: 'almost' }], ['an out-of-range completion', { completion: 140 }],
+                                ['func', { func: 'nope' }], ['a malformed issue', { issues: ['bug-12'] }],
+                                ['a non-object patch', 'done']]) {
+    writeFileSync(fill, JSON.stringify({ nodes: { [cont.id]: patch } }))
+    r = run(['gen', '--repo', repo, '--topology', topo, '--out', join(tmp, 'sa-bad.json'), '--status-apply', fill])
+    if (r.status === 0) die(`A7: --status-apply accepted ${label}`)
+    if (readFileSync(ovFile, 'utf-8') !== before) die(`A7: --status-apply wrote to the overlay before rejecting ${label} — a committed file was corrupted`)
+  }
+  writeFileSync(fill, JSON.stringify({ nodes: { ghost__node: { statusWord: 'x' } } }))
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', join(tmp, 'sa-bad.json'), '--status-apply', fill])
+  if (r.status === 0) die('A7: --status-apply accepted an id the model does not have')
+  if (readFileSync(ovFile, 'utf-8') !== before) die('A7: --status-apply wrote to the overlay before rejecting an unknown id')
+
+  // and the two other holes this branch closes. `sa-repo` is a plain copy with no git remote, so
+  // it must carry NO ghRepo — a fabricated one would send `forma verify` at the wrong repository.
+  if ('ghRepo' in readJson(topo).meta) die('A7: init invented a ghRepo for a directory with no git remote: ' + JSON.stringify(readJson(topo).meta.ghRepo))
+  const selfTopo = join(tmp, 'sa-self-topo.json')
+  r = run(['init', '--repo', join(HERE, '..'), '--out', selfTopo, '--force']); if (r.status !== 0) die('A7 self init exit ' + r.status, r)
+  if (!/^[\w.-]+\/[\w.-]+$/.test(readJson(selfTopo).meta.ghRepo || '')) die('A7: init did not seed meta.ghRepo from the git remote, got ' + JSON.stringify(readJson(selfTopo).meta.ghRepo))
+  const cats = [...new Set(readJson(model).nodes.filter((n) => n.kind === 'leaf').map((n) => n.category))]
+  if (cats.includes('container')) die('A7: leaf category is still the parent\'s KIND — the viewer collapses every leaf into one box: ' + JSON.stringify(cats))
+  console.log(`  ok status-apply — WP-A7 fill → curated overlay; merges, refuses without writing; init seeds ghRepo; leaf categories ${JSON.stringify(cats)}`)
+}
+
 // 7b) a synthesized component composes its box from its CHILDREN's docs, so their prose is one of
 // its description inputs: a child gaining a docstring must mark the component's cached LLM text
 // stale, or the box freezes with no way back (regen restores it, --enrich sees no hole).
@@ -637,4 +693,4 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok docmap — §17 ${described} node(s) described from docs/FEATURES.md; billing 50% derived, core over-cap, plumbing honest; overlay wins; drift gated`)
 }
 
-console.log('OK — mini, flat-python, data-noise, virgin-kebab, attach-doc, enrich, scaffold, status-overlay, component-hash, verify, layout-hints, viewer, schema, docmap all green.')
+console.log('OK — mini, flat-python, data-noise, virgin-kebab, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, docmap all green.')
