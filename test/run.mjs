@@ -1227,4 +1227,29 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok presentable — the shipped artifact itself passes, not a cleaned copy of it')
 }
 
+// #43: the prose cap must not silence the verdict. MAX_ROWS exists because stitching more than
+// three first sentences together invents a claim no document makes (lib/docmap.mjs:16-21) — a
+// statement about PROSE. statusFor went through describingRows and so inherited it, with the
+// perverse result that the more rows name a module the less verdict it gets. On the shipped demo
+// `internal_budget` is named by FOUR rows, all DONE, and comes out "not assessed" — the owner's
+// literal example of "things that exist are shown as not done".
+{
+  const { loadDocRows, indexByNode, statusFor } = await import(join(HERE, '..', 'lib', 'docmap.mjs'))
+  const model = readJson(join(HERE, '..', 'docs/demo/c4-model.json'))
+  const habenDocs = process.env.FORMA_HABEN_DOCS || '/home/luca/work/repos/haben'
+  if (!existsSync(join(habenDocs, 'docs/FEATURE_MATRIX.md'))) {
+    console.log('  skip docmap-cap — haben checkout not present at ' + habenDocs)
+  } else {
+    const rows = loadDocRows(habenDocs, ['docs/FEATURE_MATRIX.md'])
+    const idx = indexByNode(rows, model.nodes)
+    const e = idx.get('internal_budget')
+    if (!e) die('docmap-cap: internal_budget is not indexed at all — the fixture drifted')
+    if (e.rows.length <= 3) die('docmap-cap: internal_budget is named by ' + e.rows.length + ' rows, the case needs more than the cap')
+    const st = statusFor(idx, 'internal_budget')
+    if (!st) die('docmap-cap: internal_budget is named by ' + e.rows.length + ' DONE rows and got NO verdict — more evidence, less verdict')
+    if (st.status2 !== 'done') die('docmap-cap: ' + e.rows.length + ' rows all done produced status2=' + st.status2)
+    console.log('  ok docmap — a box many rows name is judged by all of them, not silenced by the prose cap')
+  }
+}
+
 console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, docmap, declaration, presentable all green.')
