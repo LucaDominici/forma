@@ -191,7 +191,7 @@ var STRINGS={
   printExport:"PRINT / EXPORT", exportSvg:"Export SVG", exportPng:"Export PNG", exportLayout:"Export layout JSON", print:"Print",
   legDone:"DONE (proven)", legDecl:"DONE (declared)", legProg:"IN PROGRESS", legNext:"NEXT", legPlan:"PLAN ONLY", legProb:"PROBLEM",
   legUnk:"UNKNOWN (no curated state)", stUnk:"?",
-  detDecl:"Declared in", detCover:"Coverage", coverWhole:"the document names this module itself",
+  detDecl:"Declared in", detCover:"Coverage", detRoll:"Rolled up from", rollPart:"mean of the {n} of {t} parts inside that anyone ruled on", coverWhole:"the document names this module itself",
   coverPart:"{n} of {t} units named by the document",
   legHint:"— animated arrow = active flow · dashed = to build",
   crumbRoot:"Context", crumbLevel:"C4", lvlContext:"CONTEXT",
@@ -213,7 +213,7 @@ var STRINGS={
   printExport:"STAMPA / ESPORTA", exportSvg:"Esporta SVG", exportPng:"Esporta PNG", exportLayout:"Esporta layout JSON", print:"Stampa",
   legDone:"FATTO (provato)", legDecl:"FATTO (dichiarato)", legProg:"IN CORSO", legNext:"PROSSIMO", legPlan:"SOLO PROGETTO", legProb:"PROBLEMA",
   legUnk:"IGNOTO (stato non curato)", stUnk:"?",
-  detDecl:"Dichiarato in", detCover:"Copertura", coverWhole:"il documento nomina il modulo stesso",
+  detDecl:"Dichiarato in", detCover:"Copertura", detRoll:"Somma dal basso", rollPart:"media delle {n} parti su {t} qui dentro su cui qualcuno si e pronunciato", coverWhole:"il documento nomina il modulo stesso",
   coverPart:"{n} unità su {t} nominate dal documento",
   legHint:"— freccia animata = flusso attivo · tratteggio = da costruire",
   crumbRoot:"Contesto", crumbLevel:"C4", lvlContext:"CONTESTO",
@@ -260,6 +260,30 @@ var STMAP={done:"done","in-progress":"prog",next:"next",planned:"plan",problem:"
 // would contribute ONE unknown instead of nine, so 25/53 would print as 25/45 and the coverage
 // would read better than it is — which is the number this whole function exists to keep honest.
 // One consequence, deliberate: on a grouped level the dots count units (53), not boxes (6).
+// What a box that GROUPS others can honestly say about itself. Nobody ruled on a domain — `gen`
+// refuses to derive a verdict, everywhere, on purpose — so its badge read `?` while the 22 packages
+// inside it carried 14 verdicts. Four of six domains showed `?` on the one screen a stakeholder is
+// shown, and the board looked less finished than the repo was.
+// The way out is not to invent a verdict but to report a FACT: the mean of the descendants somebody
+// did rule on, and how many that was. `100%` alone would be the invented green this tool exists to
+// kill — 14 of 14 ruled done says nothing about the other 8 — so the coverage is not optional
+// decoration, it is half the claim. Same shape as the level tally and the docmap coverage.
+// Returns null when the box has its own verdict (it speaks for itself) or when nothing below it
+// was ruled (there is no fact to report).
+function rollStatus(node,kidsOf){
+ if(node.completion!=null||node.statusWord)return null;
+ var lv=[],q=[node],n,k,i,guard=0;
+ while(q.length&&guard++<4096){n=q.pop();k=kidsOf(n.id);if(k.length){for(i=0;i<k.length;i++)q.push(k[i]);}else if(n!==node)lv.push(n);}
+ if(!lv.length)return null;
+ var sum=0,nc=0,rank={problem:5,next:4,"in-progress":3,planned:2,unknown:1.5,done:1},best=0,key="unknown",s2;
+ for(i=0;i<lv.length;i++){
+  if(lv[i].completion!=null){sum+=(+lv[i].completion||0);nc++;}
+  s2=lv[i].status2||(lv[i].status==="planned"?"planned":"unknown");
+  if((rank[s2]||0)>best){best=rank[s2]||0;key=s2;}
+ }
+ if(!nc)return null;
+ return {status2:key,mean:Math.round(sum/nc),ruled:nc,total:lv.length};
+}
 function tallyOf(kids,kidsOf){
  var cnt={},tot=0,sum=0,nc=0,st3,i,j,k,q,lv,use,n;
  for(i=0;i<kids.length;i++){
@@ -447,7 +471,10 @@ function draw(animate){
  }
  for(var j=0;j<kids.length;j++){
   var n=kids[j],p=pos[n.id];
-  var st=STMAP[n.status2]||(n.status==="planned"?"plan":"unk");
+  // A grouping box borrows its children's colour and badge — see rollStatus. The MODEL keeps saying
+  // `unknown` for it; this is the viewer reporting what is underneath, not gen inventing a verdict.
+  var roll=(n.__catalog||mode==="target")?null:rollStatus(n,childrenOf);
+  var st=STMAP[(roll?roll.status2:n.status2)]||(n.status==="planned"?"plan":"unk");
   var pulse=(st==="next"||st==="prog")&&mode!=="target"&&!n.__catalog;
   var isCat=!!n.__catalog,dr=!isCat&&hasKids(n.id),cls="nd s-"+st+(dr?" drill":"")+(isCat?" cat":"")+(pulse?" pulse":"");
   var desc=isCat?(n.count+" "+STR.rosterCount):(mode==="target"?(n.target||n.func||""):(n.current||n.func||""));
@@ -456,7 +483,9 @@ function draw(animate){
   // breathe. The measured fallback text is the generator's honest last resort, not a lie — it just
   // does not belong on screen when it says nothing the header has not already said.
   if(!isCat&&echoesName(desc,n.name))desc="";
-  var badge=isCat?String(n.count):(mode==="target"?STR.detTarget:(n.statusWord||(n.completion!=null?n.completion+"%":STR.stUnk)));
+  // The coverage rides WITH the mean, never without it: `100%` on a domain where 14 of 22 packages
+  // were ruled is the invented green, and this is the badge a stakeholder reads first.
+  var badge=isCat?String(n.count):(mode==="target"?STR.detTarget:(n.statusWord||(n.completion!=null?n.completion+"%":(roll?roll.mean+"% "+roll.ruled+"/"+roll.total:STR.stUnk))));
   // the title runs until the badge, so reserve the badge's actual width (9px text ≈ 5.4px/char)
   // instead of a flat 70px — a fixed reserve clipped names that had all the room they needed
   var tmax=Math.floor((p.w-34-String(badge).length*5.4)/6.7),tt=n.name;
@@ -597,6 +626,8 @@ function showDetail(n){
   // declared done" and "this module is done" are not the same sentence when the module holds 22
   // files and the document names 3 of them.
   +(showSrc?'<div class="row"><span class="lbl">'+esc((n.verify&&n.verify.derived)?STR.detDecl:STR.detSrc)+'</span><span class="src">'+esc(src)+'</span></div>':'')
+  // A badge the viewer rolled up must say so, or it reads as a verdict somebody wrote about the box.
+  +((function(){var r=rollStatus(n,childrenOf);return r?'<div class="row"><span class="lbl">'+esc(STR.detRoll)+'</span><span class="now">'+esc(STR.rollPart.replace("{n}",r.ruled).replace("{t}",r.total))+'</span></div>':'';})())
   +(coverText(n)?'<div class="row"><span class="lbl">'+esc(STR.detCover)+'</span><span class="now">'+esc(coverText(n))+'</span></div>':'')
   +((n.issues&&n.issues.length)?'<div class="row"><span class="lbl">'+esc(STR.detIssue)+'</span><span class="now">'+esc(n.issues.join(", "))+'</span></div>':'');
  $("detail").style.display="block";

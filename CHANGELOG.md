@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] - 2026-07-26
+
+### Fixed
+- **A box that groups others read `?` while its children carried verdicts.** Four of six domains on
+  the public demo showed the unknown badge, so the one screen a stakeholder is shown looked less
+  finished than the repository was. The viewer now rolls the children up: the badge reads the mean
+  of the descendants somebody ruled on **together with how many that was** — `100% 9/14` — and the
+  colour follows worst-of, where `unknown` still outranks `done` (a domain holding one package
+  nobody ruled on is not a green domain, however green the rest of it is). The mean alone would be
+  the invented green this tool exists to kill: 9 of 9 ruled done says nothing about the other 5.
+  `gen` still refuses to derive a verdict — the model keeps saying `unknown` for that box; this is
+  the viewer reporting what is underneath, and the detail panel names it as a roll-up.
+
 ## [0.10.0] - 2026-07-26
 
 Closes the boundary in `docs/SCOPE.md`: four issues, three of them measured on a real foreign

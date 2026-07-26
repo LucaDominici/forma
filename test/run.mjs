@@ -815,6 +815,28 @@ const diffPaths = (a, b, at = '') => {
   if (wrapDesc('anything at all', 37, 0).length) die('viewer wrapDesc: a box with no room must render no description')
   if (wrapDesc('short one', 37, 3).join('|') !== 'short one') die('viewer wrapDesc: text that fits must not be altered')
 
+  // a box that groups others borrows their verdicts — but the mean alone would be the invented
+  // green (14 of 14 ruled done says nothing about the other 8), so the coverage is half the claim
+  const rfn = (html.match(/\nfunction rollStatus\(node,kidsOf\)\{[\s\S]*?\n\}/) || [])[0]
+  if (!rfn) die('viewer: rollStatus not found')
+  const rollStatus = new Function(rfn + '; return rollStatus')()
+  const tree = { dom: [{ id: 'a', status2: 'done', completion: 100 }, { id: 'b', status2: 'done', completion: 100 }, { id: 'c', status2: 'unknown' }] }
+  const kidsOf = (id) => tree[id] || []
+  const r = rollStatus({ id: 'dom' }, kidsOf)
+  if (!r || r.mean !== 100 || r.ruled !== 2 || r.total !== 3) die('rollStatus: a grouping box must report its children\'s mean AND how many were ruled, got ' + JSON.stringify(r))
+  // worst-of, and `unknown` outranks `done` on purpose (the same rank the catalogue collapse uses):
+  // a domain holding one package nobody ruled on is not a green domain, however green the rest is
+  if (r.status2 !== 'unknown') die('rollStatus: an unruled child was averaged away into green, got ' + r.status2)
+  const twoDone = (id) => (id === 'dom' ? tree.dom.slice(0, 2) : [])
+  if (rollStatus({ id: 'dom' }, twoDone).status2 !== 'done') die('rollStatus: all children ruled done must give done')
+  // worst-of wins, so one broken child cannot hide behind two green ones
+  tree.dom[2] = { id: 'c', status2: 'problem', completion: 10 }
+  if (rollStatus({ id: 'dom' }, kidsOf).status2 !== 'problem') die('rollStatus: a problem child was averaged away')
+  // a box that speaks for itself is left alone, and a box with nothing ruled below it stays silent
+  if (rollStatus({ id: 'dom', completion: 40 }, kidsOf)) die('rollStatus: overrode a box that carries its own verdict')
+  if (rollStatus({ id: 'x' }, () => [])) die('rollStatus: invented a roll-up for a box with no children')
+  if (rollStatus({ id: 'dom' }, () => [{ id: 'q', status2: 'unknown' }])) die('rollStatus: reported a mean where nobody ruled on anything')
+
   // a derived number must disclose how much of the module its citation reaches — "3 of 3 rows
   // declared done" and "this module is done" are different sentences when the module holds 22 files
   const cfn = (html.match(/\nfunction coverText\(n\)\{[\s\S]*?\n\}/) || [])[0]
