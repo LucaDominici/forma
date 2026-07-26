@@ -1150,4 +1150,77 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok presentable — a percentage no source measured fails the publication gate, by node id')
 }
 
+// --- #43: the three defects the adversarial review found, none of them declared -------------
+// The gate keys off a provenance LABEL, and a label is writable and erasable. The badge glues a
+// mean over one child to a coverage over twenty-five. And the suite grades a copy of the shipped
+// artifact instead of the artifact.
+{
+  const gate = (m) => { const p = join(tmp, 'pres3-' + Math.random().toString(36).slice(2) + '.json'); writeFileSync(p, JSON.stringify(m)); return spawnSync(process.execPath, [join(HERE, '..', 'scripts', 'presentable.mjs'), p], { encoding: 'utf-8' }) }
+  const demo = readJson(join(HERE, '..', 'docs/demo/c4-model.json'))
+
+  // (1) A percentage with NO citation at all is the easiest lie to tell, and it was the one the
+  // gate waved through: the filter required verify.derived === true. `forma verify` writes
+  // completion = 100 and never touches node.verify (lib/verify.mjs), so a first-class command
+  // puts the complaint back on the page through a supported path.
+  const noCitation = JSON.parse(JSON.stringify(demo))
+  for (const n of noCitation.nodes) { delete n.completion; delete n.verify }
+  noCitation.nodes[0].completion = 100
+  let r = gate(noCitation)
+  if (r.status === 0) die('presentable: a percentage with no citation at all passed — the gate grades the label, not the number\n' + r.stdout)
+
+  // (2) The same number with the label flipped to a value nobody writes must not buy a pass.
+  const flipped = JSON.parse(JSON.stringify(demo))
+  for (const n of flipped.nodes) delete n.completion
+  flipped.nodes[0].completion = 100
+  flipped.nodes[0].verify = { source: 'inventata', derived: false }
+  r = gate(flipped)
+  if (r.status === 0) die('presentable: derived:false is a label anyone can write — it must not certify a number as measured\n' + r.stdout)
+
+  console.log('  ok presentable — a percentage is a declaration unless its citation proves otherwise')
+}
+
+// The badge must never glue a mean over N children to a coverage over M. Before the fix rollStatus
+// counted verdicts in `ruled` and averaged over `completion` only, so one measured child among
+// twenty-five ruled ones printed "100% 25/53" — the owner's complaint, verbatim, from one node.
+{
+  const html = readFileSync(join(HERE, '..', 'lib', 'viewer', 'c4-hologram.html'), 'utf-8')
+  const lift = (name) => {
+    const m = html.match(new RegExp('function ' + name + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}', 'm'))
+    if (!m) die('viewer: ' + name + ' not liftable — it must be measurable')
+    return m[0]
+  }
+  const STR = { stUnk: '?' }
+  const STMAP = { done: 'done', 'in-progress': 'wip', planned: 'plan', next: 'next', problem: 'prob' }
+  const fn = new Function('STR', 'STMAP', lift('rollStatus') + '\n' + lift('badgeOf') + '\n' + lift('tallyOf') + '\nreturn {rollStatus:rollStatus,badgeOf:badgeOf,tallyOf:tallyOf}')(STR, STMAP)
+
+  // One child carries a number; twenty-four are ruled without one.
+  const kids = []
+  kids.push({ id: 'k0', status2: 'done', completion: 100 })
+  for (let i = 1; i < 25; i++) kids.push({ id: 'k' + i, status2: 'done' })
+  for (let i = 25; i < 53; i++) kids.push({ id: 'k' + i, status2: 'unknown' })
+  const parent = { id: 'p' }
+  const kidsOf = (id) => (id === 'p' ? kids : [])
+
+  const roll = fn.rollStatus(parent, kidsOf)
+  if (roll && roll.mean != null && roll.ruled !== 1) {
+    die('viewer: the badge averages over ' + 1 + ' child but claims coverage of ' + roll.ruled +
+        ' — mean and coverage must share a denominator, got ' + JSON.stringify(roll))
+  }
+  const badge = fn.badgeOf(parent, roll)
+  if (/^100% 25\//.test(badge)) die('viewer: the badge reads "' + badge + '" from a single measured child — the complaint, verbatim')
+
+  const tally = fn.tallyOf(kids, kidsOf)
+  if (tally && tally.mean != null && tally.ruled !== 1) {
+    die('viewer: tallyOf mixes denominators too — ' + JSON.stringify(tally))
+  }
+  console.log('  ok viewer — a mean and a coverage never share a badge unless they share a denominator')
+}
+
+// The suite must grade the artifact that ships, not a copy of it with the offending field removed.
+{
+  const r = spawnSync(process.execPath, [join(HERE, '..', 'scripts', 'presentable.mjs'), join(HERE, '..', 'docs/demo/c4-model.json')], { encoding: 'utf-8' })
+  if (r.status !== 0) die('presentable: the SHIPPED demo model does not pass its own publication gate\n' + r.stdout + r.stderr)
+  console.log('  ok presentable — the shipped artifact itself passes, not a cleaned copy of it')
+}
+
 console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, docmap, declaration, presentable all green.')
