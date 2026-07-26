@@ -42,9 +42,10 @@ against the schema forma claims to validate it against, and CI runs `forma check
      file share a name (`store.go` in `store/`) and breaks where they do not (`main.go` in `app/`
      was `main`, is now `app`).
 
-  Non-Go repos are unaffected: ids, edges and the description chain are unchanged, and the four
-  non-Go fixtures (`mini`, `flat-python`, `data-noise`, `virgin-kebab`) are byte-identical.
-  Minor bump, not patch — 0.x may break, but it is declared here, not buried.
+  Non-Go repos are unaffected — ids, edges and the description chain are unchanged, and the five
+  non-Go fixtures (`mini`, `flat-python`, `data-noise`, `virgin-kebab`, `docmap`) stay green
+  through `init→gen→check`. Minor bump, not patch: 0.x may break, but it is declared here, not
+  buried.
 - `schemaVersion` 1.4.0 → **1.5.0**: `descSource` gains `docmap` (additive enum value).
 
 ### Added
