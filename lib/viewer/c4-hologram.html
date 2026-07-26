@@ -68,6 +68,13 @@ svg{width:100%;height:100%;display:block}
 .edge.flow{stroke-dasharray:5 7;animation:dash 1.1s linear infinite}
 .edge.plan{stroke:var(--edgeplan);stroke-dasharray:3 6;opacity:.6;marker-end:url(#arp)}
 .edge.hot{stroke:var(--cyan);stroke-width:2.6;opacity:1}
+/* A level past the label threshold is a hairball, and no layout saves it: on a real Go repo 172 of
+   189 arrows cross a box that is not one of their endpoints, and that stays 85-91% at EVERY grid
+   shape tried. Only drawing less helps. They stop competing with the names — structure survives as
+   texture — and hover still brings one arrow back to full strength, which is where its label is. */
+svg.dense .edge{stroke-width:.9;opacity:.26}
+svg.dense .edge.flow{animation:none;stroke-dasharray:none}
+svg.dense .edge.hot{opacity:1;stroke-width:2.6}
 .edgehit{stroke:transparent;stroke-width:14;fill:none;cursor:help}
 .elbl{font-size:8.2px;fill:var(--elbl);letter-spacing:.04em;pointer-events:none;
  paint-order:stroke;stroke:var(--stagebg);stroke-width:3px;stroke-linejoin:round}
@@ -260,7 +267,10 @@ function collapseCatalogs(pid,kids){
  for(i=0;i<kids.length;i++){
   var n=kids[i];
   // only leaf-like, non-drillable nodes with a category are collapse candidates
-  var collapsible=!hasKids(n.id)&&(n.category!=null&&n.category!=="");
+  // A category that is merely the node's own kind — "container" for every container, since gen
+  // falls back to n.kind — is not a grouping. Collapsing on it folds a whole level into one box
+  // named after the level, which is what a repo of 53 childless containers would do.
+  var collapsible=!hasKids(n.id)&&(n.category!=null&&n.category!==""&&n.category!==n.kind);
   var key=collapsible?("cat:"+n.category):("solo:"+i);
   if(!groups[key]){groups[key]={key:key,cat:n.category,members:[],collapsible:collapsible};order.push(key);}
   groups[key].members.push(n);
@@ -296,6 +306,14 @@ function srcOf(n){if(n.verify){if(typeof n.verify==="string")return n.verify;if(
  var ev=(n.evidence||[]).filter(function(e){return e.type==="doc"||e.type==="path";})[0];return ev?ev.ref:((M.meta&&M.meta.verifyMethod)||"");}
 
 var NW=228,NH=118; // NH fits 3 description lines without hitting the [+] DRILL
+// Past DENSE_MIN siblings a full-size card cannot stay legible: the fit-to-content viewBox scales
+// the canvas down to the stage, so 53 cards at 228x118 render 64x33 css px with a 3.24px title.
+// The compact card keeps the one thing that has to survive a projector — the name — near 11px.
+// No other edit is needed: draw() reads w/h from the pos map, never NW/NH, and at h=58 the
+// description's own line budget already falls below one line, so wrapDesc returns nothing.
+// ponytail: holds the 9px floor to ~60 siblings; past that the answer is a real grouping level,
+// not a smaller card.
+var DENSE_MIN=20,DW=168,DH=58,STAGE_ASPECT=2.1; // STAGE_ASPECT: #stage is full-width by 74vh
 // Curated coordinates from meta.layout win; everything else keeps the automatic arrangement,
 // placed BELOW the pinned block so a partial hint set can never overlap generated nodes.
 function seedLayout(kids,hints){
@@ -324,12 +342,19 @@ function autoLayout(kids){
    pos[others[i].id]={x:cx+rx*Math.cos(a)-NW/2,y:cy+ry*Math.sin(a)-NH/2,w:NW,h:NH};}
   return {W:W,H:H,pos:pos};
  }
- var n=kids.length,cols=n<=3?Math.max(n,1):Math.ceil(Math.sqrt(n));if(cols>4)cols=4;
- var rows=Math.ceil(n/cols),gx=96,gy=82,px=64,py=58;
- var blockW=cols*NW+(cols-1)*gx,W=Math.max(1020,blockW+px*2),H=Math.max(560,py*2+rows*NH+(rows-1)*gy);
+ var n=kids.length,dense=n>DENSE_MIN;
+ var bw=dense?DW:NW,bh=dense?DH:NH,gx=dense?44:96,gy=dense?38:82,px=64,py=58;
+ // Columns follow the STAGE's shape instead of a fixed cap of 4. That cap turned a real Go repo's
+ // 53 containers into a 1328x2834 ribbon inside a stage twice as wide as tall: the fit-to-content
+ // viewBox then did its job and scaled everything to 0.28, i.e. a 3.24px title. Nothing on that
+ // screen was readable, and 80% of the width was empty.
+ var cols=n<=3?Math.max(n,1):Math.round(Math.sqrt(n*STAGE_ASPECT*(bh+gy)/(bw+gx)));
+ if(cols<1)cols=1;if(cols>n)cols=n;
+ var rows=Math.ceil(n/cols);
+ var blockW=cols*bw+(cols-1)*gx,W=Math.max(1020,blockW+px*2),H=Math.max(560,py*2+rows*bh+(rows-1)*gy);
  var offx=(W-blockW)/2;
  for(i=0;i<n;i++){var c=i%cols,r=Math.floor(i/cols);
-  pos[kids[i].id]={x:offx+c*(NW+gx),y:py+r*(NH+gy),w:NW,h:NH};}
+  pos[kids[i].id]={x:offx+c*(bw+gx),y:py+r*(bh+gy),w:bw,h:bh};}
  return {W:W,H:H,pos:pos};
 }
 function layoutFor(kids){var k=keyOf();if(!POS[k])POS[k]=seedLayout(kids,hintsFor(k));
@@ -379,7 +404,7 @@ function draw(animate){
  var vbk=keyOf();
  if(drag&&VBOX[vbk]){vx=VBOX[vbk][0];vy=VBOX[vbk][1];vw=VBOX[vbk][2];vh=VBOX[vbk][3];}
  else VBOX[vbk]=[vx,vy,vw,vh];
- var s='<svg viewBox="'+vx.toFixed(1)+' '+vy.toFixed(1)+' '+vw.toFixed(1)+' '+vh.toFixed(1)+'" preserveAspectRatio="xMidYMid meet" class="'+(mode==="target"?"mode-t":"")+'">'
+ var s='<svg viewBox="'+vx.toFixed(1)+' '+vy.toFixed(1)+' '+vw.toFixed(1)+' '+vh.toFixed(1)+'" preserveAspectRatio="xMidYMid meet" class="'+(mode==="target"?"mode-t ":"")+(edges.length>LABEL_AUTO_MAX?"dense":"")+'">'
   +'<defs><marker id="ar" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edge")+'"/></marker>'
   +'<marker id="arp" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edgeplan")+'"/></marker></defs>';
  for(j=0;j<geo.length;j++){
@@ -395,6 +420,11 @@ function draw(animate){
   var pulse=(st==="next"||st==="prog")&&mode!=="target"&&!n.__catalog;
   var isCat=!!n.__catalog,dr=!isCat&&hasKids(n.id),cls="nd s-"+st+(dr?" drill":"")+(isCat?" cat":"")+(pulse?" pulse":"");
   var desc=isCat?(n.count+" "+STR.rosterCount):(mode==="target"?(n.target||n.func||""):(n.current||n.func||""));
+  // 26 of a real repo's 53 boxes printed "1 file: advisor." under a box titled "internal/advisor".
+  // A description that only restates the title is ink, not information: drop it and let the box
+  // breathe. The measured fallback text is the generator's honest last resort, not a lie — it just
+  // does not belong on screen when it says nothing the header has not already said.
+  if(!isCat&&echoesName(desc,n.name))desc="";
   var badge=isCat?String(n.count):(mode==="target"?STR.detTarget:(n.statusWord||(n.completion!=null?n.completion+"%":STR.stUnk)));
   // the title runs until the badge, so reserve the badge's actual width (9px text ≈ 5.4px/char)
   // instead of a flat 70px — a fixed reserve clipped names that had all the room they needed
@@ -448,6 +478,19 @@ function draw(animate){
 // cpl — an unbreakable token (a long class name, a URL) would otherwise paint outside the box, and
 // there is no clip-path on the node. The last line carries the ellipsis when text was dropped,
 // rather than spending a whole line on it (on a short curated box that was half the visible text).
+// True when a description carries no word the title does not already carry. Pure, so it is testable
+// without a DOM. The stop-list is the vocabulary of the generator's own measured fallback
+// ("1 file: advisor.", "3 packages: a, b, c."), never of real prose.
+var DESC_NOISE={file:1,files:1,package:1,packages:1,module:1,modules:1,dir:1,directory:1,folder:1,component:1,components:1,of:1,and:1,the:1};
+function echoesName(desc,name){
+ var norm=function(s){return String(s==null?"":s).toLowerCase().replace(/[^a-z0-9]+/g," ").trim();};
+ var d=norm(desc);if(!d)return false;
+ var own={},nw=norm(name).split(" "),i;
+ for(i=0;i<nw.length;i++)if(nw[i])own[nw[i]]=1;
+ var w=d.split(" ");
+ for(i=0;i<w.length;i++){if(!w[i]||own[w[i]]||DESC_NOISE[w[i]]||/^\d+$/.test(w[i]))continue;return false;}
+ return true;
+}
 function wrapDesc(desc,cpl,max){
  if(max<1||cpl<2)return [];
  var words=String(desc==null?"":desc).split(" "),all=[],line="",i;

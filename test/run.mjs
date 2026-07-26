@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, statSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, statSync, existsSync, renameSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -184,14 +184,23 @@ const diffPaths = (a, b, at = '') => {
   const testish = m.nodes.filter((n) => /_test$/.test(String(n.name)) || (n.evidence || []).some((e) => /_test\.go$/.test(e.ref)))
   if (testish.length) die('G2: _test.go files became nodes: ' + testish.map((n) => n.id))
 
-  // G3 — the leaf is the package; the files inside it are internal detail nobody presents.
+  // G3 — the package is ONE node. It used to be two: a container AND a leaf pointing at that very
+  // same directory, so drilling into a package showed the package again — 53 of 53 on a real Go
+  // repo, a level drawn twice. The files inside stay internal detail (#17): they are a COUNT on the
+  // container, which is what the drift gate re-walks, not boxes.
   const leaves = m.nodes.filter((n) => n.kind === 'leaf')
-  if (leaves.length !== 3) die(`G3: expected one leaf per package (3), got ${leaves.length}: ${leaves.map((n) => n.id)}`)
-  for (const l of leaves) {
-    const ev = (l.evidence || []).find((e) => e.type === 'path')
-    if (!ev) die('G3: leaf ' + l.id + ' has no path evidence')
-    if (/\.go$/.test(ev.ref) || !statSync(join(REPO, ev.ref)).isDirectory()) die(`G3: leaf ${l.id} is a file, not a package: ${ev.ref}`)
+  if (leaves.length) die(`G3: a package is one node — got ${leaves.length} redundant leaf/leaves: ${leaves.map((n) => n.id)}`)
+  for (const c of conts) {
+    const g = (c.evidence || []).find((e) => e.type === 'glob')
+    if (!g) die('G3: container ' + c.id + ' carries no glob evidence — nothing for the gate to re-count')
+    if (g.ref !== c.name) die(`G3: container ${c.id} anchors on "${g.ref}", not its own package dir "${c.name}"`)
+    if (!statSync(join(REPO, g.ref)).isDirectory()) die(`G3: container ${c.id} evidence is not a directory: ${g.ref}`)
   }
+  // G3b — the count is the package's real non-test file count. Both halves matter: a count that is
+  // always 1 is how the Go gate passed while a .go file was added or deleted.
+  const storeC = conts.find((c) => c.name === 'internal/store')
+  const storeN = ((storeC.evidence || []).find((e) => e.type === 'glob') || {}).count
+  if (storeN !== 2) die(`G3b: internal/store must count its 2 non-test files (store.go, query.go), got ${storeN}`)
 
   // G4 — edges derived from the `import` block: deterministic, and the direction is right by
   // construction (the importer depends on the imported, never the reverse).
@@ -541,7 +550,22 @@ const diffPaths = (a, b, at = '') => {
     if (lay.pos[id].x + lay.pos[id].w > lay.W || lay.pos[id].y + lay.pos[id].h > lay.H) die('WP-A4: viewBox does not cover the auto-placed nodes')
   }
   if (JSON.stringify(seedLayout(kids, null)) !== JSON.stringify(seedLayout(kids))) die('WP-A4: no-hint path changed shape')
-  console.log('  ok layout-hints — WP-A4 topology → meta.layout verbatim; pinned coords honoured, unhinted nodes placed clear of them')
+
+  // LEGIBILITY FLOOR. The owner's complaint about a real 53-container repo — "you cannot read
+  // anything" — stated as a number. The stage is full-width by 74vh and the viewBox is
+  // fit-to-content with xMidYMid meet, so the on-screen font is the model font times
+  // min(stageW/W, stageH/H). A title under ~9px is not readable on a projector; the shipped
+  // 4-column cap put it at 3.24px for 53 siblings, and at less than 9px for 44 of the 60 counts.
+  const autoLayout = new Function(src + '; return autoLayout')()
+  const TITLE_PX = 11.5, FLOOR = 9, STAGE_W = 1884, STAGE_H = 799
+  let worst = { px: Infinity, n: 0 }
+  for (let n = 1; n <= 60; n++) {
+    const l = autoLayout([...Array(n)].map((_, i) => ({ id: 'k' + i, kind: 'container' })))
+    const px = TITLE_PX * Math.min(STAGE_W / l.W, STAGE_H / l.H)
+    if (px < worst.px) worst = { px, n }
+  }
+  if (worst.px < FLOOR) die(`viewer legibility: a title renders at ${worst.px.toFixed(2)}px with ${worst.n} siblings — under the ${FLOOR}px floor, nobody can read the board`)
+  console.log(`  ok layout-hints — WP-A4 layout verbatim, pinned coords honoured; legibility floor holds to 60 siblings (worst ${worst.px.toFixed(1)}px)`)
 }
 
 // 10) viewer contract: the parts that are pure logic (no DOM) — arrow-label anchor + i18n parity.
@@ -585,6 +609,19 @@ const diffPaths = (a, b, at = '') => {
   }
   if (wrapDesc('anything at all', 37, 0).length) die('viewer wrapDesc: a box with no room must render no description')
   if (wrapDesc('short one', 37, 3).join('|') !== 'short one') die('viewer wrapDesc: text that fits must not be altered')
+
+  // a description that only restates the title is ink, not information — but a real sentence that
+  // happens to contain the name must survive, or the box goes blank on its best content
+  const efn = (html.match(/\nvar DESC_NOISE=[\s\S]*?\n\}/) || [])[0]
+  if (!efn) die('viewer: echoesName not found')
+  const echoesName = new Function(efn + '; return echoesName')()
+  for (const [d, n] of [['1 file: advisor.', 'internal/advisor'], ['3 packages: a, b, c.', 'a b c'], ['Component of module haben.', 'haben']]) {
+    if (!echoesName(d, n)) die(`viewer echoesName: "${d}" restates "${n}" and should be dropped`)
+  }
+  for (const [d, n] of [['Account domain: bank/broker kinds, free-cash, IBAN.', 'internal/account'],
+                        ['Derives progress from the feature matrix.', 'docmap'], ['', 'x']]) {
+    if (echoesName(d, n)) die(`viewer echoesName: dropped real prose "${d}" for node "${n}"`)
+  }
 
   // the headline percentage must never claim more coverage than it has. This is the flagship
   // promise ("mai un 100% inventato") and it lives in the one number read first.
@@ -707,6 +744,54 @@ const diffPaths = (a, b, at = '') => {
 
   const described = m.nodes.filter((n) => n.descSource === 'docmap').length
   console.log(`  ok docmap — §17 ${described} node(s) described from docs/FEATURES.md; billing 50% derived, core over-cap, plumbing honest; overlay wins; drift gated`)
+}
+
+// 13b) the three ways a document-derived number goes green without anyone lying on purpose.
+// Every one of these passed the gate before: the derivation fell SILENT and silence read as
+// "no drift", so a committed green box kept shipping with a citation nothing backed any more.
+{
+  const repo = join(tmp, 'dd-repo')
+  cpSync(FIX('docmap'), repo, { recursive: true })
+  const topo = join(tmp, 'dd-topo.json'), model = join(tmp, 'dd-model.json'), bad = join(tmp, 'dd-bad.json')
+  const doc = join(repo, 'docs', 'FEATURES.md')
+  let r = run(['init', '--repo', repo, '--out', topo, '--force']); if (r.status !== 0) die('dd init exit ' + r.status, r)
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('dd gen exit ' + r.status, r)
+  const pristine = readFileSync(doc, 'utf-8')
+  const gate = () => run(['check', '--repo', repo, '--model', model, '--topology', topo])
+  const out = (x) => (x.stdout || '') + (x.stderr || '')
+  if (gate().status !== 0) die('dd precondition: the untouched fixture must pass')
+
+  // the whole-product box: every row touches the system node, so its denominator is "the rows
+  // somebody wrote", never "the repo" — and a container the document never names sits below it
+  const sys = readJson(model).nodes.find((n) => n.kind === 'system')
+  if (!readJson(model).nodes.some((n) => n.kind === 'container' && n.status2 === 'unknown')) die('dd precondition: the fixture must hold a container the document never names')
+  if (sys.completion != null || sys.status2 !== 'unknown') die(`dd/system: the whole product reads ${sys.status2}/${sys.completion} "${(sys.verify || {}).source}" — a handful of rows became a verdict on a repo they do not cover`)
+
+  // (a) a renamed code_ref: the row stops touching its node, so the unfinished capability leaves
+  // the denominator and billing goes from in-progress/50 to a freshly derived done/100
+  writeFileSync(doc, pristine.replace('`src/billing/dunning.js`', '`src/billing/dunning_v2.js`'))
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', bad])
+  if (r.status === 0) die(`dd/(a): gen accepted a row whose code_ref does not exist — billing silently reads ${(readJson(bad).nodes.find((n) => n.id === 'billing') || {}).completion}% instead of 50%`)
+  // …and a glob stem is a legitimate ref that must NOT be flagged
+  writeFileSync(doc, pristine.replace('`src/billing/dunning.js`', '`src/billing/dunn*.js`'))
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', join(tmp, 'dd-glob.json')])
+  if (r.status !== 0) die('dd/(a): a glob code_ref (`src/billing/dunn*.js`) was rejected as dead', r)
+
+  // (b) the cited document is gone: the model keeps quoting it and citing "(N/N done)"
+  writeFileSync(doc, pristine)
+  const gone = doc + '.gone'
+  renameSync(doc, gone)
+  r = gate()
+  if (r.status === 0) die('dd/(b): check passed with the cited document deleted, model still quoting it')
+  if (!/FEATURES\.md/.test(out(r))) die('dd/(b): the failure did not name the missing document', r)
+  renameSync(gone, doc)
+
+  // (c) the row's sentence was rewritten: the box still quotes the old one, vouched by descSource
+  writeFileSync(doc, pristine.replace('Hand the accountant the month as a spreadsheet', 'WITHDRAWN — export was cut, see ADR-9'))
+  if (gate().status === 0) die('dd/(c): check passed a docmap box quoting a sentence the document no longer contains')
+  writeFileSync(doc, pristine)
+  if (gate().status !== 0) die('dd: the gate did not go green again once the document was restored')
+  console.log('  ok doc-drift — a dead code_ref fails gen; a deleted document, a rewritten row and a silent derivation all fail check; the system box stays unknown')
 }
 
 console.log('OK — mini, flat-python, data-noise, virgin-kebab, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, docmap all green.')
