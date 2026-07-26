@@ -215,6 +215,7 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok go-nested — ${conts.length} package containers (${cnames}), ${leaves.length} package leaves, ${derived.length} import edge(s), zero test nodes`)
 }
 
+
 // 3d) go-grouped: the curation a 53-box wall forces, and the two things it used to cost in silence.
 // Grouping packages into domains is the ONLY cure for a level no projector can show — and the
 // grouped level drew zero arrows and tallied the domains instead of the packages, so the one screen
@@ -294,6 +295,129 @@ const diffPaths = (a, b, at = '') => {
   if (!/\b5 node\(s\)/.test(r.stderr || '')) die('P4: the warning does not carry the count: ' + (r.stderr || ''))
   if (!/kind/.test(r.stderr || '')) die('P4: the warning never names the field that caused it: ' + (r.stderr || ''))
   console.log(`  ok go-grouped — a grouping box draws its children's arrows (platform→money ${dom[0].label}, self-loops dropped), tallies their verdicts (${T.ruled}/${T.tot}), and a curation that would lose edges warns loud`)
+}
+
+// 3d) §33 the first screen. `init` seeded ONE context node — a dashed box with a generated sentence
+// in it — and told nobody that curating it was mandatory rather than nice. Slide one of any
+// architecture talk is *who touches this*; the assertions below are that the roles are there, that
+// they are impossible to mistake for curation, and that nothing lets them stay anonymous quietly.
+{
+  const REPO = FIX('mini'), topo = join(tmp, 'ctx-topo.json'), model = join(tmp, 'ctx-model.json')
+  let r = run(['init', '--repo', REPO, '--out', topo, '--force']); if (r.status !== 0) die('ctx init exit ' + r.status, r)
+  const t = readJson(topo)
+  const ctx = t.nodes.filter((n) => !n.parent)
+  const sys = ctx.find((n) => n.kind === 'system')
+  const actors = ctx.filter((n) => n.kind !== 'system')
+
+  // C1 — a person and an external system, not just the product
+  for (const k of ['person', 'external']) if (!ctx.some((n) => n.kind === k)) die(`C1: init seeded no "${k}" in the context, got [${ctx.map((n) => n.kind)}]`)
+  // C2 — with an arrow each. Boxes and no arrows is a bulleted list in rectangles (predicate 4).
+  for (const a of actors) if (!t.edges.some((e) => (e.from === a.id && e.to === sys.id) || (e.to === a.id && e.from === sys.id))) die('C2: context actor ' + a.id + ' carries no edge to the system')
+  // C3 — a plausible invented actor ("End user") would be indistinguishable from curated truth
+  for (const a of actors) if (!/^TODO:/.test(a.name)) die('C3: a seeded placeholder is not marked as one: ' + a.name)
+  // C4 — the closing line leads with the context instead of burying it as one of three chores
+  const last = (r.stdout || '').trim().split('\n').pop()
+  if (!/NEXT/.test(last)) die('C4: init printed no NEXT line: ' + last)
+  if (!/TODO:/.test(last) || last.indexOf('TODO:') > last.indexOf('curate')) die('C4: the NEXT line does not put the context first: ' + last)
+
+  // C5 — while they are anonymous `gen` says so, in ONE line, naming them, and does not fail
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('C5: gen must not fail over unnamed placeholders', r)
+  const note = (r.stderr || '').split('\n').filter((l) => /still unnamed/.test(l))
+  if (note.length !== 1) die(`C5: expected exactly one reminder line on stderr, got ${note.length}:\n${r.stderr}`)
+  for (const a of actors) if (!note[0].includes(a.name)) die('C5: the reminder never names ' + a.name + ': ' + note[0])
+
+  // C6 — predicates 1 and 4 of scripts/presentable.mjs, measured on the model the way it measures
+  const m = readJson(model)
+  const roots = m.nodes.filter((n) => !n.parent)
+  if (roots.length < 2) die(`C6: predicate 1 still fails on a freshly initialised repo (${roots.length} box(es) at context)`)
+  const ids = new Set(roots.map((n) => n.id))
+  if (!m.edges.some((e) => ids.has(e.from) && ids.has(e.to))) die('C6: the context screen draws no edge — predicate 4 fails where it used to pass')
+  if (m.nodes.some((n) => n.parent && !String(n.func || '').trim())) die('C6: predicate 3 regressed — a box below the context lost its prose')
+
+  // C7 — the reminder keys on the NAME, not on the seeded ids: rename them and it must fall silent,
+  // or every curated repo carries a nag forever and the signal stops meaning anything.
+  const named = readJson(topo)
+  for (const n of named.nodes) if (/^TODO:/.test(n.name)) n.name = 'The family'
+  const namedTopo = join(tmp, 'ctx-topo-named.json')
+  writeFileSync(namedTopo, JSON.stringify(named, null, 2))
+  r = run(['gen', '--repo', REPO, '--topology', namedTopo, '--out', join(tmp, 'ctx-model-named.json')])
+  if (r.status !== 0) die('C7: gen on a curated context exit ' + r.status, r)
+  if (/still unnamed/.test(r.stderr || '')) die('C7: the reminder survived the rename: ' + r.stderr)
+  // C8 — `init` is best-effort and must never fail on a strange repo: a directory with no recognised
+  // source at all still has a true context to write, and exiting 1 left the caller with no file.
+  const bare = mkdtempSync(join(tmpdir(), 'forma-bare-'))
+  writeFileSync(join(bare, 'README.md'), '# nothing but prose\n')
+  const bareTopo = join(tmp, 'bare-topo.json'), bareModel = join(tmp, 'bare-model.json')
+  r = run(['init', '--repo', bare, '--out', bareTopo, '--force'])
+  if (r.status !== 0) die('C8: init must not exit ' + r.status + ' on a repo with no recognised source', r)
+  const b = readJson(bareTopo)
+  if (b.leafSources.length) die('C8: a source-less repo seeded containers: ' + JSON.stringify(b.leafSources))
+  if (b.nodes.filter((n) => !n.parent).length !== 3) die('C8: the context was not written anyway: ' + JSON.stringify(b.nodes.map((n) => n.kind)))
+  r = run(['gen', '--repo', bare, '--topology', bareTopo, '--out', bareModel])
+  if (r.status !== 0) die('C8: the context-only topology does not gen', r)
+  console.log(`  ok context-seed — §33 ${actors.length} placeholder actor(s) + ${t.edges.length} edge(s), gen names them once and stops after the rename; a source-less repo still gets a context`)
+}
+
+// 3e) two-stack: a product that is Go AND TypeScript. `init` models ONE stack per run, and the defect
+// was that it never said so — a Go + React monorepo came out as 53 Go packages with the application
+// its users open missing and no line anywhere admitting it. The fixture puts *.go and *.ts/*.tsx in
+// different directories; the assertions are what init SAYS about the stack it skipped, and whether
+// what it says actually WORKS when pasted.
+{
+  const REPO = FIX('two-stack'), topo = join(tmp, '2s-topo.json'), model = join(tmp, '2s-model.json')
+  let r = run(['init', '--repo', REPO, '--out', topo, '--force']); if (r.status !== 0) die('two-stack init exit ' + r.status, r)
+  const t = readJson(topo), err = r.stderr || ''
+
+  // S1 — the dominant stack is still the one seeded, alone (this is option B, deliberately)
+  if (t.meta.stack !== 'Go') die('S1: expected Go as the dominant stack, got ' + t.meta.stack)
+  const off = t.nodes.filter((n) => n.kind === 'container' && n.tech !== 'Go')
+  if (off.length) die('S1: a non-Go container was seeded by default: ' + JSON.stringify(off.map((n) => n.name)))
+
+  // S2 — no silent detection: the stack it walked past is named, and counted
+  if (!/TypeScript/.test(err)) die('S2: init never mentioned the TypeScript sources it walked past:\n' + err)
+  if (!/\b2 director/.test(err)) die('S2: the message does not count the directories it saw:\n' + err)
+
+  // S3 — the entries to paste are exact, one per directory, and cover BOTH extensions of the
+  // language: a `match` of `\.ts$` would model half a React app and call it done.
+  const u = (t._unseeded || []).find((x) => x.stack === 'TypeScript')
+  if (!u) die('S3: no _unseeded entry for TypeScript: ' + JSON.stringify(t._unseeded))
+  if (u.nodes.length !== 2 || u.leafSources.length !== 2) die('S3: expected one node + one leafSource per TS dir, got ' + JSON.stringify(u))
+  if (!new RegExp(u.match).test('view.tsx')) die('S3: the pasted match misses *.tsx: ' + u.match)
+  if (t.nodes.some((n) => u.nodes.some((x) => x.id === n.id))) die('S3: an _unseeded id collides with a seeded one — pasting it would break `gen`')
+  // S3b — a directory already seeded must never be offered again. The report keys on the dirs the
+  // container pass did NOT reach, per language: keyed on "every language but the dominant one" it
+  // handed a React repo back its own `src/ui` (seeded from *.tsx, offered again for *.ts), and
+  // pasting that stacked a second container over a directory already in the model.
+  const seededDirs = new Set(t.leafSources.map((s) => s.dir))
+  for (const e of t._unseeded || []) {
+    if (e.stack !== t.meta.stack) continue
+    for (const s of e.leafSources) if (seededDirs.has(s.dir)) die(`S3b: ${s.dir} is offered as unseeded ${e.stack} but is already a seeded container`)
+  }
+  // S3c — a *.tsx-dominant repo must seed the *.ts half of the same language too, not report it
+  const react = mkdtempSync(join(tmpdir(), 'forma-react-'))
+  mkdirSync(join(react, 'src', 'ui'), { recursive: true })
+  for (const f of ['a.tsx', 'b.tsx', 'c.tsx', 'helpers.ts', 'types.ts']) writeFileSync(join(react, 'src', 'ui', f), 'export const x = 1\n')
+  const rTopo = join(tmp, 'react-topo.json'), rModel = join(tmp, 'react-model.json')
+  r = run(['init', '--repo', react, '--out', rTopo, '--force']); if (r.status !== 0) die('S3c react init exit ' + r.status, r)
+  const rt = readJson(rTopo)
+  if ((rt._unseeded || []).length) die('S3c: the dominant language came back as an unseeded stack: ' + JSON.stringify(rt._unseeded))
+  r = run(['gen', '--repo', react, '--topology', rTopo, '--out', rModel]); if (r.status !== 0) die('S3c react gen exit ' + r.status, r)
+  const rl = readJson(rModel).nodes.filter((n) => n.kind === 'leaf').map((n) => n.name).sort()
+  if (rl.length !== 5) die(`S3c: one match per LANGUAGE — expected all 5 *.ts/*.tsx files, got ${rl.length}: ${rl}`)
+
+  // S4 — the one that decides whether option B was delivered: move the entries in, exactly as the
+  // message instructs, and the model must build AND pass the gate. A printed entry that does not
+  // work is a lie dressed as help.
+  t.nodes.push(...u.nodes); t.leafSources.push(...u.leafSources)
+  const pasted = join(tmp, '2s-topo-pasted.json')
+  writeFileSync(pasted, JSON.stringify(t, null, 2))
+  r = run(['gen', '--repo', REPO, '--topology', pasted, '--out', model]); if (r.status !== 0) die('S4: the pasted _unseeded entries do not gen', r)
+  const m = readJson(model)
+  if (!m.nodes.some((n) => n.kind === 'container' && n.tech === 'TypeScript')) die('S4: pasting _unseeded put no TypeScript container in the model')
+  if (!m.nodes.some((n) => n.kind === 'leaf' && n.name === 'view')) die('S4: the *.tsx file never became a leaf — the match under-covers the language')
+  r = run(['check', '--repo', REPO, '--model', model, '--topology', pasted]); if (r.status !== 0) die('S4: the gate rejects a model built from the pasted entries', r)
+  console.log(`  ok two-stack — §34 Go seeded, TypeScript named (${u.files} files, ${u.leafSources.length} dirs) with entries that gen+check accept verbatim`)
+
 }
 
 // 4) §1b attach-mode + check freshness, end-to-end on a copy of the self-repo
@@ -914,4 +1038,4 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok doc-drift — a dead code_ref fails gen; a deleted document, a rewritten row and a silent derivation all fail check; the system box stays unknown')
 }
 
-console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, docmap all green.')
+console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, docmap all green.')
