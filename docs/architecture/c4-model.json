@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.5.0",
-  "generatedAt": "2026-07-26T13:25:06.831Z",
+  "generatedAt": "2026-07-26T15:15:35.997Z",
   "source": {
     "repo": "forma",
-    "commit": "c16ff579f34ddc52b92898473b9969b9af205004",
-    "branch": "fix/17-overlay-writer",
+    "commit": "3b731efeea3548cbd582ca207c0858ed2dda3c5e",
+    "branch": "fix/tally-coverage",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.5.0",
     "statusPath": "docs/architecture/c4-status.json"
