@@ -4,6 +4,28 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-07-26
+
+### Changed
+
+- **A number derived from a repo document now discloses what it rests on.** Two things were true at
+  once and rendered identically: a green from a closed GitHub issue is a fact, a green from a
+  capability table is the repo declaring itself finished. The detail panel now reads **Declared in**
+  rather than *Verification source* for a derived state, the citation says `(3/3 declared done)`,
+  and the legend carries both marks — filled for **DONE (proven)**, hollow for **DONE (declared)**.
+  `check` keys off the `verify.derived` boolean and never the wording, so the words stay free to be
+  honest.
+- **Coverage rides with the percentage.** `done / rows.length` answers *of the capabilities somebody
+  wrote down, how many are finished* — never *how much of this module is finished*. A container of
+  22 files that a matrix names 3 of, all done, read `100%` while the other 19 were not counted as
+  unfinished: they were not counted at all. Every derived state now carries `verify.coverage`, and
+  the box says **3 of 22 units named by the document**, or **the document names this module itself**
+  when a row addresses the whole unit. Measured on a real Go repo: 22 of 25 derived boxes are
+  whole-module and honest; 3 were quietly reporting a corner (`internal/worker` 3 of 22,
+  `internal/insight` 3 of 8, `internal/export` 1 of 2). Averaging over every unit instead was
+  rejected as the mirror lie — a module the document never names is not 0% done, which is exactly
+  why `gen` refuses to write a completion nobody curated.
+
 ## [0.8.0] - 2026-07-26
 
 Pointed at a real 53-package Go repo, the board was unreadable and the numbers were wrong. Three

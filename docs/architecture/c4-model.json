@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.5.0",
-  "generatedAt": "2026-07-26T16:36:42.728Z",
+  "generatedAt": "2026-07-26T17:46:56.189Z",
   "source": {
     "repo": "forma",
-    "commit": "0928825f7f7cfdf6bf0954aea19a84d6a60b5bed",
-    "branch": "scope/confine-di-finito",
+    "commit": "b7993b0c86db50913db59d60e6873c3f9b52ef8d",
+    "branch": "main",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.5.0",
     "statusPath": "docs/architecture/c4-status.json"

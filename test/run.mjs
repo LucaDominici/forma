@@ -610,6 +610,17 @@ const diffPaths = (a, b, at = '') => {
   if (wrapDesc('anything at all', 37, 0).length) die('viewer wrapDesc: a box with no room must render no description')
   if (wrapDesc('short one', 37, 3).join('|') !== 'short one') die('viewer wrapDesc: text that fits must not be altered')
 
+  // a derived number must disclose how much of the module its citation reaches — "3 of 3 rows
+  // declared done" and "this module is done" are different sentences when the module holds 22 files
+  const cfn = (html.match(/\nfunction coverText\(n\)\{[\s\S]*?\n\}/) || [])[0]
+  if (!cfn) die('viewer: coverText not found')
+  const coverText = new Function('var STR={coverWhole:"WHOLE",coverPart:"{n}/{t}"};' + cfn + '; return coverText')()
+  if (coverText({ verify: { coverage: { named: 3, total: 22 } } }) !== '3/22') die('viewer coverage: a partially-covered box must report its reach')
+  if (coverText({ verify: { coverage: { named: 8, total: 8, whole: true } } }) !== 'WHOLE') die('viewer coverage: a whole-module row must say so, not print a fraction')
+  for (const n of [{}, { verify: {} }, { verify: { source: 'ADR-040' } }]) {
+    if (coverText(n)) die('viewer coverage: a curated or gh-verified state has no document reach to report: ' + JSON.stringify(n))
+  }
+
   // a description that only restates the title is ink, not information — but a real sentence that
   // happens to contain the name must survive, or the box goes blank on its best content
   const efn = (html.match(/\nvar DESC_NOISE=[\s\S]*?\n\}/) || [])[0]
