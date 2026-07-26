@@ -39,22 +39,25 @@ npx forma-arch <command>        # or: npm i -D forma-arch
 | `forma serve` | Open the live explorer at `http://localhost:4173` |
 | `forma verify` | Refresh status from live GitHub issues through your `gh` CLI — the **only** networked command |
 
-**Box text comes from your docs.** The description chain is:
+**Box text comes from your docs, and says where it came from.** Every box records its provenance in `descSource`. First hit wins:
 
-Container chain: curated topology (`topo.descriptions` + `node.description`) — key format is `<containerId>/<stem>`,
-where `stem` is the box name without extension and a container maps to itself (`core/core`), then `featurematrix`
-from `topo.featureDocs` (seeded by `forma init`), then module docstring / README / arc42 / fallback.
+| `descSource` | Source | Applies to |
+|---|---|---|
+| `curated` | `topo.descriptions[<containerId>/<stem>]`, then the node's own `description` | every box |
+| `featurematrix` | a capability table in `topo.featureDocs` | **context, container, component** |
+| `docstring` | module docstring — Python `"""…"""`, JS/TS leading block | every box |
+| `readme` | the `README.md` next to the file, or in the container's directory | every box |
+| `featurematrix` | the same capability table | **leaves** |
+| `arc42` | a section of `docPath` whose heading is named after the box | every box |
+| `fallback` | a measured, generated sentence — the last resort | every box |
 
-Leaf chain: curated topology first, then module docstring, then directory README, then `featurematrix`, then arc42
-fallback.
+The matrix sits **above** the code for a container and **below** it for a leaf. A stakeholder looking at a container asks what that piece does for them, not which docstring the first file inside carries; on a leaf, the code is the closest documentation there is.
 
-On a flat directory of many `foo_*` files it also synthesizes a **component** layer, described from its
-children's docs (`--no-cluster` to disable; `--cluster-min <n>` = leaves before a container is clustered,
-default 8; `--group-min <n>` = files sharing a prefix before they become a component, default 3).
+`topo.descriptions` is keyed `<containerId>/<stem>` — `stem` is the box name with its extension stripped, and a container is its own container, so `core/core` describes the container `core` and `core/alpha` the leaf `alpha` inside it.
 
-`featureDocs` are markdown files under `docs/` that define capabilities as tables. A row names one or more
-code paths inside inline code fences (like `` `src/services` `` or `` `src/services/report.js` ``), and that row
-becomes the resolver input for the featurematrix step.
+`topo.featureDocs` lists markdown files holding a **capability table**: rows that name what a capability does *and* the code paths implementing it, in backticks (`` `src/services` ``, `` `src/services/report.js` ``). `forma init` seeds the list by scanning `docs/` — a table qualifies when most of its rows point at paths that actually exist, which is what separates a feature matrix from any other doc that mentions filenames. A row reaches a box when its path is, contains, or sits inside one of that box's own paths; several matching rows compose into one sentence each, up to three.
+
+On a flat directory of many `foo_*` files `gen` also synthesizes a **component** layer, described from its children's docs (`--no-cluster` to disable; `--cluster-min <n>` = leaves before a container is clustered, default 8; `--group-min <n>` = files sharing a prefix before they become a component, default 3).
 
 **Programme state is curated, not guessed.** Code shows what exists, never how far along it is. Drop a `docs/architecture/c4-status.json` (`--status <path>` to move it) and `gen` decorates nodes by id with `status2`, `completion`, `statusWord`, `current`, `target`, `verify`, `issues` — never `func`, which belongs to the docs. `gen` validates the *form* (ids resolve, fields known, enums and issue numbers well-shaped) and never the prose; `forma check` fails if the overlay decorates a node the model no longer has.
 

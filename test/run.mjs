@@ -62,8 +62,11 @@ const diffPaths = (a, b, at = '') => {
   const t = readJson(topo)
   if (!((t.featureDocs || []).includes('docs/FEATURE_MATRIX.md'))) die('FM0: init did not seed featureDocs with docs/FEATURE_MATRIX.md')
   const matrix = parseFeatureDoc(readFileSync(join(REPO, 'docs', 'FEATURE_MATRIX.md'), 'utf-8'))
-  if (!matrix.some((r) => r.paths.length === 1 && r.paths[0] === 'src/report/missing.js')) die('FM1: parseFeatureDoc did not keep the non-existing-path-only row')
-  if (existsSync(join(REPO, 'src/report/missing.js'))) die('FM1: the non-existing-path-only row in FEATURE_MATRIX.md does exist on disk')
+  // the parser never touches disk — only init's qualification does, so a row pointing nowhere survives
+  if (!matrix.some((r) => r.paths.includes('src/report/missing.js'))) die('FM1: parseFeatureDoc dropped the row whose path does not exist')
+  if (existsSync(join(REPO, 'src/report/missing.js'))) die('FM1: the non-existing-path row in FEATURE_MATRIX.md does exist on disk')
+  // the capability cell wins over the id (`FX-001`), the status word (`DONE`) and the longer note
+  if (matrix[0].desc !== 'Billing core workflows reconcile recurring invoices and reminders.') die('FM1: wrong cell taken as the description: ' + matrix[0].desc)
 
   r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('fm gen exit ' + r.status, r)
   const m = readJson(model)
@@ -84,6 +87,13 @@ const diffPaths = (a, b, at = '') => {
   if (!matrixLeaf) die('FM5: no exporter leaf found')
   if (matrixLeaf.descSource !== 'featurematrix') die('FM5: leaf without docstring or README was not resolved by featurematrix: ' + matrixLeaf.descSource)
   if (!/Usage reports are exported/.test(matrixLeaf.func)) die('FM5: leaf featurematrix description not applied: ' + matrixLeaf.func)
+
+  // a repo with no docs/ must seed an EMPTY list, not be skipped: `featureDocs` is always present,
+  // so a curator can see the channel exists and fill it by hand.
+  const mt = join(tmp, 'fm-mini-topo.json')
+  r = run(['init', '--repo', FIX('mini'), '--out', mt, '--force']); if (r.status !== 0) die('FM6 init exit ' + r.status, r)
+  const mfd = readJson(mt).featureDocs
+  if (!Array.isArray(mfd) || mfd.length) die('FM6: a repo with no capability table must seed featureDocs: [], got ' + JSON.stringify(mfd))
   console.log('  ok feature-matrix — seeded featureDocs, matrix precedence, container/leaf chain checks')
 }
 
@@ -101,7 +111,10 @@ const diffPaths = (a, b, at = '') => {
   const flat = m.nodes.filter((n) => n.kind === 'leaf' && n.parent === 'services').map((n) => n.name).sort()
   if (!(flat.includes('health') && flat.includes('version'))) die('§2: no-prefix leaves should stay flat, got ' + flat)
   if (!m.nodes.some((n) => n.name === 'user_service' && n.descSource === 'docstring')) die('§1a: user_service func not from docstring')
-  if (!m.nodes.some((n) => n.name === 'health' && n.descSource === 'readme')) die('§1a: health func not from dir README')
+  const healthy = m.nodes.find((n) => n.name === 'health')
+  if (!healthy || healthy.descSource !== 'readme') die('§1a: health func not from dir README')
+  // that README opens with YAML frontmatter: the box must show the prose, never the metadata header
+  if (!/^Cross-cutting service utilities/.test(healthy.func)) die('§1a: frontmatter leaked into the box: ' + healthy.func)
   // R4: a synthesized component describes itself from its children's docs, not "Groups related files under X."
   const userComp = m.nodes.find((n) => n.kind === 'component' && n.name === 'user')
   if (!userComp || /^Groups related files under/.test(userComp.func)) die('R4: component "user" still on the bare fallback: ' + (userComp && userComp.func))
