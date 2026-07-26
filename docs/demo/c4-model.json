@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.5.0",
-  "generatedAt": "2026-07-26T18:49:32.939Z",
+  "generatedAt": "2026-07-26T22:04:14.733Z",
   "source": {
     "repo": "haben",
-    "commit": "b1bb318434d24265e94e431b99bf1a720c30e98b",
-    "branch": "task/#505-card-signed-net-worth",
+    "commit": "329420b86bcbbefa87f8778b80b59d08a80489dc",
+    "branch": "main",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.5.0"
   },
@@ -110,7 +110,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (2/2 declared done)",
         "derived": true,
@@ -171,7 +170,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -284,7 +282,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -371,7 +368,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -432,7 +428,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -493,7 +488,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -554,7 +548,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -589,7 +582,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -624,7 +616,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -763,7 +754,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (2/2 declared done)",
         "derived": true,
@@ -824,7 +814,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (3/3 declared done)",
         "derived": true,
@@ -859,7 +848,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -920,7 +908,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -955,7 +942,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -990,7 +976,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -1025,7 +1010,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -1060,7 +1044,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -1121,7 +1104,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -1156,7 +1138,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -1191,7 +1172,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -1330,7 +1310,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -1365,7 +1344,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -1400,7 +1378,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -1513,7 +1490,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
         "derived": true,
@@ -1574,7 +1550,6 @@
       ],
       "category": "container",
       "status2": "done",
-      "completion": 100,
       "verify": {
         "source": "docs/FEATURE_MATRIX.md (3/3 declared done)",
         "derived": true,
@@ -1665,17 +1640,7 @@
       "tech": "Go",
       "description": "Plusvalenze, minusvalenze e dichiarazione: cosa deve al fisco la famiglia e quando.",
       "category": "container",
-      "status2": "done",
-      "completion": 100,
-      "verify": {
-        "source": "docs/FEATURE_MATRIX.md (2/2 declared done)",
-        "derived": true,
-        "coverage": {
-          "named": 0,
-          "total": 4,
-          "whole": false
-        }
-      },
+      "status2": "unknown",
       "target": "",
       "func": "Plusvalenze, minusvalenze e dichiarazione: cosa deve al fisco la famiglia e quando.",
       "descSource": "curated"
@@ -1720,17 +1685,7 @@
       "tech": "Go",
       "description": "Chi entra, con quale dispositivo e con quali avvisi: sessioni, chiavi di accesso e profilo.",
       "category": "container",
-      "status2": "done",
-      "completion": 100,
-      "verify": {
-        "source": "docs/FEATURE_MATRIX.md (3/3 declared done)",
-        "derived": true,
-        "coverage": {
-          "named": 0,
-          "total": 5,
-          "whole": false
-        }
-      },
+      "status2": "unknown",
       "target": "",
       "func": "Chi entra, con quale dispositivo e con quali avvisi: sessioni, chiavi di accesso e profilo.",
       "descSource": "curated"
