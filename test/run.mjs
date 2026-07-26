@@ -389,6 +389,60 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok status-overlay — WP-A1 decorates by id, refuses func/bad enums/orphan ids; gate catches a stale overlay')
 }
 
+// 7a) WP-A7 --status-apply: the writer the overlay never had. It merges into the CURATED file that
+// pass 9 validates and `check` governs — so a patch that pass 9 would reject must be refused
+// BEFORE anything reaches disk, or an apply corrupts a committed file and the next gen finds out.
+{
+  const repo = join(tmp, 'sa-repo')
+  cpSync(FIX('mini'), repo, { recursive: true })
+  const topo = join(tmp, 'sa-topo.json'), model = join(tmp, 'sa-model.json')
+  const ovFile = join(repo, 'docs/architecture/c4-status.json')
+  let r = run(['init', '--repo', repo, '--out', topo, '--force']); if (r.status !== 0) die('A7 init exit ' + r.status, r)
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('A7 gen exit ' + r.status, r)
+
+  // the plan: every node with no verdict, and the two files land together
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model, '--enrich', '--enricher', 'agent'])
+  if (r.status !== 0) die('A7 plan gen exit ' + r.status, r)
+  const plan = readJson(join(dirname(model), 'status-plan.json'))
+  if (!Array.isArray(plan.nodes) || !plan.nodes.length) die('A7: --enricher agent wrote no status plan')
+  const unknown = readJson(model).nodes.filter((n) => n.status2 === 'unknown').length
+  if (plan.nodes.length !== unknown) die(`A7: plan covers ${plan.nodes.length} node(s) but ${unknown} carry no verdict`)
+  if (plan.nodes.some((e) => 'status2' in e || 'completion' in e)) die('A7: the plan must carry evidence, never a pre-filled verdict')
+  const cont = plan.nodes.find((e) => e.kind === 'container'); if (!cont) die('A7: no container in the status plan')
+
+  // apply: the overlay file does not exist yet, so this creates it
+  const fill = join(tmp, 'sa-fill.json')
+  writeFileSync(fill, JSON.stringify({ nodes: { [cont.id]: { status2: 'in-progress', completion: 40, current: 'Two of five modules landed.' } } }))
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model, '--status-apply', fill])
+  if (r.status !== 0) die('A7 apply exit ' + r.status, r)
+  const dec = readJson(model).nodes.find((n) => n.id === cont.id)
+  if (!(dec.status2 === 'in-progress' && dec.completion === 40)) die('A7: applied state did not reach the model: ' + JSON.stringify(dec))
+  if (!readJson(ovFile).nodes[cont.id]) die('A7: --status-apply did not write the curated overlay file')
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo]); if (r.status !== 0) die('A7: check must pass on an applied overlay', r)
+
+  // merge, not overwrite: a second apply on another field keeps the first
+  const fill2 = join(tmp, 'sa-fill2.json')
+  writeFileSync(fill2, JSON.stringify({ nodes: { [cont.id]: { statusWord: '40%' } } }))
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model, '--status-apply', fill2]); if (r.status !== 0) die('A7 merge exit ' + r.status, r)
+  const merged = readJson(ovFile).nodes[cont.id]
+  if (!(merged.statusWord === '40%' && merged.status2 === 'in-progress')) die('A7: the second apply overwrote the first instead of merging: ' + JSON.stringify(merged))
+
+  // and the refusals — each must leave the committed overlay byte-identical
+  const before = readFileSync(ovFile, 'utf-8')
+  for (const [label, patch] of [['bad enum', { status2: 'almost' }], ['out-of-range completion', { completion: 140 }],
+                                ['func', { func: 'nope' }], ['malformed issue', { issues: ['bug-12'] }]]) {
+    writeFileSync(fill, JSON.stringify({ nodes: { [cont.id]: patch } }))
+    r = run(['gen', '--repo', repo, '--topology', topo, '--out', join(tmp, 'sa-bad.json'), '--status-apply', fill])
+    if (r.status === 0) die(`A7: --status-apply accepted ${label}`)
+    if (readFileSync(ovFile, 'utf-8') !== before) die(`A7: --status-apply wrote to the overlay before rejecting ${label} — a committed file was corrupted`)
+  }
+  writeFileSync(fill, JSON.stringify({ nodes: { ghost__node: { statusWord: 'x' } } }))
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', join(tmp, 'sa-bad.json'), '--status-apply', fill])
+  if (r.status === 0) die('A7: --status-apply accepted an id the model does not have')
+  if (readFileSync(ovFile, 'utf-8') !== before) die('A7: --status-apply wrote to the overlay before rejecting an unknown id')
+  console.log('  ok status-apply — WP-A7 plan → fill → curated overlay; merges, and every refusal leaves the file untouched')
+}
+
 // 7b) a synthesized component composes its box from its CHILDREN's docs, so their prose is one of
 // its description inputs: a child gaining a docstring must mark the component's cached LLM text
 // stale, or the box freezes with no way back (regen restores it, --enrich sees no hole).
@@ -617,4 +671,4 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok schema — a conforming model passes; a missing required field and an out-of-enum kind are both rejected by name')
 }
 
-console.log('OK — mini, feature-matrix, flat-python, data-noise, virgin-kebab, attach-doc, enrich, scaffold, status-overlay, component-hash, verify, layout-hints, viewer, schema all green.')
+console.log('OK — mini, feature-matrix, flat-python, data-noise, virgin-kebab, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema all green.')

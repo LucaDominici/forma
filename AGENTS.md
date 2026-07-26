@@ -26,6 +26,12 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
   outrank the code for containers and sit under it for leaves — keep that asymmetry. `topo.featureDocs`
   (seeded by `init`) lists capability tables; `topo.descriptions` is keyed `<containerId>/<stem>`, and
   a container is its own container.
+- Two channels, kept apart on purpose: what a module DOES comes from the documents (`func`, §1a);
+  what it is WORTH is programme state (`c4-status.json`, which refuses `func` by design).
+  `--enricher agent` emits a plan for each — `--enrich-apply` writes prose into the model,
+  `--status-apply` writes state into the curated overlay, validating before it touches disk.
+  Neither ever writes a verdict forma inferred on its own: the plan carries evidence, a human or
+  agent rules. `unknown` is a true answer and must stay reachable.
 - The viewer is one HTML file in ES5 style (var/function); every new UI string goes in BOTH
   locales of `STRINGS`.
 - `npm pack --dry-run` must stay at the 19 shipped files, zero `.fuse_hidden` (the

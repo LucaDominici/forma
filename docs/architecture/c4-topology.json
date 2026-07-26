@@ -3,7 +3,8 @@
     "repo": "forma",
     "stack": "JavaScript (Node ESM, zero-dependency)",
     "seededBy": "forma init (curated)",
-    "title": "Forma · self-model"
+    "title": "Forma · self-model",
+    "ghRepo": "LucaDominici/forma"
   },
   "docPath": "docs/architecture/ARCHITECTURE.md",
   "levels": [
@@ -165,6 +166,7 @@
       "estatus": "active"
     }
   ],
+  "featureDocs": [],
   "descriptions": {},
   "layout": {
     "root": {

@@ -9,7 +9,10 @@
       "target": "v1.0 - public launch (LAUNCH.md), adopters beyond the home repo, schema 1.x frozen.",
       "verify": {
         "source": "CHANGELOG 0.6.0 · tag v0.6.0"
-      }
+      },
+      "issues": [
+        "#17"
+      ]
     },
     "lib": {
       "status2": "done",
@@ -19,7 +22,10 @@
       "target": "The viewer doubles as the rendering engine for curated status boards (Track B).",
       "verify": {
         "source": "lib/ on main · npm test green"
-      }
+      },
+      "issues": [
+        "#16"
+      ]
     },
     "cli": {
       "status2": "done",

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.5.0",
-  "generatedAt": "2026-07-26T08:27:54.263Z",
+  "generatedAt": "2026-07-26T08:39:17.284Z",
   "source": {
     "repo": "forma",
-    "commit": "003d6eb5d794e79765c824fbe9c1731242ef9262",
-    "branch": "feat/17-featurematrix",
+    "commit": "321657d3853e6f05f07f36354dafb3c7cb8f8d18",
+    "branch": "feat/17-status-channel",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.5.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -14,6 +14,7 @@
     "stack": "JavaScript (Node ESM, zero-dependency)",
     "seededBy": "forma init (curated)",
     "title": "Forma · self-model",
+    "ghRepo": "LucaDominici/forma",
     "layout": {
       "root": {
         "dev": {
@@ -107,7 +108,10 @@
       "current": "v0.6.0 on main (26/07): the virgin-repo fixes — kebab auto-edges, no invented completion, prose that is not the language name.",
       "verify": {
         "source": "CHANGELOG 0.6.0 · tag v0.6.0"
-      }
+      },
+      "issues": [
+        "#17"
+      ]
     },
     {
       "status": "current",
@@ -258,7 +262,10 @@
       "current": "init·gen·check·doc·serve·verify + schema 1.4.0 + the hologram viewer.",
       "verify": {
         "source": "lib/ on main · npm test green"
-      }
+      },
+      "issues": [
+        "#16"
+      ]
     },
     {
       "status": "current",
@@ -329,7 +336,7 @@
           "ref": "bin/forma.mjs"
         }
       ],
-      "category": "container",
+      "category": "cli",
       "status2": "unknown",
       "target": "",
       "func": "forma — present your architecture instead of slides. Thin CLI dispatcher over the lib/ engine. Every subcommand is a plain Node script, so any agent (or a human with no AI) drives the same contract. The engine is model-agnostic.",
@@ -348,7 +355,7 @@
           "ref": "lib/check.mjs"
         }
       ],
-      "category": "container",
+      "category": "lib",
       "status2": "unknown",
       "target": "",
       "func": "check-c4-model.mjs — NON-VACUOUS anti-drift gate for the C4 model. Fails LOUD (never SKIP). Asserts the committed model against INDEPENDENT ground truth in src/, and flags architecture-doc numbers that disagree with code (the \"14 vs 25 tabl",
@@ -367,7 +374,7 @@
           "ref": "lib/cluster.mjs"
         }
       ],
-      "category": "container",
+      "category": "lib",
       "status2": "unknown",
       "target": "",
       "func": "cluster.mjs — shared structural helpers for the C4 model. Pure, no side effects at import. containerOf: climb the parent chain to the enclosing CONTAINER. Leaves may be re-parented under synthetic component nodes (§2), so \"the container\" is",
@@ -386,7 +393,7 @@
           "ref": "lib/describe.mjs"
         }
       ],
-      "category": "container",
+      "category": "lib",
       "status2": "unknown",
       "target": "",
       "func": "describe.mjs — deterministic description resolver (§1a). Pure parsing, NO network. Fills a node's plain-language func from EXISTING docs (curated → docstring → README → arc42 → generated fallback), so boxes show MEANING, not a bare filename",
@@ -405,7 +412,7 @@
           "ref": "lib/doc.mjs"
         }
       ],
-      "category": "container",
+      "category": "lib",
       "status2": "unknown",
       "target": "",
       "func": "forma doc — project an arc42 scaffold from c4-model.json. The DETERMINISTIC sections (context/building-block diagrams, container table, ADR index, stack) are filled from the model — so they can never drift from it. The JUDGMENT sections (go",
@@ -424,7 +431,7 @@
           "ref": "lib/enrich.mjs"
         }
       ],
-      "category": "container",
+      "category": "lib",
       "status2": "unknown",
       "target": "",
       "func": "enrich.mjs — OPTIONAL LLM prose enrichment for description holes (§7). OFF by default. Contract: fills ONLY nodes whose deterministic descSource is 'fallback'; never structure, never the gate. Output is cached+committed in c4-model.json wit",
@@ -443,7 +450,7 @@
           "ref": "lib/gen.mjs"
         }
       ],
-      "category": "container",
+      "category": "lib",
       "status2": "unknown",
       "target": "",
       "func": "gen-c4-model.mjs — emit docs/architecture/c4-model.json from real code + curated topology. Leaves are walked LIVE from src/ (always current). Topology/context/runtime-edges are curated. Usage: node gen-c4-model.mjs [--repo <path] [--topolog",
@@ -462,7 +469,7 @@
           "ref": "lib/init.mjs"
         }
       ],
-      "category": "container",
+      "category": "lib",
       "status2": "unknown",
       "target": "",
       "func": "forma init — seed a c4-topology.json from the repo's real source directories. BEST-EFFORT: gives a valid, non-empty starting point (no cold-start). The human/agent then curates groupings, context externals, and plain-language descriptions. ",
@@ -481,7 +488,7 @@
           "ref": "lib/lang.mjs"
         }
       ],
-      "category": "container",
+      "category": "lib",
       "status2": "unknown",
       "target": "",
       "func": "lang.mjs — per-language adapters for TOPOLOGY and EDGES. Pure, no side effects at import. The name-matching heuristic in gen.mjs is the fallback for stacks that never say what depends on what. Some languages do say it, and guessing where a ",
@@ -500,7 +507,7 @@
           "ref": "lib/render.mjs"
         }
       ],
-      "category": "container",
+      "category": "lib",
       "status2": "unknown",
       "target": "",
       "func": "render.mjs — pure, side-effect-free renderers for the arc42 projection. Shared by forma doc (writer) and forma check (attach-mode freshness gate) so both render the governed block identically. NO writeFileSync / console / process at module ",
@@ -519,7 +526,7 @@
           "ref": "lib/serve.mjs"
         }
       ],
-      "category": "container",
+      "category": "lib",
       "status2": "unknown",
       "target": "",
       "func": "forma serve — tiny static server for the interactive viewer + model. Local dev only.",
@@ -538,7 +545,7 @@
           "ref": "lib/validate.mjs"
         }
       ],
-      "category": "container",
+      "category": "lib",
       "status2": "unknown",
       "target": "",
       "func": "validate.mjs — hold the model to the schema it declares. Shared by gen (after write) and check.",
@@ -557,7 +564,7 @@
           "ref": "lib/verify.mjs"
         }
       ],
-      "category": "container",
+      "category": "lib",
       "status2": "unknown",
       "target": "",
       "func": "forma verify — refresh programme status from LIVE GitHub issues, through the user's gh CLI. This is the ONLY command that touches the network, and it is opt-in: gen and check stay deterministic and offline forever (that is the product). It ",
@@ -576,7 +583,7 @@
           "ref": "scripts/check-clean.mjs"
         }
       ],
-      "category": "container",
+      "category": "scripts",
       "status2": "unknown",
       "target": "",
       "func": "prepack guard: refuse to publish if a stray/editor artifact lurks in shipped dirs.",
@@ -595,7 +602,7 @@
           "ref": "scripts/lint.mjs"
         }
       ],
-      "category": "container",
+      "category": "scripts",
       "status2": "unknown",
       "target": "",
       "func": "Cross-platform syntax check: node --check over bin + lib.",
@@ -614,7 +621,7 @@
           "ref": "test/run.mjs"
         }
       ],
-      "category": "container",
+      "category": "test",
       "status2": "unknown",
       "target": "",
       "func": "Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.",
@@ -633,7 +640,7 @@
           "ref": "test/stub-gh.mjs"
         }
       ],
-      "category": "container",
+      "category": "test",
       "status2": "unknown",
       "target": "",
       "func": "Offline stand-in for the gh CLI, used via forma verify --gh-cmd \"node test/stub-gh.mjs\". Prints the same shape as gh issue list --json number,state. #7 closed, #8 open — nothing else.",

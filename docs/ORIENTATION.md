@@ -19,6 +19,26 @@ Read this before changing anything under `lib/`.
 >   the schema (`git grep "c4-model.schema" -- lib bin scripts test` → the help text and the schema's
 >   own `$id`); CI still never runs the gate.
 
+> **Second delta — issue #17 (PRs #22, #23).** The two obstacles this document measured have since
+> been worked. What is below is still the audit as taken at `8af203c`; these rows are where it is
+> now **out of date**:
+>
+> | Section | Was | Is |
+> |---|---|---|
+> | §2.3, §4 DoD 1-2 | the chain has no documentary source above the code | `featurematrix` resolves from `topo.featureDocs`, at two positions: above the code for context/container/component, below it for leaves. On haben, 28 of 53 containers, up from 0 |
+> | §3.3 `descriptions` | key format documented nowhere | documented in `README.md` and `AGENTS.md` |
+> | §3.4 catalogue collapse | every leaf inherits its parent's `category`, so 25 leaves collapse into one box called `container` | a leaf's category is its container; this repo's 17 leaves carry `cli`/`lib`/`scripts`/`test` |
+> | §4 DoD 3 | `c4-status.json` has no producer, and the keyless channel cannot carry state | `gen --status-apply` writes it, through the same validator pass 9 uses and before touching disk; `--enricher agent` emits `status-plan.json` beside the prose plan |
+> | §4 DoD 3 | `meta.ghRepo` is never written, so `verify` is a no-op on the flagship repo | `init` derives it from the git remote; this repo's overlay carries #16/#17 and `verify` marks one node done |
+> | §5.1, §3.5 | nothing validates the schema; CI never runs the gate | both closed earlier, in #20 |
+>
+> Unchanged and still open: `--from-docs` and its hardcoded `docs/project-status.md` (§3.3), the two
+> disagreeing ADR scanners (§5.8), `evidence[].count` with no consumer (§5.2), `holesIn`/`BEGIN`/`END`
+> exported with no importer (§3.1), `ARCHITECTURE.md` carrying no markers (§3.5), the unwired flags of
+> §3.2, and the dead `HERE`/`basename`. **The `unknown` tally of §4 DoD 4 is unchanged too, and
+> deliberately**: the channel to fill it now exists, and nothing fills it by itself, because a
+> percentage nobody ruled on is a made-up number.
+
 ---
 
 ## 1. The purpose
