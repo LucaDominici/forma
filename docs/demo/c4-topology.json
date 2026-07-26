@@ -1,0 +1,1367 @@
+{
+  "meta": {
+    "repo": "haben",
+    "stack": "Go",
+    "seededBy": "forma init",
+    "ghRepo": "LucaDominici/haben",
+    "title": "haben · demo pubblica di forma"
+  },
+  "docPath": "docs/architecture/ARCHITECTURE.md",
+  "levels": [
+    "context",
+    "container",
+    "component",
+    "leaf"
+  ],
+  "nodes": [
+    {
+      "id": "haben",
+      "level": "context",
+      "kind": "system",
+      "name": "haben",
+      "tech": "Go",
+      "description": "Il patrimonio della famiglia in un posto solo: conti, obiettivi, fisco e documenti."
+    },
+    {
+      "id": "cmd_haben",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "cmd/haben",
+      "tech": "Go",
+      "description": "Avvia il server dell applicazione con la configurazione della macchina su cui gira."
+    },
+    {
+      "id": "cmd_haben_ocr",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "cmd/haben-ocr",
+      "tech": "Go",
+      "description": "Legge i PDF degli estratti conto e ne estrae le righe di movimento."
+    },
+    {
+      "id": "internal_account",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/account",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_advisor",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/advisor",
+      "tech": "Go",
+      "description": "Suggerisce la mossa successiva a partire da quello che il portafoglio mostra."
+    },
+    {
+      "id": "internal_allocation",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/allocation",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_allowance",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/allowance",
+      "tech": "Go",
+      "description": "Gestisce la paghetta dei figli: quanto, quando e quanto ne resta."
+    },
+    {
+      "id": "internal_backtest",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/backtest",
+      "tech": "Go",
+      "description": "Rigioca una strategia sui prezzi passati per vedere come sarebbe andata."
+    },
+    {
+      "id": "internal_benchmark",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/benchmark",
+      "tech": "Go",
+      "description": "Confronta il rendimento del portafoglio con gli indici di riferimento."
+    },
+    {
+      "id": "internal_bondladder",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/bondladder",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_budget",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/budget",
+      "tech": "Go",
+      "description": "Tiene il bilancio mensile della famiglia, entrate contro uscite."
+    },
+    {
+      "id": "internal_capsule",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/capsule",
+      "tech": "Go",
+      "description": "Congela una fotografia dei dati per poterla rileggere identica piu avanti."
+    },
+    {
+      "id": "internal_cedole",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/cedole",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_challenge",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/challenge",
+      "tech": "Go",
+      "description": "Le sfide di risparmio proposte ai ragazzi e il loro stato."
+    },
+    {
+      "id": "internal_cometa",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/cometa",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_consolidation",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/consolidation",
+      "tech": "Go",
+      "description": "Somma i conti di tutti i membri in un unico patrimonio di famiglia."
+    },
+    {
+      "id": "internal_contribution",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/contribution",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_datematch",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/datematch",
+      "tech": "Go",
+      "description": "Riconcilia le date dei movimenti quando le fonti non concordano."
+    },
+    {
+      "id": "internal_decision",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/decision",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_diary",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/diary",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_export",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/export",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_familygraph",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/familygraph",
+      "tech": "Go",
+      "description": "Chi e chi in famiglia e chi puo vedere i conti di chi."
+    },
+    {
+      "id": "internal_fisco",
+      "level": "component",
+      "kind": "container",
+      "parent": "fisco",
+      "name": "internal/fisco",
+      "tech": "Go",
+      "description": "Le regole fiscali italiane applicate ai movimenti del portafoglio."
+    },
+    {
+      "id": "internal_frontier",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/frontier",
+      "tech": "Go",
+      "description": "Calcola la frontiera efficiente per confrontare rischio e rendimento attesi."
+    },
+    {
+      "id": "internal_health",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "internal/health",
+      "tech": "Go",
+      "description": "Risponde alle sonde di stato del servizio per il monitoraggio."
+    },
+    {
+      "id": "internal_imports",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/imports",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_income",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/income",
+      "tech": "Go",
+      "description": "Registra le entrate ricorrenti della famiglia e la loro cadenza."
+    },
+    {
+      "id": "internal_insight",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/insight",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_instrument",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/instrument",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_kidgoal",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/kidgoal",
+      "tech": "Go",
+      "description": "Gli obiettivi di risparmio dei figli e i progressi verso il traguardo."
+    },
+    {
+      "id": "internal_market",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/market",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_milestone",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/milestone",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_notify",
+      "level": "component",
+      "kind": "container",
+      "parent": "accesso",
+      "name": "internal/notify",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_pac",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/pac",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_pairing",
+      "level": "component",
+      "kind": "container",
+      "parent": "accesso",
+      "name": "internal/pairing",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_portfoliohistory",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/portfoliohistory",
+      "tech": "Go",
+      "description": "Conserva il valore del portafoglio giorno per giorno."
+    },
+    {
+      "id": "internal_position",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/position",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_profile",
+      "level": "component",
+      "kind": "container",
+      "parent": "accesso",
+      "name": "internal/profile",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_runway",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/runway",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_server",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "internal/server",
+      "tech": "Go",
+      "description": "Espone le API HTTP e instrada ogni richiesta al dominio giusto."
+    },
+    {
+      "id": "internal_session",
+      "level": "component",
+      "kind": "container",
+      "parent": "accesso",
+      "name": "internal/session",
+      "tech": "Go",
+      "description": "Apre, rinnova e chiude le sessioni di chi ha effettuato l accesso."
+    },
+    {
+      "id": "internal_spine",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "internal/spine",
+      "tech": "Go",
+      "description": "Il cablaggio comune: configurazione, log e avvio dei servizi condivisi."
+    },
+    {
+      "id": "internal_store",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/store",
+      "tech": "Go",
+      "description": "Il database: legge e scrive ogni dato persistente dell applicazione."
+    },
+    {
+      "id": "internal_taxanalysis",
+      "level": "component",
+      "kind": "container",
+      "parent": "fisco",
+      "name": "internal/taxanalysis",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_taxloss",
+      "level": "component",
+      "kind": "container",
+      "parent": "fisco",
+      "name": "internal/taxloss",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_taxreport",
+      "level": "component",
+      "kind": "container",
+      "parent": "fisco",
+      "name": "internal/taxreport",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_testsupport",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "internal/testsupport",
+      "tech": "Go",
+      "description": "Impalcature condivise dai test, mai in esecuzione in produzione."
+    },
+    {
+      "id": "internal_vault",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/vault",
+      "tech": "Go",
+      "description": "La cassaforte cifrata dove i documenti sensibili restano a riposo."
+    },
+    {
+      "id": "internal_vaultmanager",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/vaultmanager",
+      "tech": "Go",
+      "description": "Governa chiavi e rotazione della cassaforte."
+    },
+    {
+      "id": "internal_web",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "internal/web",
+      "tech": "Go"
+    },
+    {
+      "id": "internal_webauthnauth",
+      "level": "component",
+      "kind": "container",
+      "parent": "accesso",
+      "name": "internal/webauthnauth",
+      "tech": "Go",
+      "description": "Accesso senza password con le chiavi del dispositivo (WebAuthn)."
+    },
+    {
+      "id": "internal_worker",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "internal/worker",
+      "tech": "Go"
+    },
+    {
+      "id": "migrations",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "migrations",
+      "tech": "Go",
+      "description": "Le migrazioni che portano il database da una versione allo schema successivo."
+    },
+    {
+      "id": "scripts",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "scripts",
+      "tech": "Go",
+      "description": "Utilita a riga di comando per manutenzione e operazioni una tantum."
+    },
+    {
+      "id": "denaro",
+      "level": "container",
+      "kind": "container",
+      "parent": "haben",
+      "name": "Denaro e patrimonio",
+      "tech": "Go",
+      "description": "Conti, strumenti, posizioni e mercato: quanto vale il patrimonio oggi e come si muove."
+    },
+    {
+      "id": "fisco",
+      "level": "container",
+      "kind": "container",
+      "parent": "haben",
+      "name": "Fisco",
+      "tech": "Go",
+      "description": "Plusvalenze, minusvalenze e dichiarazione: cosa deve al fisco la famiglia e quando."
+    },
+    {
+      "id": "famiglia",
+      "level": "container",
+      "kind": "container",
+      "parent": "haben",
+      "name": "Famiglia e obiettivi",
+      "tech": "Go",
+      "description": "Budget, paghette, traguardi dei figli e consigli: il denaro visto come progetto di famiglia."
+    },
+    {
+      "id": "archivio",
+      "level": "container",
+      "kind": "container",
+      "parent": "haben",
+      "name": "Archivio e documenti",
+      "tech": "Go",
+      "description": "Estratti conto in entrata, esportazioni in uscita e la cassaforte dove i documenti restano."
+    },
+    {
+      "id": "accesso",
+      "level": "container",
+      "kind": "container",
+      "parent": "haben",
+      "name": "Accesso e identita",
+      "tech": "Go",
+      "description": "Chi entra, con quale dispositivo e con quali avvisi: sessioni, chiavi di accesso e profilo."
+    },
+    {
+      "id": "piattaforma",
+      "level": "container",
+      "kind": "container",
+      "parent": "haben",
+      "name": "Piattaforma",
+      "tech": "Go",
+      "description": "Il servizio che espone tutto il resto: eseguibili, API HTTP, interfaccia web e lavori in background."
+    },
+    {
+      "id": "famiglia_utente",
+      "level": "context",
+      "kind": "person",
+      "name": "Famiglia",
+      "tech": "Browser",
+      "description": "I due genitori e i figli: consultano il patrimonio, registrano le spese e seguono gli obiettivi."
+    },
+    {
+      "id": "banca_broker",
+      "level": "context",
+      "kind": "external",
+      "name": "Banca e broker",
+      "tech": "CSV / PDF",
+      "description": "Le fonti degli estratti conto e dei prezzi: da qui arrivano i movimenti che il sistema riconcilia."
+    },
+    {
+      "id": "agenzia_entrate",
+      "level": "context",
+      "kind": "external",
+      "name": "Agenzia delle Entrate",
+      "tech": "Dichiarazione",
+      "description": "Il destinatario della dichiarazione: il sistema prepara i quadri, non li trasmette."
+    }
+  ],
+  "leafSources": [
+    {
+      "parent": "cmd_haben",
+      "dir": "cmd/haben",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "cmd_haben_ocr",
+      "dir": "cmd/haben-ocr",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_account",
+      "dir": "internal/account",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_advisor",
+      "dir": "internal/advisor",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_allocation",
+      "dir": "internal/allocation",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_allowance",
+      "dir": "internal/allowance",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_backtest",
+      "dir": "internal/backtest",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_benchmark",
+      "dir": "internal/benchmark",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_bondladder",
+      "dir": "internal/bondladder",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_budget",
+      "dir": "internal/budget",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_capsule",
+      "dir": "internal/capsule",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_cedole",
+      "dir": "internal/cedole",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_challenge",
+      "dir": "internal/challenge",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_cometa",
+      "dir": "internal/cometa",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_consolidation",
+      "dir": "internal/consolidation",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_contribution",
+      "dir": "internal/contribution",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_datematch",
+      "dir": "internal/datematch",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_decision",
+      "dir": "internal/decision",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_diary",
+      "dir": "internal/diary",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_export",
+      "dir": "internal/export",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_familygraph",
+      "dir": "internal/familygraph",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_fisco",
+      "dir": "internal/fisco",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_frontier",
+      "dir": "internal/frontier",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_health",
+      "dir": "internal/health",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_imports",
+      "dir": "internal/imports",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_income",
+      "dir": "internal/income",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_insight",
+      "dir": "internal/insight",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_instrument",
+      "dir": "internal/instrument",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_kidgoal",
+      "dir": "internal/kidgoal",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_market",
+      "dir": "internal/market",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_milestone",
+      "dir": "internal/milestone",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_notify",
+      "dir": "internal/notify",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_pac",
+      "dir": "internal/pac",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_pairing",
+      "dir": "internal/pairing",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_portfoliohistory",
+      "dir": "internal/portfoliohistory",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_position",
+      "dir": "internal/position",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_profile",
+      "dir": "internal/profile",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_runway",
+      "dir": "internal/runway",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_server",
+      "dir": "internal/server",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_session",
+      "dir": "internal/session",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_spine",
+      "dir": "internal/spine",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_store",
+      "dir": "internal/store",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_taxanalysis",
+      "dir": "internal/taxanalysis",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_taxloss",
+      "dir": "internal/taxloss",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_taxreport",
+      "dir": "internal/taxreport",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_testsupport",
+      "dir": "internal/testsupport",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_vault",
+      "dir": "internal/vault",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_vaultmanager",
+      "dir": "internal/vaultmanager",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_web",
+      "dir": "internal/web",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_webauthnauth",
+      "dir": "internal/webauthnauth",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "internal_worker",
+      "dir": "internal/worker",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "migrations",
+      "dir": "migrations",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    },
+    {
+      "parent": "scripts",
+      "dir": "scripts",
+      "match": "\\.go$",
+      "exclude": "_test\\.go$",
+      "evidenceOnly": true
+    }
+  ],
+  "edges": [
+    {
+      "from": "famiglia_utente",
+      "to": "haben",
+      "label": "consulta e registra",
+      "kind": "runtime",
+      "estatus": "active"
+    },
+    {
+      "from": "banca_broker",
+      "to": "haben",
+      "label": "estratti conto e prezzi",
+      "kind": "runtime",
+      "estatus": "active"
+    },
+    {
+      "from": "haben",
+      "to": "agenzia_entrate",
+      "label": "quadri della dichiarazione",
+      "kind": "runtime",
+      "estatus": "active"
+    }
+  ],
+  "docSources": [
+    "docs/FEATURE_MATRIX.md"
+  ],
+  "descriptions": {},
+  "_skipped": [],
+  "_unseeded": [
+    {
+      "stack": "TypeScript",
+      "files": 376,
+      "match": "\\.(mts|ts|tsx)$",
+      "nodes": [
+        {
+          "id": "typescript_root",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "TypeScript (repo root)",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_scripts_lib_53",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/scripts/lib",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_accounts",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/accounts",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_advisor",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/advisor",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_api",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/api",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_app",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/app",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_budget",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/budget",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_budget_setup",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/budget/setup",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_charts",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/charts",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_charts_growthtree",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/charts/growthTree",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_child",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/child",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_cmdk",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/cmdk",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_decision",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/decision",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_decision_widgets",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/decision/widgets",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_diary",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/diary",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_import",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/import",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_portfolio",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/portfolio",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_primitives",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/primitives",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_settings",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/settings",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_shared",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/shared",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "frontend_src_test",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/src/test",
+          "tech": "TypeScript"
+        },
+        {
+          "id": "tests_e2e",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "tests/e2e",
+          "tech": "TypeScript"
+        }
+      ],
+      "leafSources": [
+        {
+          "parent": "typescript_root",
+          "dir": ".",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend",
+          "dir": "frontend",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_scripts_lib_53",
+          "dir": "frontend/scripts/lib",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src",
+          "dir": "frontend/src",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_accounts",
+          "dir": "frontend/src/accounts",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_advisor",
+          "dir": "frontend/src/advisor",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_api",
+          "dir": "frontend/src/api",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_app",
+          "dir": "frontend/src/app",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_budget",
+          "dir": "frontend/src/budget",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_budget_setup",
+          "dir": "frontend/src/budget/setup",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_charts",
+          "dir": "frontend/src/charts",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_charts_growthtree",
+          "dir": "frontend/src/charts/growthTree",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_child",
+          "dir": "frontend/src/child",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_cmdk",
+          "dir": "frontend/src/cmdk",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_decision",
+          "dir": "frontend/src/decision",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_decision_widgets",
+          "dir": "frontend/src/decision/widgets",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_diary",
+          "dir": "frontend/src/diary",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_import",
+          "dir": "frontend/src/import",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_portfolio",
+          "dir": "frontend/src/portfolio",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_primitives",
+          "dir": "frontend/src/primitives",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_settings",
+          "dir": "frontend/src/settings",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_shared",
+          "dir": "frontend/src/shared",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "frontend_src_test",
+          "dir": "frontend/src/test",
+          "match": "\\.(mts|ts|tsx)$"
+        },
+        {
+          "parent": "tests_e2e",
+          "dir": "tests/e2e",
+          "match": "\\.(mts|ts|tsx)$"
+        }
+      ]
+    },
+    {
+      "stack": "JavaScript",
+      "files": 183,
+      "match": "\\.(js|mjs)$",
+      "nodes": [
+        {
+          "id": "javascript_root",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "JavaScript (repo root)",
+          "tech": "JavaScript"
+        },
+        {
+          "id": "frontend_public",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/public",
+          "tech": "JavaScript"
+        },
+        {
+          "id": "frontend_scripts",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/scripts",
+          "tech": "JavaScript"
+        },
+        {
+          "id": "frontend_scripts_lib",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "frontend/scripts/lib",
+          "tech": "JavaScript"
+        },
+        {
+          "id": "scripts_53",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "scripts",
+          "tech": "JavaScript"
+        },
+        {
+          "id": "scripts_lib",
+          "level": "container",
+          "kind": "container",
+          "parent": "haben",
+          "name": "scripts/lib",
+          "tech": "JavaScript"
+        }
+      ],
+      "leafSources": [
+        {
+          "parent": "javascript_root",
+          "dir": ".",
+          "match": "\\.(js|mjs)$"
+        },
+        {
+          "parent": "frontend_public",
+          "dir": "frontend/public",
+          "match": "\\.(js|mjs)$"
+        },
+        {
+          "parent": "frontend_scripts",
+          "dir": "frontend/scripts",
+          "match": "\\.(js|mjs)$"
+        },
+        {
+          "parent": "frontend_scripts_lib",
+          "dir": "frontend/scripts/lib",
+          "match": "\\.(js|mjs)$"
+        },
+        {
+          "parent": "scripts_53",
+          "dir": "scripts",
+          "match": "\\.(js|mjs)$"
+        },
+        {
+          "parent": "scripts_lib",
+          "dir": "scripts/lib",
+          "match": "\\.(js|mjs)$"
+        }
+      ]
+    }
+  ]
+}
