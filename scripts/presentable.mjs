@@ -3,7 +3,11 @@
 //
 // `forma check` answers "is the model still true to the code?". This answers a different and
 // narrower question: "would this model survive being projected in front of a stakeholder?".
-// Four predicates, measured exactly as a reader sees them on screen. Zero-dep, read-only, no network.
+// Five predicates, measured exactly as a reader sees them on screen. Zero-dep, read-only, no network.
+// Four of them grade the SCENE — how many boxes, whether they carry prose, whether anything is
+// related to anything. The fifth grades the CLAIM, and it was missing: a model reading 100% on
+// every box that carried a number passed at full marks and went to Pages, because not one predicate
+// read `completion`. A gate blind to the claim grades the frame, not the picture.
 //
 //   node scripts/presentable.mjs <path/to/c4-model.json>
 //
@@ -42,6 +46,14 @@ const bare = m.nodes.filter((n) => n.parent).filter((n) =>
 const parent = Object.fromEntries(m.nodes.map((n) => [n.id, n.parent || null]))
 const drawn = screens.map((k) => rollEdges(m.edges, Object.fromEntries(k.map((n) => [n.id, n.id])), parent).length)
 
+// A percentage whose only provenance is a repo document declaring itself finished is a
+// DECLARATION, and `verify.derived` is the marker gen writes for exactly that (the same marker
+// `check` keys off). A declaration read as a measurement is the one lie a status board cannot
+// survive, and it is the badge a stakeholder reads first. `forma verify` marks a node done from a
+// closed issue WITHOUT restamping its citation, so a node proven that way trips this too — and
+// that complaint is correct: the board's provenance for that number still names a document.
+const declaimed = m.nodes.filter((n) => n.completion != null && (n.verify || {}).derived === true)
+
 const predicates = [
   ['context carries at least one external actor besides the system',
     kids(null).length >= 2, `${kids(null).length} box(es) at context`],
@@ -51,6 +63,10 @@ const predicates = [
     bare.length === 0, `bare=${bare.length}`],
   ['every drawn level with more than one box draws at least one edge',
     drawn.every((d) => d > 0), `edges per screen=${drawn.join(',')}`],
+  ['every percentage on screen is a measurement, not a declaration',
+    declaimed.length === 0, declaimed.length
+      ? `${declaimed.length} box(es) show a % their own citation calls declared: ${declaimed.slice(0, 5).map((n) => `${n.id}=${n.completion}% "${(n.verify || {}).source}"`).join('; ')}${declaimed.length > 5 ? ' …' : ''}`
+      : `${m.nodes.filter((n) => n.completion != null).length} measured %, 0 declared`],
 ]
 
 let ok = true
