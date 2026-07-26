@@ -4,7 +4,48 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.0] - 2026-07-26
+
+Two things a diagram generator should have been doing all along, and was not: reading the
+**language's own declaration** of its architecture instead of guessing at it, and reading the
+sentence your **capability table** already wrote about a container instead of showing a stakeholder
+the first docstring inside it. Plus the gate finally applied to the product: the model is validated
+against the schema forma claims to validate it against, and CI runs `forma check`.
+
+**If you use forma on a Go repo, read the BREAKING note first — your node ids change.**
+
+### Changed
+
+- **BREAKING (Go repos only) — the leaf is now the package, not the file, so every Go node id
+  changes.** 0.6.0 made each `.go` *file* a leaf, `_test.go` included; 0.7.0 makes each *package*
+  the leaf and drops test files from the architecture entirely. Ids go from
+  `internal_store__store_go` to `internal_store__store`, `cmd_app__main_go` to `cmd_app__app`, and
+  a leaf like `internal_server__server_test_go` **disappears**. Anything you keyed to the old ids
+  is affected, in three different ways:
+
+  | What you curated | What 0.7.0 does |
+  |---|---|
+  | `c4-status.json` overlay on an old leaf id | **`forma gen` exits 1** — `[gen-c4] FAIL: status overlay: unknown node id "internal_store__store_go" — it is not in the model (stale overlay?)` |
+  | a `c4-topology.json` seeded by ≤0.6.0, left as-is | **every Go import edge silently vanishes** — the old `leafSources` are file-shaped and no longer map to import paths (measured on a 4-package repo: `edges=3` → `edges=0`, exit 0, no warning) |
+  | `descriptions` / `layout` keyed to old ids | **silently ignored** — the box drops to the generic `"Component of module …"` fallback, and a layout pin is copied into `meta.layout` verbatim where it matches nothing |
+
+  **Migration**, in this order:
+
+  1. `forma init --force` — re-seeds `leafSources` package-shaped. This is the step that brings the
+     import edges back; upgrading without it is the silent-empty-graph row above. Re-apply any
+     hand-curation of the topology afterwards (`init` overwrites the file).
+  2. Re-key `c4-status.json`: `<container>__<file>_go` → `<container>__<package-dir>`, and delete
+     the entries for `_test.go` leaves — those nodes no longer exist. Run `forma gen`; it fails on
+     the first stale id and names it, so repeat until it exits 0.
+  3. Re-key `descriptions` and `layout` the same way. These fail quietly, so check them by eye:
+     `descriptions` is keyed by node *name*, which survives where the package directory and the
+     file share a name (`store.go` in `store/`) and breaks where they do not (`main.go` in `app/`
+     was `main`, is now `app`).
+
+  Non-Go repos are unaffected: ids, edges and the description chain are unchanged, and the four
+  non-Go fixtures (`mini`, `flat-python`, `data-noise`, `virgin-kebab`) are byte-identical.
+  Minor bump, not patch — 0.x may break, but it is declared here, not buried.
+- `schemaVersion` 1.4.0 → **1.5.0**: `descSource` gains `docmap` (additive enum value).
 
 ### Added
 - **The feature matrix now outranks the code above the leaf (`lib/docmap.mjs`), and it can generate
@@ -27,14 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Measured on haben (107 nodes): `descSource` went from `{curated 1, fallback 104, readme 2}` with
   every node `unknown`, to `{curated 1, docmap 50, fallback 54, readme 2}` with **50 nodes carrying
   derived progress** and **25 of 53 containers** reading their own capability sentence.
-  Schema `1.4.0` → `1.5.0` (`descSource` enum += `docmap`).
-
-### Fixed
-- **A README opening with YAML front matter put `--- title: '…' docversion: '2.1.0'` in a box.**
-  `firstPara` stripped markdown headings but not front matter, so on any repo whose docs carry it
-  the first "paragraph" was the metadata block. Two of haben's containers rendered exactly that.
-
-### Added
 - **Per-language adapters for topology and edges (`lib/lang.mjs`), with Go as the first case.**
   `forma init` already detected the language and then applied a heuristic designed for JS anyway.
   On a real Go repo (~38 sources) that produced `nodes=44 leaves=38 edges=0`: `internal/` was one
@@ -70,6 +103,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   responsibility"; it no longer is, and the comment no longer says so.
 
 ### Fixed
+- **A README opening with YAML front matter put `--- title: '…' docversion: '2.1.0'` in a box.**
+  `firstPara` stripped markdown headings but not front matter, so on any repo whose docs carry it
+  the first "paragraph" was the metadata block. Two of haben's containers rendered exactly that.
 - **`dir: "."` leaked a `./` prefix into leaf evidence.** A package at the module root was recorded
   as `./migrations`, which the Go adapter could not map back to the import path
   `<module>/migrations` — one real edge silently missing. Found by the `go list` comparison, not by
@@ -77,10 +113,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A directory leaf took its parent's README.** `describe` called `dirname()` unconditionally, so a
   Go package leaf would be described by the README one level up. It now reads the README *inside* a
   directory-evidence node.
-- `npm pack` ships 19 files (was 17) — `lib/lang.mjs`, `lib/validate.mjs`; `AGENTS.md` said 17 and
-  was already stale at 18.
-- `ARCHITECTURE.md` §5 counted 10 leaves under `lib` when the model had 11; it now says 12, and §8
-  describes the validation that actually happens instead of the one it wished for.
+- `npm pack` ships **20** files (was 17) — `lib/lang.mjs`, `lib/validate.mjs`, `lib/docmap.mjs`.
+- **Documentation that this release made false, corrected.** `AGENTS.md` listed 11 of the 13 engine
+  modules (no `lang.mjs`, no `validate.mjs`) beside a file count of 20; `ARCHITECTURE.md` §5 counted
+  12 leaves under `lib` when the model has 13, credited `lint.mjs` with 8 files when it lints 16,
+  and described the `mini` fixture as 3 leaves when it has 5; §6 still described edge derivation as
+  name-matching only, with no mention of the Go adapter that overrides it; `docs/ORIENTATION.md`
+  (audited at `8af203c`, before this release) asserted in three places that nothing validates the
+  schema and that CI never runs `forma check` — both closed here — and `c4-status.json` still
+  announced `v0.6.0` and `schema 1.4.0` on the boxes the live demo renders.
 
 ## [0.6.0] - 2026-07-26
 
@@ -223,7 +264,8 @@ Closes the QA findings on 0.3.0 (R1-R5).
 - Stack-agnostic viewer with swappable skins (`holo`, `blueprint`).
 - JSON schema contract (`lib/schema/c4-model.schema.json`).
 
-[Unreleased]: https://github.com/LucaDominici/forma/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/LucaDominici/forma/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/LucaDominici/forma/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/LucaDominici/forma/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/LucaDominici/forma/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/LucaDominici/forma/compare/v0.3.0...v0.4.0

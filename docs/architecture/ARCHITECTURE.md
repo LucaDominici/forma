@@ -65,7 +65,7 @@ C4Context
 | Container | Tech | Leaves | What it does |
 |---|---|---|---|
 | cli | JavaScript | 1 | CLI entrypoint — dispatches init | gen | check | doc | serve | verify. |
-| lib | JavaScript | 12 | Engine — the six commands, the C4 JSON-schema contract, and the interactive viewer. |
+| lib | JavaScript | 13 | Engine — the six commands, the C4 JSON-schema contract, and the interactive viewer. |
 | scripts | JavaScript | 2 | Zero-dependency gates — lint and the prepack .fuse_hidden clean-check. |
 | test | JavaScript | 2 | Test runner — exercises init→gen→check across the fixtures, plus a gh stub for verify. |
 
@@ -85,17 +85,24 @@ C4Container
 
 - **cli** (`bin/forma.mjs`) — thin dispatcher; parses the command and delegates to `lib/`.
 - **lib** — the engine: `init.mjs` (seed topology), `gen.mjs` (walk + derive edges + emit model),
-  `check.mjs` (drift gate), `doc.mjs` (arc42 projection), `serve.mjs` (local viewer), the JSON
-  schema, and `lib/viewer/c4-hologram.html` (the interactive explorer with swappable skins).
-- **scripts** — `lint.mjs` (zero-dep lint, 8 files) and `check-clean.mjs` (the `prepack` guard
+  `check.mjs` (drift gate), `doc.mjs` (arc42 projection), `serve.mjs` (local viewer), `verify.mjs`
+  (state refreshed from live GitHub issues), plus the shared pieces `cluster.mjs`, `describe.mjs`,
+  `docmap.mjs`, `enrich.mjs`, `lang.mjs`, `render.mjs`, `validate.mjs`, the JSON schema, and
+  `lib/viewer/c4-hologram.html` (the interactive explorer with swappable skins).
+- **scripts** — `lint.mjs` (zero-dep lint, 16 files) and `check-clean.mjs` (the `prepack` guard
   that refuses to publish `.fuse_hidden`/editor artifacts).
-- **test** — `run.mjs` runs the full `init→gen→check` path on `test/fixtures/mini` (2 containers,
-  3 leaves, 1 derived edge) and asserts it stays green.
+- **test** — `run.mjs` runs the full `init→gen→check` path across six fixtures — `mini`
+  (2 containers, 5 leaves, 1 derived edge), `data-noise`, `docmap`, `flat-python`, `go-nested`,
+  `virgin-kebab` — and asserts they stay green.
 
 ## 6. Runtime View
 
 `forma gen`: read topology → for each leafSource, list matching files → emit leaves; derive
-container↔container edges by counting cross-references to exposed names → write `c4-model.json`.
+container↔container edges → write `c4-model.json`. Edge derivation is per-language (`lib/lang.mjs`):
+where the language declares its dependencies, forma reads the declaration — on **Go** the leaf is
+the package and every edge comes from an `import` block, so the direction is right by construction.
+Every other stack falls back to counting cross-references to exposed names, which is a heuristic and
+undirected in principle.
 `forma check`: re-walk leaves, verify counts/evidence/edges match the model → exit non-zero on drift.
 
 ## 7. Deployment View

@@ -11,7 +11,10 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
 - `lib/` — the engine: `init.mjs`, `gen.mjs`, `check.mjs`, `doc.mjs`, `serve.mjs`, `verify.mjs`,
   plus the shared pieces `cluster.mjs` (component synthesis), `describe.mjs` (§1a description
   resolution), `docmap.mjs` (capability tables → box text + derived progress), `enrich.mjs`
-  (opt-in LLM prose), `render.mjs` (arc42 renderers shared by doc+check).
+  (opt-in LLM prose), `lang.mjs` (per-language topology + edge adapters; Go reads packages and
+  `import` blocks), `render.mjs` (arc42 renderers shared by doc+check), `validate.mjs` (zero-dep
+  JSON-schema walker used by `gen` and `check`). Thirteen modules — the same 13 `lib` leaves the
+  model carries.
 - `lib/schema/c4-model.schema.json` — the JSON contract (single source of truth for the model).
 - `lib/viewer/c4-hologram.html` — the interactive viewer (swappable skins).
 - `scripts/` — `lint.mjs` (zero-dep lint), `check-clean.mjs` (prepack `.fuse_hidden` guard).
