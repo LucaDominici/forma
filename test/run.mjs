@@ -586,6 +586,22 @@ const diffPaths = (a, b, at = '') => {
   if (wrapDesc('anything at all', 37, 0).length) die('viewer wrapDesc: a box with no room must render no description')
   if (wrapDesc('short one', 37, 3).join('|') !== 'short one') die('viewer wrapDesc: text that fits must not be altered')
 
+  // the headline percentage must never claim more coverage than it has. This is the flagship
+  // promise ("mai un 100% inventato") and it lives in the one number read first.
+  const tfn = (html.match(/\nfunction tallyOf\(kids\)\{[\s\S]*?\n\}/) || [])[0]
+  if (!tfn) die('viewer: tallyOf not found — did the tally move back inline?')
+  const tallyOf = new Function('var STMAP={done:"done","in-progress":"prog",next:"next",planned:"plan",problem:"prob",unknown:"unk"};' + tfn + '; return tallyOf')()
+  // the shape that produced "progress 100%" on a board where half the containers had no verdict
+  const half = [...Array(25)].map(() => ({ status2: 'done', completion: 100 })).concat([...Array(28)].map(() => ({ status2: 'unknown' })))
+  const t = tallyOf(half)
+  if (t.mean !== 100) die('viewer tally: the mean over the ruled nodes should stay 100, got ' + t.mean)
+  if (t.ruled !== 25 || t.tot !== 53) die(`viewer tally: coverage should be 25/53, got ${t.ruled}/${t.tot}`)
+  if (t.ruled === t.tot) die('viewer tally: a partially-ruled board must not report full coverage')
+  // a node with no verdict is not 0% done — the mean must not be dragged toward zero either
+  if (tallyOf([{ status2: 'done', completion: 100 }, { status2: 'unknown' }]).mean !== 100) die('viewer tally: an unruled node was counted as 0%')
+  // nothing ruled at all ⇒ no percentage to print
+  if (tallyOf([{ status2: 'unknown' }, { status2: 'unknown' }]).mean !== null) die('viewer tally: a board nobody ruled on must print no percentage')
+
   // every UI string must exist in BOTH locales (repo rule: en is default, it must keep up)
   const lit = (html.match(/\nvar STRINGS=\{[\s\S]*?\n\};/) || [])[0]
   if (!lit) die('viewer: STRINGS literal not found')

@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-07-26
+
+### Fixed
+- **The headline percentage claimed coverage it did not have.** The per-level tally averaged
+  `completion` over the nodes that carry one and printed the result as the progress of the level.
+  On a real Go repo that rendered **`progress 100%`** beside a board where 25 containers were
+  `done` and **28 had no verdict at all** — the invented green this tool exists to kill, in the one
+  number a stakeholder reads first, while every box below it was honestly `unknown`. The mean now
+  reports its own denominator: `progress 100% 25/53`. Averaging over *every* child instead was
+  rejected as the mirror lie — a node nobody ruled on is not 0% done, which is exactly why `gen`
+  refuses to write a completion nobody curated. Found by looking at the screen; no data-level
+  check could see it, so the tally is now a lifted, tested function (`tallyOf`).
+
 ## [0.7.1] - 2026-07-26
 
 Three holes 0.7.0 left around the curated overlay — the channel it declares to be the authority.

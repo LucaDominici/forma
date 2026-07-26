@@ -225,6 +225,21 @@ var LABEL_AUTO_MAX=14;    // above this many arrows in the current level, fixed 
 var LABELS=null;          // null = auto (by arrow count); true/false = user override for this session
 var SKINS=[["holo","◆ holo"],["blueprint","▭ blueprint"]], SKIN_IDS=["holo","blueprint"];
 var STMAP={done:"done","in-progress":"prog",next:"next",planned:"plan",problem:"prob",unknown:"unk"};
+// The per-level tally. The mean is over the nodes that CARRY a completion, and it reports how many
+// those were: on a real Go repo, 25 containers at 100% next to 28 nobody has ruled on rendered as
+// "progress 100%" — the invented green this tool exists to kill, in the one number a stakeholder
+// reads first. Dividing by every child instead would be the mirror lie: a node with no verdict is
+// not 0% done, which is exactly why `gen` refuses to write a completion nobody curated. So the
+// percentage keeps its honest denominator and shows it.
+function tallyOf(kids){
+ var cnt={},tot=0,sum=0,nc=0,st3,j;
+ for(j=0;j<kids.length;j++){
+  st3=STMAP[kids[j].status2]||(kids[j].status==="planned"?"plan":"unk");
+  cnt[st3]=(cnt[st3]||0)+1;tot++;
+  if(kids[j].completion!=null){sum+=(+kids[j].completion||0);nc++;}
+ }
+ return {cnt:cnt,tot:tot,ruled:nc,mean:nc?Math.round(sum/nc):null};
+}
 var M=null, stack=[null], mode="now", POS={}, drag=null, justDragged=false, CATNODES={}, FETCHED=false
 var VBOX={}; // last fitted viewBox per level — frozen while dragging so the canvas does not rescale
 function $(i){return document.getElementById(i)}
@@ -414,19 +429,15 @@ function draw(animate){
  var lvlIdx=((M.levels||[]).indexOf(lvlKey));
  var cb=(lvlIdx>-1?STR.crumbLevel+"-L"+(lvlIdx+1):STR.crumbLevel)+" · "+lvl.toUpperCase()+"  &nbsp;&nbsp; <a data-d='-1'>"+esc(STR.crumbRoot)+"</a>";
  for(var w=0;w<chain.length;w++)cb+=" &rsaquo; "+(w===chain.length-1?"<b>"+esc(chain[w].name)+"</b>":"<a data-d='"+w+"'>"+esc(chain[w].name)+"</a>");
- // Per-level programme tally — the status-board essence in one glance: the status mix of THIS
- // view plus mean completion. Counts use the real children (a collapsed catalogue still counts
- // its members), so the tally never changes when the catalogue threshold does.
- var cnt={},tot=0,sum=0,nc=0,st3;
- for(j=0;j<realKids.length;j++){
-  st3=STMAP[realKids[j].status2]||(realKids[j].status==="planned"?"plan":"unk");
-  cnt[st3]=(cnt[st3]||0)+1;tot++;
-  if(realKids[j].completion!=null){sum+=(+realKids[j].completion||0);nc++;}
- }
- if(tot){
+ // Per-level programme tally — the status-board essence in one glance. Counts use the real
+ // children (a collapsed catalogue still counts its members), so the tally never changes when the
+ // catalogue threshold does.
+ var T=tallyOf(realKids);
+ if(T.tot){
   var DOT={done:"#2fe08a",prog:"#ffc74d",next:"#3ee7ff",plan:"#2d5a72",prob:"#ff5d5d",unk:"#7d8f99"},ord=["done","prog","next","plan","prob","unk"],agg="";
-  for(j=0;j<ord.length;j++)if(cnt[ord[j]])agg+='<i style="background:'+DOT[ord[j]]+'"></i>'+cnt[ord[j]];
-  if(nc)agg+=' &nbsp;'+esc(STR.aggProgress)+' <b>'+Math.round(sum/nc)+'%</b>';
+  for(j=0;j<ord.length;j++)if(T.cnt[ord[j]])agg+='<i style="background:'+DOT[ord[j]]+'"></i>'+T.cnt[ord[j]];
+  // The coverage rides WITH the percentage, never without it. See tallyOf.
+  if(T.ruled)agg+=' &nbsp;'+esc(STR.aggProgress)+' <b>'+T.mean+'%</b> '+T.ruled+'/'+T.tot;
   cb='<span class="agg">'+agg+'</span>'+cb;
  }
  $("crumb").innerHTML=cb;
