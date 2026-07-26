@@ -59,13 +59,22 @@ The matrix sits **above** the code for a container and **below** it for a leaf. 
 
 On a flat directory of many `foo_*` files `gen` also synthesizes a **component** layer, described from its children's docs (`--no-cluster` to disable; `--cluster-min <n>` = leaves before a container is clustered, default 8; `--group-min <n>` = files sharing a prefix before they become a component, default 3).
 
-**Programme state is curated, not guessed.** Code shows what exists, never how far along it is. Drop a `docs/architecture/c4-status.json` (`--status <path>` to move it) and `gen` decorates nodes by id with `status2`, `completion`, `statusWord`, `current`, `target`, `verify`, `issues` — never `func`, which belongs to the docs. `gen` validates the *form* (ids resolve, fields known, enums and issue numbers well-shaped) and never the prose; `forma check` fails if the overlay decorates a node the model no longer has.
+**Programme state is curated, not guessed.** Code shows what exists, never how far along it is. Drop a `docs/architecture/c4-status.json` (`--status <path>` to move it) and `gen` decorates nodes by id with `status2`, `completion`, `statusWord`, `current`, `target`, `verify`, `issues` — never `func`, which belongs to the docs. `gen` validates the *form* (ids resolve, fields known, enums and issue numbers well-shaped) and never the prose; `forma check` fails if the overlay decorates a node the model no longer has. A node no overlay has ruled on stays `unknown`: an uncurated percentage is a made-up number, including `0`.
 
 ```json
 { "nodes": { "engine": { "status2": "in-progress", "completion": 60, "statusWord": "v2 in progress",
   "current": "Live on ACA: RAG + citations. Hardening this week.",
   "target": "Multi-surface substrate with client-ready output.",
   "verify": { "source": "ADR-040 on main" }, "issues": ["#534"] } } }
+```
+
+**Curated does not have to mean hand-typed.** `forma gen --enrich --enricher agent` also writes a `status-plan.json`: one entry per node no overlay has ruled on, carrying the rows of your capability tables that address it — verbatim, plus any `#N` tokens they contain as `issueCandidates`. Fill in the fields you can support, then `forma gen --status-apply <file>` merges them into `c4-status.json`, which is a normal curated file from that point on: reviewed in the diff, validated by `gen`, governed by `check`.
+
+The plan carries **evidence, never a verdict**. A feature matrix's status column is a claim about a document, not about the code — on the repo this was measured against it read 40 `DONE` out of 51 rows while that repo's own audit recorded the matrix as missing eight shipped modules. Mapping such a column onto `completion: 100` paints a board green out of a stale table, which is the one thing this tool exists to prevent. So forma hands you the rows and you rule.
+
+```
+forma gen --enrich --enricher agent      # → enrich-plan.json (prose) + status-plan.json (state)
+forma gen --status-apply status-fill.json   # → merged into c4-status.json, validated before writing
 ```
 
 **Curated state, verified against reality.** `forma verify` asks your `gh` CLI for the state of every issue the model references (`--gh-repo owner/repo`, or `meta.ghRepo` in the topology), marks the nodes whose issues are closed as done, and prefixes their `current` with dated evidence. It touches state, never structure, and re-running it never stacks the evidence. It is opt-in and separate on purpose: `gen` and `check` never open a socket. In the served viewer, **RE-VERIFY** re-reads the model without losing your level, layout or mode.
