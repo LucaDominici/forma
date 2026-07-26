@@ -4,6 +4,58 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-07-26
+
+Pointed at a real 53-package Go repo, the board was unreadable and the numbers were wrong. Three
+independent reviews, one per failure. Every count below is measured on that repo.
+
+### Fixed — the board was unreadable
+
+- **A title rendered at 3.24 px.** `autoLayout` capped the grid at 4 columns, so 53 containers
+  became a 1328×2834 ribbon inside a stage twice as wide as tall; the fit-to-content viewBox then
+  did its job and scaled everything to 0.28. Columns now follow the stage's shape, and past 20
+  siblings the card goes compact — a title is **10.9 px**. A new legibility floor asserts ≥ 9 px for
+  every sibling count up to 60; the shipped code failed it for 44 of them.
+- **189 arrows over 53 boxes.** 172 crossed a box that was not one of their endpoints, and that
+  stayed 85–91% at every grid shape tried — layout cannot fix it, only drawing less can. Past the
+  threshold that already hides edge labels, arrows drop to background texture; hover still brings
+  one back to full strength.
+- **26 of 53 boxes printed `1 file: advisor.` under a box titled `internal/advisor`.** A description
+  that only restates the title is now dropped.
+
+### Fixed — the numbers were wrong
+
+- **A renamed `code_ref` turned a box green.** A row whose refs resolve to nothing was silently
+  dropped, so the capability it described left the completion denominator: one edited cell took a
+  container from `in-progress`/50 to `done`/100 with a fresh "(1/1 done)" citation, and `check`
+  re-derived and confirmed the new number. `gen` and `check` now refuse a row whose `code_ref`
+  resolves to nothing. Glob stems (`internal/imports/statement*.go`) still count as live.
+- **The whole-product box read `done`/100 on the first screen anyone opens.** Every row in a
+  capability table touches the system node — its subtree is the whole repo — so its denominator was
+  "the rows somebody wrote", never "the repo", while containers the document never mentions sat
+  underneath at `unknown`. The system node no longer derives state from a document; the
+  whole-product verdict is what the curated overlay is for.
+- **`check` read silence as "no drift".** Delete the cited document, rewrite a row's sentence, or
+  let the document grow past the row cap, and the derivation fell silent while the committed green
+  box and its citation kept shipping. A listed source that is gone now fails; a state that used to
+  derive and no longer does fails; and the quoted box text is re-derived just like the numbers.
+- **Two unrelated Go packages both claimed to be the whole product**, quoting the repo's root
+  README, because a package at the module root globbed `"."`.
+
+### Changed — BREAKING for Go repos
+
+- **A Go package is ONE node.** It used to be a container *and* a leaf pointing at that very same
+  directory, so drilling into a package showed the package again — 53 of 53. The files inside stay
+  internal detail (issue #17): they are a count on the container, not boxes. The model goes from
+  107 nodes to 54, with **187 of 187 import edges still agreeing with `go list`, 0 missing** —
+  nothing was traded away.
+- **This also un-breaks the drift gate on Go, which was vacuous.** The old leafSource matched one
+  fixed directory name, so adding or deleting a `.go` file passed `forma check`. The gate that is
+  the product did not fire on Go at all. It now re-walks the package's real files and compares the
+  count.
+- Go leaf node ids disappear. A `c4-status.json`, `descriptions` or `layout` keyed to one fails loud
+  at `gen` — the correct behaviour, not a regression.
+
 ## [0.7.2] - 2026-07-26
 
 ### Fixed
