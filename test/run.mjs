@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { validateModel } from '../lib/validate.mjs'
+import { indexByNode, statusFor } from '../lib/docmap.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BIN = join(HERE, '..', 'bin', 'forma.mjs')
@@ -836,6 +837,39 @@ const diffPaths = (a, b, at = '') => {
   if (rollStatus({ id: 'dom', completion: 40 }, kidsOf)) die('rollStatus: overrode a box that carries its own verdict')
   if (rollStatus({ id: 'x' }, () => [])) die('rollStatus: invented a roll-up for a box with no children')
   if (rollStatus({ id: 'dom' }, () => [{ id: 'q', status2: 'unknown' }])) die('rollStatus: reported a mean where nobody ruled on anything')
+  // …and a VERDICT is not a percentage. A document declares; it does not measure, so its nodes
+  // carry `done` with no completion. Keying the roll-up on the number alone put `?` on a domain
+  // holding nine packages a document calls finished — the same silence #42 closed, one cause later.
+  const declared = (id) => (id === 'dom' ? [{ id: 'a', status2: 'done' }, { id: 'b', status2: 'done' }, { id: 'c', status2: 'unknown' }] : [])
+  const rd = rollStatus({ id: 'dom' }, declared)
+  if (!rd) die('rollStatus: a box whose children are ruled WITHOUT a percentage went silent')
+  if (rd.ruled !== 2 || rd.total !== 3) die('rollStatus: ruled/total must count verdicts, not percentages — got ' + JSON.stringify(rd))
+  if (rd.mean != null) die('rollStatus: invented a mean where no child carries one — got ' + rd.mean)
+
+  // The badge is the first number a stakeholder reads, so it is a function like the rest.
+  const bfn = (html.match(/\nfunction badgeOf\(n,roll\)\{[\s\S]*?\n\}/) || [])[0]
+  if (!bfn) die('viewer: badgeOf not found — the badge must be liftable to be measurable')
+  const badgeOf = new Function('var STR={stUnk:"?"};' + bfn + '; return badgeOf')()
+  const decl = { status2: 'done', verify: { source: 'FEATURES.md (2/2 declared done)', derived: true } }
+  if (badgeOf({ status2: 'unknown' }, null) !== '?') die('viewer badge: a box nobody ruled on must still read "?"')
+  if (badgeOf(decl, null) === '?') die('viewer badge: a box declared done read "?" — the badge contradicts its own colour')
+  if (/%/.test(badgeOf(decl, null))) die('viewer badge: a declaration was printed as a percentage — ' + badgeOf(decl, null))
+  if (badgeOf({ status2: 'unknown' }, { mean: null, ruled: 9, total: 14 }) !== '9/14') die('viewer badge: a roll-up with no percentage must still report its coverage, got ' + JSON.stringify(badgeOf({ status2: 'unknown' }, { mean: null, ruled: 9, total: 14 })))
+  if (badgeOf({ status2: 'done' }, { mean: 100, ruled: 9, total: 14 }) !== '100% 9/14') die('viewer badge: the mean lost its coverage')
+  if (badgeOf({ completion: 40, statusWord: 'v2 in corso' }, null) !== 'v2 in corso') die('viewer badge: a curated word must still own the badge')
+  if (badgeOf({ status2: 'in-progress', completion: 40 }, null) !== '40%') die('viewer badge: a real measurement must still print')
+
+  // "nobody ruled on it" must stop wearing the clothes of "not built yet": legHint teaches the
+  // reader that a dashed box is `da costruire`, and .s-unk was dashed. That is complaint 2.
+  const unkCss = (html.match(/\n\.s-unk rect\{[^}]*\}/) || [])[0]
+  if (!unkCss) die('viewer: the .s-unk rect rule moved')
+  if (/stroke-dasharray/.test(unkCss)) die('viewer: unknown is drawn with the dash the legend defines as "to build" — ' + unkCss.trim())
+  if (!/stroke-dasharray/.test((html.match(/\n\.s-plan rect\{[^}]*\}/) || [''])[0])) die('viewer: planned lost the dash that makes legHint true')
+  // the legend has promised a HOLLOW green for a done nobody proved since #38; the canvas never drew one
+  if (!/\.s-done\.decl rect\{/.test(html)) die('viewer: the legend promises "DONE (declared)" but no .s-done.decl rule draws it')
+  const clsLine = (html.match(/\n *var isCat=[^\n]*cls="nd s-"[^\n]*/) || [])[0]
+  if (!clsLine) die('viewer: the class-assembly line moved')
+  if (!/decl/.test(clsLine)) die('viewer: a done DERIVED from a document is painted exactly like a proven one — ' + clsLine.trim())
 
   // a derived number must disclose how much of the module its citation reaches — "3 of 3 rows
   // declared done" and "this module is done" are different sentences when the module holds 22 files
@@ -1012,6 +1046,42 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok docmap — §17 ${described} node(s) described from docs/FEATURES.md; billing 50% derived, core over-cap, plumbing honest; overlay wins; drift gated`)
 }
 
+// 16b) a declaration is not a measurement. Two ways a document produced a percentage it never
+// measured — both live on the public demo, which reads 100% on every box that carries a number.
+{
+  // (a) a status column that never says "not done" is an INVENTORY. `done/rows.length` is then
+  // pinned to 1 by arithmetic: haben's feature matrix is 39 rows, 39 DONE, and every one of the
+  // 27 nodes it reaches came out at exactly 100. A constant is not a measure.
+  const repo = join(tmp, 'decl-repo')
+  cpSync(FIX('docmap'), repo, { recursive: true })
+  const doc = join(repo, 'docs', 'FEATURES.md')
+  writeFileSync(doc, readFileSync(doc, 'utf-8').replace('| BACKLOG |', '| DONE |'))
+  const topo = join(tmp, 'decl-topo.json'), model = join(tmp, 'decl-model.json')
+  let r = run(['init', '--repo', repo, '--out', topo, '--force']); if (r.status !== 0) die('decl init exit ' + r.status, r)
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('decl gen exit ' + r.status, r)
+  const billing = readJson(model).nodes.find((n) => n.id === 'billing')
+  if (billing.completion != null) die(`decl: a document whose status column never says "not done" measured nothing, yet billing reads ${billing.completion}%`)
+  // what the document DID say survives — the declaration, its citation and its reach. Dropping
+  // those with the number would trade a false percentage for a missing provenance.
+  if (billing.status2 !== 'done') die('decl: the declaration itself was thrown out with the number, got ' + billing.status2)
+  if (!/FEATURES\.md/.test((billing.verify || {}).source || '')) die('decl: the citation went with the number: ' + JSON.stringify(billing.verify))
+  if (!(billing.verify || {}).coverage) die('decl: the coverage went with the number: ' + JSON.stringify(billing.verify))
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo])
+  if (r.status !== 0) die('decl: check re-derives from the same document and must agree with gen', r)
+
+  // (b) rows that name NO unit of the node still ruled on it. On the demo the two domains with no
+  // evidence of their own — `fisco`, `accesso` — read done/100 with coverage {named:0}: a verdict
+  // borrowed from children, on a box whose own reach the document never touches.
+  const rows = [{ text: 'x', refs: ['src/a/one.js'], dead: [], done: true, from: 'FEATURES.md' }]
+  const idx = indexByNode(rows, [{ id: 'dom', kind: 'container' },
+    { id: 'a', parent: 'dom', kind: 'container', evidence: [{ type: 'path', ref: 'src/a' }] }])
+  const dom = statusFor(idx, 'dom')
+  if (dom) die('decl: a box the document names no unit of got a verdict anyway — ' + JSON.stringify(dom))
+  const own = statusFor(idx, 'a')
+  if (!own || own.status2 !== 'done') die('decl: the guard also silenced the node the row actually names — ' + JSON.stringify(own))
+  console.log('  ok declaration — an all-DONE inventory yields a verdict with no percentage, citation intact; a zero-reach box yields nothing')
+}
+
 // 13b) the three ways a document-derived number goes green without anyone lying on purpose.
 // Every one of these passed the gate before: the derivation fell SILENT and silence read as
 // "no drift", so a committed green box kept shipping with a citation nothing backed any more.
@@ -1060,4 +1130,24 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok doc-drift — a dead code_ref fails gen; a deleted document, a rewritten row and a silent derivation all fail check; the system box stays unknown')
 }
 
-console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, docmap all green.')
+// 18) the publication gate must be able to fail on the defect it shipped. Four predicates graded
+// the GEOMETRY of the scene — box counts, actors, prose, arrows — and not one of them read
+// `completion`. A board reading 100% on every box that carries a number passed at full marks, and
+// that is the model that went to Pages. A gate blind to the claim grades the frame, not the picture.
+{
+  const gate = (m) => { const p = join(tmp, 'pres-' + Math.random().toString(36).slice(2) + '.json'); writeFileSync(p, JSON.stringify(m)); return spawnSync(process.execPath, [join(HERE, '..', 'scripts', 'presentable.mjs'), p], { encoding: 'utf-8' }) }
+  const demo = readJson(join(HERE, '..', 'docs/demo/c4-model.json'))
+  const clean = JSON.parse(JSON.stringify(demo))
+  for (const n of clean.nodes) delete n.completion
+  let r = gate(clean)
+  if (r.status !== 0) die('presentable: the demo without invented percentages must still pass every other predicate\n' + r.stdout + r.stderr)
+  const lying = JSON.parse(JSON.stringify(clean))
+  const victim = lying.nodes.find((n) => (n.verify || {}).derived === true) || die('presentable: the demo carries no document-derived node to drive the gate with')
+  victim.completion = 100
+  r = gate(lying)
+  if (r.status === 0) die('presentable: a box showing a percentage its own citation calls a declaration passed the gate\n' + r.stdout)
+  if (!new RegExp(victim.id).test(r.stdout || '')) die('presentable: the failure did not name the offending box\n' + r.stdout)
+  console.log('  ok presentable — a percentage no source measured fails the publication gate, by node id')
+}
+
+console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, docmap, declaration, presentable all green.')
