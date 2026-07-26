@@ -4,6 +4,38 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-07-26
+
+Closes the boundary in `docs/SCOPE.md`: four issues, three of them measured on a real foreign
+repository rather than on this one.
+
+### Added
+- **A grouping box inherits its children.** Grouping 53 packages into domains is the only cure for
+  a level no projector can show, and it used to cost two things in silence: the domain level drew
+  **zero** arrows, and the tally counted domains instead of packages — the same repo read `25/53`
+  flat and `2/6` once curated, so drawing fewer boxes deleted 23 verdicts from the number a reader
+  sees first. `rollEdges` now projects each endpoint onto the visible ancestor, sums the counts and
+  drops self-loops (0 → 14 arrows); `tallyOf` counts units, not boxes (25/53). And a curation that
+  would lose edges — `kind: "component"` on a grouped package takes 189 edges to 13 — now warns on
+  stderr with the count. (#32)
+- **`init` seeds the first screen.** It used to emit one context node with a generated sentence in
+  it. It now seeds a `person` and an `external` placeholder with edges, and `gen` names them on
+  stderr, once, until they are renamed. (#33)
+- **`init` names the stack it did not model.** A Go + React monorepo was seeded as 53 Go packages
+  with the React application silently absent. Every skipped stack is now named with its file and
+  directory count, and the topology carries `_unseeded` with ready-made `nodes`+`leafSources` that
+  `gen` and `check` accept verbatim. Seeding every stack automatically was measured and rejected:
+  it regresses the edge predicate and doubles the box count. (#34)
+- **The public demo is no longer forma demoing on forma** — it is a private 53-package Go
+  application, published as a committed snapshot with its source commit recorded. At that commit
+  `scripts/presentable.mjs` and `forma check` both exit 0, and the Pages job refuses to publish a
+  model that fails the first. (#35)
+
+### Fixed
+- **`init` matched by file extension, not by language.** A React repo with more `.tsx` than `.ts`
+  modelled half its files, silently, and the skipped-stack report handed back directories that were
+  already seeded — pasting them would have stacked a second container on the same place.
+
 ## [0.9.0] - 2026-07-26
 
 ### Fixed — the first five minutes of a stranger

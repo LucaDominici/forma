@@ -1,6 +1,7 @@
 # Scope — what "finished" means for Forma
 
-Status: proposed 2026-07-26. Owner decision pending (see §6).
+Status: **closed 2026-07-26**, at `v0.10.0`. The boundary in §1 is met and measured — see §8.
+Forma moves to stage 5, *maintained* (§7).
 Instrument: [`scripts/presentable.mjs`](../scripts/presentable.mjs). Measured against `haben`
 (a real, foreign, 53-package Go + React repo) and against Forma's own model.
 
@@ -40,7 +41,9 @@ produces, checkable by anyone with a fresh clone: count the context nodes in the
 and look for either a container whose `tech` is not the dominant language or the stderr line
 naming what was skipped. That clause is what makes #33 and #34 load-bearing rather than optional.
 
-**Today nothing passes it** — including the demo the README currently links:
+**When this was written nothing passed it**, including the demo the README linked at the time. The
+readings below are the *before*; §8 carries the after, and the demo the README links today is a
+different model on a different repository.
 
 ```
 $ node scripts/presentable.mjs docs/architecture/c4-model.json     # Forma on Forma
@@ -173,3 +176,42 @@ single day on 2026-07-26. The estimate is effort, not calendar.
 
 Forma moves to stage 5, *maintained*: it takes bug reports and dependency-free security fixes,
 and nothing else without a new scope document replacing this one.
+
+---
+
+## 8. Closed — what was measured, and what was not
+
+The definition in §1 has two halves, and both are checked on the same commit.
+
+**The demo.** `docs/demo/c4-model.json`, forma applied to `haben` (private, 53 Go packages) at
+haben commit `b1bb318`, curated into six domains by `docs/demo/curate.mjs`:
+
+```
+$ node scripts/presentable.mjs docs/demo/c4-model.json
+PASS context carries at least one external actor besides the system  (4 box(es) at context)
+PASS no drawn level exceeds 24 boxes                                 (widest=14)
+PASS every box carries prose, not a file count                       (bare=0)
+PASS every drawn level with more than one box draws at least one edge (edges per screen=3,7,10,7,6,4,2,14)
+→ exit 0
+
+$ forma check --repo <haben> --model docs/demo/c4-model.json --topology docs/demo/c4-topology.json
+[check-c4] OK   → exit 0
+```
+
+**A bare `init`.** On the same repo, with no curation at all: predicate 1 passes (three context
+boxes, two of them placeholder actors `init` now seeds), and the stack it did not model is named
+out loud with ready-made `leafSources` under `_unseeded` — `JavaScript: 183 files in 6 directories`.
+Predicates 2 and 3 fail on a bare init, and that is the correct reading: 53 flat boxes and 28 file
+counts are what an uncurated repo *is*. §1 asks a bare init to name its actors and its skipped
+stacks, not to be presentable without a human.
+
+### What closing this does not claim
+
+- **Nothing regenerates the demo.** haben is private; Pages publishes a committed snapshot. If
+  haben moves, the demo silently describes a commit that no longer exists. The Pages job refuses to
+  publish a model that fails `presentable.mjs`, which catches rot in the *model* and nothing about
+  the *repo* it came from.
+- **The curation is a human decision, not a derivation.** Six domains over 53 packages is judgement.
+  Forma did not find it and cannot check it.
+- **`presentable.mjs` measures four things.** A model can pass all four and still be a bad slide.
+  It is a floor, not a verdict.

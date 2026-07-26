@@ -1,9 +1,15 @@
 name: Pages
-# Deploy forma's self-C4 viewer (lib/viewer + committed docs/architecture model) to GitHub Pages
-# on every push to main. The viewer fetches ./c4-model.json (relative), so it works under the
-# /forma/ project subpath. This deploys the committed model as-is: the drift-check (`forma check`)
-# runs in ci.yml on every push and PR — it does not gate this job, but a model that stopped
-# matching the code fails CI on the same commit, in public.
+# Deploy the public demo (lib/viewer + the committed docs/demo model) to GitHub Pages on every
+# push to main. The viewer fetches ./c4-model.json (relative), so it works under the /forma/
+# project subpath.
+#
+# The demo is forma applied to a repository that is NOT forma (docs/SCOPE.md §1) — a tool proving
+# itself on 28 nodes written by its own author proves nothing a reader cares about. That repository
+# is private, so this job cannot regenerate the model: it deploys a snapshot committed from a local
+# run, and docs/demo/curate.mjs carries the exact commands to rebuild it. The model records the
+# source repo and commit it was generated from, and the README names both. That is a real limit,
+# stated rather than papered over — nothing here re-derives the demo, so nothing here can catch it
+# going stale. Forma's own model still lives in docs/architecture and is drift-checked by ci.yml.
 # Runner: github-hosted (OIDC deploy-pages needs a hosted runner).
 on:
   push:
@@ -29,12 +35,14 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - id: build
-        name: Assemble site (viewer + committed model)
+        name: Assemble site (viewer + committed demo model)
         run: |
           mkdir -p _site
           cp lib/viewer/c4-hologram.html _site/index.html
-          cp docs/architecture/c4-model.json _site/c4-model.json
+          cp docs/demo/c4-model.json _site/c4-model.json
           echo "path=_site" >> "$GITHUB_OUTPUT"
+      - name: Refuse to publish a demo that is not presentable
+        run: node scripts/presentable.mjs docs/demo/c4-model.json
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
         with:

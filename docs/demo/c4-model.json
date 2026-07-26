@@ -1,0 +1,3334 @@
+{
+  "schemaVersion": "1.5.0",
+  "generatedAt": "2026-07-26T18:49:32.939Z",
+  "source": {
+    "repo": "haben",
+    "commit": "b1bb318434d24265e94e431b99bf1a720c30e98b",
+    "branch": "task/#505-card-signed-net-worth",
+    "docPath": "docs/architecture/ARCHITECTURE.md",
+    "generator": "gen-c4-model@1.5.0"
+  },
+  "meta": {
+    "repo": "haben",
+    "stack": "Go",
+    "seededBy": "forma init",
+    "ghRepo": "LucaDominici/haben",
+    "title": "haben · demo pubblica di forma",
+    "verifyMethod": "code+topology (gh re-verify optional)"
+  },
+  "levels": [
+    "context",
+    "container",
+    "component",
+    "leaf"
+  ],
+  "nodes": [
+    {
+      "status": "current",
+      "id": "haben",
+      "level": "context",
+      "kind": "system",
+      "name": "haben",
+      "tech": "Go",
+      "description": "Il patrimonio della famiglia in un posto solo: conti, obiettivi, fisco e documenti.",
+      "category": "system",
+      "status2": "unknown",
+      "target": "",
+      "func": "Il patrimonio della famiglia in un posto solo: conti, obiettivi, fisco e documenti.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "cmd_haben",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "cmd/haben",
+      "tech": "Go",
+      "description": "Avvia il server dell applicazione con la configurazione della macchina su cui gira.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "cmd/haben",
+          "count": 6
+        },
+        {
+          "type": "path",
+          "ref": "cmd/haben"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Avvia il server dell applicazione con la configurazione della macchina su cui gira.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "cmd_haben_ocr",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "cmd/haben-ocr",
+      "tech": "Go",
+      "description": "Legge i PDF degli estratti conto e ne estrae le righe di movimento.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "cmd/haben-ocr",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "cmd/haben-ocr"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Legge i PDF degli estratti conto e ne estrae le righe di movimento.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_account",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/account",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/account",
+          "count": 2
+        },
+        {
+          "type": "path",
+          "ref": "internal/account"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (2/2 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 2,
+          "total": 2,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Account domain: bank/broker kinds, free-cash, IBAN, soft-archive · Liquidity summary + idle-cash nudge (Beat-Excel A)",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_advisor",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/advisor",
+      "tech": "Go",
+      "description": "Suggerisce la mossa successiva a partire da quello che il portafoglio mostra.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/advisor",
+          "count": 7
+        },
+        {
+          "type": "path",
+          "ref": "internal/advisor"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Suggerisce la mossa successiva a partire da quello che il portafoglio mostra.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_allocation",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/allocation",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/allocation",
+          "count": 3
+        },
+        {
+          "type": "path",
+          "ref": "internal/allocation"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 3,
+          "total": 3,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Allocation domain: target weights, drift computation (Beat-Excel B)",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_allowance",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/allowance",
+      "tech": "Go",
+      "description": "Gestisce la paghetta dei figli: quanto, quando e quanto ne resta.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/allowance",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/allowance"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Gestisce la paghetta dei figli: quanto, quando e quanto ne resta.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_backtest",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/backtest",
+      "tech": "Go",
+      "description": "Rigioca una strategia sui prezzi passati per vedere come sarebbe andata.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/backtest",
+          "count": 4
+        },
+        {
+          "type": "path",
+          "ref": "internal/backtest"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Rigioca una strategia sui prezzi passati per vedere come sarebbe andata.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_benchmark",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/benchmark",
+      "tech": "Go",
+      "description": "Confronta il rendimento del portafoglio con gli indici di riferimento.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/benchmark",
+          "count": 4
+        },
+        {
+          "type": "path",
+          "ref": "internal/benchmark"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Confronta il rendimento del portafoglio con gli indici di riferimento.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_bondladder",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/bondladder",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/bondladder",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/bondladder"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 1,
+          "total": 1,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Bond Ladder module",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_budget",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/budget",
+      "tech": "Go",
+      "description": "Tiene il bilancio mensile della famiglia, entrate contro uscite.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/budget",
+          "count": 22
+        },
+        {
+          "type": "path",
+          "ref": "internal/budget"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Tiene il bilancio mensile della famiglia, entrate contro uscite.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_capsule",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/capsule",
+      "tech": "Go",
+      "description": "Congela una fotografia dei dati per poterla rileggere identica piu avanti.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/capsule",
+          "count": 2
+        },
+        {
+          "type": "path",
+          "ref": "internal/capsule"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Congela una fotografia dei dati per poterla rileggere identica piu avanti.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_cedole",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/cedole",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/cedole",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/cedole"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 1,
+          "total": 1,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Cedole module (coupon/dividend tracker)",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_challenge",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/challenge",
+      "tech": "Go",
+      "description": "Le sfide di risparmio proposte ai ragazzi e il loro stato.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/challenge",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/challenge"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Le sfide di risparmio proposte ai ragazzi e il loro stato.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_cometa",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/cometa",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/cometa",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/cometa"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 1,
+          "total": 1,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Cometa pension integration",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_consolidation",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/consolidation",
+      "tech": "Go",
+      "description": "Somma i conti di tutti i membri in un unico patrimonio di famiglia.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/consolidation",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/consolidation"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Somma i conti di tutti i membri in un unico patrimonio di famiglia.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_contribution",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/contribution",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/contribution",
+          "count": 2
+        },
+        {
+          "type": "path",
+          "ref": "internal/contribution"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 2,
+          "total": 2,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Contribution tracker module",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_datematch",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/datematch",
+      "tech": "Go",
+      "description": "Riconcilia le date dei movimenti quando le fonti non concordano.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/datematch",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/datematch"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Riconcilia le date dei movimenti quando le fonti non concordano.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_decision",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/decision",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/decision",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/decision"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 1,
+          "total": 1,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Decision engine (THE HEART): per-profile cross-module decision-of-the-day",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_diary",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/diary",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/diary",
+          "count": 2
+        },
+        {
+          "type": "path",
+          "ref": "internal/diary"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 2,
+          "total": 2,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Decision diary (log of past decisions per profile)",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_export",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/export",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/export",
+          "count": 2
+        },
+        {
+          "type": "path",
+          "ref": "internal/export"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 1,
+          "total": 2,
+          "whole": false
+        }
+      },
+      "target": "",
+      "func": "Excel template export — live workbook (D-08, Gimmick #11)",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_familygraph",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/familygraph",
+      "tech": "Go",
+      "description": "Chi e chi in famiglia e chi puo vedere i conti di chi.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/familygraph",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/familygraph"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Chi e chi in famiglia e chi puo vedere i conti di chi.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_fisco",
+      "level": "component",
+      "kind": "container",
+      "parent": "fisco",
+      "name": "internal/fisco",
+      "tech": "Go",
+      "description": "Le regole fiscali italiane applicate ai movimenti del portafoglio.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/fisco",
+          "count": 3
+        },
+        {
+          "type": "path",
+          "ref": "internal/fisco"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Le regole fiscali italiane applicate ai movimenti del portafoglio.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_frontier",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/frontier",
+      "tech": "Go",
+      "description": "Calcola la frontiera efficiente per confrontare rischio e rendimento attesi.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/frontier",
+          "count": 4
+        },
+        {
+          "type": "path",
+          "ref": "internal/frontier"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Calcola la frontiera efficiente per confrontare rischio e rendimento attesi.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_health",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "internal/health",
+      "tech": "Go",
+      "description": "Risponde alle sonde di stato del servizio per il monitoraggio.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/health",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/health"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Risponde alle sonde di stato del servizio per il monitoraggio.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_imports",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/imports",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/imports",
+          "count": 15
+        },
+        {
+          "type": "path",
+          "ref": "internal/imports"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (2/2 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 15,
+          "total": 15,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Excel/Directa CSV import: idempotent row-fingerprint dedup (Beat-Excel C) · Budget T1: bank statement import (CSV/XLSX) + accounting-identity bootstrap + Budget tab",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_income",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/income",
+      "tech": "Go",
+      "description": "Registra le entrate ricorrenti della famiglia e la loro cadenza.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/income",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/income"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Registra le entrate ricorrenti della famiglia e la loro cadenza.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_insight",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/insight",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/insight",
+          "count": 8
+        },
+        {
+          "type": "path",
+          "ref": "internal/insight"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (3/3 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 3,
+          "total": 8,
+          "whole": false
+        }
+      },
+      "target": "",
+      "func": "Budget Vision L2 — month-end cash-flow projection (§2.2) · Budget Vision L2 — quantified advice + what-if (§2.5) · Budget Vision L2 — household barometer (§2.6)",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_instrument",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/instrument",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/instrument",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/instrument"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 1,
+          "total": 1,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Instrument domain: ISIN, symbol, kind, currency, price history",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_kidgoal",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/kidgoal",
+      "tech": "Go",
+      "description": "Gli obiettivi di risparmio dei figli e i progressi verso il traguardo.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/kidgoal",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/kidgoal"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Gli obiettivi di risparmio dei figli e i progressi verso il traguardo.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_market",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/market",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/market",
+          "count": 12
+        },
+        {
+          "type": "path",
+          "ref": "internal/market"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 12,
+          "total": 12,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Live price auto-refresh: Yahoo → Stooq fallback chain, daily worker",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_milestone",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/milestone",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/milestone",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/milestone"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 1,
+          "total": 1,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Milestones: goal tracking (target amount + deadline) per profile",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_notify",
+      "level": "component",
+      "kind": "container",
+      "parent": "accesso",
+      "name": "internal/notify",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/notify",
+          "count": 2
+        },
+        {
+          "type": "path",
+          "ref": "internal/notify"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 2,
+          "total": 2,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "NTFY push notifications on decision-of-the-day",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_pac",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/pac",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/pac",
+          "count": 2
+        },
+        {
+          "type": "path",
+          "ref": "internal/pac"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 2,
+          "total": 2,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "PAC domain: 3 modes (fixed/value-average/percentage), suggestion engine",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_pairing",
+      "level": "component",
+      "kind": "container",
+      "parent": "accesso",
+      "name": "internal/pairing",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/pairing",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/pairing"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 1,
+          "total": 1,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "QR device pairing: one-time token + device cookie (D-22)",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_portfoliohistory",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/portfoliohistory",
+      "tech": "Go",
+      "description": "Conserva il valore del portafoglio giorno per giorno.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/portfoliohistory",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/portfoliohistory"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Conserva il valore del portafoglio giorno per giorno.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_position",
+      "level": "component",
+      "kind": "container",
+      "parent": "denaro",
+      "name": "internal/position",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/position",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/position"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 1,
+          "total": 1,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Position domain: quantity, avg-cost, last-price, soft-archive",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_profile",
+      "level": "component",
+      "kind": "container",
+      "parent": "accesso",
+      "name": "internal/profile",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/profile",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/profile"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 1,
+          "total": 1,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "4-patrimoni profiles (Luca/Luigia/Veronica/Lollo) + multi-profile API",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_runway",
+      "level": "component",
+      "kind": "container",
+      "parent": "famiglia",
+      "name": "internal/runway",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/runway",
+          "count": 3
+        },
+        {
+          "type": "path",
+          "ref": "internal/runway"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 3,
+          "total": 3,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Capital Runway: months-of-runway from free cash + monthly expenses",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_server",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "internal/server",
+      "tech": "Go",
+      "description": "Espone le API HTTP e instrada ogni richiesta al dominio giusto.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/server",
+          "count": 65
+        },
+        {
+          "type": "path",
+          "ref": "internal/server"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Espone le API HTTP e instrada ogni richiesta al dominio giusto.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_session",
+      "level": "component",
+      "kind": "container",
+      "parent": "accesso",
+      "name": "internal/session",
+      "tech": "Go",
+      "description": "Apre, rinnova e chiude le sessioni di chi ha effettuato l accesso.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/session",
+          "count": 2
+        },
+        {
+          "type": "path",
+          "ref": "internal/session"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Apre, rinnova e chiude le sessioni di chi ha effettuato l accesso.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_spine",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "internal/spine",
+      "tech": "Go",
+      "description": "Il cablaggio comune: configurazione, log e avvio dei servizi condivisi.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/spine",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/spine"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Il cablaggio comune: configurazione, log e avvio dei servizi condivisi.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_store",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/store",
+      "tech": "Go",
+      "description": "Il database: legge e scrive ogni dato persistente dell applicazione.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/store",
+          "count": 54
+        },
+        {
+          "type": "path",
+          "ref": "internal/store"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Il database: legge e scrive ogni dato persistente dell applicazione.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_taxanalysis",
+      "level": "component",
+      "kind": "container",
+      "parent": "fisco",
+      "name": "internal/taxanalysis",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/taxanalysis",
+          "count": 3
+        },
+        {
+          "type": "path",
+          "ref": "internal/taxanalysis"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 3,
+          "total": 3,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Annual tax report + zainetto analysis: expiring minus, cross-instrument compensations, taxed coupons, printable view",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_taxloss",
+      "level": "component",
+      "kind": "container",
+      "parent": "fisco",
+      "name": "internal/taxloss",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/taxloss",
+          "count": 3
+        },
+        {
+          "type": "path",
+          "ref": "internal/taxloss"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 3,
+          "total": 3,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Tax-Loss Harvesting module",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_taxreport",
+      "level": "component",
+      "kind": "container",
+      "parent": "fisco",
+      "name": "internal/taxreport",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/taxreport",
+          "count": 2
+        },
+        {
+          "type": "path",
+          "ref": "internal/taxreport"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 2,
+          "total": 2,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "Annual tax report + zainetto analysis: expiring minus, cross-instrument compensations, taxed coupons, printable view",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_testsupport",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "internal/testsupport",
+      "tech": "Go",
+      "description": "Impalcature condivise dai test, mai in esecuzione in produzione.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/testsupport",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/testsupport"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Impalcature condivise dai test, mai in esecuzione in produzione.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_vault",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/vault",
+      "tech": "Go",
+      "description": "La cassaforte cifrata dove i documenti sensibili restano a riposo.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/vault",
+          "count": 4
+        },
+        {
+          "type": "path",
+          "ref": "internal/vault"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "La cassaforte cifrata dove i documenti sensibili restano a riposo.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_vaultmanager",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "internal/vaultmanager",
+      "tech": "Go",
+      "description": "Governa chiavi e rotazione della cassaforte.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/vaultmanager",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "internal/vaultmanager"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Governa chiavi e rotazione della cassaforte.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_web",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "internal/web",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/web",
+          "count": 2
+        },
+        {
+          "type": "path",
+          "ref": "internal/web"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (1/1 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 2,
+          "total": 2,
+          "whole": true
+        }
+      },
+      "target": "",
+      "func": "SPA embed: React frontend baked into Go binary (build tag)",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "internal_webauthnauth",
+      "level": "component",
+      "kind": "container",
+      "parent": "accesso",
+      "name": "internal/webauthnauth",
+      "tech": "Go",
+      "description": "Accesso senza password con le chiavi del dispositivo (WebAuthn).",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/webauthnauth",
+          "count": 4
+        },
+        {
+          "type": "path",
+          "ref": "internal/webauthnauth"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Accesso senza password con le chiavi del dispositivo (WebAuthn).",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "internal_worker",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "internal/worker",
+      "tech": "Go",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "internal/worker",
+          "count": 22
+        },
+        {
+          "type": "path",
+          "ref": "internal/worker"
+        }
+      ],
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (3/3 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 3,
+          "total": 22,
+          "whole": false
+        }
+      },
+      "target": "",
+      "func": "Live price auto-refresh: Yahoo → Stooq fallback chain, daily worker · Nightly SQLite backup: VACUUM INTO + 30-day retention · Budget Vision L2 — insight digest NTFY worker",
+      "descSource": "docmap"
+    },
+    {
+      "status": "current",
+      "id": "migrations",
+      "level": "component",
+      "kind": "container",
+      "parent": "archivio",
+      "name": "migrations",
+      "tech": "Go",
+      "description": "Le migrazioni che portano il database da una versione allo schema successivo.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "migrations",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "migrations"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Le migrazioni che portano il database da una versione allo schema successivo.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "scripts",
+      "level": "component",
+      "kind": "container",
+      "parent": "piattaforma",
+      "name": "scripts",
+      "tech": "Go",
+      "description": "Utilita a riga di comando per manutenzione e operazioni una tantum.",
+      "evidence": [
+        {
+          "type": "glob",
+          "ref": "scripts",
+          "count": 1
+        },
+        {
+          "type": "path",
+          "ref": "scripts"
+        }
+      ],
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Utilita a riga di comando per manutenzione e operazioni una tantum.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "denaro",
+      "level": "container",
+      "kind": "container",
+      "parent": "haben",
+      "name": "Denaro e patrimonio",
+      "tech": "Go",
+      "description": "Conti, strumenti, posizioni e mercato: quanto vale il patrimonio oggi e come si muove.",
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Conti, strumenti, posizioni e mercato: quanto vale il patrimonio oggi e come si muove.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "fisco",
+      "level": "container",
+      "kind": "container",
+      "parent": "haben",
+      "name": "Fisco",
+      "tech": "Go",
+      "description": "Plusvalenze, minusvalenze e dichiarazione: cosa deve al fisco la famiglia e quando.",
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (2/2 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 0,
+          "total": 4,
+          "whole": false
+        }
+      },
+      "target": "",
+      "func": "Plusvalenze, minusvalenze e dichiarazione: cosa deve al fisco la famiglia e quando.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "famiglia",
+      "level": "container",
+      "kind": "container",
+      "parent": "haben",
+      "name": "Famiglia e obiettivi",
+      "tech": "Go",
+      "description": "Budget, paghette, traguardi dei figli e consigli: il denaro visto come progetto di famiglia.",
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Budget, paghette, traguardi dei figli e consigli: il denaro visto come progetto di famiglia.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "archivio",
+      "level": "container",
+      "kind": "container",
+      "parent": "haben",
+      "name": "Archivio e documenti",
+      "tech": "Go",
+      "description": "Estratti conto in entrata, esportazioni in uscita e la cassaforte dove i documenti restano.",
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Estratti conto in entrata, esportazioni in uscita e la cassaforte dove i documenti restano.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "accesso",
+      "level": "container",
+      "kind": "container",
+      "parent": "haben",
+      "name": "Accesso e identita",
+      "tech": "Go",
+      "description": "Chi entra, con quale dispositivo e con quali avvisi: sessioni, chiavi di accesso e profilo.",
+      "category": "container",
+      "status2": "done",
+      "completion": 100,
+      "verify": {
+        "source": "docs/FEATURE_MATRIX.md (3/3 declared done)",
+        "derived": true,
+        "coverage": {
+          "named": 0,
+          "total": 5,
+          "whole": false
+        }
+      },
+      "target": "",
+      "func": "Chi entra, con quale dispositivo e con quali avvisi: sessioni, chiavi di accesso e profilo.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "piattaforma",
+      "level": "container",
+      "kind": "container",
+      "parent": "haben",
+      "name": "Piattaforma",
+      "tech": "Go",
+      "description": "Il servizio che espone tutto il resto: eseguibili, API HTTP, interfaccia web e lavori in background.",
+      "category": "container",
+      "status2": "unknown",
+      "target": "",
+      "func": "Il servizio che espone tutto il resto: eseguibili, API HTTP, interfaccia web e lavori in background.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "famiglia_utente",
+      "level": "context",
+      "kind": "person",
+      "name": "Famiglia",
+      "tech": "Browser",
+      "description": "I due genitori e i figli: consultano il patrimonio, registrano le spese e seguono gli obiettivi.",
+      "category": "person",
+      "status2": "unknown",
+      "target": "",
+      "func": "I due genitori e i figli: consultano il patrimonio, registrano le spese e seguono gli obiettivi.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "banca_broker",
+      "level": "context",
+      "kind": "external",
+      "name": "Banca e broker",
+      "tech": "CSV / PDF",
+      "description": "Le fonti degli estratti conto e dei prezzi: da qui arrivano i movimenti che il sistema riconcilia.",
+      "category": "external",
+      "status2": "unknown",
+      "target": "",
+      "func": "Le fonti degli estratti conto e dei prezzi: da qui arrivano i movimenti che il sistema riconcilia.",
+      "descSource": "curated"
+    },
+    {
+      "status": "current",
+      "id": "agenzia_entrate",
+      "level": "context",
+      "kind": "external",
+      "name": "Agenzia delle Entrate",
+      "tech": "Dichiarazione",
+      "description": "Il destinatario della dichiarazione: il sistema prepara i quadri, non li trasmette.",
+      "category": "external",
+      "status2": "unknown",
+      "target": "",
+      "func": "Il destinatario della dichiarazione: il sistema prepara i quadri, non li trasmette.",
+      "descSource": "curated"
+    }
+  ],
+  "edges": [
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "famiglia_utente",
+      "to": "haben",
+      "label": "consulta e registra",
+      "kind": "runtime"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "banca_broker",
+      "to": "haben",
+      "label": "estratti conto e prezzi",
+      "kind": "runtime"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "haben",
+      "to": "agenzia_entrate",
+      "label": "quadri della dichiarazione",
+      "kind": "runtime"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_account",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_advisor",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_allocation",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_allowance",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_backtest",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_benchmark",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_budget",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_capsule",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_cometa",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_contribution",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_diary",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_health",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_imports",
+      "label": "3×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_income",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_insight",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_instrument",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_kidgoal",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_market",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_milestone",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_notify",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_pac",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_pairing",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_portfoliohistory",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_position",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_profile",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_server",
+      "label": "4×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_session",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_store",
+      "label": "5×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_taxloss",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_vaultmanager",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_web",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_webauthnauth",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "cmd_haben",
+      "to": "internal_worker",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_advisor",
+      "to": "internal_account",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_advisor",
+      "to": "internal_allocation",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_advisor",
+      "to": "internal_bondladder",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_advisor",
+      "to": "internal_cedole",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_advisor",
+      "to": "internal_cometa",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_advisor",
+      "to": "internal_income",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_advisor",
+      "to": "internal_instrument",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_advisor",
+      "to": "internal_position",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_advisor",
+      "to": "internal_runway",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_advisor",
+      "to": "internal_taxloss",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_allocation",
+      "to": "internal_account",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_allocation",
+      "to": "internal_instrument",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_allocation",
+      "to": "internal_position",
+      "label": "3×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_bondladder",
+      "to": "internal_instrument",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_bondladder",
+      "to": "internal_position",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_budget",
+      "to": "internal_datematch",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_capsule",
+      "to": "internal_profile",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_cedole",
+      "to": "internal_instrument",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_cedole",
+      "to": "internal_position",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_consolidation",
+      "to": "internal_datematch",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_decision",
+      "to": "internal_account",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_decision",
+      "to": "internal_allocation",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_decision",
+      "to": "internal_bondladder",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_decision",
+      "to": "internal_cedole",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_decision",
+      "to": "internal_cometa",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_decision",
+      "to": "internal_contribution",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_decision",
+      "to": "internal_instrument",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_decision",
+      "to": "internal_milestone",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_decision",
+      "to": "internal_pac",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_decision",
+      "to": "internal_position",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_decision",
+      "to": "internal_runway",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_decision",
+      "to": "internal_taxloss",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_diary",
+      "to": "internal_market",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_export",
+      "to": "internal_account",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_export",
+      "to": "internal_budget",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_export",
+      "to": "internal_instrument",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_export",
+      "to": "internal_position",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_familygraph",
+      "to": "internal_budget",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_familygraph",
+      "to": "internal_consolidation",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_fisco",
+      "to": "internal_cedole",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_fisco",
+      "to": "internal_instrument",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_fisco",
+      "to": "internal_taxloss",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_frontier",
+      "to": "internal_backtest",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_imports",
+      "to": "internal_instrument",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_insight",
+      "to": "internal_budget",
+      "label": "5×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_kidgoal",
+      "to": "internal_contribution",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_kidgoal",
+      "to": "internal_milestone",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_pac",
+      "to": "internal_allocation",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_pac",
+      "to": "internal_position",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_account",
+      "label": "15×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_advisor",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_allocation",
+      "label": "4×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_allowance",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_backtest",
+      "label": "4×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_benchmark",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_bondladder",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_budget",
+      "label": "20×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_capsule",
+      "label": "3×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_cedole",
+      "label": "3×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_challenge",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_cometa",
+      "label": "3×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_contribution",
+      "label": "6×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_decision",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_diary",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_export",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_frontier",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_health",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_imports",
+      "label": "10×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_income",
+      "label": "6×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_insight",
+      "label": "5×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_instrument",
+      "label": "15×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_kidgoal",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_milestone",
+      "label": "3×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_notify",
+      "label": "3×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_pac",
+      "label": "4×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_pairing",
+      "label": "5×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_portfoliohistory",
+      "label": "4×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_position",
+      "label": "13×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_profile",
+      "label": "14×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_runway",
+      "label": "4×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_session",
+      "label": "7×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_spine",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_store",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_taxanalysis",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_taxloss",
+      "label": "4×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_taxreport",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_vault",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_vaultmanager",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_webauthnauth",
+      "label": "4×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_server",
+      "to": "internal_worker",
+      "label": "4×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_session",
+      "to": "internal_pairing",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_spine",
+      "to": "internal_bondladder",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_spine",
+      "to": "internal_cedole",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_spine",
+      "to": "internal_income",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_spine",
+      "to": "internal_milestone",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_spine",
+      "to": "internal_pac",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_spine",
+      "to": "internal_runway",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_account",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_advisor",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_allocation",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_allowance",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_benchmark",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_budget",
+      "label": "9×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_capsule",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_challenge",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_cometa",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_contribution",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_diary",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_fisco",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_imports",
+      "label": "4×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_income",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_insight",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_instrument",
+      "label": "3×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_kidgoal",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_market",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_milestone",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_pac",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_pairing",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_portfoliohistory",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_position",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_profile",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_session",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_taxloss",
+      "label": "3×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "internal_webauthnauth",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_store",
+      "to": "migrations",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_taxanalysis",
+      "to": "internal_fisco",
+      "label": "3×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_taxanalysis",
+      "to": "internal_instrument",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_taxanalysis",
+      "to": "internal_position",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_taxanalysis",
+      "to": "internal_taxloss",
+      "label": "3×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_taxreport",
+      "to": "internal_cedole",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_taxreport",
+      "to": "internal_instrument",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_taxreport",
+      "to": "internal_position",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_taxreport",
+      "to": "internal_taxloss",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_testsupport",
+      "to": "internal_store",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_vaultmanager",
+      "to": "internal_store",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_vaultmanager",
+      "to": "internal_vault",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_webauthnauth",
+      "to": "internal_pairing",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_account",
+      "label": "3×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_allocation",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_allowance",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_budget",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_contribution",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_decision",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_imports",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_insight",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_instrument",
+      "label": "3×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_kidgoal",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_market",
+      "label": "6×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_milestone",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_notify",
+      "label": "7×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_portfoliohistory",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_position",
+      "label": "2×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_profile",
+      "label": "7×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "internal_worker",
+      "to": "internal_store",
+      "label": "5×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "scripts",
+      "to": "internal_session",
+      "label": "1×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "scripts",
+      "to": "internal_store",
+      "label": "1×",
+      "kind": "import"
+    }
+  ]
+}

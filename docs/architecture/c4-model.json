@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.5.0",
-  "generatedAt": "2026-07-26T17:46:56.189Z",
+  "generatedAt": "2026-07-26T18:51:07.576Z",
   "source": {
     "repo": "forma",
-    "commit": "b7993b0c86db50913db59d60e6873c3f9b52ef8d",
+    "commit": "b756a5b89bcb1c59e2a4e19a0e7901ddc584696d",
     "branch": "main",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.5.0",
@@ -730,8 +730,8 @@
     {
       "status": "current",
       "estatus": "active",
-      "from": "scripts",
-      "to": "cli",
+      "from": "lib",
+      "to": "scripts",
       "label": "1×",
       "kind": "import"
     },
@@ -739,7 +739,7 @@
       "status": "current",
       "estatus": "active",
       "from": "scripts",
-      "to": "lib",
+      "to": "cli",
       "label": "1×",
       "kind": "import"
     },
@@ -757,6 +757,14 @@
       "from": "test",
       "to": "lib",
       "label": "6×",
+      "kind": "import"
+    },
+    {
+      "status": "current",
+      "estatus": "active",
+      "from": "test",
+      "to": "scripts",
+      "label": "1×",
       "kind": "import"
     }
   ]
