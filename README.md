@@ -74,7 +74,8 @@ The overlay is the authority: every field it sets wins over anything derived, an
 | `openai` | Same, with `OPENAI_API_KEY`. | REST |
 | `ollama` | Sensitive repos: a local model, nothing leaves the machine. | localhost |
 
-`--enricher` has **no default**: `forma gen --enrich` on its own fails loud and lists the four. A
+`--enricher` has **no default**: `forma gen --enrich` on its own fails loud and lists what it
+accepts — the four above, plus `echo`, an offline stub the test suite uses and you should not. A
 default provider is a silent choice about your network and your API keys — and the old default
 (`anthropic`) meant that anyone without `ANTHROPIC_API_KEY` exported got a skip line, exit 0 and the
 same empty boxes they ran `--enrich` to fill.
