@@ -1,5 +1,9 @@
 # Forma
 
+[![npm version](https://img.shields.io/npm/v/forma-arch?label=npm)](https://www.npmjs.com/package/forma-arch)
+[![npm downloads](https://img.shields.io/npm/dm/forma-arch)](https://www.npmjs.com/package/forma-arch)
+[![license](https://img.shields.io/npm/l/forma-arch)](https://www.npmjs.com/package/forma-arch)
+
 **Present your architecture instead of slides.** Forma turns any codebase into an interactive,
 stack-agnostic C4 explorer — big-picture → drill-down to the leaf — generated *from the code* and
 kept true to it by a deterministic drift check. No more slide decks that lie the day after you draw
