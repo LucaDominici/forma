@@ -763,11 +763,16 @@ function edgePath(a,b){
 }
 function levelName(l){return (STR.lvlNames&&STR.lvlNames[l])||l||"—";}
 function cssv(v){try{return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||"#2b6e8a";}catch(e){return "#2b6e8a";}}
+function detailState(n,timeline){
+ // Function prose says what a box is. It is not also a checkpoint state: unchanged timeline nodes
+ // without curated `current` used to repeat the same sentence under both labels.
+ return timeline?(n.current||""):(n.current||n.func||n.description||"");
+}
 
 function showDetail(n){
  if(n&&n.__catalog)return showRoster(n);
- var src=srcOf(n),cur=n.current||n.func||n.description||"",showSrc=src&&String(cur).indexOf(src)<0;
- var timeline=!!(BASE&&BASE.timeline),change=timeline?nodeChange(n.id):null;
+ var timeline=!!(BASE&&BASE.timeline),src=srcOf(n),cur=detailState(n,timeline),showSrc=src&&String(cur).indexOf(src)<0;
+ var change=timeline?nodeChange(n.id):null;
  $("detail").innerHTML='<span class="cl" id="dc">'+esc(STR.detClose)+'</span><h3>'+esc(n.name)+' <span class="cat">· '+esc(n.category||n.kind||"")+(n.tech?" · "+esc(n.tech):"")+'</span></h3>'
   +(n.func?'<div class="row"><span class="lbl">'+esc(STR.detFunc)+'</span><span class="func">'+esc(n.func)+'</span></div>':'')
   +(cur&&(timeline||cur!==n.func)?'<div class="row"><span class="lbl">'+esc(timeline?STR.detCheckpoint:STR.detNow)+'</span><span class="now">'+esc(cur)+'</span></div>':'')
