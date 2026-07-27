@@ -163,6 +163,41 @@
       "label": "dispatches",
       "kind": "import",
       "estatus": "active"
+    },
+    {
+      "from": "scripts",
+      "to": "cli",
+      "label": "lints",
+      "kind": "import",
+      "estatus": "active"
+    },
+    {
+      "from": "scripts",
+      "to": "lib",
+      "label": "lints",
+      "kind": "import",
+      "estatus": "active"
+    },
+    {
+      "from": "test",
+      "to": "cli",
+      "label": "drives",
+      "kind": "import",
+      "estatus": "active"
+    },
+    {
+      "from": "test",
+      "to": "lib",
+      "label": "imports",
+      "kind": "import",
+      "estatus": "active"
+    },
+    {
+      "from": "test",
+      "to": "scripts",
+      "label": "drives",
+      "kind": "import",
+      "estatus": "active"
     }
   ],
   "descriptions": {},

@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-07-28
+
+### Changed
+- **Derived container edges now read as a relationship, not a count.** `forma gen` labels a
+  derived edge with the kind of code reference it found — `imports`, `drives`, `reads`, or
+  `references` — instead of a bare `N×`. The reference count moves to a new optional `weight`
+  field, which the viewer sums when rolling edges up, so no information is lost: a grouped arrow
+  still reads `4×`. An executive reads the verb; an engineer still has the count. Curated edges
+  in the topology always win, unchanged. Affects both the name-reference path (`lib/gen.mjs`)
+  and the Go import-block path (`lib/lang.mjs`).
+- **Derived edges are now `inferred`, not `active`.** Name-reference derivation is a heuristic
+  (undirected in principle), so stamping it `active` overstated it. The viewer draws `inferred`
+  edges with a softer dotted style, distinct from curated `active` flow and `to-build` dashed.
+  The legend names all three. Curated edges stay `active`.
+
+### Added
+- **`weight`** (optional integer) on edges in `c4-model.schema.json`; **`inferred`** added to the
+  `estatus` enum. Both are additive — existing models render unchanged.
+
 ## [0.11.3] - 2026-07-27
 
 ### Fixed

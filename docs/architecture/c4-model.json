@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-07-27T18:25:08.084Z",
+  "generatedAt": "2026-07-27T23:35:13.063Z",
   "source": {
     "repo": "forma",
-    "commit": "c256967b877ec12a8ff620148be67076aae04e52",
-    "branch": "agent/refine-timeline-summary",
+    "commit": "d9a0694a0abba2d1624cdd7ef8f389cd234b8cfe",
+    "branch": "main",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -730,17 +730,17 @@
     {
       "status": "current",
       "estatus": "active",
-      "from": "lib",
-      "to": "scripts",
-      "label": "1×",
+      "from": "scripts",
+      "to": "cli",
+      "label": "lints",
       "kind": "import"
     },
     {
       "status": "current",
       "estatus": "active",
       "from": "scripts",
-      "to": "cli",
-      "label": "1×",
+      "to": "lib",
+      "label": "lints",
       "kind": "import"
     },
     {
@@ -748,7 +748,7 @@
       "estatus": "active",
       "from": "test",
       "to": "cli",
-      "label": "1×",
+      "label": "drives",
       "kind": "import"
     },
     {
@@ -756,7 +756,7 @@
       "estatus": "active",
       "from": "test",
       "to": "lib",
-      "label": "6×",
+      "label": "imports",
       "kind": "import"
     },
     {
@@ -764,7 +764,7 @@
       "estatus": "active",
       "from": "test",
       "to": "scripts",
-      "label": "1×",
+      "label": "drives",
       "kind": "import"
     }
   ]

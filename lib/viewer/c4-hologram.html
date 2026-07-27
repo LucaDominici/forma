@@ -90,6 +90,7 @@ svg{width:100%;height:100%;display:block}
 .mode-t .nd .tt,.mode-t .nd .pp{fill:var(--next)!important}
 .edge{stroke:var(--edge);stroke-width:1.3;fill:none;marker-end:url(#ar);cursor:help}
 .edge.flow{stroke-dasharray:5 7;animation:dash 1.1s linear infinite}
+.edge.inferred{stroke-dasharray:1 3;opacity:.5}
 .edge.plan{stroke:var(--edgeplan);stroke-dasharray:3 6;opacity:.6;marker-end:url(#arp)}
 .edge.hot{stroke:var(--cyan);stroke-width:2.6;opacity:1}
 .edge.delta{stroke:var(--cyan);stroke-width:2.5;opacity:1;filter:drop-shadow(0 0 4px rgba(62,231,255,.7))}
@@ -224,7 +225,7 @@ var STRINGS={
   legUnk:"UNKNOWN (no curated state)", stUnk:"?",
   detDecl:"Declared in", detCover:"Coverage", detRoll:"Rolled up from", rollPart:"mean of the {n} of {t} parts inside that anyone ruled on", coverWhole:"the document names this module itself",
   coverPart:"{n} of {t} units named by the document",
-  legHint:"— animated arrow = active flow · dashed = to build", legCheckpoint:"CHANGE IN THIS CHECKPOINT",
+  legHint:"— animated arrow = active flow · dotted = inferred · dashed = to build", legCheckpoint:"CHANGE IN THIS CHECKPOINT",
   timelineLabel:"Architecture checkpoints", asIs:"AS-IS", asIsBadge:"verified code", cumulativeHint:"the graph is always cumulative", noArchChanges:"no architecture changes",
   deltaAdd:"ADD", deltaUpdate:"UPDATE", deltaRewire:"REWIRE", deltaRemove:"REMOVE",
   crumbRoot:"Context", crumbLevel:"C4", lvlContext:"CONTEXT",
@@ -248,7 +249,7 @@ var STRINGS={
   legUnk:"IGNOTO (stato non curato)", stUnk:"?",
   detDecl:"Dichiarato in", detCover:"Copertura", detRoll:"Somma dal basso", rollPart:"media delle {n} parti su {t} qui dentro su cui qualcuno si e pronunciato", coverWhole:"il documento nomina il modulo stesso",
   coverPart:"{n} unità su {t} nominate dal documento",
-  legHint:"— freccia animata = flusso attivo · tratteggio = da costruire", legCheckpoint:"CAMBIO IN QUESTO CHECKPOINT",
+  legHint:"— freccia animata = flusso attivo · puntini = derivato · tratteggio = da costruire", legCheckpoint:"CAMBIO IN QUESTO CHECKPOINT",
   timelineLabel:"Checkpoint architetturali", asIs:"AS-IS", asIsBadge:"codice verificato", cumulativeHint:"il grafo è sempre cumulativo", noArchChanges:"nessun cambio architetturale",
   deltaAdd:"ADD", deltaUpdate:"UPDATE", deltaRewire:"REWIRE", deltaRemove:"REMOVE",
   crumbRoot:"Contesto", crumbLevel:"C4", lvlContext:"CONTESTO",
@@ -608,7 +609,7 @@ function draw(animate){
   +'<defs><marker id="ar" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edge")+'"/></marker>'
   +'<marker id="arp" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edgeplan")+'"/></marker></defs>';
  for(j=0;j<geo.length;j++){
-  var e=geo[j].g,ed=geo[j].e,cl=(ed.estatus==="to-build"?"plan":"flow");
+  var e=geo[j].g,ed=geo[j].e,cl=(ed.estatus==="to-build"?"plan":ed.estatus==="inferred"?"inferred":"flow");
   s+='<path class="edge '+cl+(ed.delta?" delta":"")+'" data-e="'+geo[j].i+'" d="'+e.d+'"/>';
   s+='<path class="edgehit" data-e="'+geo[j].i+'" data-label="'+esc(ed.label||"")+'" d="'+e.d+'"/>';
   if(showLbl&&ed.label){var lb=String(ed.label);if(lb.length>28)lb=lb.slice(0,27)+"…";
@@ -740,7 +741,7 @@ function rollEdges(edges,vis,parent){
   f=null;cur=e.from;guard=0;while(cur!=null&&guard++<64){if(vis[cur]){f=vis[cur];break;}cur=parent[cur];}
   t=null;cur=e.to;guard=0;while(cur!=null&&guard++<64){if(vis[cur]){t=vis[cur];break;}cur=parent[cur];}
   if(!f||!t||f===t)continue;
-  c=parseInt(String(e.label),10);if(!(c>0))c=1;
+  c=(e.weight>0)?e.weight:parseInt(String(e.label),10);if(!(c>0))c=1;
   k=f+"|"+t;
   if(ix[k]==null){ix[k]=out.length;out.push({from:f,to:t,label:e.label,estatus:e.estatus,n:c,delta:typeof edgeChange==="function"?edgeChange(e):null});}
   else{g=out[ix[k]];g.n+=c;g.label=g.n+"×";if(e.estatus!=="to-build")g.estatus=e.estatus;if(!g.delta&&typeof edgeChange==="function")g.delta=edgeChange(e);}

@@ -77,10 +77,11 @@ C4Container
   Container(scripts, "scripts", "JavaScript")
   Container(test, "test", "JavaScript")
   Rel(cli, lib, "dispatches")
-  Rel(scripts, cli, "1×")
-  Rel(scripts, lib, "1×")
-  Rel(test, cli, "1×")
-  Rel(test, lib, "4×")
+  Rel(scripts, cli, "lints")
+  Rel(scripts, lib, "lints")
+  Rel(test, cli, "drives")
+  Rel(test, lib, "imports")
+  Rel(test, scripts, "drives")
 ```
 
 - **cli** (`bin/forma.mjs`) — thin dispatcher; parses the command and delegates to `lib/`.
