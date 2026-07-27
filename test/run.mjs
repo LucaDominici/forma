@@ -5,7 +5,7 @@ import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, st
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { validateModel } from '../lib/validate.mjs'
+import { materializeTimeline, validateModel } from '../lib/validate.mjs'
 import { indexByNode, statusFor } from '../lib/docmap.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -983,6 +983,147 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok schema — a conforming model passes; a missing required field and an out-of-enum kind are both rejected by name')
 }
 
+// 12) Optional architecture timeline: AS-IS stays generated from code; checkpoints are compact,
+// typed patches applied cumulatively. Board prose may label a checkpoint but can never become an
+// architecture mutation by implication.
+{
+  const repo = join(tmp, 'timeline-repo')
+  cpSync(FIX('mini'), repo, { recursive: true })
+  mkdirSync(join(repo, 'docs'), { recursive: true })
+  writeFileSync(join(repo, 'docs', 'roadmap.md'), '# Governed future architecture\n')
+  const topo = join(tmp, 'timeline-topo.json'), model = join(tmp, 'timeline-model.json')
+  let r = run(['init', '--repo', repo, '--out', topo, '--force']); if (r.status !== 0) die('timeline init exit ' + r.status, r)
+  const t = readJson(topo)
+  const system = t.nodes.find((n) => n.kind === 'system')
+  if (!system) die('timeline precondition: init produced no system')
+  t.timeline = {
+    source: 'docs/roadmap.md',
+    checkpoints: [
+      { id: 'g0', label: 'G0 · readiness', badge: '35 item · 2 P0' },
+      {
+        id: 'g1', label: 'G1 · new surface', badge: '9 item · 1 P0',
+        patch: {
+          nodes: {
+            add: [
+              { node: { id: 'future_api', level: 'container', parent: system.id, kind: 'container', name: 'Future API', status: 'planned', status2: 'planned', func: 'A governed future surface.' }, change: 'Add the future API.' },
+              { node: { id: 'future_legacy', level: 'leaf', parent: 'future_api', kind: 'leaf', name: 'Temporary adapter', status: 'planned', status2: 'planned', func: 'A transition-only adapter.' }, change: 'Add the transition adapter.' },
+            ],
+            update: [{ id: 'core', set: { current: 'Core also serves the future API.' }, change: 'Extend the core responsibility.' }],
+          },
+          edges: {
+            add: [{ edge: { from: 'core', to: 'future_api', label: 'serves', kind: 'runtime', status: 'planned', estatus: 'to-build' }, change: 'Connect core to the future API.' }],
+          },
+        },
+      },
+      {
+        id: 'g2', label: 'G2 · direct utility',
+        patch: {
+          nodes: {
+            update: [{ id: 'future_api', set: { status2: 'next', current: 'Future API reads utility directly.' }, change: 'Promote the surface to the next checkpoint.' }],
+            remove: [{ id: 'future_legacy', change: 'Remove the transition adapter.' }],
+          },
+          edges: {
+            rewire: [{ match: { from: 'core', to: 'future_api', label: 'serves' }, set: { from: 'util', label: 'serves directly' }, change: 'Route the surface through utility.' }],
+          },
+        },
+      },
+    ],
+  }
+  writeFileSync(topo, JSON.stringify(t, null, 2) + '\n')
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('timeline gen exit ' + r.status, r)
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo]); if (r.status !== 0) die('timeline check exit ' + r.status, r)
+  const base = readJson(model)
+  if (base.schemaVersion !== '1.6.0') die('timeline: schema version is ' + base.schemaVersion)
+  if (base.nodes.some((n) => n.id === 'future_api')) die('timeline: future node leaked into the AS-IS baseline')
+  const built = materializeTimeline(base, { sourceExists: (rel) => existsSync(join(repo, rel)) })
+  if (built.errors.length) die('timeline materializer rejected valid fixture:\n - ' + built.errors.join('\n - '))
+  if (built.states.length !== 3) die('timeline: expected 3 checkpoints, got ' + built.states.length)
+  const g0 = built.states[0], g1 = built.states[1], g2 = built.states[2]
+  if (JSON.stringify(g0.model.nodes) !== JSON.stringify(base.nodes) || JSON.stringify(g0.model.edges) !== JSON.stringify(base.edges)) {
+    die('timeline honesty: a display-only board badge generated architecture operations')
+  }
+  if (!g1.model.nodes.some((n) => n.id === 'future_api') || !g1.model.nodes.some((n) => n.id === 'future_legacy')) die('timeline G1: additions missing')
+  if (!g1.model.nodes.find((n) => n.id === 'core').current.includes('future API')) die('timeline G1: baseline update missing')
+  if (!g2.model.nodes.some((n) => n.id === 'future_api') || g2.model.nodes.some((n) => n.id === 'future_legacy')) die('timeline G2: cumulative add/remove wrong')
+  if (!g2.model.nodes.find((n) => n.id === 'core').current.includes('future API')) die('timeline G2: G1 update did not survive cumulatively')
+  if (!g2.model.edges.some((e) => e.from === 'util' && e.to === 'future_api' && e.label === 'serves directly')) die('timeline G2: rewire missing')
+  if (g2.model.edges.some((e) => e.from === 'core' && e.to === 'future_api' && e.label === 'serves')) die('timeline G2: pre-rewire edge survived')
+  if (g2.delta.nodes.length !== 1 || g2.delta.nodes[0].id !== 'future_api' || g2.delta.edges.length !== 1 || g2.delta.edges[0].type !== 'REWIRE') {
+    die('timeline G2: local delta includes changes from earlier checkpoints: ' + JSON.stringify(g2.delta))
+  }
+  if (g2.delta.removedNodes.length !== 1 || g2.delta.removedNodes[0].id !== 'future_legacy') die('timeline G2: removal not reported in local summary')
+
+  // The ES5 viewer owns a deliberately small mirror of the validated materializer. Drive the same
+  // fixture through it so the browser cannot silently diverge from gen/check.
+  const html = readFileSync(join(HERE, '..', 'lib', 'viewer', 'c4-hologram.html'), 'utf-8')
+  const tlBlock = (html.match(/function jsonCopy\([\s\S]*?(?=\nvar BASE=)/) || [])[0]
+  if (!tlBlock) die('timeline viewer: pure materializer block not found')
+  const viewerStates = new Function(tlBlock + '\nreturn timelineStates')()(base)
+  const vg2 = viewerStates.states[2]
+  if (!vg2 || JSON.stringify(vg2.model.nodes) !== JSON.stringify(g2.model.nodes) || JSON.stringify(vg2.model.edges) !== JSON.stringify(g2.model.edges)) {
+    die('timeline viewer: cumulative graph differs from the engine materializer')
+  }
+  if (!/id="legacytime"/.test(html) || !/id="timeline"/.test(html) || !/BASE&&BASE\.timeline/.test(html)) {
+    die('timeline viewer: legacy/timeline mutual-exclusion wiring missing')
+  }
+  if (/BASE&&BASE\.timeline&&BASE\.timeline\.source\)\|\|/.test(html) ||
+      !/nodeProjected\(n\.id\)&&BASE&&BASE\.timeline/.test(html) ||
+      !/function nodeProjected\(id\)/.test(html) ||
+      !/preserveLegacyMode&&\(!BASE\|\|!BASE\.timeline\)&&mode==="target"/.test(html)) {
+    die('timeline viewer: checkpoint provenance leaked onto unchanged nodes or legacy RE-VERIFY lost TARGET mode')
+  }
+  if (!/id="checkpoint-changes"/.test(html) ||
+      !/d\.removedEdges\.length/.test(html) ||
+      !/d\.removedNodes\.length/.test(html) ||
+      !/if\(err\)st2\.appendChild\(err\)/.test(html) ||
+      !/BASE=candidate;M=jsonCopy\(candidate\)/.test(html)) {
+    die('timeline viewer: operation prose is incomplete or RE-VERIFY does not preserve its live error overlay/atomic model swap')
+  }
+
+  const structurallyBad = JSON.parse(JSON.stringify(base))
+  structurallyBad.timeline.checkpoints[1].patch.nodes.add[0].node = {}
+  structurallyBad.timeline.checkpoints[1].patch.nodes.update[0].set = { parent: 'nonsense' }
+  structurallyBad.timeline.checkpoints[1].patch.edges.add[0].edge = {}
+  structurallyBad.timeline.checkpoints[2].patch.edges.rewire[0].set = { label: 'not a rewire' }
+  const structuralErrors = validateModel(structurallyBad)
+  if (!structuralErrors.some((e) => /missing required property "id"/.test(e)) ||
+      !structuralErrors.some((e) => /unexpected property "parent"/.test(e)) ||
+      !structuralErrors.some((e) => /missing required property "from"/.test(e)) ||
+      !structuralErrors.some((e) => /does not satisfy any allowed schema shape/.test(e))) {
+    die('timeline schema: typed node/edge add and update/rewire set shapes are not structurally governed:\n - ' + structuralErrors.join('\n - '))
+  }
+
+  // Bad projections are rejected BEFORE the output is touched.
+  const invalid = [
+    ['duplicate checkpoint', (x) => { x.timeline.checkpoints[2].id = 'g1' }],
+    ['missing source', (x) => { x.timeline.source = 'docs/no-such-roadmap.md' }],
+    ['unknown update', (x) => { x.timeline.checkpoints[1].patch.nodes.update[0].id = 'ghost' }],
+    ['orphan add', (x) => { x.timeline.checkpoints[1].patch.nodes.add[0].node.parent = 'ghost' }],
+    ['forbidden target', (x) => { x.timeline.checkpoints[1].patch.nodes.add[0].node.target = 'a second target' }],
+    ['live child on remove', (x) => { x.timeline.checkpoints[2].patch.nodes.remove = [{ id: 'future_api', change: 'unsafe parent removal' }] }],
+    ['ambiguous rewire', (x) => {
+      x.timeline.checkpoints[1].patch.edges.add.push({ edge: { from: 'core', to: 'future_api', label: 'second route', kind: 'runtime' }, change: 'Second route.' })
+      delete x.timeline.checkpoints[2].patch.edges.rewire[0].match.label
+    }],
+  ]
+  for (let i = 0; i < invalid.length; i++) {
+    const badTopo = join(tmp, `timeline-bad-${i}.json`), badModel = join(tmp, `timeline-bad-${i}-model.json`)
+    const bad = JSON.parse(JSON.stringify(t)); invalid[i][1](bad)
+    writeFileSync(badTopo, JSON.stringify(bad, null, 2) + '\n')
+    writeFileSync(badModel, 'KEEP\n')
+    r = run(['gen', '--repo', repo, '--topology', badTopo, '--out', badModel])
+    if (r.status === 0) die('timeline invalid accepted: ' + invalid[i][0])
+    if (readFileSync(badModel, 'utf-8') !== 'KEEP\n') die('timeline invalid overwrote output before rejection: ' + invalid[i][0])
+  }
+
+  const tampered = readJson(model)
+  tampered.timeline.checkpoints[0].badge = 'invented after generation'
+  writeFileSync(model, JSON.stringify(tampered, null, 2) + '\n')
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo])
+  if (r.status === 0 || !/TIMELINE DRIFT/.test((r.stdout || '') + (r.stderr || ''))) die('timeline: check accepted a model-only timeline edit', r)
+  console.log('  ok timeline — legacy baseline + 3 cumulative checkpoints; local delta; board badge inert; invalid patches fail before write')
+}
+
 // 16) docmap: the documentary source of the chain (§17-1) and the only deterministic producer of
 // programme state (§17-2). The fixture is shaped so that every rule has to hold at once — a
 // container the matrix describes, one it merely touches, one it never names, and a leaf whose own
@@ -1257,4 +1398,4 @@ const diffPaths = (a, b, at = '') => {
   }
 }
 
-console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, docmap, declaration, presentable all green.')
+console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable all green.')

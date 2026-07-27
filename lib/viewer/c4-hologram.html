@@ -21,6 +21,7 @@ h1{font-size:16px;letter-spacing:.16em;color:var(--cyan);text-shadow:0 0 14px rg
 .sub{font-size:10.5px;color:var(--sec);margin-top:3px}
 .top{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:8px}
 .ctrls{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#legacytime{display:inline-flex;gap:8px}
 button,select{font:inherit;font-size:10.5px;letter-spacing:.09em;cursor:pointer;border-radius:6px;padding:6px 12px;
  background:transparent;border:1px solid var(--border);color:var(--sec)}
 button:hover,select:hover{background:rgba(62,231,255,.10);color:var(--cyan)}
@@ -28,6 +29,21 @@ button.on{background:rgba(62,231,255,.18);color:var(--cyan);border-color:var(--c
 #back{border-color:var(--cyan);color:var(--cyan)}
 #back[disabled]{opacity:.28;cursor:default;border-color:var(--border);color:var(--ter)}
 select#skin option{background:#08202e;color:var(--nm)}
+#timeline{display:none;margin:10px 0 8px;padding:9px 10px 7px;border:1px solid var(--stageborder);border-radius:9px;background:var(--stagebg)}
+#timeline-track{display:flex;align-items:flex-start;position:relative;overflow-x:auto;padding-bottom:2px}
+#timeline-track:before{content:"";position:absolute;left:28px;right:28px;top:7px;height:1px;background:var(--border)}
+.cpstep{position:relative;z-index:1;flex:1 0 118px;min-width:118px;border:0;padding:0 5px;background:transparent;text-align:center;color:var(--ter);font-size:9px;letter-spacing:.06em}
+.cpstep:hover{background:transparent;color:var(--nm)}
+.cpstep .dot{display:block;width:15px;height:15px;margin:0 auto 5px;border:2px solid var(--border);background:var(--bg);border-radius:50%}
+.cpstep .cpbadge{display:block;margin-top:2px;color:var(--ter2);font-size:8px;letter-spacing:.02em;white-space:normal}
+.cpstep.real .dot{border-color:var(--done);background:var(--done)}
+.cpstep.active{color:var(--cyan)}
+.cpstep.active .dot{border-color:var(--cyan);background:var(--bg);box-shadow:0 0 10px rgba(62,231,255,.8)}
+#checkpoint-summary{text-align:right;color:var(--ter2);font-size:8.5px;letter-spacing:.08em;margin-top:5px;min-height:11px}
+#checkpoint-summary b{color:var(--cyan);font-weight:600}
+#checkpoint-changes{display:grid;gap:3px;margin-top:7px;max-height:92px;overflow:auto}
+.cpchange{color:var(--text);font-size:9px;line-height:1.35;padding-left:8px;border-left:2px solid var(--cyan)}
+.cpchange b{color:var(--cyan);font-weight:600;letter-spacing:.08em}.cpchange span{color:var(--ter2)}
 #crumb{font-size:11px;color:var(--sec);margin:8px 0}
 #crumb .agg{float:right;color:var(--ter2);letter-spacing:.05em}
 #crumb .agg i{display:inline-block;width:7px;height:7px;border-radius:50%;margin:0 3px 0 8px;vertical-align:baseline}
@@ -71,12 +87,15 @@ svg{width:100%;height:100%;display:block}
    right there. Not-ruled is now a plain grey outline: no dash (planned), no glow (done). */
 .s-unk rect{stroke:var(--unk)}
 .s-unk .tt,.s-unk .pp{fill:var(--unk)}
+.nd.delta rect{stroke:var(--cyan)!important;stroke-width:2.3!important;filter:drop-shadow(0 0 12px rgba(62,231,255,.72))!important}
+.nd.delta .tt{fill:var(--cyan)!important}
 .mode-t .nd rect{stroke:var(--next)!important;stroke-dasharray:none!important;filter:drop-shadow(0 0 8px rgba(62,231,255,.5))!important}
 .mode-t .nd .tt,.mode-t .nd .pp{fill:var(--next)!important}
 .edge{stroke:var(--edge);stroke-width:1.3;fill:none;marker-end:url(#ar);cursor:help}
 .edge.flow{stroke-dasharray:5 7;animation:dash 1.1s linear infinite}
 .edge.plan{stroke:var(--edgeplan);stroke-dasharray:3 6;opacity:.6;marker-end:url(#arp)}
 .edge.hot{stroke:var(--cyan);stroke-width:2.6;opacity:1}
+.edge.delta{stroke:var(--cyan);stroke-width:2.5;opacity:1;filter:drop-shadow(0 0 4px rgba(62,231,255,.7))}
 /* A level past the label threshold is a hairball, and no layout saves it: on a real Go repo 172 of
    189 arrows cross a box that is not one of their endpoints, and that stays 85-91% at EVERY grid
    shape tried. Only drawing less helps. They stop competing with the names — structure survives as
@@ -130,7 +149,7 @@ svg.dense .edge.hot{opacity:1;stroke-width:2.6}
 @media print{
  body{background:#fff}
  #wrap{background:none;padding:0}
- .ctrls,#legend,.sub,#etip,#pmenu{display:none!important}
+ .ctrls,#timeline,#legend,.sub,#etip,#pmenu{display:none!important}
  #stage{border:1px solid #999;height:auto;min-height:0}
  #stage svg{height:70vh}
 }
@@ -143,6 +162,7 @@ html[data-skin="blueprint"] h1{text-shadow:none}
 html[data-skin="blueprint"] .s-done rect,html[data-skin="blueprint"] .s-prog rect,html[data-skin="blueprint"] .s-next rect,html[data-skin="blueprint"] .s-prob rect{filter:none}
 html[data-skin="blueprint"] .nd.pulse rect{animation:none}
 html[data-skin="blueprint"] button.on{text-shadow:none}
+html[data-skin="blueprint"] .nd.delta rect,html[data-skin="blueprint"] .edge.delta{filter:none}
 </style>
 </head>
 <body>
@@ -152,8 +172,8 @@ html[data-skin="blueprint"] button.on{text-shadow:none}
    <div class="sub" id="subhelp"></div></div>
   <div class="ctrls">
    <button id="back" type="button" disabled></button>
-   <button id="bnow" class="on" type="button"></button>
-   <button id="btgt" type="button"></button>
+   <span id="legacytime"><button id="bnow" class="on" type="button"></button>
+   <button id="btgt" type="button"></button></span>
    <button id="brf" type="button"></button>
    <button id="blbl" type="button"></button>
    <button id="brl" type="button"></button>
@@ -169,6 +189,11 @@ html[data-skin="blueprint"] button.on{text-shadow:none}
    <select id="skin" title="skin"></select>
   </div>
  </div>
+ <nav id="timeline">
+ <div id="timeline-track"></div>
+ <div id="checkpoint-summary"></div>
+  <div id="checkpoint-changes"></div>
+ </nav>
  <div id="crumb"></div>
  <div id="stamp"></div>
  <div id="stage"><div id="etip"></div><div id="err" style="display:none"></div></div>
@@ -183,6 +208,7 @@ html[data-skin="blueprint"] button.on{text-shadow:none}
   <span><i style="background:#2d5a72"></i><span id="lg-plan"></span></span>
   <span><i style="background:#ff5d5d"></i><span id="lg-prob"></span></span>
   <span><i style="background:#7d8f99"></i><span id="lg-unk"></span></span>
+  <span id="lg-checkpoint-wrap" style="display:none"><i style="border:1.5px solid #3ee7ff"></i><span id="lg-checkpoint"></span></span>
   <span class="hint" id="lg-hint"></span>
  </div>
  <div id="detail"></div>
@@ -202,17 +228,19 @@ var STRINGS={
   legUnk:"UNKNOWN (no curated state)", stUnk:"?",
   detDecl:"Declared in", detCover:"Coverage", detRoll:"Rolled up from", rollPart:"mean of the {n} of {t} parts inside that anyone ruled on", coverWhole:"the document names this module itself",
   coverPart:"{n} of {t} units named by the document",
-  legHint:"— animated arrow = active flow · dashed = to build",
+  legHint:"— animated arrow = active flow · dashed = to build", legCheckpoint:"CHANGE IN THIS CHECKPOINT",
+  timelineLabel:"Architecture checkpoints", asIs:"AS-IS", asIsBadge:"verified code", cumulativeHint:"the graph is always cumulative",
+  deltaAdd:"ADD", deltaUpdate:"UPDATE", deltaRewire:"REWIRE", deltaRemove:"REMOVE",
   crumbRoot:"Context", crumbLevel:"C4", lvlContext:"CONTEXT",
   lvlNames:{context:"Context",container:"Container",component:"Components",leaf:"Leaves"},
-  detClose:"[x] close", detFunc:"What it does", detNow:"Current state (facts)",
+  detClose:"[x] close", detFunc:"What it does", detNow:"Current state (facts)", detCheckpoint:"At this checkpoint", detChange:"Change from previous",
   detTgt:"Target state (project)", detSrc:"Verification source", detIssue:"Issue",
   detTarget:"TARGET",
   rosterSearch:"filter…", rosterCount:"members", rosterEmpty:"no match", aggProgress:"progress",
-  stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology", staticSrc:"(static source)",
+  stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology", stampProjection:"projection:", staticSrc:"(static source)",
   errEmpty:"Model unreachable or empty.",
   errNotFound:"Model not found (./c4-model.json). Open via `forma serve` or inject window.__C4_MODEL__.",
-  errUnavail:"Model unavailable."
+  errUnavail:"Model unavailable.", errTimeline:"Invalid architecture timeline."
  },
  it:{
   subhelp:"click = spiega (ogni livello) · doppio-click o [+] = entra · trascina per spostare · hover su una freccia = etichetta · ESC/BACK",
@@ -224,17 +252,19 @@ var STRINGS={
   legUnk:"IGNOTO (stato non curato)", stUnk:"?",
   detDecl:"Dichiarato in", detCover:"Copertura", detRoll:"Somma dal basso", rollPart:"media delle {n} parti su {t} qui dentro su cui qualcuno si e pronunciato", coverWhole:"il documento nomina il modulo stesso",
   coverPart:"{n} unità su {t} nominate dal documento",
-  legHint:"— freccia animata = flusso attivo · tratteggio = da costruire",
+  legHint:"— freccia animata = flusso attivo · tratteggio = da costruire", legCheckpoint:"CAMBIO IN QUESTO CHECKPOINT",
+  timelineLabel:"Checkpoint architetturali", asIs:"AS-IS", asIsBadge:"codice verificato", cumulativeHint:"il grafo è sempre cumulativo",
+  deltaAdd:"ADD", deltaUpdate:"UPDATE", deltaRewire:"REWIRE", deltaRemove:"REMOVE",
   crumbRoot:"Contesto", crumbLevel:"C4", lvlContext:"CONTESTO",
   lvlNames:{context:"Contesto",container:"Container",component:"Componenti",leaf:"Foglie"},
-  detClose:"[x] chiudi", detFunc:"Cosa fa", detNow:"Stato attuale (fatti)",
+  detClose:"[x] chiudi", detFunc:"Cosa fa", detNow:"Stato attuale (fatti)", detCheckpoint:"A questo checkpoint", detChange:"Modifica dal precedente",
   detTgt:"Stato finito (progetto)", detSrc:"Fonte verifica", detIssue:"Issue",
   detTarget:"TARGET",
   rosterSearch:"filtra…", rosterCount:"elementi", rosterEmpty:"nessun risultato", aggProgress:"avanzamento",
-  stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology", staticSrc:"(fonte statica)",
+  stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology", stampProjection:"proiezione:", staticSrc:"(fonte statica)",
   errEmpty:"Modello non raggiungibile o vuoto.",
   errNotFound:"Modello non trovato (./c4-model.json). Apri via `forma serve` o inietta window.__C4_MODEL__.",
-  errUnavail:"Modello non disponibile."
+  errUnavail:"Modello non disponibile.", errTimeline:"Timeline architetturale non valida."
  }
 };
 var LANG="en", STR=STRINGS.en;
@@ -332,11 +362,57 @@ function tallyOf(kids,kidsOf){
  // subject to the same rule: it is emitted only when every judged box carries a number.
  return {cnt:cnt,tot:tot,ruled:nr,measured:nc,mean:(nc&&nc===nr)?Math.round(sum/nc):null};
 }
-var M=null, stack=[null], mode="now", POS={}, drag=null, justDragged=false, CATNODES={}, FETCHED=false
+function jsonCopy(v){return JSON.parse(JSON.stringify(v));}
+function timelineMatches(edges,match){
+ var out=[],i,e;for(i=0;i<edges.length;i++){e=edges[i];
+  if(e.from===match.from&&e.to===match.to&&(!match.hasOwnProperty("label")||(e.label||"")===match.label)&&(!match.hasOwnProperty("kind")||(e.kind||"")===match.kind))out.push(i);
+ }return out;
+}
+// The browser materializer mirrors lib/validate.mjs after generation has rejected every ambiguous
+// patch. It returns baseline+checkpoint states without storing a second graph in the model.
+function timelineStates(base){
+ var tl=base&&base.timeline;if(!tl)return {errors:[],states:[]};
+ var errors=[],states=[],current=jsonCopy(base),c,cp,p,n,e,i,j,found,target,before;
+ if(!tl.checkpoints||!tl.checkpoints.length)return {errors:["timeline.checkpoints"],states:[]};
+ for(c=0;c<tl.checkpoints.length;c++){
+  cp=tl.checkpoints[c];p=cp.patch||{};n=p.nodes||{};e=p.edges||{};
+  var d={nodes:[],edges:[],removedNodes:[],removedEdges:[],counts:{add:0,update:0,rewire:0,remove:0}};
+  var adds=n.add||[],updates=n.update||[],nrem=n.remove||[],erem=e.remove||[],rew=e.rewire||[],eadd=e.add||[];
+  for(i=0;i<adds.length;i++){current.nodes.push(jsonCopy(adds[i].node));d.nodes.push({id:adds[i].node.id,type:"ADD",change:adds[i].change});d.counts.add++;}
+  for(i=0;i<updates.length;i++){target=null;for(j=0;j<current.nodes.length;j++)if(current.nodes[j].id===updates[i].id){target=current.nodes[j];break;}
+   if(!target){errors.push(cp.id+":node:"+updates[i].id);continue;}for(var k in updates[i].set)if(updates[i].set.hasOwnProperty(k))target[k]=jsonCopy(updates[i].set[k]);
+   d.nodes.push({id:updates[i].id,type:"UPDATE",change:updates[i].change});d.counts.update++;}
+  for(i=0;i<erem.length;i++){found=timelineMatches(current.edges,erem[i].match);if(found.length!==1){errors.push(cp.id+":remove-edge");continue;}
+   target=current.edges.splice(found[0],1)[0];d.removedEdges.push({from:target.from,to:target.to,label:target.label,kind:target.kind,type:"REMOVE",change:erem[i].change});d.counts.remove++;}
+  for(i=0;i<rew.length;i++){found=timelineMatches(current.edges,rew[i].match);if(found.length!==1){errors.push(cp.id+":rewire-edge");continue;}
+   target=current.edges[found[0]];before=jsonCopy(target);for(k in rew[i].set)if(rew[i].set.hasOwnProperty(k))target[k]=jsonCopy(rew[i].set[k]);
+   d.edges.push({from:target.from,to:target.to,label:target.label,kind:target.kind,type:"REWIRE",change:rew[i].change,before:before});d.counts.rewire++;}
+  for(i=0;i<eadd.length;i++){current.edges.push(jsonCopy(eadd[i].edge));target=eadd[i].edge;
+   d.edges.push({from:target.from,to:target.to,label:target.label,kind:target.kind,type:"ADD",change:eadd[i].change});d.counts.add++;}
+  for(i=0;i<nrem.length;i++){target=null;for(j=0;j<current.nodes.length;j++)if(current.nodes[j].id===nrem[i].id){target=current.nodes[j];break;}
+   if(!target){errors.push(cp.id+":remove-node:"+nrem[i].id);continue;}current.nodes=current.nodes.filter(function(x){return x.id!==nrem[i].id;});
+   d.removedNodes.push({id:nrem[i].id,name:target.name,type:"REMOVE",change:nrem[i].change});d.counts.remove++;}
+  states.push({id:cp.id,label:cp.label,badge:cp.badge||"",model:jsonCopy(current),delta:d});
+ }
+ return {errors:errors,states:states};
+}
+var BASE=null,M=null,TSTATES=[],CPID="as-is",CPDELTA={nodes:[],edges:[],removedNodes:[],removedEdges:[],counts:{add:0,update:0,rewire:0,remove:0}}
+var stack=[null],mode="now",POS={},POSALL={},drag=null,justDragged=false,CATNODES={},FETCHED=false
 var VBOX={}; // last fitted viewBox per level — frozen while dragging so the canvas does not rescale
 function $(i){return document.getElementById(i)}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;")}
 function setSkin(s){var k=SKIN_IDS.indexOf(s)>-1?s:"holo";document.documentElement.dataset.skin=k;var el=$("skin");if(el)el.value=k;}
+function nodeChange(id){for(var i=0;i<CPDELTA.nodes.length;i++)if(CPDELTA.nodes[i].id===id)return CPDELTA.nodes[i];return null;}
+function nodeProjected(id){
+ var projected=false;
+ for(var i=0;i<TSTATES.length;i++){
+  var d=TSTATES[i].delta,j;
+  for(j=0;j<d.nodes.length;j++)if(d.nodes[j].id===id)projected=true;
+  for(j=0;j<d.removedNodes.length;j++)if(d.removedNodes[j].id===id)projected=false;
+  if(TSTATES[i].id===CPID)break;
+ }
+ return projected;
+}
 // Layout key = the id of the level's parent ("root" at the top). Stable and documentable: it is
 // exactly the key used by meta.layout hints and by the exported layout JSON.
 function keyOf(){return stack[stack.length-1]||"root";}
@@ -387,8 +463,52 @@ function makeCatalogNode(pid,g){
 function hasKids(id){for(var i=0;i<M.nodes.length;i++)if(M.nodes[i].parent===id)return true;return false;}
 function node(id){for(var i=0;i<M.nodes.length;i++)if(M.nodes[i].id===id)return M.nodes[i];return null;}
 function nameOf(id){var n=node(id);return n?n.name:id;}
-function srcOf(n){if(n.verify){if(typeof n.verify==="string")return n.verify;if(n.verify.source)return n.verify.source;if(n.verify.ref)return n.verify.ref;if(n.verify.issue)return "#"+n.verify.issue;}
- var ev=(n.evidence||[]).filter(function(e){return e.type==="doc"||e.type==="path";})[0];return ev?ev.ref:((M.meta&&M.meta.verifyMethod)||"");}
+function srcOf(n){if(CPID!=="as-is"&&nodeProjected(n.id)&&BASE&&BASE.timeline)return BASE.timeline.source;
+ if(n.verify){if(typeof n.verify==="string")return n.verify;if(n.verify.source)return n.verify.source;if(n.verify.ref)return n.verify.ref;if(n.verify.issue)return "#"+n.verify.issue;}
+ var ev=(n.evidence||[]).filter(function(e){return e.type==="doc"||e.type==="path";})[0];
+ return ev?ev.ref:((M.meta&&M.meta.verifyMethod)||"");}
+function edgeChange(e){
+ for(var i=0;i<CPDELTA.edges.length;i++){var d=CPDELTA.edges[i];
+  if(d.from===e.from&&d.to===e.to&&(d.label||"")===(e.label||"")&&(d.kind||"")===(e.kind||""))return d;
+ }return null;
+}
+function emptyDelta(){return {nodes:[],edges:[],removedNodes:[],removedEdges:[],counts:{add:0,update:0,rewire:0,remove:0}};}
+function renderTimeline(){
+ var nav=$("timeline"),legacy=$("legacytime"),legend=$("lg-checkpoint-wrap");
+ if(!BASE||!BASE.timeline){nav.style.display="none";legacy.style.display="inline-flex";legend.style.display="none";$("checkpoint-changes").innerHTML="";return;}
+ nav.style.display="block";legacy.style.display="none";legend.style.display="inline";
+ nav.setAttribute("aria-label",STR.timelineLabel);
+ var html='<button class="cpstep real'+(CPID==="as-is"?" active":"")+'" data-checkpoint="as-is" type="button"><span class="dot"></span>'+esc(STR.asIs)+'<span class="cpbadge">'+esc(STR.asIsBadge)+'</span></button>';
+ for(var i=0;i<TSTATES.length;i++){var s=TSTATES[i];html+='<button class="cpstep'+(CPID===s.id?" active":"")+'" data-checkpoint="'+esc(s.id)+'" type="button"><span class="dot"></span>'+esc(s.label)+(s.badge?'<span class="cpbadge">'+esc(s.badge)+'</span>':'')+'</button>';}
+ $("timeline-track").innerHTML=html;
+ var c=CPDELTA.counts,parts=[];
+ if(c.add)parts.push('<b>'+STR.deltaAdd+'</b> '+c.add);
+ if(c.update)parts.push('<b>'+STR.deltaUpdate+'</b> '+c.update);
+ if(c.rewire)parts.push('<b>'+STR.deltaRewire+'</b> '+c.rewire);
+ if(c.remove)parts.push('<b>'+STR.deltaRemove+'</b> '+c.remove);
+ $("checkpoint-summary").innerHTML=(parts.length?parts.join(" · ")+" · ":"")+esc(STR.cumulativeHint);
+ var changes=[],d=CPDELTA,i,nm,subject;
+ function row(type,what,why){changes.push('<div class="cpchange"><b>'+esc(type)+'</b> '+esc(what)+' <span>— '+esc(why)+'</span></div>');}
+ for(i=0;i<d.nodes.length;i++){nm=node(d.nodes[i].id);row(d.nodes[i].type,nm?nm.name:d.nodes[i].id,d.nodes[i].change);}
+ for(i=0;i<d.edges.length;i++){subject=nameOf(d.edges[i].from)+" → "+nameOf(d.edges[i].to)+(d.edges[i].label?" · "+d.edges[i].label:"");row(d.edges[i].type,subject,d.edges[i].change);}
+ for(i=0;i<d.removedEdges.length;i++){subject=nameOf(d.removedEdges[i].from)+" → "+nameOf(d.removedEdges[i].to)+(d.removedEdges[i].label?" · "+d.removedEdges[i].label:"");row(d.removedEdges[i].type,subject,d.removedEdges[i].change);}
+ for(i=0;i<d.removedNodes.length;i++)row(d.removedNodes[i].type,d.removedNodes[i].name||d.removedNodes[i].id,d.removedNodes[i].change);
+ $("checkpoint-changes").innerHTML=changes.join("");
+}
+function checkpointUrl(id){
+ try{var u=new URL(location.href);if(id==="as-is")u.searchParams.delete("checkpoint");else u.searchParams.set("checkpoint",id);history.replaceState(null,"",u.toString());}catch(e){}
+}
+function setCheckpoint(id,writeUrl,animate,preserveLegacyMode){
+ var state=null,i;for(i=0;i<TSTATES.length;i++)if(TSTATES[i].id===id){state=TSTATES[i];break;}
+ if(!state){id="as-is";M=jsonCopy(BASE);CPDELTA=emptyDelta();}else{M=jsonCopy(state.model);CPDELTA=jsonCopy(state.delta);}
+ CPID=id;mode=preserveLegacyMode&&(!BASE||!BASE.timeline)&&mode==="target"?"target":"now";
+ $("bnow").className=mode==="now"?"on":"";$("btgt").className=mode==="target"?"on":"";
+ var posKey="checkpoint:"+id;if(!POSALL[posKey])POSALL[posKey]={};POS=POSALL[posKey];VBOX={};
+ while(stack.length>1&&!node(stack[stack.length-1]))stack.pop();
+ if(!stack.length)stack=[null];
+ $("detail").style.display="none";
+ renderTimeline();stamp("");if(writeUrl)checkpointUrl(id);draw(animate!==false);
+}
 
 var NW=228,NH=118; // NH fits 3 description lines without hitting the [+] DRILL
 // Past DENSE_MIN siblings a full-size card cannot stay legible: the fit-to-content viewBox scales
@@ -495,7 +615,7 @@ function draw(animate){
   +'<marker id="arp" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edgeplan")+'"/></marker></defs>';
  for(j=0;j<geo.length;j++){
   var e=geo[j].g,ed=geo[j].e,cl=(ed.estatus==="to-build"?"plan":"flow");
-  s+='<path class="edge '+cl+'" data-e="'+geo[j].i+'" d="'+e.d+'"/>';
+  s+='<path class="edge '+cl+(ed.delta?" delta":"")+'" data-e="'+geo[j].i+'" d="'+e.d+'"/>';
   s+='<path class="edgehit" data-e="'+geo[j].i+'" data-label="'+esc(ed.label||"")+'" d="'+e.d+'"/>';
   if(showLbl&&ed.label){var lb=String(ed.label);if(lb.length>28)lb=lb.slice(0,27)+"…";
    s+='<text class="elbl" x="'+e.mx+'" y="'+(e.my-4)+'" text-anchor="middle">'+esc(lb)+'</text>';}
@@ -510,7 +630,7 @@ function draw(animate){
   // `decl`: this verdict was DERIVED from a repo document, not proven. The legend has carried a
   // hollow green for it since #38 and the canvas never drew one, so every declared done shipped
   // dressed as proof.
-  var isCat=!!n.__catalog,dr=!isCat&&hasKids(n.id),cls="nd s-"+st+((n.verify&&n.verify.derived)?" decl":"")+(dr?" drill":"")+(isCat?" cat":"")+(pulse?" pulse":"");
+  var isCat=!!n.__catalog,dr=!isCat&&hasKids(n.id),change=isCat?null:nodeChange(n.id),cls="nd s-"+st+((n.verify&&n.verify.derived)?" decl":"")+(dr?" drill":"")+(isCat?" cat":"")+(pulse?" pulse":"")+(change?" delta":"");
   var desc=isCat?(n.count+" "+STR.rosterCount):(mode==="target"?(n.target||n.func||""):(n.current||n.func||""));
   // 26 of a real repo's 53 boxes printed "1 file: advisor." under a box titled "internal/advisor".
   // A description that only restates the title is ink, not information: drop it and let the box
@@ -526,7 +646,7 @@ function draw(animate){
   if(String(tt).length>tmax)tt=String(tt).slice(0,Math.max(1,tmax-1))+"…";
   s+='<g class="'+cls+'" data-id="'+esc(n.id)+'">'
    +'<rect x="'+p.x+'" y="'+p.y+'" width="'+p.w+'" height="'+p.h+'" rx="10"/>'
-   +'<text class="kk" x="'+(p.x+13)+'" y="'+(p.y+16)+'">'+esc(n.category||n.kind||"")+'</text>'
+   +'<text class="kk" x="'+(p.x+13)+'" y="'+(p.y+16)+'">'+esc((n.category||n.kind||"")+(change?" · "+change.type:""))+'</text>'
    +'<text class="tt" x="'+(p.x+13)+'" y="'+(p.y+33)+'">'+esc(tt)+'</text>'
    +'<text class="pp" x="'+(p.x+p.w-13)+'" y="'+(p.y+16)+'" text-anchor="end">'+esc(badge)+'</text>';
   // Description lines: how many fit comes from the geometry (text starts at y+51, 12.5px apart,
@@ -542,8 +662,8 @@ function draw(animate){
  }
  s+='</svg>';
  var st2=$("stage");
- var etip=$("etip"); // preserve tooltip node
- st2.innerHTML=s;st2.appendChild(etip);
+ var etip=$("etip"),err=$("err"); // preserve the live overlays across redraw/re-verify
+ st2.innerHTML=s;if(etip)st2.appendChild(etip);if(err)st2.appendChild(err);
  st2.classList.toggle("anim",animate!==false);
  // breadcrumb
  var chain=[],c=pid;while(c){var nn=node(c);chain.unshift(nn);c=nn?nn.parent:null;}
@@ -562,9 +682,11 @@ function draw(animate){
   var DOT={done:"#2fe08a",prog:"#ffc74d",next:"#3ee7ff",plan:"#2d5a72",prob:"#ff5d5d",unk:"#7d8f99"},ord=["done","prog","next","plan","prob","unk"],agg="";
   for(j=0;j<ord.length;j++)if(T.cnt[ord[j]])agg+='<i style="background:'+DOT[ord[j]]+'"></i>'+T.cnt[ord[j]];
   // The coverage rides WITH the percentage, never without it. See tallyOf.
-  if(T.ruled)agg+=' &nbsp;'+esc(STR.aggProgress)+' <b>'+T.mean+'%</b> '+T.ruled+'/'+T.tot;
+  if(T.ruled)agg+=' &nbsp;'+(T.mean!=null?esc(STR.aggProgress)+' <b>'+T.mean+'%</b> ':'')+T.ruled+'/'+T.tot;
   cb='<span class="agg">'+agg+'</span>'+cb;
  }
+ if(BASE&&BASE.timeline){var cpLabel=CPID==="as-is"?STR.asIs:CPID;for(j=0;j<TSTATES.length;j++)if(TSTATES[j].id===CPID)cpLabel=TSTATES[j].label;
+  cb='<b>'+esc(cpLabel)+'</b> &nbsp;·&nbsp; '+cb;}
  $("crumb").innerHTML=cb;
  $("back").disabled=stack.length<2;
  $("detail").style.display="none";
@@ -626,8 +748,8 @@ function rollEdges(edges,vis,parent){
   if(!f||!t||f===t)continue;
   c=parseInt(String(e.label),10);if(!(c>0))c=1;
   k=f+"|"+t;
-  if(ix[k]==null){ix[k]=out.length;out.push({from:f,to:t,label:e.label,estatus:e.estatus,n:c});}
-  else{g=out[ix[k]];g.n+=c;g.label=g.n+"×";if(e.estatus!=="to-build")g.estatus=e.estatus;}
+  if(ix[k]==null){ix[k]=out.length;out.push({from:f,to:t,label:e.label,estatus:e.estatus,n:c,delta:typeof edgeChange==="function"?edgeChange(e):null});}
+  else{g=out[ix[k]];g.n+=c;g.label=g.n+"×";if(e.estatus!=="to-build")g.estatus=e.estatus;if(!g.delta&&typeof edgeChange==="function")g.delta=edgeChange(e);}
  }
  return out;
 }
@@ -650,11 +772,13 @@ function cssv(v){try{return getComputedStyle(document.documentElement).getProper
 
 function showDetail(n){
  if(n&&n.__catalog)return showRoster(n);
- var src=srcOf(n),cur=n.current||n.func||"",showSrc=src&&String(cur).indexOf(src)<0;
+ var src=srcOf(n),cur=n.current||n.func||n.description||"",showSrc=src&&String(cur).indexOf(src)<0;
+ var timeline=!!(BASE&&BASE.timeline),change=timeline?nodeChange(n.id):null;
  $("detail").innerHTML='<span class="cl" id="dc">'+esc(STR.detClose)+'</span><h3>'+esc(n.name)+' <span class="cat">· '+esc(n.category||n.kind||"")+(n.tech?" · "+esc(n.tech):"")+'</span></h3>'
   +(n.func?'<div class="row"><span class="lbl">'+esc(STR.detFunc)+'</span><span class="func">'+esc(n.func)+'</span></div>':'')
-  +(cur&&cur!==n.func?'<div class="row"><span class="lbl">'+esc(STR.detNow)+'</span><span class="now">'+esc(cur)+'</span></div>':'')
-  +((n.target&&n.target!=="—")?'<div class="row"><span class="lbl">'+esc(STR.detTgt)+'</span><span class="tgt">'+esc(n.target)+'</span></div>':'')
+  +(cur&&(timeline||cur!==n.func)?'<div class="row"><span class="lbl">'+esc(timeline?STR.detCheckpoint:STR.detNow)+'</span><span class="now">'+esc(cur)+'</span></div>':'')
+  +(!timeline&&(n.target&&n.target!=="—")?'<div class="row"><span class="lbl">'+esc(STR.detTgt)+'</span><span class="tgt">'+esc(n.target)+'</span></div>':'')
+  +(change?'<div class="row"><span class="lbl">'+esc(STR.detChange)+'</span><span class="tgt">'+esc(change.type+" · "+change.change)+'</span></div>':'')
   // A number DERIVED from a repo document is a declaration, not a verification: the label says which
   // one, and the coverage says how much of this module the citation actually reaches. "3 of 3 rows
   // declared done" and "this module is done" are not the same sentence when the module holds 22
@@ -760,12 +884,14 @@ function wire(){
  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&stack.length>1){stack.pop();draw(true);}});
  $("bnow").addEventListener("click",function(){mode="now";$("bnow").className="on";$("btgt").className="";draw(false);});
  $("btgt").addEventListener("click",function(){mode="target";$("btgt").className="on";$("bnow").className="";draw(false);});
+ $("timeline").addEventListener("click",function(ev){var b=ev.target;while(b&&b!==$("timeline")&&!(b.getAttribute&&b.getAttribute("data-checkpoint")))b=b.parentNode;
+  if(b&&b!==$("timeline"))setCheckpoint(b.getAttribute("data-checkpoint"),true,true);});
  $("brf").addEventListener("click",function(){
   // Served model ⇒ actually re-read it (a `forma verify` run in the terminal shows up here without
   // losing the level, the layout or the mode). Injected/offline ⇒ re-stamp, and say why.
   if(!FETCHED){stamp(STR.staticSrc);return;}
   fetch("./c4-model.json?ts="+(new Date()).getTime()).then(function(r){return r.json();})
-   .then(function(m){if(m&&m.nodes&&m.nodes.length){M=m;stamp("");draw(false);}else stamp(STR.staticSrc);})
+   .then(function(m){if(m&&m.nodes&&m.nodes.length)loadModel(m,true);else stamp(STR.staticSrc);})
    .catch(function(){stamp(STR.staticSrc);});
  });
  $("blbl").addEventListener("click",function(){LABELS=!($("blbl").className==="on");draw(false);});
@@ -783,14 +909,14 @@ function applyStrings(){
  set("pexp",STR.printExport);set("pexpSvg",STR.exportSvg);set("pexpPng",STR.exportPng);
  set("pexpLayout",STR.exportLayout);set("pexpPrint",STR.print);
  set("lg-done",STR.legDone);set("lg-decl",STR.legDecl);set("lg-prog",STR.legProg);set("lg-next",STR.legNext);
- set("lg-plan",STR.legPlan);set("lg-prob",STR.legProb);set("lg-unk",STR.legUnk);set("lg-hint",STR.legHint);
+ set("lg-plan",STR.legPlan);set("lg-prob",STR.legProb);set("lg-unk",STR.legUnk);set("lg-checkpoint",STR.legCheckpoint);set("lg-hint",STR.legHint);
 }
 // ---- FEATURE #2: PRINT / EXPORT (all client-side, offline) ----
 function exportBaseName(){
  var repo=(M&&M.source&&M.source.repo)||"forma";
  var pid=stack[stack.length-1];
  var lvl=pid?(node(pid)&&node(pid).name)||"level":"context";
- return String(repo+"-"+lvl).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"forma";
+ return String(repo+"-"+(BASE&&BASE.timeline?CPID+"-":"")+lvl).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"forma";
 }
 // Collect the CSS rules the SVG needs so a standalone serialize renders styled.
 function collectSvgCss(){
@@ -900,24 +1026,29 @@ function moveTip(ev){var st=$("stage").getBoundingClientRect(),t=$("etip");
 function stamp(suffix){
  var m=(M&&M.meta)||{};
  $("stamp").textContent=STR.stampBase+" "+(m.verifiedAt||(M&&M.generatedAt)||(M&&M.source&&M.source.commit)||"—")
-  +" · "+STR.stampMethod+" "+(m.verifyMethod||STR.stampVerify)+(suffix?" "+suffix:"");
+  +" · "+STR.stampMethod+" "+(m.verifyMethod||STR.stampVerify)
+  +(BASE&&BASE.timeline?" · "+STR.stampProjection+" "+BASE.timeline.source:"")+(suffix?" "+suffix:"");
 }
-function boot(model){
- M=model;
- LANG=pickLang(M);STR=STRINGS[LANG];
+function loadModel(model,preserveCheckpoint){
+ var wanted=preserveCheckpoint?CPID:null,candidate=null;
+ try{candidate=jsonCopy(model);}catch(e){}
+ LANG=pickLang(candidate);STR=STRINGS[LANG];
  try{document.documentElement.setAttribute("lang",LANG);}catch(e){}
  applyStrings();
- if(!M||!M.nodes||!M.nodes.length){$("err").style.display="block";$("err").textContent=STR.errEmpty;return;}
+ if(!candidate||!candidate.nodes||!candidate.nodes.length){$("err").style.display="block";$("err").textContent=STR.errEmpty;return;}
+ var built=timelineStates(candidate);if(built.errors.length){$("err").style.display="block";$("err").textContent=STR.errTimeline+" "+built.errors.join(", ");return;}
+ BASE=candidate;M=jsonCopy(candidate);
+ $("err").style.display="none";TSTATES=built.states;
  var ttl=(M.meta&&M.meta.title)||((M.source&&M.source.repo)?"Forma · "+M.source.repo:null);
  if(ttl){$("title").textContent=ttl;try{document.title=ttl;}catch(e){}}
- stamp("");
- setSkin((new URLSearchParams(location.search).get("skin"))||window.__C4_SKIN__||(M.meta&&M.meta.skin)||"holo");
- stack=[null];mode="now";POS={};
- draw(true);
+ if(!preserveCheckpoint)setSkin((new URLSearchParams(location.search).get("skin"))||window.__C4_SKIN__||(M.meta&&M.meta.skin)||"holo");
+ if(!preserveCheckpoint){stack=[null];POSALL={};wanted=null;try{wanted=new URLSearchParams(location.search).get("checkpoint");}catch(e){}}
+ setCheckpoint(wanted||"as-is",false,!preserveCheckpoint,preserveCheckpoint);
  // Minimal hook for embedders (the Cowork artifact re-verifies through its own MCP bridge and
  // needs to push the result back in without forking the viewer).
- window.__C4_API__={model:function(){return M;},redraw:function(){draw(false);},stamp:function(t){$("stamp").textContent=t;}};
+ window.__C4_API__={model:function(){return M;},checkpoint:function(id){setCheckpoint(id,true,true);},redraw:function(){draw(false);},stamp:function(t){$("stamp").textContent=t;}};
 }
+function boot(model){loadModel(model,false);}
 function start(){
  // Pick language from URL/global up-front so header + errors render even if the model never loads.
  LANG=pickLang(null);STR=STRINGS[LANG];

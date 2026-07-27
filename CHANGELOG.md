@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-27
+
 ### Fixed
 - **The public demo asserted a completion nobody measured, and drew "not ruled" as "not built".**
   The board read `100%` on every box that carried a number and `avanzamento 100% 25/56` on the one
@@ -30,6 +32,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     function (`badgeOf`) and stops printing `?` over a box its own colour calls finished.
 
 ### Added
+- **A governed architecture timeline can replace the binary CURRENT/TARGET projection.** Models
+  may carry an optional sequence of cumulative checkpoints over the code-derived AS-IS baseline.
+  Each checkpoint contains typed node/edge add, update, rewire and remove operations; `gen`
+  materializes and validates every cumulative graph before writing, while `check` fails if the
+  compact programme drifts from the topology. In the viewer the timeline is the only temporal
+  control, the local patch is accented, board counts remain display-only, and legacy models retain
+  CURRENT/TARGET unchanged. Schema `1.6.0`.
 - **`scripts/presentable.mjs` grades the claim, not just the scene.** Its four predicates measured
   geometry — box counts, actors, prose, arrows — and not one read `completion`, so the model above
   passed at full marks and went to Pages. A fifth predicate refuses to publish a board where a
