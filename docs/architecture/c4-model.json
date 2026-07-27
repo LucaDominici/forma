@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-07-27T15:09:41.291Z",
+  "generatedAt": "2026-07-27T18:25:08.084Z",
   "source": {
     "repo": "forma",
-    "commit": "9c79c2ce20f6b097fe62e67b6f311a53391f93e3",
-    "branch": "fix/demo-stato-inventato",
+    "commit": "c256967b877ec12a8ff620148be67076aae04e52",
+    "branch": "agent/refine-timeline-summary",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
     "statusPath": "docs/architecture/c4-status.json"

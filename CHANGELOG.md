@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-07-27
+
+### Changed
+- **The timeline is navigation, not a persistent change register.** The duplicated list above the
+  graph is gone; the local patch remains visible through graph accents and contextual node detail.
+  A future checkpoint with an empty patch now says `no architecture changes`, while board badges
+  stay verbatim display-only annotations. The cumulative graph, typed-patch contract and legacy
+  CURRENT/TARGET behavior are unchanged.
+
 ## [0.11.0] - 2026-07-27
 
 ### Fixed

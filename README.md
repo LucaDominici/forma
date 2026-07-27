@@ -88,7 +88,7 @@ and validates every cumulative state before replacing the last model.
   "timeline": {
     "source": "docs/architecture/FUTURE.md",
     "checkpoints": [{
-      "id": "g1", "label": "G1 · UAT", "badge": "9 item · 1 P0",
+      "id": "g1", "label": "G1 · UAT", "badge": "9 board · 1 P0",
       "patch": {
         "nodes": {
           "add": [{ "node": {
@@ -112,14 +112,17 @@ and validates every cumulative state before replacing the last model.
 ```
 
 Node patches support `add`, non-structural `update`, and child-first `remove`; edge patches support
-`add`, exact-match `rewire`, and `remove`. Every operation carries the prose shown as “Change from
-previous”. IDs, parents, levels and kinds cannot be edited in place, ambiguous edge selectors fail,
-and a node cannot disappear while children or incident relations survive. The source path must
-exist. `AS-IS` is implicit and reserved; the last checkpoint is the target, so `target` is forbidden
-inside timeline patches. With a timeline the viewer replaces CURRENT/TARGET with the checkpoints,
-supports `?checkpoint=g1`, accents only the local patch, and keeps drill, layout, re-verification
-and export working on the cumulative graph. Without one, the legacy controls and model are
-unchanged.
+`add`, exact-match `rewire`, and `remove`. Every operation carries governed change prose; a live
+node changed locally exposes it as “Change from previous”, while the graph accents changed nodes
+and relations without keeping a second change log or drawing ghosts for removals. IDs, parents,
+levels and kinds cannot be edited in place, ambiguous edge selectors fail, and a node cannot
+disappear while children or incident relations survive. The source path must exist. `AS-IS` is
+implicit and reserved; the last checkpoint is the target, so `target` is forbidden inside timeline
+patches. With a timeline the viewer replaces CURRENT/TARGET with the checkpoints, supports
+`?checkpoint=g1`, accents only the local patch, and keeps drill, layout, re-verification and export
+working on the cumulative graph. A future checkpoint with no local patch says “no architecture
+changes”; its display-only badge is not interpreted. Without a timeline, the legacy controls and
+model are unchanged.
 
 **Curated state, verified against reality.** `forma verify` asks your `gh` CLI for the state of every issue the model references (`--gh-repo owner/repo`, or `meta.ghRepo` in the topology), marks the nodes whose issues are closed as done, and prefixes their `current` with dated evidence. It touches state, never structure, and re-running it never stacks the evidence. It is opt-in and separate on purpose: `gen` and `check` never open a socket. In the served viewer, **RE-VERIFY** re-reads the model without losing your level, layout or mode.
 
