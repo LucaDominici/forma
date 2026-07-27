@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-07-27
+
+### Changed
+- **The public haben demo now exercises the governed architecture timeline instead of only
+  describing it.** The reproducible curation maps haben's current delivery boundary to five typed,
+  cumulative checkpoints over the code-verified AS-IS graph. The final custody-only checkpoint
+  deliberately carries no C4 patch and therefore renders `no architecture changes`. The snapshot
+  was regenerated from `haben@4c9b6880`: 63 nodes and 193 edges at AS-IS, 66 nodes and 196 edges at
+  the final projection, with `presentable` and `forma check` both green.
+
 ## [0.11.1] - 2026-07-27
 
 ### Changed
