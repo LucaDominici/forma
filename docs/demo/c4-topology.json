@@ -1278,7 +1278,7 @@
     },
     {
       "stack": "JavaScript",
-      "files": 183,
+      "files": 156,
       "match": "\\.(js|mjs)$",
       "nodes": [
         {

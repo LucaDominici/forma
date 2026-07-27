@@ -4,6 +4,47 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.11.0] - 2026-07-27
+
+### Fixed
+- **The public demo asserted a completion nobody measured, and drew "not ruled" as "not built".**
+  The board read `100%` on every box that carried a number and `avanzamento 100% 25/56` on the one
+  line a stakeholder reads first, while 36 boxes — modules the measured repository plainly has —
+  wore the dash the legend teaches as *to build*. Four causes, one class:
+  - **A status column that never says "not done" is an inventory, not a measure.**
+    `done / rows.length` is pinned to 1 by arithmetic when no row can say no — the source matrix is
+    39 rows, 39 `DONE`, so all 27 nodes it reached came out at exactly 100. The verdict survives
+    (the document *is* declaring those capabilities finished); the percentage does not. Measured per
+    source, which is the unit that either discriminates or does not.
+  - **Rows that reach a box only through its children did not rule on that box.** Two curated
+    groupings with no evidence of their own read `done/100` with `coverage {named:0}` — a verdict
+    borrowed from below and printed as their own. Reporting what is underneath is `rollStatus`'s
+    job, not something `gen` may invent.
+  - **`unknown` wore the grammar of `planned`.** `.s-unk` was dashed and `legHint` says a dashed box
+    is *da costruire*; the dash now belongs to `.s-plan` alone. And the hollow green the legend has
+    promised since 0.9.0 — `DONE (declared)` as against `DONE (proven)` — is finally drawn, so a
+    verdict derived from a document stops being painted as proof.
+  - **`rollStatus` counted percentages, not verdicts,** so a domain holding nine packages a document
+    calls finished went silent again the moment those packages stopped carrying a number. It now
+    counts verdicts and reports `9/14` with no mean when there is none to report. The badge became a
+    function (`badgeOf`) and stops printing `?` over a box its own colour calls finished.
+
+### Added
+- **A governed architecture timeline can replace the binary CURRENT/TARGET projection.** Models
+  may carry an optional sequence of cumulative checkpoints over the code-derived AS-IS baseline.
+  Each checkpoint contains typed node/edge add, update, rewire and remove operations; `gen`
+  materializes and validates every cumulative graph before writing, while `check` fails if the
+  compact programme drifts from the topology. In the viewer the timeline is the only temporal
+  control, the local patch is accented, board counts remain display-only, and legacy models retain
+  CURRENT/TARGET unchanged. Schema `1.6.0`.
+- **`scripts/presentable.mjs` grades the claim, not just the scene.** Its four predicates measured
+  geometry — box counts, actors, prose, arrows — and not one read `completion`, so the model above
+  passed at full marks and went to Pages. A fifth predicate refuses to publish a board where a
+  percentage's only provenance is a document declaring itself finished (`verify.derived`). Driven
+  at the published model it names the offending boxes with their citations and exits 1.
+
 ## [0.10.1] - 2026-07-26
 
 ### Fixed

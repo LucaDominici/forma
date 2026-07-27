@@ -5,7 +5,8 @@ import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, st
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { validateModel } from '../lib/validate.mjs'
+import { materializeTimeline, validateModel } from '../lib/validate.mjs'
+import { indexByNode, statusFor } from '../lib/docmap.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BIN = join(HERE, '..', 'bin', 'forma.mjs')
@@ -659,9 +660,13 @@ const diffPaths = (a, b, at = '') => {
   if (r.status !== 0) die('WP-A5: verify exit ' + r.status, r)
   let v = readJson(model)
   const done = v.nodes.find((n) => n.id === c1.id), open = v.nodes.find((n) => n.id === c2.id)
-  if (!(done.status2 === 'done' && done.completion === 100)) die('WP-A5: node on a CLOSED issue not marked done')
-  // the badge renders statusWord over completion, so a curated word must not outlive the verdict
-  if (done.statusWord !== '100%') die('WP-A5: badge still reads "' + done.statusWord + '" on a node verified done')
+  // #43: this used to assert completion === 100, which encoded the defect rather than preventing
+  // it — a closed issue justifies a VERDICT, never a percentage, and the number it wrote carried
+  // no citation, so the publication gate read it as a measurement.
+  if (done.status2 !== 'done') die('WP-A5: node on a CLOSED issue not marked done')
+  if (done.completion != null) die('WP-A5: a closed issue produced a percentage (' + done.completion + '%) — nothing here measured anything')
+  // the badge renders statusWord over the verdict, so a curated word must not outlive it
+  if (done.statusWord != null) die('WP-A5: badge still reads "' + done.statusWord + '" on a node verified done')
   if (!/^Closed with evidence \(#7 CLOSED, gh .*\)\. Was in progress\.$/.test(done.current)) die('WP-A5: evidence prefix missing/malformed: ' + done.current)
   if (JSON.stringify(open) !== openBefore) die('WP-A5: node on an OPEN issue was modified: ' + JSON.stringify(open))
   if (!(v.meta.verifiedAt && v.meta.verifyMethod === 'gh live')) die('WP-A5: fact base not stamped')
@@ -836,6 +841,39 @@ const diffPaths = (a, b, at = '') => {
   if (rollStatus({ id: 'dom', completion: 40 }, kidsOf)) die('rollStatus: overrode a box that carries its own verdict')
   if (rollStatus({ id: 'x' }, () => [])) die('rollStatus: invented a roll-up for a box with no children')
   if (rollStatus({ id: 'dom' }, () => [{ id: 'q', status2: 'unknown' }])) die('rollStatus: reported a mean where nobody ruled on anything')
+  // …and a VERDICT is not a percentage. A document declares; it does not measure, so its nodes
+  // carry `done` with no completion. Keying the roll-up on the number alone put `?` on a domain
+  // holding nine packages a document calls finished — the same silence #42 closed, one cause later.
+  const declared = (id) => (id === 'dom' ? [{ id: 'a', status2: 'done' }, { id: 'b', status2: 'done' }, { id: 'c', status2: 'unknown' }] : [])
+  const rd = rollStatus({ id: 'dom' }, declared)
+  if (!rd) die('rollStatus: a box whose children are ruled WITHOUT a percentage went silent')
+  if (rd.ruled !== 2 || rd.total !== 3) die('rollStatus: ruled/total must count verdicts, not percentages — got ' + JSON.stringify(rd))
+  if (rd.mean != null) die('rollStatus: invented a mean where no child carries one — got ' + rd.mean)
+
+  // The badge is the first number a stakeholder reads, so it is a function like the rest.
+  const bfn = (html.match(/\nfunction badgeOf\(n,roll\)\{[\s\S]*?\n\}/) || [])[0]
+  if (!bfn) die('viewer: badgeOf not found — the badge must be liftable to be measurable')
+  const badgeOf = new Function('var STR={stUnk:"?"};' + bfn + '; return badgeOf')()
+  const decl = { status2: 'done', verify: { source: 'FEATURES.md (2/2 declared done)', derived: true } }
+  if (badgeOf({ status2: 'unknown' }, null) !== '?') die('viewer badge: a box nobody ruled on must still read "?"')
+  if (badgeOf(decl, null) === '?') die('viewer badge: a box declared done read "?" — the badge contradicts its own colour')
+  if (/%/.test(badgeOf(decl, null))) die('viewer badge: a declaration was printed as a percentage — ' + badgeOf(decl, null))
+  if (badgeOf({ status2: 'unknown' }, { mean: null, ruled: 9, total: 14 }) !== '9/14') die('viewer badge: a roll-up with no percentage must still report its coverage, got ' + JSON.stringify(badgeOf({ status2: 'unknown' }, { mean: null, ruled: 9, total: 14 })))
+  if (badgeOf({ status2: 'done' }, { mean: 100, ruled: 9, total: 14 }) !== '100% 9/14') die('viewer badge: the mean lost its coverage')
+  if (badgeOf({ completion: 40, statusWord: 'v2 in corso' }, null) !== 'v2 in corso') die('viewer badge: a curated word must still own the badge')
+  if (badgeOf({ status2: 'in-progress', completion: 40 }, null) !== '40%') die('viewer badge: a real measurement must still print')
+
+  // "nobody ruled on it" must stop wearing the clothes of "not built yet": legHint teaches the
+  // reader that a dashed box is `da costruire`, and .s-unk was dashed. That is complaint 2.
+  const unkCss = (html.match(/\n\.s-unk rect\{[^}]*\}/) || [])[0]
+  if (!unkCss) die('viewer: the .s-unk rect rule moved')
+  if (/stroke-dasharray/.test(unkCss)) die('viewer: unknown is drawn with the dash the legend defines as "to build" — ' + unkCss.trim())
+  if (!/stroke-dasharray/.test((html.match(/\n\.s-plan rect\{[^}]*\}/) || [''])[0])) die('viewer: planned lost the dash that makes legHint true')
+  // the legend has promised a HOLLOW green for a done nobody proved since #38; the canvas never drew one
+  if (!/\.s-done\.decl rect\{/.test(html)) die('viewer: the legend promises "DONE (declared)" but no .s-done.decl rule draws it')
+  const clsLine = (html.match(/\n *var isCat=[^\n]*cls="nd s-"[^\n]*/) || [])[0]
+  if (!clsLine) die('viewer: the class-assembly line moved')
+  if (!/decl/.test(clsLine)) die('viewer: a done DERIVED from a document is painted exactly like a proven one — ' + clsLine.trim())
 
   // a derived number must disclose how much of the module its citation reaches — "3 of 3 rows
   // declared done" and "this module is done" are different sentences when the module holds 22 files
@@ -945,6 +983,147 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok schema — a conforming model passes; a missing required field and an out-of-enum kind are both rejected by name')
 }
 
+// 12) Optional architecture timeline: AS-IS stays generated from code; checkpoints are compact,
+// typed patches applied cumulatively. Board prose may label a checkpoint but can never become an
+// architecture mutation by implication.
+{
+  const repo = join(tmp, 'timeline-repo')
+  cpSync(FIX('mini'), repo, { recursive: true })
+  mkdirSync(join(repo, 'docs'), { recursive: true })
+  writeFileSync(join(repo, 'docs', 'roadmap.md'), '# Governed future architecture\n')
+  const topo = join(tmp, 'timeline-topo.json'), model = join(tmp, 'timeline-model.json')
+  let r = run(['init', '--repo', repo, '--out', topo, '--force']); if (r.status !== 0) die('timeline init exit ' + r.status, r)
+  const t = readJson(topo)
+  const system = t.nodes.find((n) => n.kind === 'system')
+  if (!system) die('timeline precondition: init produced no system')
+  t.timeline = {
+    source: 'docs/roadmap.md',
+    checkpoints: [
+      { id: 'g0', label: 'G0 · readiness', badge: '35 item · 2 P0' },
+      {
+        id: 'g1', label: 'G1 · new surface', badge: '9 item · 1 P0',
+        patch: {
+          nodes: {
+            add: [
+              { node: { id: 'future_api', level: 'container', parent: system.id, kind: 'container', name: 'Future API', status: 'planned', status2: 'planned', func: 'A governed future surface.' }, change: 'Add the future API.' },
+              { node: { id: 'future_legacy', level: 'leaf', parent: 'future_api', kind: 'leaf', name: 'Temporary adapter', status: 'planned', status2: 'planned', func: 'A transition-only adapter.' }, change: 'Add the transition adapter.' },
+            ],
+            update: [{ id: 'core', set: { current: 'Core also serves the future API.' }, change: 'Extend the core responsibility.' }],
+          },
+          edges: {
+            add: [{ edge: { from: 'core', to: 'future_api', label: 'serves', kind: 'runtime', status: 'planned', estatus: 'to-build' }, change: 'Connect core to the future API.' }],
+          },
+        },
+      },
+      {
+        id: 'g2', label: 'G2 · direct utility',
+        patch: {
+          nodes: {
+            update: [{ id: 'future_api', set: { status2: 'next', current: 'Future API reads utility directly.' }, change: 'Promote the surface to the next checkpoint.' }],
+            remove: [{ id: 'future_legacy', change: 'Remove the transition adapter.' }],
+          },
+          edges: {
+            rewire: [{ match: { from: 'core', to: 'future_api', label: 'serves' }, set: { from: 'util', label: 'serves directly' }, change: 'Route the surface through utility.' }],
+          },
+        },
+      },
+    ],
+  }
+  writeFileSync(topo, JSON.stringify(t, null, 2) + '\n')
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('timeline gen exit ' + r.status, r)
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo]); if (r.status !== 0) die('timeline check exit ' + r.status, r)
+  const base = readJson(model)
+  if (base.schemaVersion !== '1.6.0') die('timeline: schema version is ' + base.schemaVersion)
+  if (base.nodes.some((n) => n.id === 'future_api')) die('timeline: future node leaked into the AS-IS baseline')
+  const built = materializeTimeline(base, { sourceExists: (rel) => existsSync(join(repo, rel)) })
+  if (built.errors.length) die('timeline materializer rejected valid fixture:\n - ' + built.errors.join('\n - '))
+  if (built.states.length !== 3) die('timeline: expected 3 checkpoints, got ' + built.states.length)
+  const g0 = built.states[0], g1 = built.states[1], g2 = built.states[2]
+  if (JSON.stringify(g0.model.nodes) !== JSON.stringify(base.nodes) || JSON.stringify(g0.model.edges) !== JSON.stringify(base.edges)) {
+    die('timeline honesty: a display-only board badge generated architecture operations')
+  }
+  if (!g1.model.nodes.some((n) => n.id === 'future_api') || !g1.model.nodes.some((n) => n.id === 'future_legacy')) die('timeline G1: additions missing')
+  if (!g1.model.nodes.find((n) => n.id === 'core').current.includes('future API')) die('timeline G1: baseline update missing')
+  if (!g2.model.nodes.some((n) => n.id === 'future_api') || g2.model.nodes.some((n) => n.id === 'future_legacy')) die('timeline G2: cumulative add/remove wrong')
+  if (!g2.model.nodes.find((n) => n.id === 'core').current.includes('future API')) die('timeline G2: G1 update did not survive cumulatively')
+  if (!g2.model.edges.some((e) => e.from === 'util' && e.to === 'future_api' && e.label === 'serves directly')) die('timeline G2: rewire missing')
+  if (g2.model.edges.some((e) => e.from === 'core' && e.to === 'future_api' && e.label === 'serves')) die('timeline G2: pre-rewire edge survived')
+  if (g2.delta.nodes.length !== 1 || g2.delta.nodes[0].id !== 'future_api' || g2.delta.edges.length !== 1 || g2.delta.edges[0].type !== 'REWIRE') {
+    die('timeline G2: local delta includes changes from earlier checkpoints: ' + JSON.stringify(g2.delta))
+  }
+  if (g2.delta.removedNodes.length !== 1 || g2.delta.removedNodes[0].id !== 'future_legacy') die('timeline G2: removal not reported in local summary')
+
+  // The ES5 viewer owns a deliberately small mirror of the validated materializer. Drive the same
+  // fixture through it so the browser cannot silently diverge from gen/check.
+  const html = readFileSync(join(HERE, '..', 'lib', 'viewer', 'c4-hologram.html'), 'utf-8')
+  const tlBlock = (html.match(/function jsonCopy\([\s\S]*?(?=\nvar BASE=)/) || [])[0]
+  if (!tlBlock) die('timeline viewer: pure materializer block not found')
+  const viewerStates = new Function(tlBlock + '\nreturn timelineStates')()(base)
+  const vg2 = viewerStates.states[2]
+  if (!vg2 || JSON.stringify(vg2.model.nodes) !== JSON.stringify(g2.model.nodes) || JSON.stringify(vg2.model.edges) !== JSON.stringify(g2.model.edges)) {
+    die('timeline viewer: cumulative graph differs from the engine materializer')
+  }
+  if (!/id="legacytime"/.test(html) || !/id="timeline"/.test(html) || !/BASE&&BASE\.timeline/.test(html)) {
+    die('timeline viewer: legacy/timeline mutual-exclusion wiring missing')
+  }
+  if (/BASE&&BASE\.timeline&&BASE\.timeline\.source\)\|\|/.test(html) ||
+      !/nodeProjected\(n\.id\)&&BASE&&BASE\.timeline/.test(html) ||
+      !/function nodeProjected\(id\)/.test(html) ||
+      !/preserveLegacyMode&&\(!BASE\|\|!BASE\.timeline\)&&mode==="target"/.test(html)) {
+    die('timeline viewer: checkpoint provenance leaked onto unchanged nodes or legacy RE-VERIFY lost TARGET mode')
+  }
+  if (!/id="checkpoint-changes"/.test(html) ||
+      !/d\.removedEdges\.length/.test(html) ||
+      !/d\.removedNodes\.length/.test(html) ||
+      !/if\(err\)st2\.appendChild\(err\)/.test(html) ||
+      !/BASE=candidate;M=jsonCopy\(candidate\)/.test(html)) {
+    die('timeline viewer: operation prose is incomplete or RE-VERIFY does not preserve its live error overlay/atomic model swap')
+  }
+
+  const structurallyBad = JSON.parse(JSON.stringify(base))
+  structurallyBad.timeline.checkpoints[1].patch.nodes.add[0].node = {}
+  structurallyBad.timeline.checkpoints[1].patch.nodes.update[0].set = { parent: 'nonsense' }
+  structurallyBad.timeline.checkpoints[1].patch.edges.add[0].edge = {}
+  structurallyBad.timeline.checkpoints[2].patch.edges.rewire[0].set = { label: 'not a rewire' }
+  const structuralErrors = validateModel(structurallyBad)
+  if (!structuralErrors.some((e) => /missing required property "id"/.test(e)) ||
+      !structuralErrors.some((e) => /unexpected property "parent"/.test(e)) ||
+      !structuralErrors.some((e) => /missing required property "from"/.test(e)) ||
+      !structuralErrors.some((e) => /does not satisfy any allowed schema shape/.test(e))) {
+    die('timeline schema: typed node/edge add and update/rewire set shapes are not structurally governed:\n - ' + structuralErrors.join('\n - '))
+  }
+
+  // Bad projections are rejected BEFORE the output is touched.
+  const invalid = [
+    ['duplicate checkpoint', (x) => { x.timeline.checkpoints[2].id = 'g1' }],
+    ['missing source', (x) => { x.timeline.source = 'docs/no-such-roadmap.md' }],
+    ['unknown update', (x) => { x.timeline.checkpoints[1].patch.nodes.update[0].id = 'ghost' }],
+    ['orphan add', (x) => { x.timeline.checkpoints[1].patch.nodes.add[0].node.parent = 'ghost' }],
+    ['forbidden target', (x) => { x.timeline.checkpoints[1].patch.nodes.add[0].node.target = 'a second target' }],
+    ['live child on remove', (x) => { x.timeline.checkpoints[2].patch.nodes.remove = [{ id: 'future_api', change: 'unsafe parent removal' }] }],
+    ['ambiguous rewire', (x) => {
+      x.timeline.checkpoints[1].patch.edges.add.push({ edge: { from: 'core', to: 'future_api', label: 'second route', kind: 'runtime' }, change: 'Second route.' })
+      delete x.timeline.checkpoints[2].patch.edges.rewire[0].match.label
+    }],
+  ]
+  for (let i = 0; i < invalid.length; i++) {
+    const badTopo = join(tmp, `timeline-bad-${i}.json`), badModel = join(tmp, `timeline-bad-${i}-model.json`)
+    const bad = JSON.parse(JSON.stringify(t)); invalid[i][1](bad)
+    writeFileSync(badTopo, JSON.stringify(bad, null, 2) + '\n')
+    writeFileSync(badModel, 'KEEP\n')
+    r = run(['gen', '--repo', repo, '--topology', badTopo, '--out', badModel])
+    if (r.status === 0) die('timeline invalid accepted: ' + invalid[i][0])
+    if (readFileSync(badModel, 'utf-8') !== 'KEEP\n') die('timeline invalid overwrote output before rejection: ' + invalid[i][0])
+  }
+
+  const tampered = readJson(model)
+  tampered.timeline.checkpoints[0].badge = 'invented after generation'
+  writeFileSync(model, JSON.stringify(tampered, null, 2) + '\n')
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo])
+  if (r.status === 0 || !/TIMELINE DRIFT/.test((r.stdout || '') + (r.stderr || ''))) die('timeline: check accepted a model-only timeline edit', r)
+  console.log('  ok timeline — legacy baseline + 3 cumulative checkpoints; local delta; board badge inert; invalid patches fail before write')
+}
+
 // 16) docmap: the documentary source of the chain (§17-1) and the only deterministic producer of
 // programme state (§17-2). The fixture is shaped so that every rule has to hold at once — a
 // container the matrix describes, one it merely touches, one it never names, and a leaf whose own
@@ -977,7 +1156,12 @@ const diffPaths = (a, b, at = '') => {
   // four capabilities into one sentence would invent a claim; falling through is the honest answer.
   const core = at('core')
   if (core.descSource === 'docmap') die('docmap: a node touched by 4 rows was described anyway: ' + core.func)
-  if (core.status2 !== 'unknown' || core.completion != null) die(`docmap: over-cap node got state ${core.status2}/${core.completion}`)
+  // #43: the cap used to withhold the VERDICT too, so the more rows named a module the less it was
+  // judged — `internal_budget` on the real demo, named by four DONE rows, rendered as unassessed.
+  // The two halves part company: the verdict is still something the document says; a percentage
+  // over a reach nobody can state is not.
+  if (core.status2 !== 'in-progress') die(`docmap: over-cap node lost its verdict: ${core.status2}`)
+  if (core.completion != null) die(`docmap: over-cap node got a percentage over an unstatable reach: ${core.completion}`)
 
   // DoD 4 — a container the matrix never names stays honestly blank. This is the 0.6.0 guarantee.
   const plumbing = at('plumbing')
@@ -1010,6 +1194,42 @@ const diffPaths = (a, b, at = '') => {
 
   const described = m.nodes.filter((n) => n.descSource === 'docmap').length
   console.log(`  ok docmap — §17 ${described} node(s) described from docs/FEATURES.md; billing 50% derived, core over-cap, plumbing honest; overlay wins; drift gated`)
+}
+
+// 16b) a declaration is not a measurement. Two ways a document produced a percentage it never
+// measured — both live on the public demo, which reads 100% on every box that carries a number.
+{
+  // (a) a status column that never says "not done" is an INVENTORY. `done/rows.length` is then
+  // pinned to 1 by arithmetic: haben's feature matrix is 39 rows, 39 DONE, and every one of the
+  // 27 nodes it reaches came out at exactly 100. A constant is not a measure.
+  const repo = join(tmp, 'decl-repo')
+  cpSync(FIX('docmap'), repo, { recursive: true })
+  const doc = join(repo, 'docs', 'FEATURES.md')
+  writeFileSync(doc, readFileSync(doc, 'utf-8').replace('| BACKLOG |', '| DONE |'))
+  const topo = join(tmp, 'decl-topo.json'), model = join(tmp, 'decl-model.json')
+  let r = run(['init', '--repo', repo, '--out', topo, '--force']); if (r.status !== 0) die('decl init exit ' + r.status, r)
+  r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('decl gen exit ' + r.status, r)
+  const billing = readJson(model).nodes.find((n) => n.id === 'billing')
+  if (billing.completion != null) die(`decl: a document whose status column never says "not done" measured nothing, yet billing reads ${billing.completion}%`)
+  // what the document DID say survives — the declaration, its citation and its reach. Dropping
+  // those with the number would trade a false percentage for a missing provenance.
+  if (billing.status2 !== 'done') die('decl: the declaration itself was thrown out with the number, got ' + billing.status2)
+  if (!/FEATURES\.md/.test((billing.verify || {}).source || '')) die('decl: the citation went with the number: ' + JSON.stringify(billing.verify))
+  if (!(billing.verify || {}).coverage) die('decl: the coverage went with the number: ' + JSON.stringify(billing.verify))
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topo])
+  if (r.status !== 0) die('decl: check re-derives from the same document and must agree with gen', r)
+
+  // (b) rows that name NO unit of the node still ruled on it. On the demo the two domains with no
+  // evidence of their own — `fisco`, `accesso` — read done/100 with coverage {named:0}: a verdict
+  // borrowed from children, on a box whose own reach the document never touches.
+  const rows = [{ text: 'x', refs: ['src/a/one.js'], dead: [], done: true, from: 'FEATURES.md' }]
+  const idx = indexByNode(rows, [{ id: 'dom', kind: 'container' },
+    { id: 'a', parent: 'dom', kind: 'container', evidence: [{ type: 'path', ref: 'src/a' }] }])
+  const dom = statusFor(idx, 'dom')
+  if (dom) die('decl: a box the document names no unit of got a verdict anyway — ' + JSON.stringify(dom))
+  const own = statusFor(idx, 'a')
+  if (!own || own.status2 !== 'done') die('decl: the guard also silenced the node the row actually names — ' + JSON.stringify(own))
+  console.log('  ok declaration — an all-DONE inventory yields a verdict with no percentage, citation intact; a zero-reach box yields nothing')
 }
 
 // 13b) the three ways a document-derived number goes green without anyone lying on purpose.
@@ -1060,4 +1280,122 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok doc-drift — a dead code_ref fails gen; a deleted document, a rewritten row and a silent derivation all fail check; the system box stays unknown')
 }
 
-console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, docmap all green.')
+// 18) the publication gate must be able to fail on the defect it shipped. Four predicates graded
+// the GEOMETRY of the scene — box counts, actors, prose, arrows — and not one of them read
+// `completion`. A board reading 100% on every box that carries a number passed at full marks, and
+// that is the model that went to Pages. A gate blind to the claim grades the frame, not the picture.
+{
+  const gate = (m) => { const p = join(tmp, 'pres-' + Math.random().toString(36).slice(2) + '.json'); writeFileSync(p, JSON.stringify(m)); return spawnSync(process.execPath, [join(HERE, '..', 'scripts', 'presentable.mjs'), p], { encoding: 'utf-8' }) }
+  const demo = readJson(join(HERE, '..', 'docs/demo/c4-model.json'))
+  const clean = JSON.parse(JSON.stringify(demo))
+  for (const n of clean.nodes) delete n.completion
+  let r = gate(clean)
+  if (r.status !== 0) die('presentable: the demo without invented percentages must still pass every other predicate\n' + r.stdout + r.stderr)
+  const lying = JSON.parse(JSON.stringify(clean))
+  const victim = lying.nodes.find((n) => (n.verify || {}).derived === true) || die('presentable: the demo carries no document-derived node to drive the gate with')
+  victim.completion = 100
+  r = gate(lying)
+  if (r.status === 0) die('presentable: a box showing a percentage its own citation calls a declaration passed the gate\n' + r.stdout)
+  if (!new RegExp(victim.id).test(r.stdout || '')) die('presentable: the failure did not name the offending box\n' + r.stdout)
+  console.log('  ok presentable — a percentage no source measured fails the publication gate, by node id')
+}
+
+// --- #43: the three defects the adversarial review found, none of them declared -------------
+// The gate keys off a provenance LABEL, and a label is writable and erasable. The badge glues a
+// mean over one child to a coverage over twenty-five. And the suite grades a copy of the shipped
+// artifact instead of the artifact.
+{
+  const gate = (m) => { const p = join(tmp, 'pres3-' + Math.random().toString(36).slice(2) + '.json'); writeFileSync(p, JSON.stringify(m)); return spawnSync(process.execPath, [join(HERE, '..', 'scripts', 'presentable.mjs'), p], { encoding: 'utf-8' }) }
+  const demo = readJson(join(HERE, '..', 'docs/demo/c4-model.json'))
+
+  // (1) A percentage with NO citation at all is the easiest lie to tell, and it was the one the
+  // gate waved through: the filter required verify.derived === true. `forma verify` writes
+  // completion = 100 and never touches node.verify (lib/verify.mjs), so a first-class command
+  // puts the complaint back on the page through a supported path.
+  const noCitation = JSON.parse(JSON.stringify(demo))
+  for (const n of noCitation.nodes) { delete n.completion; delete n.verify }
+  noCitation.nodes[0].completion = 100
+  let r = gate(noCitation)
+  if (r.status === 0) die('presentable: a percentage with no citation at all passed — the gate grades the label, not the number\n' + r.stdout)
+
+  // (2) The same number with the label flipped to a value nobody writes must not buy a pass.
+  const flipped = JSON.parse(JSON.stringify(demo))
+  for (const n of flipped.nodes) delete n.completion
+  flipped.nodes[0].completion = 100
+  flipped.nodes[0].verify = { source: 'inventata', derived: false }
+  r = gate(flipped)
+  if (r.status === 0) die('presentable: derived:false is a label anyone can write — it must not certify a number as measured\n' + r.stdout)
+
+  console.log('  ok presentable — a percentage is a declaration unless its citation proves otherwise')
+}
+
+// The badge must never glue a mean over N children to a coverage over M. Before the fix rollStatus
+// counted verdicts in `ruled` and averaged over `completion` only, so one measured child among
+// twenty-five ruled ones printed "100% 25/53" — the owner's complaint, verbatim, from one node.
+{
+  const html = readFileSync(join(HERE, '..', 'lib', 'viewer', 'c4-hologram.html'), 'utf-8')
+  const lift = (name) => {
+    const m = html.match(new RegExp('function ' + name + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}', 'm'))
+    if (!m) die('viewer: ' + name + ' not liftable — it must be measurable')
+    return m[0]
+  }
+  const STR = { stUnk: '?' }
+  const STMAP = { done: 'done', 'in-progress': 'wip', planned: 'plan', next: 'next', problem: 'prob' }
+  const fn = new Function('STR', 'STMAP', lift('rollStatus') + '\n' + lift('badgeOf') + '\n' + lift('tallyOf') + '\nreturn {rollStatus:rollStatus,badgeOf:badgeOf,tallyOf:tallyOf}')(STR, STMAP)
+
+  // One child carries a number; twenty-four are ruled without one.
+  const kids = []
+  kids.push({ id: 'k0', status2: 'done', completion: 100 })
+  for (let i = 1; i < 25; i++) kids.push({ id: 'k' + i, status2: 'done' })
+  for (let i = 25; i < 53; i++) kids.push({ id: 'k' + i, status2: 'unknown' })
+  const parent = { id: 'p' }
+  const kidsOf = (id) => (id === 'p' ? kids : [])
+
+  const roll = fn.rollStatus(parent, kidsOf)
+  if (roll && roll.mean != null && roll.ruled !== 1) {
+    die('viewer: the badge averages over ' + 1 + ' child but claims coverage of ' + roll.ruled +
+        ' — mean and coverage must share a denominator, got ' + JSON.stringify(roll))
+  }
+  const badge = fn.badgeOf(parent, roll)
+  if (/^100% 25\//.test(badge)) die('viewer: the badge reads "' + badge + '" from a single measured child — the complaint, verbatim')
+
+  const tally = fn.tallyOf(kids, kidsOf)
+  if (tally && tally.mean != null && tally.ruled !== 1) {
+    die('viewer: tallyOf mixes denominators too — ' + JSON.stringify(tally))
+  }
+  console.log('  ok viewer — a mean and a coverage never share a badge unless they share a denominator')
+}
+
+// The suite must grade the artifact that ships, not a copy of it with the offending field removed.
+{
+  const r = spawnSync(process.execPath, [join(HERE, '..', 'scripts', 'presentable.mjs'), join(HERE, '..', 'docs/demo/c4-model.json')], { encoding: 'utf-8' })
+  if (r.status !== 0) die('presentable: the SHIPPED demo model does not pass its own publication gate\n' + r.stdout + r.stderr)
+  console.log('  ok presentable — the shipped artifact itself passes, not a cleaned copy of it')
+}
+
+// #43: the prose cap must not silence the verdict. MAX_ROWS exists because stitching more than
+// three first sentences together invents a claim no document makes (lib/docmap.mjs:16-21) — a
+// statement about PROSE. statusFor went through describingRows and so inherited it, with the
+// perverse result that the more rows name a module the less verdict it gets. On the shipped demo
+// `internal_budget` is named by FOUR rows, all DONE, and comes out "not assessed" — the owner's
+// literal example of "things that exist are shown as not done".
+{
+  const { loadDocRows, indexByNode, statusFor } = await import(join(HERE, '..', 'lib', 'docmap.mjs'))
+  const model = readJson(join(HERE, '..', 'docs/demo/c4-model.json'))
+  const habenDocs = process.env.FORMA_HABEN_DOCS || '/home/luca/work/repos/haben'
+  if (!existsSync(join(habenDocs, 'docs/FEATURE_MATRIX.md'))) {
+    console.log('  skip docmap-cap — haben checkout not present at ' + habenDocs)
+  } else {
+    const rows = loadDocRows(habenDocs, ['docs/FEATURE_MATRIX.md'])
+    const idx = indexByNode(rows, model.nodes)
+    const e = idx.get('internal_budget')
+    if (!e) die('docmap-cap: internal_budget is not indexed at all — the fixture drifted')
+    if (e.rows.length <= 3) die('docmap-cap: internal_budget is named by ' + e.rows.length + ' rows, the case needs more than the cap')
+    const st = statusFor(idx, 'internal_budget')
+    if (!st) die('docmap-cap: internal_budget is named by ' + e.rows.length + ' DONE rows and got NO verdict — more evidence, less verdict')
+    if (st.status2 !== 'done') die('docmap-cap: ' + e.rows.length + ' rows all done produced status2=' + st.status2)
+    console.log('  ok docmap — a box many rows name is judged by all of them, not silenced by the prose cap')
+  }
+}
+
+console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable all green.')

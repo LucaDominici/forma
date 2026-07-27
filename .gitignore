@@ -16,3 +16,6 @@ docs/architecture/ARCHITECTURE.scaffold.md
 # stray working-tree artifacts, never part of the package
 forma-holo-essence.patch
 forma-social-preview.png
+
+# Worktree degli agenti: repo git annidati, mai da tracciare (#43)
+.claude/worktrees/

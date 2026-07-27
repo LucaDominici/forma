@@ -77,6 +77,50 @@ Column roles are detected by header name (`capability`/`feature`/`description`�
 
 The overlay is the authority: every field it sets wins over anything derived, and `check` stops re-deriving that field. You do not have to hand-edit that JSON — `forma gen --status-apply <file>` merges `{"nodes":{"<id>":{…}}}` into it, validating every patch **before** it touches disk, so a rejected fill leaves the committed overlay untouched. It is the state counterpart of `--enrich-apply`, for the fields no document can supply. To describe one box by hand without a table, put the sentence in `descriptions`, keyed `"<containerId>/<node-name-without-extension>"` — `"core/alpha"` for the leaf `alpha.js` in container `core`, `"core/core"` for the container itself, since a container is its own container. It outranks every other source.
 
+**Future architecture can be a governed timeline.** Add an optional `timeline` to the curated
+`c4-topology.json` when one binary target is not enough. The generated `nodes` and `edges` remain
+the code-verified `AS-IS`; each checkpoint applies a compact typed patch over every checkpoint
+before it. Forma never stores a second complete graph, never reads a board count as architecture,
+and validates every cumulative state before replacing the last model.
+
+```json
+{
+  "timeline": {
+    "source": "docs/architecture/FUTURE.md",
+    "checkpoints": [{
+      "id": "g1", "label": "G1 · UAT", "badge": "9 item · 1 P0",
+      "patch": {
+        "nodes": {
+          "add": [{ "node": {
+            "id": "mcp", "level": "container", "parent": "system",
+            "kind": "container", "name": "MCP channel", "status": "planned"
+          }, "change": "Add the MCP surface." }],
+          "update": [{ "id": "engine", "set": {
+            "current": "Serves HTTP and MCP through one core."
+          }, "change": "Extend the existing engine." }]
+        },
+        "edges": {
+          "add": [{ "edge": {
+            "from": "mcp", "to": "engine", "label": "delegates",
+            "estatus": "to-build"
+          }, "change": "Connect the new surface to the engine." }]
+        }
+      }
+    }]
+  }
+}
+```
+
+Node patches support `add`, non-structural `update`, and child-first `remove`; edge patches support
+`add`, exact-match `rewire`, and `remove`. Every operation carries the prose shown as “Change from
+previous”. IDs, parents, levels and kinds cannot be edited in place, ambiguous edge selectors fail,
+and a node cannot disappear while children or incident relations survive. The source path must
+exist. `AS-IS` is implicit and reserved; the last checkpoint is the target, so `target` is forbidden
+inside timeline patches. With a timeline the viewer replaces CURRENT/TARGET with the checkpoints,
+supports `?checkpoint=g1`, accents only the local patch, and keeps drill, layout, re-verification
+and export working on the cumulative graph. Without one, the legacy controls and model are
+unchanged.
+
 **Curated state, verified against reality.** `forma verify` asks your `gh` CLI for the state of every issue the model references (`--gh-repo owner/repo`, or `meta.ghRepo` in the topology), marks the nodes whose issues are closed as done, and prefixes their `current` with dated evidence. It touches state, never structure, and re-running it never stacks the evidence. It is opt-in and separate on purpose: `gen` and `check` never open a socket. In the served viewer, **RE-VERIFY** re-reads the model without losing your level, layout or mode.
 
 **One source of truth.** `forma doc --attach docs/architecture/arc42.md` injects the generated diagrams/tables between `<!-- forma:begin -->` / `<!-- forma:end -->` markers in your existing doc; your prose lives outside them, and `forma check` fails if that block drifts. Attached files are recorded in `source.attachedDocs`, so the gate governs **every** doc you attach — not just the model's `docPath`; deleting the markers (or the file) from a registered doc fails the check rather than quietly un-governing it. That registry lives in `c4-model.json`, so **commit the model** — a lost model takes the registry with it. Where a repo lacks docs, `forma gen --enrich` can fill the remaining box holes with an LLM — opt-in, cached, never on the deterministic gate:
@@ -121,7 +165,9 @@ contract. The Claude skill in `adapters/` is a thin wrapper, not the product.
 
 The viewer is a live C4 map, not a static picture:
 
-- **Click any box** to read its explanation — what it does, current state, target, verification source — at *every* level, from context down to a leaf.
+- **Click any box** to read its explanation — what it does, current state/target on legacy models,
+  or the state and local change at the selected checkpoint — at *every* level, from context down to
+  a leaf.
 - **Double-click a box** (or its `[+] DRILL`) to descend into it; **BACK**, the breadcrumb, or `ESC` climb back out.
 - **Drag boxes** to lay out the view your way; **RESET LAYOUT** restores the arrangement (your curated hints if the topology has them, the automatic one otherwise). To keep a layout, drag it, pick **Export layout JSON**, and paste the result under `"layout"` in the topology — `gen` carries it into `meta.layout` and the viewer pins those boxes, auto-arranging everything else clear of them.
 - **Arrow labels** are painted on the diagram while the level stays readable (≤14 arrows) and turn off above that; **LABELS** forces them on or off, and hovering an arrow always reveals its label.

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/LucaDominici/forma/blob/main/lib/schema/c4-model.schema.json",
   "title": "C4 model \u2014 stack-agnostic architecture graph",
-  "description": "Reusable contract for the C4 live dashboard. A generator conforms iff its output validates; the viewer renders anything that validates. Stack-specific facts live only in tech/meta.",
+  "description": "Reusable structural contract for the C4 live dashboard. A generator conforms iff its output validates and every optional timeline checkpoint materializes semantically; the viewer renders generator-conformant models. Stack-specific facts live only in tech/meta.",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -58,6 +58,319 @@
         },
         "generator": {
           "type": "string"
+        }
+      }
+    },
+    "timeline": {
+      "type": "object",
+      "description": "Optional governed future architecture. The generated nodes/edges remain the AS-IS baseline; ordered checkpoint patches are applied cumulatively.",
+      "required": [
+        "source",
+        "checkpoints"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "Repo-relative architecture document governing the future projection."
+        },
+        "checkpoints": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "label"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]*$"
+              },
+              "label": {
+                "type": "string"
+              },
+              "badge": {
+                "type": "string",
+                "description": "Display-only checkpoint annotation. Never interpreted as architecture operations."
+              },
+              "patch": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "nodes": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "add": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "node",
+                            "change"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "node": {
+                              "$ref": "#/properties/nodes/items"
+                            },
+                            "change": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "update": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "set",
+                            "change"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "set": {
+                              "type": "object",
+                              "minProperties": 1,
+                              "additionalProperties": false,
+                              "properties": {
+                                "name": {
+                                  "$ref": "#/properties/nodes/items/properties/name"
+                                },
+                                "drill": {
+                                  "$ref": "#/properties/nodes/items/properties/drill"
+                                },
+                                "tech": {
+                                  "$ref": "#/properties/nodes/items/properties/tech"
+                                },
+                                "description": {
+                                  "$ref": "#/properties/nodes/items/properties/description"
+                                },
+                                "status": {
+                                  "$ref": "#/properties/nodes/items/properties/status"
+                                },
+                                "link": {
+                                  "$ref": "#/properties/nodes/items/properties/link"
+                                },
+                                "evidence": {
+                                  "$ref": "#/properties/nodes/items/properties/evidence"
+                                },
+                                "meta": {
+                                  "$ref": "#/properties/nodes/items/properties/meta"
+                                },
+                                "category": {
+                                  "$ref": "#/properties/nodes/items/properties/category"
+                                },
+                                "status2": {
+                                  "$ref": "#/properties/nodes/items/properties/status2"
+                                },
+                                "completion": {
+                                  "$ref": "#/properties/nodes/items/properties/completion"
+                                },
+                                "statusWord": {
+                                  "$ref": "#/properties/nodes/items/properties/statusWord"
+                                },
+                                "current": {
+                                  "$ref": "#/properties/nodes/items/properties/current"
+                                },
+                                "issues": {
+                                  "$ref": "#/properties/nodes/items/properties/issues"
+                                },
+                                "verify": {
+                                  "$ref": "#/properties/nodes/items/properties/verify"
+                                },
+                                "func": {
+                                  "$ref": "#/properties/nodes/items/properties/func"
+                                },
+                                "descSource": {
+                                  "$ref": "#/properties/nodes/items/properties/descSource"
+                                },
+                                "descInputHash": {
+                                  "$ref": "#/properties/nodes/items/properties/descInputHash"
+                                }
+                              }
+                            },
+                            "change": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "remove": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "change"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "change": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "edges": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "add": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "edge",
+                            "change"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "edge": {
+                              "$ref": "#/properties/edges/items"
+                            },
+                            "change": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "rewire": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "match",
+                            "set",
+                            "change"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "match": {
+                              "type": "object",
+                              "required": [
+                                "from",
+                                "to"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "from": {
+                                  "type": "string"
+                                },
+                                "to": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "set": {
+                              "type": "object",
+                              "minProperties": 1,
+                              "additionalProperties": false,
+                              "anyOf": [
+                                {
+                                  "required": [
+                                    "from"
+                                  ]
+                                },
+                                {
+                                  "required": [
+                                    "to"
+                                  ]
+                                }
+                              ],
+                              "properties": {
+                                "from": {
+                                  "$ref": "#/properties/edges/items/properties/from"
+                                },
+                                "to": {
+                                  "$ref": "#/properties/edges/items/properties/to"
+                                },
+                                "label": {
+                                  "$ref": "#/properties/edges/items/properties/label"
+                                },
+                                "kind": {
+                                  "$ref": "#/properties/edges/items/properties/kind"
+                                },
+                                "status": {
+                                  "$ref": "#/properties/edges/items/properties/status"
+                                },
+                                "evidence": {
+                                  "$ref": "#/properties/edges/items/properties/evidence"
+                                },
+                                "estatus": {
+                                  "$ref": "#/properties/edges/items/properties/estatus"
+                                }
+                              }
+                            },
+                            "change": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "remove": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "match",
+                            "change"
+                          ],
+                          "additionalProperties": false,
+                          "properties": {
+                            "match": {
+                              "type": "object",
+                              "required": [
+                                "from",
+                                "to"
+                              ],
+                              "additionalProperties": false,
+                              "properties": {
+                                "from": {
+                                  "type": "string"
+                                },
+                                "to": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "change": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
