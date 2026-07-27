@@ -41,9 +41,6 @@ select#skin option{background:#08202e;color:var(--nm)}
 .cpstep.active .dot{border-color:var(--cyan);background:var(--bg);box-shadow:0 0 10px rgba(62,231,255,.8)}
 #checkpoint-summary{text-align:right;color:var(--ter2);font-size:8.5px;letter-spacing:.08em;margin-top:5px;min-height:11px}
 #checkpoint-summary b{color:var(--cyan);font-weight:600}
-#checkpoint-changes{display:grid;gap:3px;margin-top:7px;max-height:92px;overflow:auto}
-.cpchange{color:var(--text);font-size:9px;line-height:1.35;padding-left:8px;border-left:2px solid var(--cyan)}
-.cpchange b{color:var(--cyan);font-weight:600;letter-spacing:.08em}.cpchange span{color:var(--ter2)}
 #crumb{font-size:11px;color:var(--sec);margin:8px 0}
 #crumb .agg{float:right;color:var(--ter2);letter-spacing:.05em}
 #crumb .agg i{display:inline-block;width:7px;height:7px;border-radius:50%;margin:0 3px 0 8px;vertical-align:baseline}
@@ -190,9 +187,8 @@ html[data-skin="blueprint"] .nd.delta rect,html[data-skin="blueprint"] .edge.del
   </div>
  </div>
  <nav id="timeline">
- <div id="timeline-track"></div>
- <div id="checkpoint-summary"></div>
-  <div id="checkpoint-changes"></div>
+  <div id="timeline-track"></div>
+  <div id="checkpoint-summary"></div>
  </nav>
  <div id="crumb"></div>
  <div id="stamp"></div>
@@ -229,7 +225,7 @@ var STRINGS={
   detDecl:"Declared in", detCover:"Coverage", detRoll:"Rolled up from", rollPart:"mean of the {n} of {t} parts inside that anyone ruled on", coverWhole:"the document names this module itself",
   coverPart:"{n} of {t} units named by the document",
   legHint:"— animated arrow = active flow · dashed = to build", legCheckpoint:"CHANGE IN THIS CHECKPOINT",
-  timelineLabel:"Architecture checkpoints", asIs:"AS-IS", asIsBadge:"verified code", cumulativeHint:"the graph is always cumulative",
+  timelineLabel:"Architecture checkpoints", asIs:"AS-IS", asIsBadge:"verified code", cumulativeHint:"the graph is always cumulative", noArchChanges:"no architecture changes",
   deltaAdd:"ADD", deltaUpdate:"UPDATE", deltaRewire:"REWIRE", deltaRemove:"REMOVE",
   crumbRoot:"Context", crumbLevel:"C4", lvlContext:"CONTEXT",
   lvlNames:{context:"Context",container:"Container",component:"Components",leaf:"Leaves"},
@@ -253,7 +249,7 @@ var STRINGS={
   detDecl:"Dichiarato in", detCover:"Copertura", detRoll:"Somma dal basso", rollPart:"media delle {n} parti su {t} qui dentro su cui qualcuno si e pronunciato", coverWhole:"il documento nomina il modulo stesso",
   coverPart:"{n} unità su {t} nominate dal documento",
   legHint:"— freccia animata = flusso attivo · tratteggio = da costruire", legCheckpoint:"CAMBIO IN QUESTO CHECKPOINT",
-  timelineLabel:"Checkpoint architetturali", asIs:"AS-IS", asIsBadge:"codice verificato", cumulativeHint:"il grafo è sempre cumulativo",
+  timelineLabel:"Checkpoint architetturali", asIs:"AS-IS", asIsBadge:"codice verificato", cumulativeHint:"il grafo è sempre cumulativo", noArchChanges:"nessun cambio architetturale",
   deltaAdd:"ADD", deltaUpdate:"UPDATE", deltaRewire:"REWIRE", deltaRemove:"REMOVE",
   crumbRoot:"Contesto", crumbLevel:"C4", lvlContext:"CONTESTO",
   lvlNames:{context:"Contesto",container:"Container",component:"Componenti",leaf:"Foglie"},
@@ -396,6 +392,14 @@ function timelineStates(base){
  }
  return {errors:errors,states:states};
 }
+function timelineSummary(id,delta){
+ var c=(delta&&delta.counts)||{},parts=[];
+ if(c.add)parts.push({key:"deltaAdd",count:c.add});
+ if(c.update)parts.push({key:"deltaUpdate",count:c.update});
+ if(c.rewire)parts.push({key:"deltaRewire",count:c.rewire});
+ if(c.remove)parts.push({key:"deltaRemove",count:c.remove});
+ return {parts:parts,empty:id!=="as-is"&&!parts.length};
+}
 var BASE=null,M=null,TSTATES=[],CPID="as-is",CPDELTA={nodes:[],edges:[],removedNodes:[],removedEdges:[],counts:{add:0,update:0,rewire:0,remove:0}}
 var stack=[null],mode="now",POS={},POSALL={},drag=null,justDragged=false,CATNODES={},FETCHED=false
 var VBOX={}; // last fitted viewBox per level — frozen while dragging so the canvas does not rescale
@@ -462,7 +466,6 @@ function makeCatalogNode(pid,g){
 }
 function hasKids(id){for(var i=0;i<M.nodes.length;i++)if(M.nodes[i].parent===id)return true;return false;}
 function node(id){for(var i=0;i<M.nodes.length;i++)if(M.nodes[i].id===id)return M.nodes[i];return null;}
-function nameOf(id){var n=node(id);return n?n.name:id;}
 function srcOf(n){if(CPID!=="as-is"&&nodeProjected(n.id)&&BASE&&BASE.timeline)return BASE.timeline.source;
  if(n.verify){if(typeof n.verify==="string")return n.verify;if(n.verify.source)return n.verify.source;if(n.verify.ref)return n.verify.ref;if(n.verify.issue)return "#"+n.verify.issue;}
  var ev=(n.evidence||[]).filter(function(e){return e.type==="doc"||e.type==="path";})[0];
@@ -475,25 +478,16 @@ function edgeChange(e){
 function emptyDelta(){return {nodes:[],edges:[],removedNodes:[],removedEdges:[],counts:{add:0,update:0,rewire:0,remove:0}};}
 function renderTimeline(){
  var nav=$("timeline"),legacy=$("legacytime"),legend=$("lg-checkpoint-wrap");
- if(!BASE||!BASE.timeline){nav.style.display="none";legacy.style.display="inline-flex";legend.style.display="none";$("checkpoint-changes").innerHTML="";return;}
+ if(!BASE||!BASE.timeline){nav.style.display="none";legacy.style.display="inline-flex";legend.style.display="none";return;}
  nav.style.display="block";legacy.style.display="none";legend.style.display="inline";
  nav.setAttribute("aria-label",STR.timelineLabel);
  var html='<button class="cpstep real'+(CPID==="as-is"?" active":"")+'" data-checkpoint="as-is" type="button"><span class="dot"></span>'+esc(STR.asIs)+'<span class="cpbadge">'+esc(STR.asIsBadge)+'</span></button>';
  for(var i=0;i<TSTATES.length;i++){var s=TSTATES[i];html+='<button class="cpstep'+(CPID===s.id?" active":"")+'" data-checkpoint="'+esc(s.id)+'" type="button"><span class="dot"></span>'+esc(s.label)+(s.badge?'<span class="cpbadge">'+esc(s.badge)+'</span>':'')+'</button>';}
  $("timeline-track").innerHTML=html;
- var c=CPDELTA.counts,parts=[];
- if(c.add)parts.push('<b>'+STR.deltaAdd+'</b> '+c.add);
- if(c.update)parts.push('<b>'+STR.deltaUpdate+'</b> '+c.update);
- if(c.rewire)parts.push('<b>'+STR.deltaRewire+'</b> '+c.rewire);
- if(c.remove)parts.push('<b>'+STR.deltaRemove+'</b> '+c.remove);
- $("checkpoint-summary").innerHTML=(parts.length?parts.join(" · ")+" · ":"")+esc(STR.cumulativeHint);
- var changes=[],d=CPDELTA,i,nm,subject;
- function row(type,what,why){changes.push('<div class="cpchange"><b>'+esc(type)+'</b> '+esc(what)+' <span>— '+esc(why)+'</span></div>');}
- for(i=0;i<d.nodes.length;i++){nm=node(d.nodes[i].id);row(d.nodes[i].type,nm?nm.name:d.nodes[i].id,d.nodes[i].change);}
- for(i=0;i<d.edges.length;i++){subject=nameOf(d.edges[i].from)+" → "+nameOf(d.edges[i].to)+(d.edges[i].label?" · "+d.edges[i].label:"");row(d.edges[i].type,subject,d.edges[i].change);}
- for(i=0;i<d.removedEdges.length;i++){subject=nameOf(d.removedEdges[i].from)+" → "+nameOf(d.removedEdges[i].to)+(d.removedEdges[i].label?" · "+d.removedEdges[i].label:"");row(d.removedEdges[i].type,subject,d.removedEdges[i].change);}
- for(i=0;i<d.removedNodes.length;i++)row(d.removedNodes[i].type,d.removedNodes[i].name||d.removedNodes[i].id,d.removedNodes[i].change);
- $("checkpoint-changes").innerHTML=changes.join("");
+ var summary=timelineSummary(CPID,CPDELTA),parts=[];
+ for(i=0;i<summary.parts.length;i++)parts.push('<b>'+STR[summary.parts[i].key]+'</b> '+summary.parts[i].count);
+ $("checkpoint-summary").innerHTML=parts.length?parts.join(" · ")+" · "+esc(STR.cumulativeHint)
+  :(summary.empty?'<b>'+esc(STR.noArchChanges)+'</b> · ':'')+esc(STR.cumulativeHint);
 }
 function checkpointUrl(id){
  try{var u=new URL(location.href);if(id==="as-is")u.searchParams.delete("checkpoint");else u.searchParams.set("checkpoint",id);history.replaceState(null,"",u.toString());}catch(e){}

@@ -999,9 +999,9 @@ const diffPaths = (a, b, at = '') => {
   t.timeline = {
     source: 'docs/roadmap.md',
     checkpoints: [
-      { id: 'g0', label: 'G0 · readiness', badge: '35 item · 2 P0' },
+      { id: 'g0', label: 'G0 · readiness', badge: '35 board · 2 P0' },
       {
-        id: 'g1', label: 'G1 · new surface', badge: '9 item · 1 P0',
+        id: 'g1', label: 'G1 · new surface', badge: '9 board · 1 P0',
         patch: {
           nodes: {
             add: [
@@ -1042,6 +1042,7 @@ const diffPaths = (a, b, at = '') => {
   if (JSON.stringify(g0.model.nodes) !== JSON.stringify(base.nodes) || JSON.stringify(g0.model.edges) !== JSON.stringify(base.edges)) {
     die('timeline honesty: a display-only board badge generated architecture operations')
   }
+  if (g0.badge !== '35 board · 2 P0') die('timeline honesty: checkpoint badge was interpreted or rewritten: ' + g0.badge)
   if (!g1.model.nodes.some((n) => n.id === 'future_api') || !g1.model.nodes.some((n) => n.id === 'future_legacy')) die('timeline G1: additions missing')
   if (!g1.model.nodes.find((n) => n.id === 'core').current.includes('future API')) die('timeline G1: baseline update missing')
   if (!g2.model.nodes.some((n) => n.id === 'future_api') || g2.model.nodes.some((n) => n.id === 'future_legacy')) die('timeline G2: cumulative add/remove wrong')
@@ -1058,10 +1059,19 @@ const diffPaths = (a, b, at = '') => {
   const html = readFileSync(join(HERE, '..', 'lib', 'viewer', 'c4-hologram.html'), 'utf-8')
   const tlBlock = (html.match(/function jsonCopy\([\s\S]*?(?=\nvar BASE=)/) || [])[0]
   if (!tlBlock) die('timeline viewer: pure materializer block not found')
-  const viewerStates = new Function(tlBlock + '\nreturn timelineStates')()(base)
+  const viewer = new Function(tlBlock + '\nreturn {timelineStates:timelineStates,timelineSummary:timelineSummary}')()
+  const viewerStates = viewer.timelineStates(base)
   const vg2 = viewerStates.states[2]
   if (!vg2 || JSON.stringify(vg2.model.nodes) !== JSON.stringify(g2.model.nodes) || JSON.stringify(vg2.model.edges) !== JSON.stringify(g2.model.edges)) {
     die('timeline viewer: cumulative graph differs from the engine materializer')
+  }
+  const emptySummary = viewer.timelineSummary('g0', g0.delta)
+  const asIsSummary = viewer.timelineSummary('as-is', { counts: {} })
+  const changedSummary = viewer.timelineSummary('g2', g2.delta)
+  if (!emptySummary.empty || emptySummary.parts.length || asIsSummary.empty ||
+      changedSummary.empty || changedSummary.parts.map((x) => x.key).join(',') !== 'deltaUpdate,deltaRewire,deltaRemove') {
+    die('timeline viewer: AS-IS, empty checkpoint and typed local summary are not distinguished: ' +
+      JSON.stringify({ asIsSummary, emptySummary, changedSummary }))
   }
   if (!/id="legacytime"/.test(html) || !/id="timeline"/.test(html) || !/BASE&&BASE\.timeline/.test(html)) {
     die('timeline viewer: legacy/timeline mutual-exclusion wiring missing')
@@ -1072,12 +1082,11 @@ const diffPaths = (a, b, at = '') => {
       !/preserveLegacyMode&&\(!BASE\|\|!BASE\.timeline\)&&mode==="target"/.test(html)) {
     die('timeline viewer: checkpoint provenance leaked onto unchanged nodes or legacy RE-VERIFY lost TARGET mode')
   }
-  if (!/id="checkpoint-changes"/.test(html) ||
-      !/d\.removedEdges\.length/.test(html) ||
-      !/d\.removedNodes\.length/.test(html) ||
+  if (/checkpoint-changes|class="cpchange"/.test(html) ||
+      !/summary\.empty\?'<b>'\+esc\(STR\.noArchChanges\)/.test(html) ||
       !/if\(err\)st2\.appendChild\(err\)/.test(html) ||
       !/BASE=candidate;M=jsonCopy\(candidate\)/.test(html)) {
-    die('timeline viewer: operation prose is incomplete or RE-VERIFY does not preserve its live error overlay/atomic model swap')
+    die('timeline viewer: persistent change register survived, empty checkpoint is silent, or RE-VERIFY lost its live error overlay/atomic model swap')
   }
 
   const structurallyBad = JSON.parse(JSON.stringify(base))
