@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.3] - 2026-07-27
+
+### Fixed
+- **Unchanged timeline nodes no longer repeat their function as checkpoint state.** `What it does`
+  remains visible once; `At this checkpoint` now appears only when the model carries an explicit
+  `current` value. Projected nodes keep their checkpoint state and change detail, while legacy
+  models retain their existing fallback behavior.
+
 ## [0.11.2] - 2026-07-27
 
 ### Changed

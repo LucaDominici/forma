@@ -1088,6 +1088,14 @@ const diffPaths = (a, b, at = '') => {
       !/BASE=candidate;M=jsonCopy\(candidate\)/.test(html)) {
     die('timeline viewer: persistent change register survived, empty checkpoint is silent, or RE-VERIFY lost its live error overlay/atomic model swap')
   }
+  const detailStateBlock = (html.match(/\nfunction detailState\([\s\S]*?\n\}/) || [])[0]
+  if (!detailStateBlock) die('timeline viewer: detailState not found')
+  const detailState = new Function(detailStateBlock + '\nreturn detailState')()
+  if (detailState({ func: 'What it does', description: 'What it does' }, true) !== '' ||
+      detailState({ func: 'What it does', current: 'Projected state' }, true) !== 'Projected state' ||
+      detailState({ func: 'What it does' }, false) !== 'What it does') {
+    die('timeline viewer: unchanged function prose is duplicated as checkpoint state, or legacy detail lost its fallback')
+  }
 
   const structurallyBad = JSON.parse(JSON.stringify(base))
   structurallyBad.timeline.checkpoints[1].patch.nodes.add[0].node = {}
