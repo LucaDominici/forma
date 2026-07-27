@@ -116,6 +116,153 @@ const ACTOR_EDGES = [
   { from: 'haben', to: 'agenzia_entrate', label: 'quadri della dichiarazione', kind: 'runtime', estatus: 'active' },
 ]
 
+// The demo also exercises Forma's optional future-architecture timeline. `CONFINE.md` is haben's
+// current product boundary: five open issues move it from author-operated software to a maintained
+// family product. Only architectural effects become patches. The last issue is operational
+// custody, so its empty patch deliberately demonstrates "nessun cambio architetturale".
+const TIMELINE = {
+  source: 'docs/steering/CONFINE.md',
+  checkpoints: [
+    {
+      id: 'lan',
+      label: 'LAN · #570',
+      badge: '1 issue · ingresso durevole',
+      patch: {
+        nodes: {
+          add: [{
+            node: {
+              id: 'lan_ingress', level: 'component', parent: 'piattaforma', kind: 'component',
+              name: 'Ingresso LAN durevole', tech: 'Caddy / Docker Compose',
+              description: 'Espone haben sulla LAN attraverso il proxy condiviso e sopravvive ai riavvii del NAS.',
+              status: 'planned', status2: 'next', issues: ['#570'],
+            },
+            change: 'Aggiunge l ingresso LAN durevole richiesto dal confine di consegna.',
+          }],
+          update: [{
+            id: 'haben',
+            set: {
+              current: 'Raggiungibile dalla famiglia sulla LAN attraverso un ingresso durevole sul NAS.',
+              status2: 'next', issues: ['#570'],
+            },
+            change: 'Porta il sistema al checkpoint in cui la sessione familiare puo iniziare senza terminale.',
+          }],
+        },
+        edges: {
+          add: [{
+            edge: {
+              from: 'lan_ingress', to: 'cmd_haben', label: 'inoltra richieste', level: 'component',
+              kind: 'runtime', status: 'planned', estatus: 'to-build',
+            },
+            change: 'Collega il proxy LAN al processo haben.',
+          }],
+        },
+      },
+    },
+    {
+      id: 'casa',
+      label: 'CASA · #358',
+      badge: '1 issue · tenant condiviso',
+      patch: {
+        nodes: {
+          add: [{
+            node: {
+              id: 'tenant_casa', level: 'component', parent: 'accesso', kind: 'component',
+              name: 'Tenant Casa', tech: 'Authelia / SQLite silo',
+              description: 'Consente a Luca e Veronica di usare il silo condiviso Casa con identita individuali.',
+              status: 'planned', status2: 'next', issues: ['#358'],
+            },
+            change: 'Aggiunge il tenant condiviso Casa al perimetro di accesso.',
+          }],
+          update: [{
+            id: 'famiglia_utente',
+            set: {
+              current: 'Luca e Veronica accedono con identita individuali al tenant condiviso Casa.',
+              status2: 'next', issues: ['#358'],
+            },
+            change: 'Rende visibile nel contesto il passaggio da autore singolo a uso familiare.',
+          }],
+        },
+        edges: {
+          add: [{
+            edge: {
+              from: 'internal_session', to: 'tenant_casa', label: 'autorizza membri', level: 'component',
+              kind: 'runtime', status: 'planned', estatus: 'to-build',
+            },
+            change: 'Collega la sessione autenticata alla membership del tenant Casa.',
+          }],
+        },
+      },
+    },
+    {
+      id: 'offline',
+      label: 'OFFLINE · #499',
+      badge: '1 issue · exactly-once',
+      patch: {
+        nodes: {
+          add: [{
+            node: {
+              id: 'offline_outbox', level: 'component', parent: 'famiglia', kind: 'component',
+              name: 'Outbox spese offline', tech: 'PWA / IndexedDB',
+              description: 'Accoda una spesa senza rete e la sincronizza una sola volta quando il NAS torna raggiungibile.',
+              status: 'planned', status2: 'next', issues: ['#499'],
+            },
+            change: 'Aggiunge l outbox offline richiesta dalla sessione di confine.',
+          }],
+          update: [{
+            id: 'haben',
+            set: {
+              current: 'Una spesa catturata offline viene consegnata una sola volta e resta disponibile il giorno dopo.',
+              status2: 'next', issues: ['#499'],
+            },
+            change: 'Porta la promessa exactly-once della cattura mobile nel checkpoint di sistema.',
+          }],
+        },
+        edges: {
+          add: [{
+            edge: {
+              from: 'offline_outbox', to: 'internal_budget', label: 'sincronizza una volta', level: 'component',
+              kind: 'runtime', status: 'planned', estatus: 'to-build',
+            },
+            change: 'Collega la cattura offline al dominio budget con consegna idempotente.',
+          }],
+        },
+      },
+    },
+    {
+      id: 'numeri',
+      label: 'NUMERI · #505',
+      badge: '1 issue · patrimonio corretto',
+      patch: {
+        nodes: {
+          update: [
+            {
+              id: 'internal_account',
+              set: {
+                current: 'Le carte di credito non contribuiscono agli attivi del patrimonio netto.',
+                status2: 'next', issues: ['#505'],
+              },
+              change: 'Rende esplicita nel dominio account la regola patrimoniale del confine.',
+            },
+            {
+              id: 'haben',
+              set: {
+                current: 'I numeri mostrati alla famiglia escludono le carte di credito dagli attivi.',
+                status2: 'next', issues: ['#505'],
+              },
+              change: 'Rende visibile nel contesto il checkpoint di correttezza patrimoniale.',
+            },
+          ],
+        },
+      },
+    },
+    {
+      id: 'maintained',
+      label: 'MANTENUTO · #560',
+      badge: '1 issue · custodia operativa',
+    },
+  ],
+}
+
 // `forma init` now seeds two TODO placeholder actors (#33) and their edges. This curation names
 // the real ones, so the placeholders are dropped rather than grouped — they are context, not
 // packages, and demanding a domain for them is what made this script exit 1 the first time.
@@ -142,8 +289,9 @@ t.nodes.push(...Object.entries(DOMAINS).map(([id, d]) => ({
   id, level: 'container', kind: 'container', parent: 'haben', name: d.name, tech: 'Go', description: d.description,
 })), ...ACTORS)
 t.meta = { ...(t.meta || {}), title: 'haben · demo pubblica di forma' }
+t.timeline = TIMELINE
 t.nodes[0].description = 'Il patrimonio della famiglia in un posto solo: conti, obiettivi, fisco e documenti.'
 t.edges = [...(t.edges || []), ...ACTOR_EDGES]
 
 writeFileSync(OUT, JSON.stringify(t, null, 2) + '\n')
-console.log(`wrote ${OUT}: ${Object.keys(DOMAINS).length} domains, ${ACTORS.length} actors, ${t.nodes.length} nodes`)
+console.log(`wrote ${OUT}: ${Object.keys(DOMAINS).length} domains, ${ACTORS.length} actors, ${t.nodes.length} nodes, ${TIMELINE.checkpoints.length} checkpoints`)
