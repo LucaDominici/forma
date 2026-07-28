@@ -39,6 +39,14 @@ const diffPaths = (a, b, at = '') => {
   if (containers < 2) die(`expected >=2 containers, got ${containers}`)
   if (leaves < 3) die(`expected >=3 leaves, got ${leaves}`)
   if (derived < 1) die(`expected >=1 derived edge (core→util), got ${derived}`)
+  // derived edges carry a relationship verb (not a bare count), a numeric weight the viewer rolls
+  // up, and an `inferred` status — so an executive reads the relationship and sees which arrows are
+  // measured (curated, active) vs guessed from name references (inferred).
+  const d = m.edges.find((e) => e.kind === 'import' && e.estatus === 'inferred')
+  if (!d) die(`expected an inferred derived edge, got estatus set: ${[...new Set(m.edges.filter((e) => e.kind === 'import').map((e) => e.estatus))].join(',')}`)
+  if (!/^(imports|drives|reads|references)$/.test(d.label)) die(`derived edge label should be a verb, got "${d.label}"`)
+  if (!(d.weight > 0)) die(`derived edge should carry a numeric weight, got ${JSON.stringify(d.weight)}`)
+  if (m.edges.some((e) => e.kind === 'import' && /\d×$/.test(String(e.label)))) die('a derived edge still carries a bare N× label — the verb refactor regressed')
   // determinism: a second gen on the same tree is byte-identical excluding timestamps/commit
   r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model2]); if (r.status !== 0) die('gen(2) exit ' + r.status, r)
   if (stripVolatile(m) !== stripVolatile(readJson(model2))) die('determinism: gen output differs across runs (excl. volatile fields)')
@@ -270,8 +278,21 @@ const diffPaths = (a, b, at = '') => {
   if (screen(['money', 'platform']).some((e) => e.from === e.to)) die('P2: a box drew an arrow to itself')
   const insideMoney = screen(['internal_account', 'internal_ledger'])
   if (!(insideMoney.length === 1 && insideMoney[0].from === 'internal_account')) die('P2: drilling into a domain lost its internal arrow: ' + JSON.stringify(insideMoney))
-  if (String(insideMoney[0].label) !== '1×') die('P2: a single contributing edge must keep its label verbatim, got ' + insideMoney[0].label)
+  // a single contributing edge keeps its label verbatim (the verb, not a synthesized count) and
+  // carries its weight in .n — the roll-up only synthesizes "n×" when it merges ≥2 edges.
+  const srcInternal = m.edges.find((e) => e.from === 'internal_account' && e.to === 'internal_ledger')
+  if (!srcInternal) die('P2: fixture lost the account→ledger internal edge')
+  if (String(insideMoney[0].label) !== String(srcInternal.label)) die('P2: a single contributing edge must keep its label verbatim, got ' + insideMoney[0].label + ' (source ' + srcInternal.label + ')')
+  if (insideMoney[0].n !== (srcInternal.weight > 0 ? srcInternal.weight : 1)) die('P2: a single edge must carry its weight in .n, got ' + insideMoney[0].n)
   if (!screen(['cmd_app', 'internal_server', 'internal_worker']).length) die('P2: the platform screen lost its internal arrow')
+
+  // P2b — a derived edge labelled with a verb (no number in the label) still counts: its `weight`
+  // field feeds the roll-up, so the arrow reports the summed count without parsing the label.
+  // Regression guard for the verb refactor (label = relationship, weight = count).
+  const vis = Object.fromEntries(['money', 'platform'].map((i) => [i, i]))
+  const wm = rollEdges([...m.edges, { from: 'platform', to: 'money', label: 'imports', weight: 3, kind: 'import', estatus: 'inferred' }], vis, parent)
+    .find((e) => e.from === 'platform' && e.to === 'money')
+  if (!wm || wm.n !== 7) die('P2b: a verb-labelled edge with weight did not add its weight to the roll (want 7=4+3): ' + JSON.stringify(wm))
 
   // P3 — the tally reports the PACKAGES, not the domains. 3 of 5 packages carry a verdict; the two
   // domain boxes carry none. Before the roll-up this level read 0/2 and the 3 verdicts vanished.

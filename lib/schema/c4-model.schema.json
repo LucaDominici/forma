@@ -571,6 +571,11 @@
           "level": {
             "type": "string"
           },
+          "weight": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Reference count for a derived edge; the viewer sums it when rolling up. Optional; falls back to parsing the label."
+          },
           "kind": {
             "type": "string",
             "description": "import | runtime | ci \u2014 provenance of the relationship."
@@ -605,9 +610,10 @@
             "type": "string",
             "enum": [
               "active",
-              "to-build"
+              "to-build",
+              "inferred"
             ],
-            "description": "active = animated flow; to-build = dashed."
+            "description": "active = animated flow (curated); to-build = dashed; inferred = derived from code references (heuristic, drawn softer)."
           }
         }
       }
