@@ -1581,19 +1581,21 @@ const diffPaths = (a, b, at = '') => {
     ['a decision that lands on no work', (s) => s.replace('| `R-1` | `#3` |', '| `R-1` | |'), /requirement "D-3" lands on no issue and names no verification/],
     ['open work no requirement claims', (s) => s.replace('`R-2` | `#2`', '`R-2` | `#1`'), /open issue #2 .* is cited by no requirement/],
   ]
+  // The document is restored BEFORE the assertions, not after the loop: a die() mid-loop would
+  // otherwise leave the fixture edited, and the next block's failure would point at the wrong thing.
   const designDoc = join(alpha, 'docs/DESIGN.md'), designSrc = readFileSync(designDoc, 'utf-8')
   for (const [what, edit, expected] of rtmBreaks) {
     const broken = edit(designSrc)
     if (broken === designSrc) die(`rtm: the edit for "${what}" changed nothing — the fixture document drifted`)
     writeFileSync(designDoc, broken)
     const rebuilt = join(R, 'rtm-broken.html')
-    r = run(['room', '--manifest', manifest, '--out', rebuilt])
-    if (r.status !== 0) die(`rtm: room refused to compose with ${what}; the matrix is graded by check, not by the composer`, r)
-    r = checkRoom(rebuilt)
-    if (r.status === 0) die(`rtm: check passed a matrix with ${what}`)
-    if (!expected.test(r.stderr || '')) die(`rtm: check failed on ${what} but did not say so — got: ` + (r.stderr || '').slice(0, 400))
+    const composed = run(['room', '--manifest', manifest, '--out', rebuilt])
+    const graded = composed.status === 0 ? checkRoom(rebuilt) : null
+    writeFileSync(designDoc, designSrc)
+    if (!graded) die(`rtm: room refused to compose with ${what}; the matrix is graded by check, not by the composer`, composed)
+    if (graded.status === 0) die(`rtm: check passed a matrix with ${what}`)
+    if (!expected.test(graded.stderr || '')) die(`rtm: check failed on ${what} but did not say so — got: ` + (graded.stderr || '').slice(0, 400))
   }
-  writeFileSync(designDoc, designSrc)
 
   // A document that contributes nothing is named. Untracked is the case that matters: the matrix
   // must not depend on what happens to be lying in a working tree.
