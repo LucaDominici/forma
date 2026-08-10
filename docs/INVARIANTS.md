@@ -149,6 +149,18 @@ Model prose, issue titles, finding text and document bodies are all attacker-adj
 - **Enforced by:** `test/run.mjs` compares key counts.
 - **Red when:** a string is added to one locale only.
 
+## I16. Traceability is measured, never inferred
+
+A requirement traces to a decision, a verification or an issue because a cell in a document says
+so. Forma measures how much of that is covered and names what is not, at both ends: a requirement
+that lands on nothing, and open work no requirement claims.
+
+- **Enforced by:** `lib/rtm.mjs` reads only declared references; `lib/check.mjs` fails on a
+  duplicate id, a reference that resolves to nothing, an uncovered requirement, an orphan open
+  issue, and a declared document that contributed no rows.
+- **Red when:** a matrix is missing a link at either end — or a document quietly stops contributing,
+  which is how a matrix empties while still looking full.
+
 ---
 
 ## How to add an invariant

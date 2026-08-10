@@ -77,16 +77,24 @@ code through git; composing a portfolio briefing; and gating all of it.
 
 A requirement with no command behind it is a wish. Each of these is runnable.
 
-| Requirement | Verified by |
-|---|---|
-| the model matches the code | `forma check` re-walks `src/` and compares |
-| the model matches its own contract | `validateModel` against `lib/schema/c4-model.schema.json`, run inside `gen` and `check` |
-| a generated document does not drift | `check` re-renders the governed block and compares |
-| a derived state still derives | `check` recomputes from the source document and fails if the row is gone |
-| the artifact is worth projecting | `scripts/presentable.mjs`, five predicates |
-| the briefing keeps its promises | `scripts/room-presentable.mjs`, including a byte-identical re-render |
-| a verdict is anchored | `applyVerdicts` refuses an unresolvable reference; `check` re-checks on disk |
-| the whole thing still works | `npm test`, fixtures driven through the real CLI |
+The `id` column is not decoration. It is the first link of the traceability chain `lib/rtm.mjs`
+reads: a requirement here is satisfied by a decision in [`DESIGN.md`](DESIGN.md), proved by a row in
+[`DELIVERY.md`](DELIVERY.md), and worked by GitHub issues. Where a programme's manifest declares an
+`rtm` block, `forma check` fails on a requirement that lands on nothing and on open work no
+requirement claims — which is the only way "the issues are the whole of the work" can be checked
+rather than asserted.
+
+| id | requirement | verified by |
+|---|---|---|
+| R-1 | the model matches the code | `forma check` re-walks `src/` and compares |
+| R-2 | the model matches its own contract | `validateModel` against `lib/schema/c4-model.schema.json`, run inside `gen` and `check` |
+| R-3 | a generated document does not drift | `check` re-renders the governed block and compares |
+| R-4 | a derived state still derives | `check` recomputes from the source document and fails if the row is gone |
+| R-5 | the artifact is worth projecting | `scripts/presentable.mjs`, five predicates |
+| R-6 | the briefing keeps its promises | `scripts/room-presentable.mjs`, including a byte-identical re-render |
+| R-7 | a verdict is anchored | `applyVerdicts` refuses an unresolvable reference; `check` re-checks on disk |
+| R-8 | the whole thing still works | `npm test`, fixtures driven through the real CLI |
+| R-9 | a requirement lands on work, and no work is unclaimed | `forma check` with an `rtm` block declared; `npm test`, the `rtm` block |
 
 ## 7. What success looks like
 
