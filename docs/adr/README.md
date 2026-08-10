@@ -8,3 +8,5 @@ that links back to it. Newest last.
 | [0001](0001-zero-dependency-esm.md) | Zero-dependency Node ESM CLI | Accepted |
 | [0002](0002-single-source-of-truth-model.md) | One `c4-model.json` as single source of truth | Accepted |
 | [0003](0003-npm-oidc-trusted-publishing.md) | Publish via npm OIDC trusted publishing + provenance | Accepted |
+| [0004](0004-control-room-as-a-forma-rendering.md) | Control Room as a Forma rendering, not a second product | Accepted |
+| [0005](0005-portfolio-briefing-over-per-repo-dashboard.md) | A portfolio briefing, not a per-repository dashboard | Accepted |

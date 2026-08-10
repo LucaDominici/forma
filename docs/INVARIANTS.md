@@ -1,0 +1,158 @@
+# Invariants
+
+The rules Forma does not break. Each one names where it is enforced and what turns red when it is
+violated. An invariant with no enforcement is a preference, and preferences do not belong here.
+
+Read this before changing anything in `lib/`.
+
+---
+
+## I1. Zero runtime dependencies
+
+`package.json` has no `dependencies` and never will. Everything is Node stdlib: the JSON Schema
+walker, the layout, the renderers, the charts.
+
+- **Enforced by:** `scripts/lint.mjs` runs `node --check` over the tree; `npm pack --dry-run`
+  ships `bin/`, `lib/`, and three text files. ADR-0001.
+- **Red when:** a dependency appears; the package grows a `node_modules` requirement.
+- **Why:** an architecture tool that rots because its charting library moved on has proven the
+  point it exists to disprove.
+
+## I2. Only `verify` touches the network
+
+`gen`, `check`, `doc`, `serve` and `room` never open a socket. `gen --enrich` is the one opt-in
+exception and requires an explicit flag plus a key.
+
+- **Enforced by:** `lib/verify.mjs` is the only module importing a network path; `lib/room.mjs`
+  reads a snapshot that must already exist.
+- **Red when:** a fetch appears in an offline command; `check` behaves differently with the
+  network down.
+- **Why:** a gate that can fail because of DNS is not a gate.
+
+## I3. `gen` is the only writer of the model
+
+`verify` writes exactly one model field (`meta.verifiedAt`) plus node state. `room` and `check`
+never write the model at all.
+
+- **Enforced by:** `lib/verify.mjs` (the comment at the `meta.verifiedAt` assignment states it);
+  `lib/room.mjs` opens the model read-only.
+- **Red when:** two commands can produce a different model from the same inputs.
+- **Why:** two writers means the file is nobody's.
+
+## I4. Nothing that survives a regeneration may live only in the model
+
+`gen` rebuilds the model from the topology and overlays. Anything else it holds is transient.
+
+- **Enforced by:** the fact base lives in its own file, `docs/architecture/c4-issues.json`, which
+  `gen` never touches.
+- **Red when:** a fact disappears after a routine `forma gen`.
+- **Why:** discovered the hard way: `verify` used to decorate the model, and every decoration died
+  at the next generation.
+
+## I5. Code proves existence, never completion
+
+`gen` sets `status2` to `unknown` for anything it merely found. A percentage may only come from a
+document or an overlay that a human or an agent wrote, and it carries its citation.
+
+- **Enforced by:** `lib/gen.mjs` at the `status2` default; `scripts/presentable.mjs` predicate 5
+  refuses a percentage whose citation does not positively claim a measurement.
+- **Red when:** a box turns green because a file exists.
+
+## I6. Unknown renders as a blank, never as a zero
+
+A node nobody ruled on, a program without a curated map, an issue git never saw: all of these
+report `null`, and the interface says so in words.
+
+- **Enforced by:** `lib/roomderive.mjs` returns `null` (not `0`) for every aggregate that needs a
+  model the program does not have; the viewer's neutral status class.
+- **Red when:** a zero appears where nothing was measured. Zero claims "measured and none", which
+  is a different and stronger statement.
+
+## I7. Absent is not the same claim as empty
+
+A rule nobody declared and a rule declared as empty are different facts and must stay distinct.
+
+- **Enforced by:** `lib/roomderive.mjs` counts programs with no declared `blockedBy` into
+  `totals.unknownRule` rather than into the unblocked count.
+- **Red when:** "nobody checked" is rendered as "checked, none".
+- **Why:** measured on three repositories: haben declares `needs-human`, arbiter declares
+  `needs-human` and `owner-decision`, viafera has no such label at all.
+
+## I8. No colour without a resolvable reason
+
+Every health verdict carries a non-empty `why` and at least one evidence reference. A `path` must
+exist on disk; a `commit` must resolve in git.
+
+- **Enforced by:** `applyVerdicts` in `lib/audit.mjs` throws rather than skipping; `lib/check.mjs`
+  re-checks every reference; `scripts/room-presentable.mjs` fails on an unresolvable one.
+- **Red when:** a verdict is written whose evidence points at nothing.
+
+## I9. Nothing is dropped silently
+
+Every cap, exclusion and truncation is counted and named where a reader can see it.
+
+- **Enforced by:** `lib/link.mjs` records `excludedSweeps` with sha and file count;
+  `lib/verify.mjs` sets a required `truncated` flag and warns; `lib/room.mjs` refuses to build on
+  a truncated snapshot.
+- **Red when:** a number quietly describes a subset.
+- **Why:** measured, a fetch returned 1200 of 2246 issues and said nothing. Every proportion built
+  on it would have been false.
+
+## I10. The gate re-derives, it never trusts
+
+`check` recomputes from raw inputs and compares. It never parses the generated HTML, and never
+takes a committed number at face value.
+
+- **Enforced by:** `lib/check.mjs` imports the same `lib/roomderive.mjs` the composer uses and
+  compares against a machine-readable block, not against markup.
+- **Red when:** a check reads the artifact it is supposed to be checking.
+
+## I11. New gating is opt-in by presence
+
+A repository that never adopted a feature sees no new failure mode from it.
+
+- **Enforced by:** the pattern of `topo.countChecks || []` and `existsSync(statusPath)`, followed
+  by every Control Room assertion in `lib/check.mjs`.
+- **Red when:** adding a capability turns an unrelated repository's gate red.
+
+## I12. Determinism: the only clock is the manifest
+
+Nothing in the derivation path calls `Date.now()` or `new Date()` with no argument. `today` comes
+from `forma.room.json`. `gen` has exactly one volatile field, `generatedAt`.
+
+- **Enforced by:** `test/run.mjs` compares two consecutive `gen` runs and allows exactly one field
+  to differ; `room-presentable` re-renders and compares bytes.
+- **Red when:** two runs on unchanged inputs differ.
+
+## I13. Nothing in `lib/` knows any project's names
+
+No node id, directory, label or stack of any specific repository appears in the engine. Anything
+project-specific is declared in a manifest or a topology.
+
+- **Enforced by:** `CONTRIBUTING.md`; the per-program `blockedBy` and `taxonomy` fields exist
+  precisely so `needs-human` is not hardcoded.
+- **Red when:** a grep for a project's vocabulary hits `lib/` or `bin/`.
+
+## I14. Repository-controlled text never becomes markup
+
+Model prose, issue titles, finding text and document bodies are all attacker-adjacent input.
+
+- **Enforced by:** `lib/room.mjs` escapes `<` as `<` in injected JSON and `</script` in the
+  inlined viewer; the embedded frame runs `sandbox="allow-scripts"` without `allow-same-origin`.
+- **Red when:** a `</script>` in a description closes the script element. There is a test that
+  plants exactly that.
+
+## I15. Every UI string exists in both locales
+
+`STRINGS.en` and `STRINGS.it` stay at parity in both the viewer and the Control Room.
+
+- **Enforced by:** `test/run.mjs` compares key counts.
+- **Red when:** a string is added to one locale only.
+
+---
+
+## How to add an invariant
+
+Do not add one here until it has an enforcement point. Write the check first, watch it fail on
+purpose, then write the row. A rule that has never been seen to go red is a rule nobody knows
+works.

@@ -1,0 +1,108 @@
+# Scope — what "finished" means for the Control Room
+
+Status: **open**, reopens the boundary closed by [`docs/SCOPE.md`](SCOPE.md) (v0.10.0,
+*maintained*), which named "no new command" outside its own confine. This document exists
+because that one's §7 requires it before any such work proceeds. See
+[ADR-0004](adr/0004-control-room-as-a-forma-rendering.md) for the shape of the decision.
+
+Instrument: `scripts/room-presentable.mjs`, the same role `scripts/presentable.mjs` plays for
+the single-lens viewer — it grades the rendered artifact, `forma check` grades adherence to the
+code.
+
+---
+
+## 1. The definition of finished
+
+> `forma room` generates a self-contained, 8-tab HTML from a model + overlays + a `gh` snapshot,
+> with no post-generation hand-editing; `forma check` exits 0 on the same commit and fails on a
+> deliberately altered aggregate, naming what drifted; `scripts/room-presentable.mjs` exits 0 on
+> the generated artifact and fails on a missing evidence ref, an un-piled issue reference, or a
+> non-deterministic re-render.
+
+Two people running those three commands on the same inputs get the same three verdicts.
+
+## 2. What "mirrors reality" means, operationally
+
+The room's central claim — *deve essere uno specchio della realtà o è completamente inutile* — is
+implemented as three separate, falsifiable channels, never one blended trust:
+
+1. **Architecture** — the existing SSOT (`c4-model.json`), unchanged.
+2. **Programme facts** — `gh` issues/milestones, fetched by `verify`, timestamped, never invented.
+3. **The link between them** — issue → commit citing it → files touched → C4 node, derived from
+   `git log`, not curated by hand and not inferred by an LLM. Coverage is partial by
+   construction (haben: 69%, arbiter: 54%, viafera: 56%, measured on 2026-08-09) — the
+   uncovered remainder reads `unknown`, never zero.
+
+Everything colored, clustered, or prioritized on screen traces to one of those three, or it does
+not render.
+
+## 3. Inside the boundary (this round)
+
+- `forma verify` gains a second output, `c4-issues.json`, additive and atomic with the existing
+  model write.
+- `forma room` composes 8 tabs (`exec`, `holo`, `c4`, `wbs`, `auto`, `kan`, `seg`, `tec`) from
+  model + status overlay + issue snapshot + git linkage + optional audit overlays
+  (`c4-health.json`, `c4-findings.json`).
+- `forma check` gains four assertions, all opt-in by presence.
+- The audit channel (`c4-health.json`/`c4-findings.json`) is populated by the same
+  plan-then-apply pattern `--enricher agent` already uses for description holes — never a
+  network call, never an unattributed verdict.
+
+## 4. Outside the boundary (this round)
+
+- A second target repo proving the manifest is parametric (arbiter/viafera have no Forma model
+  yet — curating one is real work, not a code change).
+- `c4-blocks.json` as a curated file — the `auto` tab derives its queue from
+  issues×milestone×label until something is demonstrably uncoverable that way.
+- Publishing the generated Control Room anywhere (Pages, `docs/demo/`, haben) — this round's
+  artifact lives in scratch space for review.
+- Any new language adapter, any new graph heuristic, any network path outside `verify`.
+
+## 5. Decisions made (grilled with the owner, 2026-08-09)
+
+| # | Decision | Chosen |
+|---|---|---|
+| 1 | Command shape | `forma room`, dedicated — not `gen --room` |
+| 2 | Health overlay key | issue number, not node id — one node can carry several verdicts |
+| 3 | Taxonomy detection | automatic (`name<sep>value` label families) + population threshold + manifest-only alias/rename/exclude — never semantic inference |
+| 4 | Issue↔code link | git only (`#N` in commit subject → files → node) — no label-based or hand-curated second mapping |
+| 5 | `holo` vs `c4` | AS-IS vs TO-BE via the existing `?checkpoint=` mechanism — not drill-depth (would touch the shipped viewer) |
+| 6 | Async audit | evidence-gated agent fills (`auditPlan`/`applyVerdicts`), reusing the `enrich.mjs` pattern — no bare LLM prose |
+| 7 | This round's target | `haben` only — its Forma model already exists in `docs/demo/`; a second repo is a follow-up |
+| 8 | This round's output | scratch space only — no commit to `forma` or `haben` |
+
+## 6. Open (not this document's to close)
+
+- **Disclosure.** A published Control Room exposes issue titles, labels, and milestones from the
+  target repo — richer than the package-name disclosure `docs/SCOPE.md §6.1` already approved for
+  `haben`. Not decided; blocks publishing, not building.
+- **Shipped-file count.** `AGENTS.md`/`scripts/check-clean.mjs` name a number that grows once
+  `room.mjs` and friends are committed for real. Needs a deliberate bump, not a silent one.
+
+## 7. After the boundary
+
+Undecided — this document does not itself define a stage-5 *maintained* state, because it opens
+one confine while `docs/SCOPE.md` still governs the rest of the product.
+
+---
+
+## 8. What this does not claim
+
+- **Freshness is not verifiable offline.** `c4-issues.json` carries `fetchedAt`; nothing in
+  `check`/`room-presentable` can know whether the live repo has moved since. They can only refuse
+  a snapshot that is missing, malformed, or older than the manifest's `staleAfterDays` — never
+  confirm it is current.
+- **`source.commit` drift is reported, not enforced to zero.** Forma's own dogfood model already
+  disagrees with `main` at the moment this document was written (`d9a0694…` vs `d5be89f`) because
+  `gen` only runs on demand. The `tec` tab must say how many commits behind the architecture layer
+  is; it is not required to be zero.
+- **The haben health audit in this round is a worked example, not a completeness claim.** 4 of
+  haben's 5 open issues are `needs-human` — a verdict there is a judgment about a pending human
+  decision, not a measurement of code. What is proven is the mechanism (a verdict without a
+  resolvable evidence ref is rejected), not that every verdict is correct.
+- **The taxonomy detector is pattern matching, not understanding.** It finds `name<sep>value`
+  label families and a population threshold; it does not know that `priority:p2` and
+  `priority:P2` mean the same thing unless the manifest says so.
+- **Parametricity across repos is not proven this round.** One repo (haben) exercises the
+  pipeline end to end; the manifest mechanism exists, but "change only the manifest, get a
+  coherent room on a second repo" is unverified until it is actually run on one.

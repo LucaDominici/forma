@@ -1,7 +1,9 @@
 # Scope — what "finished" means for Forma
 
 Status: **closed 2026-07-26**, at `v0.10.0`. The boundary in §1 is met and measured — see §8.
-Forma moves to stage 5, *maintained* (§7).
+Forma moves to stage 5, *maintained* (§7). §4 named "no new command" outside this boundary;
+per this document's own §7, that boundary is reopened, for the Control Room only, by
+[`docs/SCOPE-room.md`](SCOPE-room.md) — the rest of this document still governs.
 Instrument: [`scripts/presentable.mjs`](../scripts/presentable.mjs). Measured against `haben`
 (a real, foreign, 53-package Go + React repo) and against Forma's own model.
 

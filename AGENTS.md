@@ -7,16 +7,23 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
 
 ## Layout
 
-- `bin/forma.mjs` — CLI entry; dispatches `init | gen | check | doc | serve | verify`.
+- `bin/forma.mjs` — CLI entry; dispatches `init | gen | check | doc | serve | verify | room`.
 - `lib/` — the engine: `init.mjs`, `gen.mjs`, `check.mjs`, `doc.mjs`, `serve.mjs`, `verify.mjs`,
-  plus the shared pieces `cluster.mjs` (component synthesis), `describe.mjs` (§1a description
-  resolution), `docmap.mjs` (capability tables → box text + derived progress), `enrich.mjs`
-  (opt-in LLM prose), `lang.mjs` (per-language topology + edge adapters; Go reads packages and
-  `import` blocks), `render.mjs` (arc42 renderers shared by doc+check), `validate.mjs` (zero-dep
-  JSON-schema walker used by `gen` and `check`). Thirteen modules — the same 13 `lib` leaves the
-  model carries.
+  `room.mjs`, plus the shared pieces `cluster.mjs` (component synthesis), `describe.mjs` (§1a
+  description resolution), `docmap.mjs` (capability tables → box text + derived progress),
+  `enrich.mjs` (opt-in LLM prose), `lang.mjs` (per-language topology + edge adapters; Go reads
+  packages and `import` blocks), `render.mjs` (arc42 renderers shared by doc+check), `validate.mjs`
+  (zero-dep JSON-schema walker used by `gen`, `check` and `room`), `link.mjs` (issue↔code linkage
+  via git log, no LLM), `taxonomy.mjs` (auto-detected label families), `audit.mjs` (evidence-gated
+  Control Room verdicts, same doctrine as `enrich.mjs`), `roomderive.mjs` (Control Room aggregates
+  — the ONE module both `room` and `check` import, so they can't disagree). Eighteen modules — the
+  same 18 `lib` leaves the model carries.
 - `lib/schema/c4-model.schema.json` — the JSON contract (single source of truth for the model).
+  `c4-issues.schema.json`, `c4-health.schema.json`, `c4-findings.schema.json`,
+  `forma.room.schema.json` — the Control Room overlays (docs/SCOPE-room.md), each its own file
+  with its own lifecycle, validated by the same `validateModel(obj, schemaPath)`.
 - `lib/viewer/c4-hologram.html` — the interactive viewer (swappable skins).
+- `lib/viewer/control-room.html` — the 8-tab Control Room shell `forma room` composes into.
 - `scripts/` — `lint.mjs` (zero-dep lint), `check-clean.mjs` (prepack `.fuse_hidden` guard).
 - `test/` — `run.mjs` runs `init→gen→check` across the fixtures; `stub-gh.mjs` stands in for the
   `gh` CLI so `verify` is tested offline.

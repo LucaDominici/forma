@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-07-27T23:35:13.063Z",
+  "generatedAt": "2026-08-10T07:34:58.760Z",
   "source": {
     "repo": "forma",
-    "commit": "d9a0694a0abba2d1624cdd7ef8f389cd234b8cfe",
-    "branch": "main",
+    "commit": "29b1901dd0da4e04a6bc1285f0d29d00f70321bc",
+    "branch": "feat/control-room",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -245,7 +245,7 @@
         {
           "type": "glob",
           "ref": "lib",
-          "count": 13
+          "count": 18
         }
       ],
       "category": "container",
@@ -273,7 +273,7 @@
         {
           "type": "glob",
           "ref": "scripts",
-          "count": 3
+          "count": 4
         }
       ],
       "category": "container",
@@ -333,6 +333,25 @@
       "status2": "unknown",
       "target": "",
       "func": "forma — present your architecture instead of slides. Thin CLI dispatcher over the lib/ engine. Every subcommand is a plain Node script, so any agent (or a human with no AI) drives the same contract. The engine is model-agnostic.",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__audit_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "audit",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/audit.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "audit.mjs — the async on-demand audit channel behind c4-health.json / c4-findings.json. Same doctrine as lib/enrich.mjs's --enricher agent: emit a plan of prompts instead of calling an API (the agent driving forma already has the model in t",
       "descSource": "docstring"
     },
     {
@@ -507,6 +526,25 @@
       "descSource": "docstring"
     },
     {
+      "id": "lib__link_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "link",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/link.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "link.mjs — issue - commit citing it - files touched - C4 node. Pure, offline, no LLM. The only authority for \"which part of the architecture did this issue touch\" is git: a second, hand-curated map of the same fact is exactly the concurrent",
+      "descSource": "docstring"
+    },
+    {
       "id": "lib__render_mjs",
       "level": "leaf",
       "parent": "lib",
@@ -526,6 +564,44 @@
       "descSource": "docstring"
     },
     {
+      "id": "lib__room_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "room",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/room.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "forma room — compose one portfolio manifest into one self-contained Control Room HTML. Read-only over every input; no network here: issue snapshots must already exist (forma verify). Usage: node lib/room.mjs --manifest <path [--out <path]",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__roomderive_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "roomderive",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/roomderive.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "roomderive.mjs — the ONLY place Control Room aggregates are computed. Imported by both room.mjs (which writes the numbers into window.ROOM.derived) and check.mjs (which recomputes them from the same raw inputs and compares against what room",
+      "descSource": "docstring"
+    },
+    {
       "id": "lib__serve_mjs",
       "level": "leaf",
       "parent": "lib",
@@ -542,6 +618,25 @@
       "status2": "unknown",
       "target": "",
       "func": "forma serve — tiny static server for the interactive viewer + model. Local dev only.",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__taxonomy_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "taxonomy",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/taxonomy.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "taxonomy.mjs — auto-detect label \"families\" (priority, size, type, domain, ...) from a repo's own label vocabulary. Pure pattern matching, never semantic inference: a family exists because enough labels share a name<sepvalue shape, not beca",
       "descSource": "docstring"
     },
     {
@@ -640,6 +735,25 @@
       "descSource": "docstring"
     },
     {
+      "id": "scripts__room_presentable_mjs",
+      "level": "leaf",
+      "parent": "scripts",
+      "kind": "leaf",
+      "name": "room-presentable",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "scripts/room-presentable.mjs"
+        }
+      ],
+      "category": "scripts",
+      "status2": "unknown",
+      "target": "",
+      "func": "room-presentable.mjs — the acceptance instrument for the Control Room (docs/SCOPE-room.md), same role scripts/presentable.mjs plays for the single-lens viewer: forma check grades adherence to the code, this grades whether the rendered artif",
+      "descSource": "docstring"
+    },
+    {
       "id": "test__run_mjs",
       "level": "leaf",
       "parent": "test",
@@ -674,7 +788,7 @@
       "category": "test",
       "status2": "unknown",
       "target": "",
-      "func": "Offline stand-in for the gh CLI, used via forma verify --gh-cmd \"node test/stub-gh.mjs\". Prints the same shape as gh issue list --json number,state. #7 closed, #8 open — nothing else.",
+      "func": "Offline stand-in for the gh CLI, used via forma verify --gh-cmd \"node test/stub-gh.mjs\". Prints the same shape as gh issue list --json number,title,state,milestone,labels. #7 closed (milestone v1), #8 open (no milestone) — nothing else.",
       "descSource": "docstring"
     }
   ],
