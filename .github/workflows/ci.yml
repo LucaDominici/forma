@@ -52,10 +52,26 @@ jobs:
       # only the age bar is left, which is a weaker gate that still reports success.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { fetch-depth: 0 }
+      # forma is public and arbiter is private, so the default GITHUB_TOKEN cannot read it: the
+      # checkout 404s with "Not Found" and the job dies before any gate runs. Named here rather
+      # than left as a confusing checkout error, and NOT made skippable — a documentation gate that
+      # quietly stands down when its engines are unreachable is the shape of gate this repository
+      # exists to argue against (DECISION_REGISTRY.md D-04, technical-debt.md D-7).
+      - name: the gate engines must be reachable
+        env: { ARBITER_TOKEN: "${{ secrets.ARBITER_TOKEN }}" }
+        run: |
+          [ -n "$ARBITER_TOKEN" ] || {
+            echo "::error::secrets.ARBITER_TOKEN is not set. arbiter is a private repository and"\
+                 "forma is public, so the default GITHUB_TOKEN cannot check it out. Create a"\
+                 "fine-grained PAT with Contents: read on LucaDominici/arbiter and add it as the"\
+                 "repository secret ARBITER_TOKEN."
+            exit 1
+          }
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: LucaDominici/arbiter
           path: .arbiter-gates
+          token: ${{ secrets.ARBITER_TOKEN }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
