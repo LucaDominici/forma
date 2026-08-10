@@ -1826,7 +1826,24 @@ const diffPaths = (a, b, at = '') => {
   if (find(renderMarkdown('10. ten\n100. hundred\n1000. thousand\n'), 'OL').children.filter((c) => c.tagName === 'LI').length !== 3) {
     die('markdown: an item numbered past 999 was dropped out of its own list')
   }
-  // A lone CR, U+2028 or U+2029 inside a document HUNG THE BROWSER: `.` and `$` exclude all three
+  // Nested lists (Audit #13): a deeper indent is a list under the previous item, not a flat row.
+  // The renderer ingests arbitrary client documents, so a nested list that flattens is a structural
+  // lie about what the document says — and the corpus has none today, which is exactly when it rots.
+  const nested = renderMarkdown('- parent\n  - child one\n  - child two\n- sibling\n')
+  const ul = find(nested, 'UL')
+  if (!ul) die('markdown: a bullet list did not produce a <ul>')
+  const lis = ul.children.filter((c) => c.tagName === 'LI')
+  if (lis.length !== 2) die(`markdown: nested list flattened — expected 2 top-level <li>, got ${lis.length}`)
+  const childUl = lis[0].children.filter((c) => c.tagName === 'UL')
+  if (childUl.length !== 1) die('markdown: a deeper indent did not become a nested <ul> under its parent item')
+  if (childUl[0].children.filter((c) => c.tagName === 'LI').length !== 2) die('markdown: the nested list lost its items')
+  // cross-type nesting: an ordered list under a bullet item
+  const mixed = renderMarkdown('- parent\n  1. first\n  2. second\n')
+  const muls = find(mixed, 'UL')
+  if (!muls || !muls.children.filter((c) => c.tagName === 'LI')[0].children.some((c) => c.tagName === 'OL')) {
+    die('markdown: an ordered list under a bullet item was not nested')
+  }
+  // a lone CR, U+2028 or U+2029 inside a document HUNG THE BROWSER: `.` and `$` exclude all three
   // in JavaScript, so the unanchored list detector matched a line the anchored consumer could not,
   // the index never advanced, and the loop appended empty <ul>s until the heap died. Repository
   // text reaches this renderer unfiltered, so it was a hang triggered by somebody else's bytes.

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Forma</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23122'/%3E%3Ccircle cx='8' cy='8' r='3.5' fill='%233ee7ff'/%3E%3C/svg%3E">
 <style>
 /* Every value here was produced by `node scripts/palette.mjs`, which is the script docs/DESIGN.md
    D6 claimed had already been run and which did not exist until it was written. OKLCH because the
@@ -80,7 +81,7 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
 
 .answer{display:grid;gap:var(--gap);grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
 .evidence{display:grid;gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin;
- grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(230px,1fr)}
+ grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(0,auto);align-content:start}
 .span2{grid-column:span 2}
 .full{grid-column:1/-1}
 @media(min-width:1500px){
@@ -90,7 +91,8 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
  :root{--pad:22px;--gap:20px}
  .answer,.evidence{grid-template-columns:repeat(4,minmax(0,1fr))}
  body{font-size:15px}
- .evidence{grid-auto-rows:minmax(280px,1fr)}
+ .evidence{grid-auto-rows:minmax(0,auto)}
+ .chart-viz{min-height:220px}
 }
 /* Below the floor the shell is released rather than crushed: the page scrolls.
    Gated on HEIGHT as well as width, because the budget being protected is vertical: a 1920x640
@@ -161,7 +163,10 @@ details[open]>summary:after{content:"\2212"}
 /* Charts fill the box the grid gave them. The old viewBox had a fixed height and took its width
    from the aspect ratio, which is exactly why a grid row could never contain one. */
 .chart{min-height:0}
-.chart-viz{flex:1 1 auto;min-height:0;position:relative}
+/* A chart is the one panel that needs a floor now that evidence rows size to content (F2): an SVG
+   has no intrinsic height, so without this a chart would collapse to its heading. 180px keeps a
+   single bar or a short series legible without reserving a whole screen row. */
+.chart-viz{flex:1 1 auto;min-height:180px;position:relative}
 .chart-viz svg{display:block;width:100%;height:100%}
 .axis{stroke:var(--line);stroke-width:1;shape-rendering:crispEdges}
 .mark-accent{fill:var(--accent)}.mark-series2{fill:var(--series2)}.mark-bad{fill:var(--bad)}
@@ -187,8 +192,9 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
 .hole{padding:5px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(120px,170px) 1fr;gap:12px;font-size:12px}
 .hole>span:first-child{color:var(--bad);font-size:11px}
 
-/* The map finally gets the area an ultrawide actually has. */
-.frame{width:100%;height:100%;min-height:0;display:block;border:1px solid var(--line);background:var(--surface)}
+/* The map finally gets the area an ultrawide actually has. It is a diagram, not a list: it uses the
+   height it reserves, so it keeps an explicit floor now that evidence rows size to content (F2). */
+.frame{width:100%;height:100%;min-height:420px;display:block;border:1px solid var(--line);background:var(--surface)}
 /* Two panes, not an accordion: a document is not a disclosure widget. */
 .reader{margin:0;max-width:78ch;font-size:13px;line-height:1.6}
 .md p{margin:0 0 10px;max-width:72ch}
@@ -522,18 +528,23 @@ function chartPriority(s,program){
  });
 }
 function chartNodes(s,program){
- var all=[],k,i;for(k in s.workPerNode)if(s.workPerNode.hasOwnProperty(k))all.push([k,s.workPerNode[k]]);
+ // The reader's name for a node is its path (`lib/audit.mjs`), not the id the topology encodes
+ // (`lib__audit_mjs`). The id is a mechanism; the path is what the reader opens (F4).
+ var pathOf={},i,nodes=program.model&&program.model.nodes||[];
+ for(i=0;i<nodes.length;i++){var nd=nodes[i],ev=(nd.evidence||[]).filter(function(e){return e.type==="path";})[0];pathOf[nd.id]=ev?ev.ref:nd.name;}
+ var all=[],k;for(k in s.workPerNode)if(s.workPerNode.hasOwnProperty(k))all.push([k,s.workPerNode[k]]);
  all.sort(function(a,b){return b[1]-a[1]||(a[0]<b[0]?-1:1);});
  // A row of zero-length bars is not information, it is noise that costs the rows that are. The
  // count of untouched nodes is the information, and it goes in the provenance line (I9).
  var pairs=all.filter(function(p){return p[1]>0;}),quiet=all.length-pairs.length;
- var rows=all.map(function(p){return [p[0],p[1]];});
+ var rows=all.map(function(p){return [pathOf[p[0]]||p[0],p[1]];});
  var prov=STR.provLink+(quiet?" · "+fmt(STR.nodesQuiet,{n:quiet}):"");
  return chart(STR.nodeChart,prov,[STR.node,STR.count],rows,function(svg,w,h){
   if(!pairs.length){empty(svg,w,h);return;}
   var top=Math.max(1,Math.min(pairs.length,Math.floor((h-18)/22)));
   barsH(svg,w,h,pairs.slice(0,top).map(function(p){
-   return {name:p[0],total:p[1],parts:[{v:p[1],cls:"mark-accent"}],tip:fmt(STR.tipNode,{name:p[0],n:p[1]})};
+   var name=pathOf[p[0]]||p[0];
+   return {name:name,total:p[1],parts:[{v:p[1],cls:"mark-accent"}],tip:fmt(STR.tipNode,{name:name,n:p[1]})};
   }),{gutter:210,maxStep:24});
  });
 }
@@ -616,20 +627,40 @@ function renderMarkdown(src){
  /* Consecutive item lines become ONE list element. Emitting a <div> per item looked identical and
     exposed nothing: assistive technology got ten paragraphs where the document had a list of ten,
     with no "list, 10 items" and no way to skip it. */
- function list(tag,cls,first){
+ function list(tag,cls,first,minIndent){
   // The consumer allows more digits than the detector on purpose. `\d{1,3}` opening a list keeps
   // "2026. The year the manifest was frozen" as prose; but once a list IS running, item 1000 is an
   // item, and dropping it into the paragraph buffer was a silent structural loss (I9).
-  var box=el(tag,cls),re=tag==="ol"?/^\s*(\d{1,9})\.\s+(.*)$/:/^\s*[-*]\s+(.*)$/,m,n=0;
+  var box=el(tag,cls),re=tag==="ol"?/^(\s*)(\d{1,9})\.\s+(.*)$/:/^(\s*)[-*]\s+(.*)$/,m,n=0,base=null,lastLi=null;
   if(tag==="ol"&&first!==1)box.setAttribute("start",String(first));
-  while(i<lines.length&&(m=re.exec(lines[i]))!==null){
-   inline(box.appendChild(el("li","md-li","")),m[tag==="ol"?2:1]);i++;n++;
+  while(i<lines.length){
+   var ln=lines[i],ind=(/^(\s*)/.exec(ln)||["",""])[1].length;
+   // A line shallower than the parent's level is not ours: it ends this list (Audit #13).
+   // Top-level lists have no parent, so their floor is -1: a list starting at indent 0 is legal.
+   if(ind<=(minIndent==null?-1:minIndent))break;
+   m=re.exec(ln);
+   if(!m){
+    // A deeper-indented line of the OTHER marker type is a nested list too: `- parent` then
+    // `  1. first` is an ordered list under a bullet item, not a new top-level list.
+    var t=/^\s*\d{1,9}\.\s+/.test(ln)?"ol":/^\s*[-*]\s+/.test(ln)?"ul":null;
+    if(t&&lastLi){lastLi.appendChild(list(t,t==="ol"?"md-ol":"md-ul",1,base));continue;}
+    break; // prose: the outer loop owns it
+   }
+   if(base===null)base=ind;
+   if(ind>base){
+    // A deeper indent of our own marker is a nested list under the previous item. The recursive
+    // call consumes the nested lines and leaves i on the next sibling.
+    if(lastLi){lastLi.appendChild(list(tag,cls,1,base));continue;}
+    i++;n++;continue;
+   }
+   lastLi=el("li","md-li","");
+   inline(lastLi,m[tag==="ol"?2:1]);box.appendChild(lastLi);i++;n++;
   }
   // Belt and braces: the caller decided this line starts a list using a DIFFERENT pattern from the
   // one above. If the two ever disagree again, consume the line as prose rather than spin — a
   // renderer that hangs on a document is worse than one that renders it plainly.
-  if(!n){para.push(lines[i].trim());i++;return;}
-  out.appendChild(box);
+  if(!n){if(i<lines.length)para.push(lines[i].trim());i++;return null;}
+  return box;
  }
  while(i<lines.length){
   var ln=lines[i],h=/^(#{1,6})\s+(.*)$/.exec(ln);
@@ -657,11 +688,11 @@ function renderMarkdown(src){
    }
    continue;
   }
-  if(/^\s*[-*]\s+/.test(ln)){flush();list("ul","md-ul",1);continue;}
+  if(/^\s*[-*]\s+/.test(ln)){flush();var bl=list("ul","md-ul",1);if(bl)out.appendChild(bl);continue;}
   /* `\d{1,3}\.` and not `\d+\.`: a paragraph opening "2026. The year the manifest was frozen"
      is prose, not the two-thousand-and-twenty-sixth item of a list. */
   var ol=/^\s*(\d{1,3})\.\s+/.exec(ln);
-  if(ol){flush();list("ol","md-ol",parseInt(ol[1],10));continue;}
+  if(ol){flush();var bo=list("ol","md-ol",parseInt(ol[1],10));if(bo)out.appendChild(bo);continue;}
   var q=/^>\s?(.*)$/.exec(ln);
   if(q){
    flush();var qb=el("blockquote","md-q");
@@ -904,19 +935,34 @@ function viewWbs(view,program,summary){
  if(rtm){
   var wrap=el("div","tablewrap"),tb=el("table","matrix"),th=el("thead"),htr=el("tr"),tbody=el("tbody");
   var heads=[STR.wbsRequirement,STR.wbsRole,STR.wbsSatisfies,STR.wbsVerified,STR.wbsIssues,STR.wbsProgress,STR.wbsSource];
-  for(i=0;i<heads.length;i++){var hc=el("th","",heads[i]);hc.setAttribute("scope","col");htr.appendChild(hc);}
+  // A column every row answers identically is a scan that teaches nothing (F3): on the demo, Role
+  // reads "requirement" nine times and Satisfies/Issues/Closed read "—" nine times. Build the raw
+  // values first, drop the constant columns, then render what varies. A single row keeps every
+  // column — its values are all the information there is.
+  var raw=[],i,j;
+  for(i=0;i<rtm.requirements.length;i++){
+   var r=rtm.requirements[i],pr=rtm.progress[r.id];
+   raw.push([r.id,r.role,r.satisfies.join(", ")||"—",r.verified.join(", ")||"—",
+     r.issues.length?r.issues.join(","):"—",pr&&pr.pct!=null?pr.closed+"/"+pr.issues+" ("+pr.pct+"%)":"—",r.from+":"+r.line]);
+  }
+  var keep=[];
+  if(raw.length>1)for(j=0;j<heads.length;j++){var v=raw[0][j],c=true;for(i=1;i<raw.length;i++)if(raw[i][j]!==v){c=false;break;}if(!c)keep.push(j);}
+  else for(j=0;j<heads.length;j++)keep.push(j);
+  if(keep.length<heads.length){var provEl=mp.querySelector("p.prov");if(provEl)provEl.textContent+=" · "+STR.wbsConstant;}
+  for(j=0;j<keep.length;j++){var hc=el("th","",heads[keep[j]]);hc.setAttribute("scope","col");htr.appendChild(hc);}
   th.appendChild(htr);tb.appendChild(th);
   for(i=0;i<rtm.requirements.length;i++){
    var r=rtm.requirements[i],tr=el("tr"),td;
-   td=el("td","id");td.appendChild(el("strong","",r.id));td.appendChild(el("div","muted",short(r.text,70)));tr.appendChild(td);
-   tr.appendChild(el("td","",r.role));
-   tr.appendChild(el("td","",r.satisfies.join(", ")||"—"));
-   tr.appendChild(el("td","",short(r.verified.join(", "),40)||"—"));
-   td=el("td");for(j=0;j<r.issues.length;j++){td.appendChild(issueLink(program,r.issues[j]));td.appendChild(document.createTextNode(" "));}
-   if(!r.issues.length)td.textContent="—";tr.appendChild(td);
-   var pr=rtm.progress[r.id];
-   tr.appendChild(el("td","nums",pr&&pr.pct!=null?pr.closed+"/"+pr.issues+" ("+pr.pct+"%)":"—"));
-   td=el("td");td.appendChild(docLink(program,r.from,r.line));tr.appendChild(td);
+   for(j=0;j<keep.length;j++){
+    var c=keep[j];
+    if(c===0){td=el("td","id");td.appendChild(el("strong","",r.id));td.appendChild(el("div","muted",short(r.text,70)));tr.appendChild(td);}
+    else if(c===1)tr.appendChild(el("td","",r.role));
+    else if(c===2)tr.appendChild(el("td","",r.satisfies.join(", ")||"—"));
+    else if(c===3)tr.appendChild(el("td","",short(r.verified.join(", "),40)||"—"));
+    else if(c===4){td=el("td");for(var k=0;k<r.issues.length;k++){td.appendChild(issueLink(program,r.issues[k]));td.appendChild(document.createTextNode(" "));}if(!r.issues.length)td.textContent="—";tr.appendChild(td);}
+    else if(c===5){var pr=rtm.progress[r.id];tr.appendChild(el("td","nums",pr&&pr.pct!=null?pr.closed+"/"+pr.issues+" ("+pr.pct+"%)":"—"));}
+    else{td=el("td");td.appendChild(docLink(program,r.from,r.line));tr.appendChild(td);}
+   }
    tbody.appendChild(tr);
   }
   tb.appendChild(tbody);wrap.appendChild(tb);mp.body.appendChild(wrap);
@@ -955,7 +1001,7 @@ function viewDocs(view,program){
  if(!docs||(!docs.embedded.length&&!docs.listed.length)){
   var np=panel(STR.routeDocs,STR.provDocsNone,"full");np.body.appendChild(el("p","muted",STR.docsNone));ev.appendChild(np);view.appendChild(ev);return;
  }
- var lp=panel(STR.docsCanon,fmt(STR.docsBudget,{n:docs.embedded.length,bytes:docs.bytes,max:docs.maxBytes}));
+ var lp=panel(STR.docsCanon,fmt(STR.docsBudget,{n:docs.embedded.length}));
  var rp=panel("",STR.provDocsReader,"span2"),listWrap=el("div","doclist"),i;
  rp.head.className+=" doc-reader-head";
  rp.classList.add("span2");
@@ -1215,6 +1261,9 @@ function start(){
  tipEl=document.getElementById("tip");
  document.addEventListener("mousemove",onTip);document.addEventListener("focusin",onTip);
  document.addEventListener("mouseleave",onTip);document.addEventListener("focusout",onTip);
+ // A tooltip that only a mouse can dismiss is a trap for a keyboard reader: Escape closes it, and
+ // the next focusin re-opens it for the element that owns it (Audit #12).
+ document.addEventListener("keydown",function(e){if(e.key==="Escape")tipEl.hidden=true;});
  if(!ROOM){document.getElementById("content").appendChild(el("p","muted",STR.emptyRoom));return;}
  applyTheme();wireTheme();
  document.getElementById("page-title").textContent=ROOM.meta.title||STR.appTitle;
