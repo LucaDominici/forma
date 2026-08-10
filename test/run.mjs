@@ -1745,6 +1745,49 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok scan+serve — discovery merges instead of replacing, an excluded programme stays excluded, and serve binds loopback only')
 }
 
+// I14 on a surface that did not exist before: the briefing now RENDERS markdown out of a
+// repository's own documents, and a link target read from that prose is attacker-adjacent input.
+// Assigning it to .href unchecked makes `[read me](javascript:...)` live XSS in a document written
+// by somebody else. The renderer is lifted out of the shipped template and driven directly, the
+// same trick this suite already uses for the viewer's pure functions.
+{
+  const src = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
+  const inlineFn = /function inline\(target,text\)\{[\s\S]*?\n\}/.exec(src)
+  const elFn = /function el\(t,c,x\)\{[^\n]*\n/.exec(src)
+  if (!inlineFn) die('markdown: inline() not found in control-room.html — the renderer moved')
+  if (!elFn) die('markdown: el() not found in control-room.html')
+  const stub = `
+    var document = {
+      createElement: function (t) { return { tagName: t.toUpperCase(), children: [], setAttribute: function () {}, appendChild: function (c) { this.children.push(c) } } },
+      createTextNode: function (t) { return { text: String(t) } },
+    };
+    ${elFn[0]}
+    ${inlineFn[0]}
+    return inline;`
+  // new Function over text lifted from a TRACKED first-party file, which is the same no-jsdom trick
+  // this suite already uses to test the viewer's pure functions. The interpolated strings are our
+  // own source at a reviewed commit, never input; the thing being tested is precisely that the
+  // renderer refuses input.
+  const inline = new Function(stub)()
+  const anchorsFor = (md) => {
+    const target = { children: [], appendChild(c) { this.children.push(c) } }
+    inline(target, md)
+    return target.children.filter((c) => c.tagName === 'A')
+  }
+  for (const hostile of ['[go](javascript:alert(1))', '[go](JaVaScRiPt:alert(1))', '[go](  javascript:alert(1))', '[go](data:text/html,<script>alert(1)</script>)', '[go](vbscript:msgbox)']) {
+    const a = anchorsFor(hostile)
+    if (a.length) die(`markdown: ${hostile} produced a live anchor with href ${a[0].href} — a document can inject a scheme`)
+  }
+  for (const safe of ['[go](https://example.com/x)', '[go](./docs/PRD.md)', '[go](#section)', '[go](mailto:a@b.c)']) {
+    if (!anchorsFor(safe).length) die(`markdown: ${safe} should be a link and was rendered as text`)
+  }
+  // The rejected link is shown, not swallowed: a link that will not be followed should say so.
+  const rejected = { children: [], appendChild(c) { this.children.push(c) } }
+  inline(rejected, '[go](javascript:alert(1))')
+  if (!rejected.children.some((c) => c.text && c.text.indexOf('javascript:') > -1)) die('markdown: a refused link was dropped silently instead of being shown as text (I9)')
+  console.log('  ok markdown — a document cannot inject a scheme through a link, and a refused link is shown rather than dropped')
+}
+
 // Locale parity, now that the tables are files rather than a literal buried in the template. I15
 // claimed this was enforced for the Control Room; it was only ever true of the single-lens viewer.
 {
@@ -1790,4 +1833,4 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok rtm-dogfood — forma's own PRD parses as ${rows.length} traceable requirements, every one carrying its verification and its line`)
 }
 
-console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, strings, rtm-dogfood all green.')
+console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood all green.')
