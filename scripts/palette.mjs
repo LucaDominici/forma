@@ -175,9 +175,10 @@ const EXPLORER_ROLES = {
   // measuring the token is the honest floor, and a planned edge that disappears is a lost claim.
   edgeplan: MARK('a planned relationship'),
   border: HAIRLINE('node outline'), stageborder: HAIRLINE('stage outline'),
-  // WCAG 1.4.3 exempts an inactive control, and this one is painted at opacity .28 on top: holding
-  // it to a text bar would force a disabled button to shout.
-  ter: HAIRLINE('text of a DISABLED control, itself drawn at opacity .28'),
+  // Classified as a disabled control's label on the strength of ONE usage (#back[disabled]). It has
+  // a second: .cpstep, the checkpoint stepper's label, enabled and at full opacity. Auditing a
+  // token by the friendliest of its usages is how a role table becomes a way of excusing a colour.
+  ter: TEXT('checkpoint stepper label (also the disabled back button)'),
 }
 
 const SOURCES = [
@@ -213,6 +214,18 @@ function load() {
         // has no ratio without knowing what is behind it, and saying so is the honest answer.
         if (parsed) tokens.set(name, parsed)
         else if (source.roles[name] || source.grounds.includes(name)) unmeasurable.push(`${name}: ${value}`)
+      }
+      // A gate that can pass without evaluating anything is the defect this whole file exists to
+      // remove, one layer down. `tokensIn` finds a rule by string match, and this file has more than
+      // one `:root{` — the colour block and the layout block — so a reordering, a rename or a
+      // reformat could hand back a rule with none of the tokens in it. Every loop below would then
+      // skip, `failures` would stay empty, and the run would print OK having measured nothing.
+      for (const ground of source.grounds) {
+        if (!tokens.has(ground)) problems.push(`${source.file} · ${theme}: no --${ground} in \`${selector}\` — this audit has no ground to measure against and would otherwise pass by skipping`)
+      }
+      const measured = Object.keys(source.roles).filter((n) => tokens.has(n)).length
+      if (measured < Object.keys(source.roles).length / 2) {
+        problems.push(`${source.file} · ${theme}: only ${measured} of ${Object.keys(source.roles).length} known roles resolved in \`${selector}\` — the rule matched is not the palette`)
       }
       palettes.push({ file: source.file, theme, tokens, unmeasurable, source })
     }
@@ -280,8 +293,12 @@ function audit(palette) {
 // only while that remains true, so the two checks are one rule with two halves.
 function secondaryEncodingPresent() {
   const html = readFileSync(join(REPO, 'lib/viewer/control-room.html'), 'utf-8')
-  const fn = /function statusMark\(v\)\{([\s\S]*?)\n\}/.exec(html)
-  if (!fn) return { ok: false, why: 'statusMark() not found in control-room.html — the status renderer moved' }
+  // Anchored to the END OF THE LINE, not to the next `\n}`. statusMark is a single-line function;
+  // a lazy multi-line capture ran past its closing brace and swallowed the four functions after it,
+  // so the window this check reads was set by wherever the next multi-line function happened to
+  // close. It passed only because none of the swept-in code contained a matching string.
+  const fn = /function statusMark\(v\)\{(.*)$/m.exec(html)
+  if (!fn) return { ok: false, why: 'statusMark() not found on one line in control-room.html — the status renderer moved or was reformatted' }
   const body = fn[1]
   // Coupled to the template on purpose. A looser check ("does it render two things") would keep
   // passing while the glyph became decoration, and the whole point is that the palette is legal
@@ -319,6 +336,10 @@ if (!CHECK_ONLY) {
     console.log(`\n${relative(REPO, join(REPO, palette.file))} · ${palette.theme} · ${palette.tokens.size} tokens`)
     for (const row of result.rows) {
       console.log(`  ${row.pass ? 'PASS' : 'FAIL'}  ${row.what.padEnd(22)} ${row.paint}  ${String(row.value).padStart(8)}  (bar ${row.bar}:1)`)
+    }
+    if (palette.unmeasurable.length) {
+      console.log(`  ---- ${palette.unmeasurable.length} token(s) this audit cannot measure (translucent over an unknown backdrop):`)
+      for (const u of palette.unmeasurable) console.log(`        ${u}`)
     }
     if (result.cvdRows.length) {
       const byVision = new Map()

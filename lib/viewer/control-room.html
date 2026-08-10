@@ -224,6 +224,7 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
 <div class="tip" id="tip" role="tooltip" hidden></div>
 <script>window.__ROOM__ = /*__ROOM_JSON__*/null;</script>
 <script>window.__STRINGS__ = /*__STRINGS__*/null;</script>
+<script>window.__WRITABLE__ = /*__WRITABLE__*/false;</script>
 <script type="text/plain" id="holo-src"><!--__HOLO_SRC__--></script>
 <script>
 (function(){
@@ -783,10 +784,12 @@ function viewOptions(view){
  view.appendChild(ev);
 }
 
-// A checkbox appears only when the page is SERVED, because only then is there something that can
-// write the manifest. A file opened from disk shows the same list read-only: a dead switch teaches
-// the reader the page lies. `forma room --serve` is what turns them on.
-var SERVED=location.protocol==="http:"||location.protocol==="https:";
+// A checkbox appears only when the COMPOSER said this copy has somewhere to write to — which is
+// only true of the page `forma room --serve` hands out. Inferring it from location.protocol was
+// wrong in the way that matters: it is true on any static host, so the public demo on Pages would
+// have rendered live switches whose PUT lands on nothing. A dead switch teaches the reader the page
+// lies, which is the one thing this briefing cannot afford.
+var SERVED=window.__WRITABLE__===true;
 function toggle(id,enabled){
  var wrap=el("label","flag"+(enabled?" on":"")),box=document.createElement("input"),err=el("span","muted");
  box.type="checkbox";box.checked=enabled;box.style.marginRight="5px";
