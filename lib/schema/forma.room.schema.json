@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/LucaDominici/forma/blob/main/lib/schema/forma.room.schema.json",
+  "title": "forma.room.json — portfolio manifest for `forma room`",
+  "description": "What makes the Control Room parametric instead of hand-cut per portfolio: another program changes only this file. `today` is a determinism anchor — room/check/room-presentable never call Date.now(); every run is pinned to the date this file names.",
+  "type": "object",
+  "required": ["today", "programs"],
+  "additionalProperties": false,
+  "properties": {
+    "today": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "title": { "type": "string", "description": "Control Room page title. Never inherited from model.meta.title, which describes an architecture snapshot, not the room." },
+    "theme": { "type": "string", "enum": ["dark", "light"], "description": "Control Room color theme. Default dark." },
+    "staleAfterDays": { "type": "integer", "minimum": 1, "description": "room-presentable fails if c4-issues.json.fetchedAt is older than this many days before `today`. Default 14." },
+    "linkMaxFiles": { "type": "integer", "minimum": 1, "description": "A commit touching more files than this is a sweep and attributes to no node (still counted, named in `tec`). Default 50." },
+    "docs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxBytes": { "type": "integer", "minimum": 0, "description": "Caps document bytes read across the portfolio so room generation stays bounded." }
+      }
+    },
+    "programs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "ghRepo", "repo", "issues"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$", "description": "Stable program key used to join portfolio data without depending on a display name." },
+          "ghRepo": { "type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$" },
+          "repo": { "type": "string", "description": "Filesystem path to the checkout. Relative paths resolve against the manifest file's own directory so invocation location cannot change the target." },
+          "issues": { "type": "string", "description": "Path to this program's c4-issues.json fact base." },
+          "model": { "type": "string", "description": "Path to this program's architecture model when it participates in the room." },
+          "topology": { "type": "string", "description": "Path to this program's topology overlay when one exists." },
+          "health": { "type": "string", "description": "Path to this program's health overlay when one exists." },
+          "findings": { "type": "string", "description": "Path to this program's findings overlay when one exists." },
+          "blockedBy": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Declares what 'waiting on a human' means for this program; lib/ never infers it. Measured reality differs: haben uses needs-human, arbiter uses needs-human plus owner-decision, and viafera has no such label because status:parked means deliberately stopped, not waiting.",
+            "properties": {
+              "labels": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "docs": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "include": { "type": "array", "items": { "type": "string" }, "description": "Globs selecting only git-tracked files, so generated or local files cannot silently enter the room." }
+            }
+          },
+          "taxonomy": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "alias": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "family -> {rawValue: canonicalValue}, e.g. {\"priority\": {\"P2\": \"p2\", \"high\": \"p1\"}}."
+              },
+              "order": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "family -> values ordered most severe first, e.g. {\"priority\": [\"P0\", \"P1\", \"P2\"]}. Values not listed sort after every declared value."
+              },
+              "exclude": { "type": "array", "items": { "type": "string" }, "description": "Label families to never promote to an axis, however populated." },
+              "minPopulation": { "type": "integer", "minimum": 1, "description": "A family below this many labeled issues stays in the named 'other' bucket. Default 3." }
+            }
+          }
+        }
+      }
+    }
+  }
+}
