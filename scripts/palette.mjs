@@ -133,8 +133,16 @@ export function tokensIn(rawCss, selector) {
   const start = css.indexOf(selector)
   if (start < 0) return null
   const open = css.indexOf('{', start)
-  const close = css.indexOf('}', open)
-  if (open < 0 || close < 0) return null
+  if (open < 0) return null
+  // Depth-counted, so an at-rule yields everything it contains however many rules that is. The naive
+  // first-`}` scan stopped at the first nested rule's close: it read `@media print{` correctly only
+  // because that block's tokens happened to be declared in one `:root` and happened to be first.
+  let depth = 0, close = -1
+  for (let i = open; i < css.length; i++) {
+    if (css[i] === '{') depth++
+    else if (css[i] === '}' && --depth === 0) { close = i; break }
+  }
+  if (close < 0) return null
   const out = new Map()
   for (const m of css.slice(open + 1, close).matchAll(/--([\w-]+)\s*:\s*([^;}]+)/g)) out.set(m[1], m[2].trim())
   return out
@@ -174,7 +182,14 @@ const EXPLORER_ROLES = {
   cyan: TEXT('accent, and the interactive affordance'), tgt: TEXT('target-state prose'),
   done: TEXT('status text'), prog: TEXT('status text'), prob: TEXT('status text'),
   src: TEXT('provenance text'),
-  plan: MARK('planned-node outline'), unk: MARK('unknown-state outline'),
+  // Re-derived against the stylesheet rather than extended by hand. `next` was in no role at all and
+  // therefore held to no bar, while it colours .tt/.pp — the node title and badge — both for the
+  // next status and for EVERY node whenever TARGET STATE mode is on. `unk` was a mark and paints the
+  // same text; `plan` is the one that legitimately stays a mark, because its text is a separate
+  // token (planTxt). One sibling had the right shape and two did not.
+  next: TEXT('node title and badge, for the next status and for every node in TARGET mode'),
+  unk: TEXT('node title and badge of an unknown-state node'),
+  plan: MARK('planned-node outline; its text is planTxt'),
   edge: MARK('a drawn relationship'),
   // Drawn at opacity .6, so the painted contrast is lower than this ratio. The bar is held anyway:
   // measuring the token is the honest floor, and a planned edge that disappears is a lost claim.
@@ -240,6 +255,12 @@ function load() {
       const measured = Object.keys(source.roles).filter((n) => tokens.has(n)).length
       if (measured < Object.keys(source.roles).length / 2) {
         problems.push(`${source.file} · ${theme}: only ${measured} of ${Object.keys(source.roles).length} known roles resolved in \`${selector}\` — the rule matched is not the palette`)
+      }
+      // Named, not counted. A threshold on how MANY roles resolved is satisfied while the three that
+      // matter are missing, and the CVD check then skips in silence.
+      const missingStatus = source.status.filter((n) => !tokens.has(n))
+      if (missingStatus.length) {
+        problems.push(`${source.file} · ${theme}: the status trio is incomplete (${missingStatus.map((n) => '--' + n).join(', ')} absent) — the colour-blind separation check cannot run, and would otherwise pass by skipping`)
       }
       palettes.push({ file: source.file, theme, tokens, unmeasurable, source })
     }

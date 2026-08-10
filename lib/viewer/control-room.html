@@ -240,6 +240,7 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
     output was eleven anonymous sheets with no product name, date, programme or view on any of them. */
   .print-all{display:block!important}
  .reader>.md{display:none}
+ .doc-reader-head{display:none!important}
  .print-id{display:block!important;margin:0 0 8pt;padding-bottom:4pt;border-bottom:1pt solid var(--line);
   font:9pt "SF Mono",Menlo,Consolas,monospace;color:var(--muted)}
 }
@@ -252,7 +253,7 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  <div class="brand"><h1 id="page-title"></h1><span id="page-stamp"></span></div>
  <div class="bar-sep" aria-hidden="true"></div>
  <nav class="tabs" id="nav-programs"></nav>
- <div class="bar-sep" id="nav-sep" aria-hidden="true" hidden></div>
+ <div class="bar-sep" aria-hidden="true"></div>
  <nav class="tabs" id="nav-views"></nav>
  <div class="bar-end"><button class="ghost" id="theme-toggle" type="button"></button></div>
 </header>
@@ -533,7 +534,10 @@ function inline(target,text){
    // wrote. Allow-list the schemes a document legitimately uses; anything else stays TEXT, visibly,
    // rather than being silently dropped — a link that will not be followed should say so.
    var cut=tok.indexOf("]("),label=tok.slice(1,cut),href=tok.slice(cut+2,-1);
-   if(/^(https?:\/\/|mailto:|#|\.{0,2}\/)/i.test(href)&&!/^\s*javascript:/i.test(href)){
+   // `//host/x` is a network-path reference: same scheme, DIFFERENT HOST. It is not a relative
+   // path, and the earlier pattern let it through because a leading `/` satisfied `\.{0,2}\/`.
+   var relative=/^(#|\/(?!\/)|\.{1,2}\/)/.test(href),absolute=/^(https?:\/\/|mailto:)/i.test(href);
+   if(relative||absolute){
     var a=el("a","",label);a.href=href;a.target="_blank";a.rel="noopener noreferrer";target.appendChild(a);
    }else target.appendChild(document.createTextNode(label+" ("+href+")"));
   }
@@ -832,18 +836,27 @@ function viewDocs(view,program){
  }
  var lp=panel(STR.docsCanon,fmt(STR.docsBudget,{n:docs.embedded.length,bytes:docs.bytes,max:docs.maxBytes}));
  var rp=panel("",STR.provDocsReader,"span2"),listWrap=el("div","doclist"),i;
+ rp.head.className+=" doc-reader-head";
  rp.classList.add("span2");
  var body=el("div","reader"),title=rp.head.querySelector("h2"),link=el("span");
  rp.head.appendChild(link);
  rp.body.appendChild(body);
  // On screen the reader shows one document. On paper it must carry all of them: the panel is
- // headed "8 documents embedded" and the PDF contained one, which is the heading lying.
+ // headed "N documents embedded" and the PDF contained one, which is the heading lying.
+ //
+ // Built on demand, not at load. Rendering every canon document for every programme cost every
+ // visitor the whole corpus whether or not they ever opened this view or ever pressed print, and it
+ // scales with programmes x each one's byte budget.
  var all=el("div","print-all");
- for(var a=0;a<docs.embedded.length;a++){
-  all.appendChild(el("div","md-h md-h1",docs.embedded[a].title||docs.embedded[a].path));
-  all.appendChild(el("div","prov",docs.embedded[a].path));
-  all.appendChild(renderMarkdown(docs.embedded[a].text));
- }
+ all.fill=function(){
+  if(all.firstChild)return;
+  for(var a=0;a<docs.embedded.length;a++){
+   all.appendChild(el("div","md-h md-h1",docs.embedded[a].title||docs.embedded[a].path));
+   all.appendChild(el("div","prov",docs.embedded[a].path));
+   all.appendChild(renderMarkdown(docs.embedded[a].text));
+  }
+ };
+ PRINT_FILL.push(all);
  rp.body.appendChild(all);
  function open(idx){
   var d=docs.embedded[idx],b;
@@ -935,7 +948,7 @@ function toggle(id,enabled){
 }
 
 /* --------------------------------- routing -------------------------------- */
-var VIEWS={},ORDER=[];
+var VIEWS={},ORDER=[],PRINT_FILL=[];
 var TABS=[["exec",function(){return STR.routeExec;}],["tech",function(){return STR.routeTech;}],
           ["map",function(){return STR.routeMap;}],["wbs",function(){return STR.routeWbs;}],
           ["docs",function(){return STR.routeDocs;}]];
@@ -1067,17 +1080,23 @@ function start(){
  window.addEventListener("hashchange",onHash);
  window.addEventListener("resize",onResize);
  // Printing un-hides every view, so every chart must be drawn before the dialog opens.
- var reopened=[];
+ var reopened=null;
  window.addEventListener("beforeprint",function(){
-  var k,i,d=document.querySelectorAll("details:not([open])");
-  reopened=[];
-  for(i=0;i<d.length;i++){reopened.push(d[i]);d[i].open=true;}
+  var k,i,d;
+  // Captured ONCE per print. Firefox fires this again when a setting changes with the preview open;
+  // recapturing then found nothing closed and discarded the real list, so afterprint restored
+  // nothing and every evidence row stayed expanded permanently.
+  if(reopened===null){
+   reopened=[];d=document.querySelectorAll("details:not([open])");
+   for(i=0;i<d.length;i++){reopened.push(d[i]);d[i].open=true;}
+  }
+  for(i=0;i<PRINT_FILL.length;i++)PRINT_FILL[i].fill();
   stampPrintIds();
   for(k in VIEWS)if(VIEWS.hasOwnProperty(k)){VIEWS[k].hidden=false;relayoutAll(VIEWS[k]);}
  });
  window.addEventListener("afterprint",function(){
-  for(var i=0;i<reopened.length;i++)reopened[i].open=false;
-  reopened=[];
+  if(reopened)for(var i=0;i<reopened.length;i++)reopened[i].open=false;
+  reopened=null;
   show(normalize(location.hash));
  });
  onHash();

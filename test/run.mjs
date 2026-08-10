@@ -1774,11 +1774,13 @@ const diffPaths = (a, b, at = '') => {
     inline(target, md)
     return target.children.filter((c) => c.tagName === 'A')
   }
-  for (const hostile of ['[go](javascript:alert(1))', '[go](JaVaScRiPt:alert(1))', '[go](  javascript:alert(1))', '[go](data:text/html,<script>alert(1)</script>)', '[go](vbscript:msgbox)']) {
+  // `//host/x` is a network-path reference — same scheme, different HOST. It is not a relative path,
+  // and an allow-list that lets it through is letting a document link off-site while looking local.
+  for (const hostile of ['[go](javascript:alert(1))', '[go](JaVaScRiPt:alert(1))', '[go](  javascript:alert(1))', '[go](data:text/html,<script>alert(1)</script>)', '[go](vbscript:msgbox)', '[go](//evil.example/phish)', '[go](\\/\\/evil.example)']) {
     const a = anchorsFor(hostile)
     if (a.length) die(`markdown: ${hostile} produced a live anchor with href ${a[0].href} — a document can inject a scheme`)
   }
-  for (const safe of ['[go](https://example.com/x)', '[go](./docs/PRD.md)', '[go](#section)', '[go](mailto:a@b.c)']) {
+  for (const safe of ['[go](https://example.com/x)', '[go](./docs/PRD.md)', '[go](/docs/PRD.md)', '[go](#section)', '[go](mailto:a@b.c)']) {
     if (!anchorsFor(safe).length) die(`markdown: ${safe} should be a link and was rendered as text`)
   }
   // The rejected link is shown, not swallowed: a link that will not be followed should say so.
