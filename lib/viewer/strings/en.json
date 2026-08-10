@@ -49,7 +49,7 @@
   "lastWorkDay": "last work 1 day ago",
   "neverLanded": "never landed in code",
   "execHeadline": "{open} open, {blocked} waiting on a human",
-  "planCoverageNote": "{accounted} of {requirements} written requirements are accounted for.",
+  "planCoverageNote": "{accounted} of {requirements}: {withIssues} on issues, {verifiedOnly} by a named verification.",
   "historyChart": "Open work over time",
   "historyMissing": "This snapshot predates issue dates, so history cannot be derived from it. Re-run forma verify.",
   "milestoneChart": "Milestone completion",
@@ -180,5 +180,11 @@
   "provDocsNone": "No documents are declared for this programme",
   "nodesQuiet": "{n} nodes have no linked work",
   "landingSingle": "{n} issue(s) last landed in {month}; one month is not a series",
-  "wbsSplit": "{withIssues} land on issues; {verifiedOnly} name a verification instead. A requirement doing neither, and open work no requirement claims, both fail the gate."
+  "wbsSplit": "{withIssues} land on issues; {verifiedOnly} name a verification instead. A requirement doing neither, and open work no requirement claims, both fail the gate.",
+  "ruleInert": "Blocking rule declared with no labels, so it can never match. Its issues are counted as moving.",
+  "provBuckets": "{closed} closed, and {open} open issues partitioned by what is known about them",
+  "bucketClosedNote": "not part of the partition below",
+  "noBlockedHere": "No issue in this programme matches its blocking rule.",
+  "mismatchLede": "Where the facts disagree with each other, or with what a programme declared.",
+  "kpiLinkedNote": "share of all issues a commit tied to a C4 node; the rest stays unknown, never zero"
 }

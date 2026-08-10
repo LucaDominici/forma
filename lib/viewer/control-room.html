@@ -50,7 +50,7 @@ a:hover{color:var(--accent)}
 .bar{display:flex;align-items:center;gap:18px;height:var(--bar);padding:0 var(--pad);
  border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap;scrollbar-width:thin}
 .brand{display:flex;align-items:baseline;gap:9px;min-width:0;flex:0 1 auto}
-.brand b{font-size:14px;font-weight:650;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis}
+.brand h1{margin:0;font-size:14px;font-weight:650;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis}
 .brand span{color:var(--muted);font-size:11px;font-family:"SF Mono",Menlo,Consolas,monospace}
 .tabs{display:flex;gap:2px;align-items:center;flex:0 0 auto}
 .tabs a{display:block;padding:5px 10px;color:var(--muted);font-size:12.5px;text-decoration:none;border-radius:5px}
@@ -92,8 +92,12 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
  body{font-size:15px}
  .evidence{grid-auto-rows:minmax(280px,1fr)}
 }
-/* Below the floor the shell is released rather than crushed: one column, the page scrolls. */
-@media(max-width:1199px){
+/* Below the floor the shell is released rather than crushed: one column, the page scrolls.
+   Gated on HEIGHT as well as width, because the budget being protected is vertical: a 1920x640
+   window is not a phone, and holding the locked shell there delivered the whole evidence tier
+   through a 97px slot with no page scrollbar. 760px is the height at which 52px of bar, 32px of
+   padding and two usable rows stop fitting. */
+@media(max-width:1199px),(max-height:760px){
  body{height:auto;overflow:visible;display:block}
  main{overflow:visible;height:auto}
  .bar{position:sticky;top:0;z-index:20;background:var(--bg)}
@@ -179,7 +183,19 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
 /* The map finally gets the area an ultrawide actually has. */
 .frame{width:100%;height:100%;min-height:0;display:block;border:1px solid var(--line);background:var(--surface)}
 /* Two panes, not an accordion: a document is not a disclosure widget. */
-.reader{white-space:pre-wrap;word-wrap:break-word;font:11.5px/1.6 "SF Mono",Menlo,Consolas,monospace;margin:0;max-width:96ch}
+.reader{margin:0;max-width:78ch;font-size:13px;line-height:1.6}
+.md p{margin:0 0 10px;max-width:72ch}
+.md-h{font-weight:650;letter-spacing:-.01em;margin:16px 0 6px}
+.md-h1{font-size:17px;margin-top:0}.md-h2{font-size:15px}.md-h3{font-size:13.5px}
+.md-h4,.md-h5,.md-h6{font-size:12.5px;color:var(--muted)}
+.md-li{margin:0 0 4px 16px;position:relative;max-width:70ch}
+.md-li:before{content:"\2013";position:absolute;left:-14px;color:var(--muted)}
+.md-q{margin:0 0 10px;padding-left:12px;border-left:2px solid var(--line);color:var(--muted);max-width:70ch}
+.md-pre{margin:0 0 10px;padding:8px 10px;background:var(--surface);overflow:auto;font:11.5px/1.5 "SF Mono",Menlo,Consolas,monospace}
+.md-code{font:11.5px "SF Mono",Menlo,Consolas,monospace;color:var(--muted)}
+.md-table{margin:0 0 12px;font-size:11.5px}
+.md-hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+.print-all{display:none}
 .doclist button{display:block;width:100%;text-align:left;appearance:none;background:none;border:0;border-bottom:1px solid var(--line);padding:6px 4px;cursor:pointer;font-size:12.5px}
 .doclist button:hover{color:var(--accent)}
 .doclist button[aria-current]{color:var(--ink);box-shadow:inset 2px 0 0 var(--accent);padding-left:9px}
@@ -194,7 +210,17 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
 /* Printing hands over the WHOLE briefing. A hash route is not something anyone can put on paper,
    so the shell is released, every view is un-hidden, and each starts a page. */
 @media print{
- body{height:auto;overflow:visible;display:block;background:#fff;color:#000;font-size:10pt}
+ /* The print palette is DECLARED, not inherited. Setting only body{color:#000} left every token at
+    its dark-theme value, so chart numbers printed at 1.23:1 against white — invisible — and every
+    provenance line at 3.73:1. Worse, the theme persists to localStorage, so the paper output
+    differed depending on what the reader last clicked. These are the measured light values. */
+ :root{
+  --bg:oklch(100% 0 0);--surface:oklch(100% 0 0);--line:oklch(80% 0 0);
+  --ink:oklch(22.0% 0.009 75);--muted:oklch(44.0% 0.010 72);
+  --ok:oklch(52.9% 0.141 151);--warn:oklch(44.4% 0.094 73);--bad:oklch(35.5% 0.144 25);
+  --accent:oklch(45.0% 0.150 255);--series2:oklch(55.0% 0.012 80);
+  --ramp1:oklch(63.3% 0.079 255);--ramp2:oklch(59.2% 0.110 255);--ramp3:oklch(55.1% 0.145 255);--ramp4:oklch(51.0% 0.172 255)}
+ body{height:auto;overflow:visible;display:block;background:#fff;color:var(--ink);font-size:10pt}
  .bar,.toggle,.tip,.skip,.ghost{display:none!important}
  main{overflow:visible;height:auto;padding:0}
  .view{height:auto;display:block}
@@ -204,22 +230,34 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  .panel{break-inside:avoid;border-top:1px solid #999;margin-bottom:10pt}
  .panel-body,.tablewrap{overflow:visible;max-height:none}
  .chart-viz{height:200pt}
- details>*{display:revert}
+ /* `details>*{display:revert}` does NOT defeat Chrome's disclosure hiding: a controlled A/B showed
+    the body of a closed <details> simply absent from the PDF. Every per-issue evidence block —
+    verdict, why, evidence refs, nodes, milestone, last landing — was silently dropped from the
+    printed briefing, which is the one thing the print promise exists to carry. The rows are opened
+    in beforeprint instead, and restored afterwards. */
  .frame{height:340pt}
+ /* Each view identifies itself on paper. The bar is hidden when printing, so without this the
+    output was eleven anonymous sheets with no product name, date, programme or view on any of them. */
+  .print-all{display:block!important}
+ .reader>.md{display:none}
+ .print-id{display:block!important;margin:0 0 8pt;padding-bottom:4pt;border-bottom:1pt solid var(--line);
+  font:9pt "SF Mono",Menlo,Consolas,monospace;color:var(--muted)}
 }
+.print-id{display:none}
 </style>
 </head>
 <body>
-<a class="skip" id="skip" href="#content"></a>
+<button class="skip" id="skip" type="button"></button>
 <header class="bar" id="bar">
- <div class="brand"><b id="page-title"></b><span id="page-stamp"></span></div>
+ <div class="brand"><h1 id="page-title"></h1><span id="page-stamp"></span></div>
  <div class="bar-sep" aria-hidden="true"></div>
  <nav class="tabs" id="nav-programs"></nav>
  <div class="bar-sep" id="nav-sep" aria-hidden="true" hidden></div>
  <nav class="tabs" id="nav-views"></nav>
  <div class="bar-end"><button class="ghost" id="theme-toggle" type="button"></button></div>
 </header>
-<main id="content"></main>
+<main id="content" tabindex="-1"></main>
+<div id="live" class="sr-only" role="status" aria-live="polite"></div>
 <template id="table-template"><div class="tablewrap"><table><caption class="sr-only"></caption><thead><tr><th scope="col"></th></tr></thead><tbody></tbody></table></div></template>
 <div class="tip" id="tip" role="tooltip" hidden></div>
 <script>window.__ROOM__ = /*__ROOM_JSON__*/null;</script>
@@ -243,7 +281,7 @@ function byId(id){var i;for(i=0;i<ROOM.programs.length;i++)if(ROOM.programs[i].i
 function sumOf(id){var i;for(i=0;i<ROOM.portfolio.programs.length;i++)if(ROOM.portfolio.programs[i].id===id)return ROOM.portfolio.programs[i];return null;}
 function line(svg,x1,y1,x2,y2){svg.appendChild(svgEl("line",{x1:x1,y1:y1,x2:x2,y2:y2,"class":"axis"}));}
 function label(svg,x,y,t,anchor,cls){svg.appendChild(svgEl("text",{x:x,y:y,"text-anchor":anchor||"start","class":cls||"svg-label"},t));}
-function hit(svg,a,tip){a=a||{};a["class"]="hit";a.fill="transparent";a.tabindex="0";a.role="img";a["aria-label"]=tip;a["aria-describedby"]="tip";a["data-tip"]=tip;svg.appendChild(svgEl(a.r!=null?"circle":"rect",a));}
+function hit(svg,a,tip){a=a||{};a["class"]="hit";a.fill="transparent";a.tabindex="0";a.role="img";a["aria-label"]=tip;a["data-tip"]=tip;svg.appendChild(svgEl(a.r!=null?"circle":"rect",a));}
 function statusMark(v){var map={ok:["●",STR.statusOk],warn:["◐",STR.statusWarn],bad:["×",STR.statusBad]},p=map[v]||["◇",STR.notAudited];var s=el("span","status status-"+(map[v]?v:"none")),g=el("span","glyph",p[0]);g.setAttribute("aria-hidden","true");s.appendChild(g);s.appendChild(el("span","",p[1]));return s;}
 function chips(v){var w=el("span","chips"),i;if(!v||!v.length){w.appendChild(el("span","muted",STR.none));return w;}for(i=0;i<v.length;i++)w.appendChild(el("span","chip",v[i]));return w;}
 function issueLink(p,n,t){var a=el("a","data",t==null?"#"+n:t);a.href="https://github.com/"+p.ghRepo+"/issues/"+n;a.target="_blank";a.rel="noopener";return a;}
@@ -292,7 +330,7 @@ function chart(title,prov,headers,rows,draw,cls){
  for(i=0;i<headers.length;i++){cell=el("th","",headers[i]);cell.setAttribute("scope","col");tr.appendChild(cell);}
  for(i=0;i<rows.length;i++){tr=el("tr");for(j=0;j<rows[i].length;j++){cell=el("td",typeof rows[i][j]==="number"||/^\d+(?:\.\d+)?%?$/.test(String(rows[i][j]))?"nums":"",rows[i][j]);tr.appendChild(cell);}body.appendChild(tr);}
  p.body.appendChild(tw);
- function show(t){tw.hidden=!t;viz.hidden=t;btn.textContent=t?STR.showChart:STR.showTable;btn.setAttribute("aria-expanded",t?"true":"false");if(!t)relayout(p);}
+ function show(t){tw.hidden=!t;viz.hidden=t;btn.textContent=t?STR.showChart:STR.showTable;if(!t)relayout(p);}
  show(false);
  btn.addEventListener("click",function(){show(tw.hidden);});
  p.draw=draw;p.viz=viz;p.svg=svg;
@@ -476,6 +514,72 @@ function rowsPanel(p,items,render,emptyText){
  p.body.appendChild(wrap);return p;
 }
 
+
+/* A restrained markdown renderer. The reader was handing a client the source: literal `#`, `**`
+   and `|---|---|` rows. This covers what the canon actually uses — headings, bold, inline code,
+   links, list items, pipe tables, block quotes — and falls back to the literal line for anything
+   else rather than guessing. Every node is built with textContent, never innerHTML: repository
+   prose is attacker-adjacent input and never becomes markup (I14). */
+function inline(target,text){
+ var re=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,last=0,m;
+ while((m=re.exec(text))!==null){
+  if(m.index>last)target.appendChild(document.createTextNode(text.slice(last,m.index)));
+  var tok=m[0];
+  if(tok.charAt(0)==="*")target.appendChild(el("strong","",tok.slice(2,-2)));
+  else if(tok.charAt(0)==="`")target.appendChild(el("code","md-code",tok.slice(1,-1)));
+  else{
+   var cut=tok.indexOf("]("),a=el("a","",tok.slice(1,cut));
+   a.href=tok.slice(cut+2,-1);a.target="_blank";a.rel="noopener";target.appendChild(a);
+  }
+  last=re.lastIndex;
+ }
+ if(last<text.length)target.appendChild(document.createTextNode(text.slice(last)));
+ return target;
+}
+function renderMarkdown(src){
+ var out=el("div","md"),lines=String(src).replace(/\r\n/g,"\n").split("\n"),i=0,para=[];
+ function flush(){
+  if(!para.length)return;
+  inline(out.appendChild(el("p","")),para.join(" "));
+  para=[];
+ }
+ while(i<lines.length){
+  var ln=lines[i],h=/^(#{1,6})\s+(.*)$/.exec(ln);
+  if(/^\s*$/.test(ln)){flush();i++;continue;}
+  if(h){flush();inline(out.appendChild(el("div","md-h md-h"+h[1].length,"")),h[2]);i++;continue;}
+  if(/^```/.test(ln)){
+   flush();var buf=[];i++;
+   while(i<lines.length&&!/^```/.test(lines[i]))buf.push(lines[i++]);
+   i++;out.appendChild(el("pre","md-pre",buf.join("\n")));continue;
+  }
+  if(/^\s*\|.*\|\s*$/.test(ln)){
+   flush();
+   var rows=[];
+   while(i<lines.length&&/^\s*\|.*\|\s*$/.test(lines[i])){
+    var cells=lines[i].trim().slice(1,-1).split("|").map(function(c){return c.trim();});
+    if(!/^[\s:|-]+$/.test(lines[i].trim().replace(/^\||\|$/g,"")))rows.push(cells);
+    i++;
+   }
+   if(rows.length){
+    var t=el("table","md-table"),th=el("thead"),htr=el("tr"),tb=el("tbody"),c;
+    for(c=0;c<rows[0].length;c++){var hc=el("th");hc.setAttribute("scope","col");inline(hc,rows[0][c]);htr.appendChild(hc);}
+    th.appendChild(htr);t.appendChild(th);
+    for(var r=1;r<rows.length;r++){var tr=el("tr");for(c=0;c<rows[r].length;c++)inline(tr.appendChild(el("td")),rows[r][c]);tb.appendChild(tr);}
+    t.appendChild(tb);out.appendChild(t);
+   }
+   continue;
+  }
+  var li=/^\s*[-*]\s+(.*)$/.exec(ln);
+  if(li){flush();inline(out.appendChild(el("div","md-li","")),li[1]);i++;continue;}
+  var q=/^>\s?(.*)$/.exec(ln);
+  if(q){flush();inline(out.appendChild(el("div","md-q","")),q[1]);i++;continue;}
+  if(/^---+$/.test(ln)){flush();out.appendChild(el("hr","md-hr"));i++;continue;}
+  para.push(ln.trim());i++;
+ }
+ flush();
+ return out;
+}
+
 /* --------------------------------- views --------------------------------- */
 function viewPortfolio(view){
  var t=ROOM.portfolio.totals;
@@ -508,8 +612,13 @@ function viewPortfolio(view){
  mv.body.appendChild(stack);ev.appendChild(mv);
 
  var mm=panel(STR.mismatch,STR.provAudit),any=false;
- for(i=0;i<ROOM.portfolio.programs.length;i++)if(!ROOM.portfolio.programs[i].blockedRule.declared){
-  var r=el("div","kv");r.appendChild(el("span","data",ROOM.portfolio.programs[i].id));r.appendChild(el("span","",STR.ruleUnknown));mm.body.appendChild(r);any=true;
+ mm.body.appendChild(el("p","muted",STR.mismatchLede));
+ for(i=0;i<ROOM.portfolio.programs.length;i++){
+  var rule=ROOM.portfolio.programs[i].blockedRule;
+  if(rule.declared&&!rule.inert)continue;
+  var r=el("div","kv");r.appendChild(el("span","data",ROOM.portfolio.programs[i].id));
+  r.appendChild(el("span","",rule.declared?STR.ruleInert:STR.ruleUnknown));
+  mm.body.appendChild(r);any=true;
  }
  for(i=0;i<ROOM.programs.length;i++){
   var pr=ROOM.programs[i],age=days(pr.issuesSnapshot.fetchedAt,ROOM.meta.today),dt=String(pr.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
@@ -517,7 +626,7 @@ function viewPortfolio(view){
   r2.appendChild(el("span","",age===0?fmt(STR.snapshotToday,{date:dt}):(age===1?fmt(STR.snapshotAgeOne,{date:dt}):fmt(STR.snapshotAge,{n:age,date:dt}))));
   mm.body.appendChild(r2);
  }
- if(!any)mm.body.insertBefore(el("p","muted",STR.rulesComplete),mm.body.firstChild);
+ if(!any)mm.body.appendChild(el("p","muted",STR.rulesComplete));
  ev.appendChild(mm);
  view.appendChild(ev);
 }
@@ -538,9 +647,9 @@ function viewExec(view,program,summary){
  kpi(list,STR.kpiOpen,k.openCount);
  kpi(list,STR.kpiBlocked,summary.blockedRule.declared?summary.blocked:null,summary.blockedRule.declared?null:STR.ruleUnknown);
  kpi(list,STR.kpiNoMilestone,k.noMilestoneCount);
- kpi(list,STR.kpiLinked,k.linkCoveragePct==null?null:k.linkCoveragePct+"%",k.linkCoveragePct==null?STR.notMeasured:null);
+ kpi(list,STR.kpiLinked,k.linkCoveragePct==null?null:k.linkCoveragePct+"%",k.linkCoveragePct==null?STR.notMeasured:STR.kpiLinkedNote);
  kpi(list,STR.kpiRequirements,rtm&&rtm.coverage.pct!=null?rtm.coverage.pct+"%":null,
-     rtm?fmt(STR.planCoverageNote,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements}):STR.notMeasured);
+     rtm?fmt(STR.planCoverageNote,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements,withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly}):STR.notMeasured);
  kp.body.appendChild(list);
  answer.appendChild(kp);
  view.appendChild(answer);
@@ -561,14 +670,18 @@ function viewTech(view,program,summary){
  lead.appendChild(el("p","thesis",mine.length?fmt(STR.techHeadline,{n:mine.length}):STR.noBlocked));
  lead.appendChild(el("p","lede",STR.techLede));
  answer.appendChild(lead);
+var i,j;
  var buckets=program.derived.kanban,names=[["chiuse",STR.bucketChiuse],["sane",STR.bucketSane],["a-meta",STR.bucketAMeta],["premessa-falsa",STR.bucketPremessaFalsa],["aspettano-umano",STR.bucketAspettanoUmano],["non-auditate",STR.bucketNonAuditate]];
- var bp=panel(STR.techBuckets,snapshotProv(program),"span2"),bl=el("dl","kpis"),i,j;
- for(i=0;i<names.length;i++)kpi(bl,names[i][1],(buckets[names[i][0]]||[]).length);
+ var openTotal=0;
+ for(i=1;i<names.length;i++)openTotal+=(buckets[names[i][0]]||[]).length;
+
+ var bp=panel(STR.techBuckets,fmt(STR.provBuckets,{closed:(buckets.chiuse||[]).length,open:openTotal}),"span2"),bl=el("dl","kpis");
+ for(i=0;i<names.length;i++)kpi(bl,names[i][1],(buckets[names[i][0]]||[]).length,i===0?STR.bucketClosedNote:null);
  bp.body.appendChild(bl);answer.appendChild(bp);
  view.appendChild(answer);
 
  var ev=el("div","evidence");
- ev.appendChild(rowsPanel(panel(STR.techBlocked,fmt(STR.provBlocked,{n:mine.length}),"span2"),mine,blockedRow,STR.noBlocked));
+ ev.appendChild(rowsPanel(panel(STR.techBlocked,fmt(STR.provBlocked,{n:mine.length}),"span2"),mine,blockedRow,STR.noBlockedHere));
 
  var findings=(program.findings&&program.findings.findings)||[];
  ev.appendChild(rowsPanel(panel(STR.techFindings,STR.provAudit),findings,function(f){
@@ -584,7 +697,7 @@ function viewTech(view,program,summary){
  function kv(k,v){var r=el("div","kv");r.appendChild(el("span","",k));r.appendChild(v&&v.nodeType?v:el("span","",v));hp.body.appendChild(r);}
  kv(STR.drift,!cd?STR.noDrift:(!cd.resolvable?fmt(STR.unresolved,{reason:cd.reason}):(cd.commitsBehind?fmt(STR.behind,{n:cd.commitsBehind}):STR.aligned)));
  kv(STR.noMilestones,program.derived.kpis.noMilestoneCount?fmt(STR.noMilestoneCount,{n:program.derived.kpis.noMilestoneCount}):STR.allMilestoned);
- kv(STR.rules,summary.blockedRule.declared?(summary.blockedRule.labels.join(", ")||STR.none):STR.ruleUnknown);
+ kv(STR.rules,!summary.blockedRule.declared?STR.ruleUnknown:(summary.blockedRule.inert?STR.ruleInert:summary.blockedRule.labels.join(", ")));
  var sweeps=(program.derived.link&&program.derived.link.excludedSweeps)||[],cell=el("span");
  cell.appendChild(el("div","",sweeps.length?fmt(STR.sweepsCount,{n:sweeps.length}):STR.sweepsNone));
  for(i=0;i<sweeps.length;i++){var sw=el("div","muted");sw.appendChild(el("span","data",String(sweeps[i].sha).slice(0,8)+" "));sw.appendChild(document.createTextNode(short(sweeps[i].subject,60)+" — "+fmt(STR.sweepFiles,{n:sweeps[i].files})));cell.appendChild(sw);}
@@ -714,15 +827,25 @@ function viewDocs(view,program){
  var lp=panel(STR.docsCanon,fmt(STR.docsBudget,{n:docs.embedded.length,bytes:docs.bytes,max:docs.maxBytes}));
  var rp=panel("",STR.provDocsReader,"span2"),listWrap=el("div","doclist"),i;
  rp.classList.add("span2");
- var body=el("pre","reader"),title=rp.head.querySelector("h2"),link=el("span");
+ var body=el("div","reader"),title=rp.head.querySelector("h2"),link=el("span");
  rp.head.appendChild(link);
  rp.body.appendChild(body);
+ // On screen the reader shows one document. On paper it must carry all of them: the panel is
+ // headed "8 documents embedded" and the PDF contained one, which is the heading lying.
+ var all=el("div","print-all");
+ for(var a=0;a<docs.embedded.length;a++){
+  all.appendChild(el("div","md-h md-h1",docs.embedded[a].title||docs.embedded[a].path));
+  all.appendChild(el("div","prov",docs.embedded[a].path));
+  all.appendChild(renderMarkdown(docs.embedded[a].text));
+ }
+ rp.body.appendChild(all);
  function open(idx){
   var d=docs.embedded[idx],b;
   title.textContent=d.title||d.path;
   link.textContent="";link.appendChild(docLink(program,d.path,null,STR.docsOpen));
-  body.textContent=d.text;
+  body.textContent="";body.appendChild(renderMarkdown(d.text));
   rp.body.scrollTop=0;
+  announce(d.title||d.path);
   var btns=listWrap.querySelectorAll("button");
   for(b=0;b<btns.length;b++){if(b===idx)btns[b].setAttribute("aria-current","true");else btns[b].removeAttribute("aria-current");}
  }
@@ -814,7 +937,17 @@ var BUILD={exec:viewExec,tech:viewTech,map:viewMap,wbs:viewWbs,docs:viewDocs};
 function key(p,t){return p?"/"+p+"/"+t:"/"+t;}
 function mount(k){
  var v=el("section","view");v.id="view-"+k.replace(/[^a-z0-9]+/gi,"-");v.hidden=true;
+ v.appendChild(el("p","print-id",""));
  document.getElementById("content").appendChild(v);VIEWS[k]=v;ORDER.push(k);return v;
+}
+function stampPrintIds(){
+ var k,p,name;
+ for(k in VIEWS)if(VIEWS.hasOwnProperty(k)){
+  p=progOf(k);
+  name=k==="/"?STR.routePortfolio:k==="/options"?STR.routeOptions:tabLabel(k);
+  VIEWS[k].querySelector(".print-id").textContent=
+   (ROOM.meta.title||STR.appTitle)+"  ·  "+(p?p+"  ·  ":"")+name+"  ·  "+ROOM.meta.today;
+ }
 }
 function buildAll(){
  var i,j;
@@ -839,25 +972,54 @@ function normalize(h){
 }
 function progOf(k){var m=/^\/([^/]+)\/([^/]+)$/.exec(k);return m?m[1]:null;}
 function navLink(href,text,cur){var a=el("a","",text);a.href="#"+href;if(cur)a.setAttribute("aria-current","page");return a;}
+// Built once. Rebuilding it on every route change destroyed the anchor the user had just pressed
+// and left focus on <body>, so each navigation forced a Tab-from-the-top.
+function buildNav(){
+ var progs=document.getElementById("nav-programs"),views=document.getElementById("nav-views"),i,j;
+ progs.appendChild(navLink("/",STR.routePortfolio,false));
+ for(i=0;i<ROOM.programs.length;i++)progs.appendChild(navLink(key(ROOM.programs[i].id,"exec"),ROOM.programs[i].id,false));
+ progs.appendChild(navLink("/options",STR.routeOptions,false));
+ // One set of view tabs, re-pointed at whichever programme is open. They are present from the
+ // first screen rather than appearing only after the reader guesses that a lowercase repo id
+ // between two sentence-case labels is the primary action.
+ for(i=0;i<TABS.length;i++){
+  var a=navLink("/",TABS[i][1](),false);
+  a.setAttribute("data-tab",TABS[i][0]);
+  views.appendChild(a);
+ }
+}
 function renderNav(k){
- var progs=document.getElementById("nav-programs"),views=document.getElementById("nav-views"),sep=document.getElementById("nav-sep"),i;
- var p=progOf(k);
- progs.textContent="";views.textContent="";
- progs.appendChild(navLink("/",STR.routePortfolio,k==="/"));
- for(i=0;i<ROOM.programs.length;i++)progs.appendChild(navLink(key(ROOM.programs[i].id,"exec"),ROOM.programs[i].id,p===ROOM.programs[i].id));
- progs.appendChild(navLink("/options",STR.routeOptions,k==="/options"));
- sep.hidden=!p;
- if(!p)return;
- for(i=0;i<TABS.length;i++)views.appendChild(navLink(key(p,TABS[i][0]),TABS[i][1](),k===key(p,TABS[i][0])));
+ var progs=document.getElementById("nav-programs"),views=document.getElementById("nav-views"),i;
+ var p=progOf(k)||(ROOM.programs[0]&&ROOM.programs[0].id);
+ var links=progs.querySelectorAll("a");
+ for(i=0;i<links.length;i++){
+  var href=links[i].getAttribute("href").slice(1);
+  if(href===k||(progOf(k)&&href===key(progOf(k),"exec")))links[i].setAttribute("aria-current","page");
+  else links[i].removeAttribute("aria-current");
+ }
+ var tabs=views.querySelectorAll("a");
+ for(i=0;i<tabs.length;i++){
+  var t=tabs[i].getAttribute("data-tab"),target=p?key(p,t):"/";
+  tabs[i].href="#"+target;
+  if(k===target)tabs[i].setAttribute("aria-current","page");else tabs[i].removeAttribute("aria-current");
+ }
 }
 function show(k){
  var x;
  for(x in VIEWS)if(VIEWS.hasOwnProperty(x))VIEWS[x].hidden=x!==k;
  renderNav(k);
  var p=progOf(k);
- document.title=(ROOM.meta.title||STR.appTitle)+(p?" · "+p:"");
+ var name=(k==="/"?STR.routePortfolio:k==="/options"?STR.routeOptions:tabLabel(k));
+ document.title=(ROOM.meta.title||STR.appTitle)+(p?" · "+p:"")+" · "+name;
+ announce(p?p+" · "+name:name);
  relayoutAll(VIEWS[k]);
 }
+function tabLabel(k){
+ var m=/^\/[^/]+\/([^/]+)$/.exec(k),i;
+ if(m)for(i=0;i<TABS.length;i++)if(TABS[i][0]===m[1])return TABS[i][1]();
+ return k;
+}
+function announce(text){var l=document.getElementById("live");if(l)l.textContent=text;}
 function onHash(){show(normalize(location.hash));}
 
 function applyTheme(){
@@ -884,8 +1046,8 @@ function onResize(){
 
 function start(){
  document.documentElement.setAttribute("lang",LANG);
- document.getElementById("skip").textContent=STR.skip;
- document.getElementById("bar").setAttribute("aria-label",STR.navMain);
+ var skip=document.getElementById("skip");skip.textContent=STR.skip;
+ skip.addEventListener("click",function(){var m=document.getElementById("content");m.focus();announce(STR.skip);});
  document.getElementById("nav-programs").setAttribute("aria-label",STR.navMain);
  document.getElementById("nav-views").setAttribute("aria-label",STR.navProgram);
  tipEl=document.getElementById("tip");
@@ -895,12 +1057,23 @@ function start(){
  applyTheme();wireTheme();
  document.getElementById("page-title").textContent=ROOM.meta.title||STR.appTitle;
  document.getElementById("page-stamp").textContent=ROOM.meta.today;
- buildAll();
+ buildAll();buildNav();
  window.addEventListener("hashchange",onHash);
  window.addEventListener("resize",onResize);
  // Printing un-hides every view, so every chart must be drawn before the dialog opens.
- window.addEventListener("beforeprint",function(){var k;for(k in VIEWS)if(VIEWS.hasOwnProperty(k)){VIEWS[k].hidden=false;relayoutAll(VIEWS[k]);}});
- window.addEventListener("afterprint",function(){show(normalize(location.hash));});
+ var reopened=[];
+ window.addEventListener("beforeprint",function(){
+  var k,i,d=document.querySelectorAll("details:not([open])");
+  reopened=[];
+  for(i=0;i<d.length;i++){reopened.push(d[i]);d[i].open=true;}
+  stampPrintIds();
+  for(k in VIEWS)if(VIEWS.hasOwnProperty(k)){VIEWS[k].hidden=false;relayoutAll(VIEWS[k]);}
+ });
+ window.addEventListener("afterprint",function(){
+  for(var i=0;i<reopened.length;i++)reopened[i].open=false;
+  reopened=[];
+  show(normalize(location.hash));
+ });
  onHash();
 }
 start();

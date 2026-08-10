@@ -49,7 +49,7 @@
   "lastWorkDay": "ultimo lavoro 1 giorno fa",
   "neverLanded": "mai atterrata nel codice",
   "execHeadline": "{open} aperte, {blocked} aspettano un umano",
-  "planCoverageNote": "{accounted} requisiti scritti su {requirements} sono coperti.",
+  "planCoverageNote": "{accounted} su {requirements}: {withIssues} su issue, {verifiedOnly} per verifica nominata.",
   "historyChart": "Lavoro aperto nel tempo",
   "historyMissing": "Questa fotografia è precedente alle date delle issue, quindi la storia non è derivabile. Rilancia forma verify.",
   "milestoneChart": "Completamento milestone",
@@ -180,5 +180,11 @@
   "provDocsNone": "Questo programma non dichiara documenti",
   "nodesQuiet": "{n} nodi non hanno lavoro collegato",
   "landingSingle": "{n} issue atterrate l'ultima volta in {month}; un mese non è una serie",
-  "wbsSplit": "{withIssues} atterrano su issue; {verifiedOnly} nominano una verifica. Un requisito che non fa né l'una né l'altra, e lavoro aperto che nessun requisito rivendica, fanno fallire il gate."
+  "wbsSplit": "{withIssues} atterrano su issue; {verifiedOnly} nominano una verifica. Un requisito che non fa né l'una né l'altra, e lavoro aperto che nessun requisito rivendica, fanno fallire il gate.",
+  "ruleInert": "Regola di blocco dichiarata senza etichette, quindi non può mai scattare. Le sue issue contano come in movimento.",
+  "provBuckets": "{closed} chiuse, e {open} issue aperte ripartite per quello che se ne sa",
+  "bucketClosedNote": "non fa parte della ripartizione qui sotto",
+  "noBlockedHere": "Nessuna issue di questo programma corrisponde alla sua regola di blocco.",
+  "mismatchLede": "Dove i fatti non concordano tra loro, o con quello che un programma ha dichiarato.",
+  "kpiLinkedNote": "quota delle issue che un commit ha legato a un nodo C4; il resto resta unknown, mai zero"
 }

@@ -124,7 +124,12 @@ export function parseColor(raw) {
 }
 
 // Every `--token: value` inside a rule whose selector matches `selector`.
-export function tokensIn(css, selector) {
+// Comments are removed first: a brace inside prose ends the scan early and silently. This was not
+// hypothetical — a comment containing `body{color:#000}` truncated the print palette to zero tokens,
+// and only the "did this actually measure anything" guard caught it.
+const withoutComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '')
+export function tokensIn(rawCss, selector) {
+  const css = withoutComments(rawCss)
   const start = css.indexOf(selector)
   if (start < 0) return null
   const open = css.indexOf('{', start)
@@ -185,7 +190,16 @@ const SOURCES = [
   {
     file: 'lib/viewer/control-room.html',
     grounds: ['bg', 'surface'], status: ['ok', 'warn', 'bad'], roles: BRIEFING_ROLES,
-    palettes: [{ theme: 'briefing/dark', selector: ':root{' }, { theme: 'briefing/light', selector: 'html[data-theme="light"]{' }],
+    palettes: [
+      { theme: 'briefing/dark', selector: ':root{' },
+      { theme: 'briefing/light', selector: 'html[data-theme="light"]{' },
+      // Paper is a third theme and was the unmeasured one. Setting only body{color:#000} left every
+      // token at its dark value, so chart numbers printed at 1.23:1 against white — and because the
+      // theme persists to localStorage, the paper output differed depending on what the reader last
+      // clicked. A deliverable that prints differently per reader is not a deliverable, so the print
+      // palette is declared and measured like the other two.
+      { theme: 'briefing/print', selector: '@media print{' },
+    ],
   },
   {
     file: 'lib/viewer/c4-hologram.html',
