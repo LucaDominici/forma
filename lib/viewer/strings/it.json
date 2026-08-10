@@ -91,6 +91,7 @@
   "allMilestoned": "Ogni issue aperta ha una milestone.",
   "drift": "Scarto architettura",
   "behind": "La fonte architettura è {n} commit indietro rispetto a HEAD.",
+  "behindOne": "La fonte architettura è {n} commit indietro rispetto a HEAD.",
   "aligned": "La fonte architettura coincide con HEAD.",
   "unresolved": "Lo scarto architettura non è risolvibile: {reason}",
   "noDrift": "Manca la mappa architetturale, quindi lo scarto commit non è disponibile.",

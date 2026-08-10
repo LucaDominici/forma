@@ -811,16 +811,34 @@ var i,j;
  view.appendChild(ev);
 }
 
+/* The architecture skin that matches the briefing's theme. `blueprint` IS the briefing's light
+   palette mapped onto the explorer's token names (DESIGN.md §D6); `blueprint-dark` is the same
+   mapping onto the dark one. Before this, the map was light in both and the theme control silently
+   did not apply to one of five programme views. */
+function mapSkin(){return document.documentElement.getAttribute("data-theme")==="light"?"blueprint":"blueprint-dark";}
+function pushSkin(skin){
+ var f=document.querySelectorAll("iframe.frame"),i,s=skin||mapSkin();
+ for(i=0;i<f.length;i++){try{f[i].contentWindow.postMessage({forma:"skin",skin:s},"*");}catch(e){}}
+}
 function frameDoc(program){
  var src=document.getElementById("holo-src").textContent.replace(/<\\\/script/gi,"<"+"/script");
  var model=JSON.stringify(program.model).replace(/</g,"\\u003c");
- var seed="<script>window.__C4_MODEL__="+model+";window.__C4_SKIN__=\"blueprint\";window.__C4_LANG__="+JSON.stringify(LANG)+";"+"<"+"/script>";
+ var seed="<script>window.__C4_MODEL__="+model+";window.__C4_SKIN__=\""+mapSkin()+"\";window.__C4_EMBED__=true;window.__C4_LANG__="+JSON.stringify(LANG)+";"+"<"+"/script>";
  return src.replace("<head>","<head>"+seed);
 }
 function viewMap(view,program){
  view.setAttribute("data-single","");
  var ev=el("div","evidence"),date=String(program.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
- var mp=panel(STR.routeMap,fmt(STR.mapStatic,{date:date}),"span2");
+ /* The staleness belongs HERE, not only 500px away on another view. This is the page most likely
+    to be photographed into a deck, and it presented a snapshot ten commits behind HEAD as
+    "Static architecture snapshot from 2026-08-10" beside a green 63% — the product's own doctrine
+    inverted on its own picture. The same fact `tech` reports, on the surface that shows it. */
+ var drift=(program.derived&&program.derived.commitDrift)||null;
+ var prov=fmt(STR.mapStatic,{date:date});
+ if(drift&&!drift.resolvable)prov+="  ·  "+fmt(STR.unresolved,{reason:drift.reason});
+ else if(drift&&drift.commitsBehind)prov+="  ·  "+fmt(plural(drift.commitsBehind,STR.behindOne,STR.behind),{n:drift.commitsBehind});
+ else if(drift)prov+="  ·  "+STR.aligned;
+ var mp=panel(STR.routeMap,prov,"span2");
  mp.classList.add("span2");
  if(!program.hasMap)mp.body.appendChild(el("p","muted",STR.mapMissing));
  else{
@@ -1178,7 +1196,7 @@ function wireTheme(){
   var n=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";
   document.documentElement.setAttribute("data-theme",n);
   try{localStorage.setItem("forma-room-theme",n);}catch(e){}
-  themeButton(n);
+  themeButton(n);pushSkin();
  });
 }
 

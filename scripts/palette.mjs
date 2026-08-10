@@ -322,7 +322,16 @@ const SOURCES = [
     // `nodebg` and `stagebg` are rgba over the stage in the holo skin, so `bg` is the one ground
     // that is a solid colour in both skins and the only one a ratio can honestly be taken against.
     grounds: ['bg'], status: ['done', 'prog', 'prob'], roles: EXPLORER_ROLES,
-    palettes: [{ theme: 'explorer/holo', selector: ':root{' }, { theme: 'explorer/blueprint', selector: 'html[data-skin="blueprint"]{' }],
+    palettes: [
+      { theme: 'explorer/holo', selector: ':root{' },
+      { theme: 'explorer/blueprint', selector: 'html[data-skin="blueprint"]{' },
+      // The map inside a dark briefing. Same mapping as blueprint onto the briefing's dark palette,
+      // and measured for the same reason: it is a palette a reader sees, not a variant.
+      { theme: 'explorer/blueprint-dark', selector: 'html[data-skin="blueprint-dark"]{' },
+      // The map on paper. Declared rather than switched at print time, for the reason the block
+      // itself records, and measured for the reason every other palette here is.
+      { theme: 'explorer/print', selector: '@media print{', rule: 'html[data-skin="blueprint-dark"]:root' },
+    ],
   },
 ]
 // Below this, two statuses are close enough under simulated CVD that colour alone cannot separate

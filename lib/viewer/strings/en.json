@@ -91,6 +91,7 @@
   "allMilestoned": "Every open issue has a milestone.",
   "drift": "Architecture drift",
   "behind": "Architecture source is {n} commits behind HEAD.",
+  "behindOne": "Architecture source is {n} commit behind HEAD.",
   "aligned": "Architecture source matches HEAD.",
   "unresolved": "Architecture drift cannot be resolved: {reason}",
   "noDrift": "No architecture map, so commit drift is unavailable.",
