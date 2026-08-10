@@ -159,17 +159,76 @@ export function tokensIn(rawCss, selector) {
 // tied the base `:root` and won on source order — the accident, not the rule. This audit had no
 // opinion on any of it: it read the declaration and reported the number nobody was getting.
 export function specificity(sel) {
-  const s = sel.trim()
+  let s = sel.trim()
+  const add = [0, 0, 0]
+  // Functional pseudo-classes take the specificity of their ARGUMENT, and `:where()` takes none.
+  // Counting `:not(...)` as one pseudo-class AND scoring its argument made
+  // `html:not([data-theme="light"])` — the canonical prefers-color-scheme pattern — score (0,2,1)
+  // instead of (0,1,1), which turned a legitimate third theme into a false red. A gate that goes
+  // red on correct code is abandoned, and an abandoned gate protects nothing.
+  for (let guard = 0; guard < 8; guard++) {
+    const m = /:(is|not|has|matches|any|where)\(([^()]*)\)/i.exec(s)
+    if (!m) break
+    if (m[1].toLowerCase() !== 'where') {
+      // The strongest branch of the argument list wins.
+      let best = [0, 0, 0]
+      for (const part of m[2].split(',')) { const p = specificity(part); if (beats(p, best)) best = p }
+      add[0] += best[0]; add[1] += best[1]; add[2] += best[2]
+    }
+    s = s.slice(0, m.index) + ' ' + s.slice(m.index + m[0].length)
+  }
+  // Pseudo-ELEMENTS count as type selectors, so `::x` must be taken out before `:x` is counted.
+  const elements = (s.match(/::[\w-]+/g) || []).length
+  s = s.replace(/::[\w-]+/g, ' ')
   return [
-    (s.match(/#[\w-]+/g) || []).length,
-    (s.match(/\.[\w-]+|\[[^\]]*\]|:(?!:)[\w-]+/g) || []).length,
-    (s.replace(/\[[^\]]*\]/g, '').match(/(^|[\s>+~])[a-zA-Z][\w-]*/g) || []).length,
+    add[0] + (s.match(/#[\w-]+/g) || []).length,
+    add[1] + (s.match(/\.[\w-]+|\[[^\]]*\]|:[\w-]+/g) || []).length,
+    add[2] + elements + (s.replace(/\[[^\]]*\]/g, '').match(/(^|[\s>+~])[a-zA-Z][\w-]*/g) || []).length,
   ]
 }
 const beats = (a, b) => a[0] !== b[0] ? a[0] > b[0] : a[1] !== b[1] ? a[1] > b[1] : a[2] > b[2]
 // Every selector in the file that declares the ground token — i.e. every rule that IS a palette.
 // Derived rather than listed, so a fourth theme added tomorrow is compared without anyone
 // remembering to add it here.
+// Does anything in the file out-declare the rule whose numbers this audit reports? Three ways it
+// could, all found by a reviewer against the first version of this check and all reproduced in
+// Chrome before being fixed here:
+//   - a rival touching --ink or --muted while never mentioning --bg (the first version only looked
+//     for rules declaring the ground token, so it searched for the loophole and reported none);
+//   - `!important`, which beats specificity outright and which a specificity comparison cannot see;
+//   - a token whose value this audit cannot parse, which used to land in `unmeasurable` and then go
+//     unprinted in --check, the one mode that gates. Silence in the gating mode is not I9.
+export function outranked({ file, theme, rule, css, declares }) {
+  const out = [], mine = specificity(rule), want = new Set(declares)
+  for (const rival of declaringRules(css)) {
+    if (rival.selector === rule) continue
+    const shared = rival.tokens.filter((t) => want.has(t.name))
+    if (!shared.length) continue
+    const bang = shared.filter((t) => t.important)
+    if (bang.length) {
+      out.push(`${file} · ${theme}: \`${rival.selector}\` declares ${bang.map((t) => '--' + t.name).join(', ')} with \`!important\` — that beats any specificity, so the values measured here are not the values that apply`)
+    } else if (!beats(mine, specificity(rival.selector))) {
+      out.push(`${file} · ${theme}: \`${rule}\` scores (${mine}) and \`${rival.selector}\` scores (${specificity(rival.selector)}) over ${shared.map((t) => '--' + t.name).join(', ')} — the palette measured here is not the one that applies, so this audit reports a number the reader never gets`)
+    }
+  }
+  return out
+}
+// Every rule in the file and every custom property it declares, with whether the value is forced.
+export function declaringRules(rawCss) {
+  const stripped = withoutComments(rawCss)
+  const styles = [...stripped.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1])
+  const css = styles.length ? styles.join('\n') : stripped
+  const out = []
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const tokens = [...m[2].matchAll(/--([\w-]+)\s*:\s*([^;}]+)/g)].map((d) => ({ name: d[1], important: /!\s*important/i.test(d[2]) }))
+    if (!tokens.length) continue
+    for (const one of m[1].split(',')) {
+      const selector = one.trim().replace(/\s+/g, ' ')
+      if (selector && !selector.startsWith('@')) out.push({ selector, tokens })
+    }
+  }
+  return out
+}
 export function paletteRules(rawCss, ground) {
   // The sources are HTML, so the first rule's prelude would otherwise carry the whole document head
   // in front of `:root` and score (0,1,6) on the tag names in it.
@@ -276,26 +335,30 @@ function load() {
     let css
     try { css = readFileSync(join(REPO, source.file), 'utf-8') } catch (e) { problems.push(`${source.file}: unreadable — ${(e && e.message) || e}`); continue }
     for (const { theme, selector, rule } of source.palettes) {
-      const raw = tokensIn(css, selector)
-      if (!raw) { problems.push(`${source.file}: no \`${selector}\` rule — the palette moved and this audit stopped seeing it`); continue }
-      if (rule) {
-        const body = blockIn(css, selector) || ''
-        const mine = specificity(rule)
-        if (!new RegExp(rule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{').test(body)) {
-          problems.push(`${source.file} · ${theme}: \`${selector}\` no longer contains \`${rule}\` — the measured tokens are declared by some other selector and this audit is checking the wrong one`)
-        }
-        for (const rival of paletteRules(css, source.grounds[0])) {
-          if (rival === rule || beats(mine, specificity(rival))) continue
-          problems.push(`${source.file} · ${theme}: \`${rule}\` scores (${mine}) and \`${rival}\` scores (${specificity(rival)}) — the palette measured here is not the one that applies, so this audit reports a number the reader never gets`)
-        }
-      }
+      // When a palette names an inner `rule`, the tokens are read from THAT declaration and not from
+      // the block around it. Scraping the whole `@media print{…}` let the tokens be moved to a
+      // weaker `:root{}` inside it while a token-free `html:root:root{}` stayed behind to satisfy
+      // the specificity check — the exact regression this check exists to prevent, passing green.
+      const outer = blockIn(css, selector)
+      const raw = rule ? (outer === null ? null : tokensIn(outer, rule + '{')) : tokensIn(css, selector)
+      if (!raw) { problems.push(`${source.file}: no \`${rule ? selector + ' ' + rule : selector}\` rule — the palette moved and this audit stopped seeing it`); continue }
+      if (rule) problems.push(...outranked({ file: source.file, theme, rule, css, declares: [...raw.keys()] }))
       const tokens = new Map(), unmeasurable = []
       for (const [name, value] of raw) {
         const parsed = parseColor(value)
         // I9: a token this audit cannot read is NAMED, never quietly skipped. A translucent overlay
         // has no ratio without knowing what is behind it, and saying so is the honest answer.
+        //
+        // "Named" was true only of `--report`. The list was printed inside `if (!CHECK_ONLY)`, so in
+        // the one mode that gates — the mode `npm test` runs — an unparseable value on a token with
+        // a declared ROLE vanished: no ratio taken, no line printed, exit 0. `color-mix()`, a
+        // `var()` indirection or a stray `!important` were all enough. A token this audit cannot
+        // read is a hole in the audit, and a hole is a failure, not a footnote.
         if (parsed) tokens.set(name, parsed)
-        else if (source.roles[name] || source.grounds.includes(name)) unmeasurable.push(`${name}: ${value}`)
+        else if (source.roles[name] || source.grounds.includes(name)) {
+          unmeasurable.push(`${name}: ${value}`)
+          problems.push(`${source.file} · ${theme}: --${name} is \`${value}\`, which this audit cannot read — it holds ${source.grounds.includes(name) ? 'a ground' : 'the role "' + source.roles[name].why + '"'} and would otherwise pass unmeasured`)
+        }
       }
       // A gate that can pass without evaluating anything is the defect this whole file exists to
       // remove, one layer down. `tokensIn` finds a rule by string match, and this file has more than

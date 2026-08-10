@@ -240,12 +240,14 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
   --ink:oklch(22.0% 0.009 75);--muted:oklch(44.0% 0.010 72);
   --ok:oklch(52.9% 0.141 151);--warn:oklch(44.4% 0.094 73);--bad:oklch(35.5% 0.144 25);
   --accent:oklch(45.0% 0.150 255);--series2:oklch(55.0% 0.012 80);
-  --ramp1:oklch(63.3% 0.079 255);--ramp2:oklch(59.2% 0.110 255);--ramp3:oklch(55.1% 0.145 255);--ramp4:oklch(51.0% 0.172 255)}
- /* `color-scheme:dark` is a UA instruction, not a token, and the print palette could not reach it:
-    the canvas kept being painted #121212 under the white page, so a dark-theme reader's PDF opened
-    on a black sheet. Every token matched and the paper still differed on all 29 sheets. The canvas
-    is declared here for the same reason the colours are. */
- html:root:root{color-scheme:light;background:var(--bg)}
+  --ramp1:oklch(63.3% 0.079 255);--ramp2:oklch(59.2% 0.110 255);--ramp3:oklch(55.1% 0.145 255);--ramp4:oklch(51.0% 0.172 255);
+  /* `color-scheme:dark` is a UA instruction, not a token, and the print palette could not reach it:
+     the canvas kept being painted #121212 under the white page, so a dark-theme reader's PDF opened
+     on a black sheet. Every token matched and the paper still differed on all 29 sheets.
+     In the SAME rule as the tokens, deliberately. As a second `html:root:root{…}` it gave the audit
+     two candidates for one name, and `indexOf` picked whichever came first: the check that the
+     measured tokens belong to the compared selector would have been reading a coin flip. */
+  color-scheme:light;background:var(--bg)}
  body{height:auto;overflow:visible;display:block;background:var(--bg);color:var(--ink);font-size:10pt}
  .bar,.toggle,.tip,.skip,.ghost{display:none!important}
  main{overflow:visible;height:auto;padding:0}
@@ -577,7 +579,14 @@ function inline(target,text){
    has one, and a screen reader's heading list would read as two documents. */
 function mdHeading(level){return "h"+Math.min(level+2,6);}
 function renderMarkdown(src){
- var out=el("div","md"),lines=String(src).replace(/\r\n/g,"\n").split("\n"),i=0,para=[];
+ /* EVERY line terminator, not just CRLF. In JavaScript `.` and `$` exclude `\r`, U+2028 and
+    U+2029, so a lone CR or a Unicode line separator inside a document made the unanchored list
+    DETECTOR match a line the `$`-anchored CONSUMER could not, `i` never advanced, and the outer
+    loop appended empty <ul>s until the heap died — a hang, in the browser, from a byte in somebody
+    else's repository. The same mismatch silently rendered `# Title<U+2028>more` as a paragraph with
+    the hash still in it. Normalising here fixes the class; `list()` additionally guarantees it
+    advances, because a detector and a consumer that are two different patterns can drift again. */
+ var out=el("div","md"),lines=String(src).replace(/\r\n?|\u2028|\u2029/g,"\n").split("\n"),i=0,para=[];
  function flush(){
   if(!para.length)return;
   inline(out.appendChild(el("p","")),para.join(" "));
@@ -587,11 +596,18 @@ function renderMarkdown(src){
     exposed nothing: assistive technology got ten paragraphs where the document had a list of ten,
     with no "list, 10 items" and no way to skip it. */
  function list(tag,cls,first){
-  var box=el(tag,cls),re=tag==="ol"?/^\s*(\d{1,3})\.\s+(.*)$/:/^\s*[-*]\s+(.*)$/,m;
+  // The consumer allows more digits than the detector on purpose. `\d{1,3}` opening a list keeps
+  // "2026. The year the manifest was frozen" as prose; but once a list IS running, item 1000 is an
+  // item, and dropping it into the paragraph buffer was a silent structural loss (I9).
+  var box=el(tag,cls),re=tag==="ol"?/^\s*(\d{1,9})\.\s+(.*)$/:/^\s*[-*]\s+(.*)$/,m,n=0;
   if(tag==="ol"&&first!==1)box.setAttribute("start",String(first));
   while(i<lines.length&&(m=re.exec(lines[i]))!==null){
-   inline(box.appendChild(el("li","md-li","")),m[tag==="ol"?2:1]);i++;
+   inline(box.appendChild(el("li","md-li","")),m[tag==="ol"?2:1]);i++;n++;
   }
+  // Belt and braces: the caller decided this line starts a list using a DIFFERENT pattern from the
+  // one above. If the two ever disagree again, consume the line as prose rather than spin — a
+  // renderer that hangs on a document is worse than one that renders it plainly.
+  if(!n){para.push(lines[i].trim());i++;return;}
   out.appendChild(box);
  }
  while(i<lines.length){
@@ -876,6 +892,16 @@ function viewWbs(view,program,summary){
  view.appendChild(ev);
 }
 
+/* The title and the body partition the document. `roomdocs` lifts the first `# ` line as the title
+   and leaves it in the text, which was invisible while both were divs — and became a real
+   duplicate the moment they were both real headings: a screen reader's heading list read
+   "Design h2, Design h3, Global invariants h2, Global invariants h3" for all eight documents, on
+   screen and on paper. Removed here rather than in roomdocs, because `text` is what the byte
+   budget counts and what the determinism gate re-derives. */
+function docBody(d){
+ var t=String(d.text||""),m=/^\s*#\s+(.*)(?:\n|$)/.exec(t);
+ return (m&&m[1].trim()===String(d.title||"").trim())?t.slice(m[0].length):t;
+}
 function viewDocs(view,program){
  view.setAttribute("data-single","");
  var docs=program.docs,ev=el("div","evidence");
@@ -903,7 +929,7 @@ function viewDocs(view,program){
    // renderMarkdown lands its `#` at h3 in both places.
    all.appendChild(el("h2","md-h md-h1",docs.embedded[a].title||docs.embedded[a].path));
    all.appendChild(el("div","prov",docs.embedded[a].path));
-   all.appendChild(renderMarkdown(docs.embedded[a].text));
+   all.appendChild(renderMarkdown(docBody(docs.embedded[a])));
   }
  };
  PRINT_FILL.push(all);
@@ -912,7 +938,7 @@ function viewDocs(view,program){
   var d=docs.embedded[idx],b;
   title.textContent=d.title||d.path;
   link.textContent="";link.appendChild(docLink(program,d.path,null,STR.docsOpen));
-  body.textContent="";body.appendChild(renderMarkdown(d.text));
+  body.textContent="";body.appendChild(renderMarkdown(docBody(d)));
   rp.body.scrollTop=0;
   announce(d.title||d.path);
   var btns=listWrap.querySelectorAll("button");
@@ -1022,8 +1048,8 @@ function stampRunningHead(){
  var head=esc((ROOM.meta.title||STR.appTitle)+"  ·  "+ROOM.meta.today);
  var s=document.createElement("style");
  s.textContent="@page{margin:16mm 12mm 12mm;"+
-  "@top-left{content:\""+head+"\";font:8pt \"SF Mono\",Menlo,Consolas,monospace;color:#56524d}"+
-  "@top-right{content:counter(page) \" / \" counter(pages);font:8pt \"SF Mono\",Menlo,Consolas,monospace;color:#56524d}}";
+  "@top-left{content:\""+head+"\";font:8pt \"SF Mono\",Menlo,Consolas,monospace;color:var(--muted)}"+
+  "@top-right{content:counter(page) \" / \" counter(pages);font:8pt \"SF Mono\",Menlo,Consolas,monospace;color:var(--muted)}}";
  document.head.appendChild(s);
 }
 function stampPrintIds(){

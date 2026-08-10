@@ -1808,7 +1808,8 @@ const diffPaths = (a, b, at = '') => {
   const t = tags(doc)
   // Demoted by two: the reader panel is already an h2, so the document\'s `#` is an h3.
   if (t.indexOf('H3') < 0 || t.indexOf('H4') < 0) die('markdown: `#`/`##` did not become real headings — got ' + t.join(','))
-  if (t.indexOf('DIV') > -1 && !find(doc, 'UL')) die('markdown: list items are still divs')
+  // The old renderer emitted div.md-h and div.md-li. A DIV anywhere in the output means it is back.
+  if (t.indexOf('DIV') > -1) die('markdown: the renderer emitted a <div> — headings and list items are divs again, which look like structure and expose none')
   if (!find(doc, 'UL') || !find(doc, 'OL')) die('markdown: a bullet list and a numbered list must be <ul> and <ol> — got ' + t.join(','))
   if (find(doc, 'UL').children.filter((c) => c.tagName === 'LI').length !== 2) die('markdown: a two-item bullet list did not produce two <li>')
   const ol = find(doc, 'OL')
@@ -1820,6 +1821,27 @@ const diffPaths = (a, b, at = '') => {
   if (find(off, 'OL').attrs.start !== '3') die('markdown: a list starting at 3 was silently renumbered from 1')
   // ...but a paragraph opening with a year is prose, not the two-thousand-and-twenty-sixth item.
   if (find(renderMarkdown('2026. The year the manifest was frozen.\n'), 'OL')) die('markdown: a sentence beginning with a year was turned into a list')
+  // Once a list IS running, a four-digit item is an item. Dropping it into the paragraph buffer is
+  // a silent structural loss (I9), which is worse than rendering it plainly.
+  if (find(renderMarkdown('10. ten\n100. hundred\n1000. thousand\n'), 'OL').children.filter((c) => c.tagName === 'LI').length !== 3) {
+    die('markdown: an item numbered past 999 was dropped out of its own list')
+  }
+  // A lone CR, U+2028 or U+2029 inside a document HUNG THE BROWSER: `.` and `$` exclude all three
+  // in JavaScript, so the unanchored list detector matched a line the anchored consumer could not,
+  // the index never advanced, and the loop appended empty <ul>s until the heap died. Repository
+  // text reaches this renderer unfiltered, so it was a hang triggered by somebody else's bytes.
+  // These cases run in-process: a regression hangs the suite, which is the honest failure — a test
+  // for a non-terminating loop cannot both prove termination and return.
+  for (const [why, input, want] of [
+    ['a lone CR inside a bullet', '- item\rmore\n', 'UL'],
+    ['a lone CR inside a numbered item', '1. item\rmore\n', 'OL'],
+    ['U+2028 inside a bullet', '- item\u2028more\n', 'UL'],
+    ['U+2029 inside a bullet', '- item\u2029more\n', 'UL'],
+  ]) {
+    if (!find(renderMarkdown(input), want)) die(`markdown: ${why} did not produce a <${want.toLowerCase()}> — the line terminator was not normalised`)
+  }
+  // Same mismatch, silent instead of fatal: the heading was rendered as a paragraph, hash included.
+  if (!find(renderMarkdown('# Title\u2028more\n'), 'H3')) die('markdown: a heading followed by U+2028 rendered as a paragraph with its hash still in it')
   console.log('  ok markdown — a document cannot inject a scheme through a link, a refused link is shown rather than dropped, and headings, bullet lists, numbered lists and quotes are real elements')
 }
 

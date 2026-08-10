@@ -192,9 +192,13 @@ with a 2096px document.
 briefing say different things on different screens, and a briefing that omits without saying so is
 the artifact this product exists to replace.
 
-- **Enforced by:** measurement in a real browser, in CI, not by a regex over CSS text in `npm test`
-  — a pattern match cannot fail for the right reason. See [`docs/technical-debt.md`](technical-debt.md).
-- **Red when:** any route overflows the viewport at 3440×1440 or 1920×900.
+- **Not enforced.** Every number above was measured in a real browser against the built artifact,
+  by hand. There is no job that repeats it, so a layout regression can merge — one did, and a
+  re-audit caught it rather than CI. The honest field here is empty, and the debt is
+  [D-8](technical-debt.md). A regex over CSS text in `npm test` would close the field without
+  closing the hole: a pattern that cannot fail for the right reason is worse than a written manual
+  step, because it reads as green.
+- **Would be red when:** any route overflows the viewport at 3440×1440 or 1920×900.
 
 ## D7. Determinism over freshness
 
