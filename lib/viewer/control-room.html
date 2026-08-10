@@ -92,7 +92,7 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
  body{font-size:15px}
  .evidence{grid-auto-rows:minmax(280px,1fr)}
 }
-/* Below the floor the shell is released rather than crushed: one column, the page scrolls.
+/* Below the floor the shell is released rather than crushed: the page scrolls.
    Gated on HEIGHT as well as width, because the budget being protected is vertical: a 1920x640
    window is not a phone, and holding the locked shell there delivered the whole evidence tier
    through a 97px slot with no page scrollbar. 760px is the height at which 52px of bar, 32px of
@@ -102,11 +102,18 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
  main{overflow:visible;height:auto}
  .bar{position:sticky;top:0;z-index:20;background:var(--bg)}
  .view{height:auto;display:block}
- .answer,.evidence{grid-template-columns:1fr;overflow:visible;grid-auto-rows:auto}
- .answer,.evidence{display:grid}
- .span2,.full{grid-column:auto}
+ .answer,.evidence{overflow:visible;grid-auto-rows:auto}
  .panel{margin-bottom:var(--gap)}
  .panel-body{overflow:visible;max-height:none}
+}
+/* Only a NARROW release collapses to one column. Folding the column rule into the query above
+   meant a wide, short window — an ultrawide snapped to half height — released into a single
+   3381px column: `.answer` alone grew to 1535px and "Now" sat 1609px below the fold, for content
+   that occupies 520px at full height. Releasing the height should let the page scroll, not throw
+   away 2200px of width. */
+@media(max-width:1199px){
+ .answer,.evidence{grid-template-columns:1fr}
+ .span2,.full{grid-column:auto}
 }
 
 /* Type. One thing on the page is large: the thesis. Everything else is 10.5-14px, because a
@@ -188,9 +195,15 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
 .md-h{font-weight:650;letter-spacing:-.01em;margin:16px 0 6px}
 .md-h1{font-size:17px;margin-top:0}.md-h2{font-size:15px}.md-h3{font-size:13.5px}
 .md-h4,.md-h5,.md-h6{font-size:12.5px;color:var(--muted)}
-.md-li{margin:0 0 4px 16px;position:relative;max-width:70ch}
-.md-li:before{content:"\2013";position:absolute;left:-14px;color:var(--muted)}
+/* Real ul/ol/li, so the marker is the browser's. The hand-drawn en dash that used to sit in a
+   ::before is gone: keeping it would print twice, once from the pseudo-element and once from the
+   list marker the element now has. */
+.md-ul,.md-ol{margin:0 0 10px;padding-left:20px}
+.md-ul{list-style:disc}.md-ol{list-style:decimal}
+.md-li{margin:0 0 4px;max-width:70ch}
+.md-li::marker{color:var(--muted)}
 .md-q{margin:0 0 10px;padding-left:12px;border-left:2px solid var(--line);color:var(--muted);max-width:70ch}
+.md-q>p:last-child{margin-bottom:0}
 .md-pre{margin:0 0 10px;padding:8px 10px;background:var(--surface);overflow:auto;font:11.5px/1.5 "SF Mono",Menlo,Consolas,monospace}
 .md-code{font:11.5px "SF Mono",Menlo,Consolas,monospace;color:var(--muted)}
 .md-table{margin:0 0 12px;font-size:11.5px}
@@ -213,14 +226,27 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  /* The print palette is DECLARED, not inherited. Setting only body{color:#000} left every token at
     its dark-theme value, so chart numbers printed at 1.23:1 against white — invisible — and every
     provenance line at 3.73:1. Worse, the theme persists to localStorage, so the paper output
-    differed depending on what the reader last clicked. These are the measured light values. */
- :root{
+    differed depending on what the reader last clicked. These are the measured light values.
+
+    Declared is not the same as WINNING. A media query adds no specificity, so `:root` here scored
+    (0,1,0) and `html[data-theme="light"]` scored (0,1,1) and outranked it: every reader who had
+    ever pressed the theme button printed the light UI palette instead, --muted at 5.05:1 and the
+    hairline at 1.43:1, on cream. The dark case only passed because it TIED the base :root and won
+    on source order — the accident, not the rule. Doubling the pseudo-class scores (0,2,1), above
+    any single-attribute theme selector, so this wins on specificity and not on where it sits.
+    scripts/palette.mjs now compares the two and fails if a theme selector ever catches up. */
+ html:root:root{
   --bg:oklch(100% 0 0);--surface:oklch(100% 0 0);--line:oklch(80% 0 0);
   --ink:oklch(22.0% 0.009 75);--muted:oklch(44.0% 0.010 72);
   --ok:oklch(52.9% 0.141 151);--warn:oklch(44.4% 0.094 73);--bad:oklch(35.5% 0.144 25);
   --accent:oklch(45.0% 0.150 255);--series2:oklch(55.0% 0.012 80);
   --ramp1:oklch(63.3% 0.079 255);--ramp2:oklch(59.2% 0.110 255);--ramp3:oklch(55.1% 0.145 255);--ramp4:oklch(51.0% 0.172 255)}
- body{height:auto;overflow:visible;display:block;background:#fff;color:var(--ink);font-size:10pt}
+ /* `color-scheme:dark` is a UA instruction, not a token, and the print palette could not reach it:
+    the canvas kept being painted #121212 under the white page, so a dark-theme reader's PDF opened
+    on a black sheet. Every token matched and the paper still differed on all 29 sheets. The canvas
+    is declared here for the same reason the colours are. */
+ html:root:root{color-scheme:light;background:var(--bg)}
+ body{height:auto;overflow:visible;display:block;background:var(--bg);color:var(--ink);font-size:10pt}
  .bar,.toggle,.tip,.skip,.ghost{display:none!important}
  main{overflow:visible;height:auto;padding:0}
  .view{height:auto;display:block}
@@ -546,6 +572,10 @@ function inline(target,text){
  if(last<text.length)target.appendChild(document.createTextNode(text.slice(last)));
  return target;
 }
+/* Levels are demoted by two. A rendered document sits inside a panel whose heading is an <h2>, so
+   its own `#` is an h3: emitting <h1> would put a second top-level heading on a page that already
+   has one, and a screen reader's heading list would read as two documents. */
+function mdHeading(level){return "h"+Math.min(level+2,6);}
 function renderMarkdown(src){
  var out=el("div","md"),lines=String(src).replace(/\r\n/g,"\n").split("\n"),i=0,para=[];
  function flush(){
@@ -553,10 +583,21 @@ function renderMarkdown(src){
   inline(out.appendChild(el("p","")),para.join(" "));
   para=[];
  }
+ /* Consecutive item lines become ONE list element. Emitting a <div> per item looked identical and
+    exposed nothing: assistive technology got ten paragraphs where the document had a list of ten,
+    with no "list, 10 items" and no way to skip it. */
+ function list(tag,cls,first){
+  var box=el(tag,cls),re=tag==="ol"?/^\s*(\d{1,3})\.\s+(.*)$/:/^\s*[-*]\s+(.*)$/,m;
+  if(tag==="ol"&&first!==1)box.setAttribute("start",String(first));
+  while(i<lines.length&&(m=re.exec(lines[i]))!==null){
+   inline(box.appendChild(el("li","md-li","")),m[tag==="ol"?2:1]);i++;
+  }
+  out.appendChild(box);
+ }
  while(i<lines.length){
   var ln=lines[i],h=/^(#{1,6})\s+(.*)$/.exec(ln);
   if(/^\s*$/.test(ln)){flush();i++;continue;}
-  if(h){flush();inline(out.appendChild(el("div","md-h md-h"+h[1].length,"")),h[2]);i++;continue;}
+  if(h){flush();inline(out.appendChild(el(mdHeading(h[1].length),"md-h md-h"+h[1].length,"")),h[2]);i++;continue;}
   if(/^```/.test(ln)){
    flush();var buf=[];i++;
    while(i<lines.length&&!/^```/.test(lines[i]))buf.push(lines[i++]);
@@ -579,10 +620,17 @@ function renderMarkdown(src){
    }
    continue;
   }
-  var li=/^\s*[-*]\s+(.*)$/.exec(ln);
-  if(li){flush();inline(out.appendChild(el("div","md-li","")),li[1]);i++;continue;}
+  if(/^\s*[-*]\s+/.test(ln)){flush();list("ul","md-ul",1);continue;}
+  /* `\d{1,3}\.` and not `\d+\.`: a paragraph opening "2026. The year the manifest was frozen"
+     is prose, not the two-thousand-and-twenty-sixth item of a list. */
+  var ol=/^\s*(\d{1,3})\.\s+/.exec(ln);
+  if(ol){flush();list("ol","md-ol",parseInt(ol[1],10));continue;}
   var q=/^>\s?(.*)$/.exec(ln);
-  if(q){flush();inline(out.appendChild(el("div","md-q","")),q[1]);i++;continue;}
+  if(q){
+   flush();var qb=el("blockquote","md-q");
+   while(i<lines.length&&(q=/^>\s?(.*)$/.exec(lines[i]))!==null){inline(qb.appendChild(el("p","")),q[1]);i++;}
+   out.appendChild(qb);continue;
+  }
   if(/^---+$/.test(ln)){flush();out.appendChild(el("hr","md-hr"));i++;continue;}
   para.push(ln.trim());i++;
  }
@@ -851,7 +899,9 @@ function viewDocs(view,program){
  all.fill=function(){
   if(all.firstChild)return;
   for(var a=0;a<docs.embedded.length;a++){
-   all.appendChild(el("div","md-h md-h1",docs.embedded[a].title||docs.embedded[a].path));
+   // h2, matching the panel heading a document sits under on screen, so the demotion in
+   // renderMarkdown lands its `#` at h3 in both places.
+   all.appendChild(el("h2","md-h md-h1",docs.embedded[a].title||docs.embedded[a].path));
    all.appendChild(el("div","prov",docs.embedded[a].path));
    all.appendChild(renderMarkdown(docs.embedded[a].text));
   }
@@ -959,6 +1009,23 @@ function mount(k){
  v.appendChild(el("p","print-id",""));
  document.getElementById("content").appendChild(v);VIEWS[k]=v;ORDER.push(k);return v;
 }
+/* A running header, because `.print-id` is a block element and a block element stamps the page it
+   starts on: seven identity lines covered seven of twenty-nine sheets, and the twenty in the
+   Documents view came out anonymous. A `@page` margin box repeats on every sheet and is the only
+   place `counter(page)` is legal, so it also carries the page number the briefing never had.
+   Measured in Chrome 151 before being written, not recalled: 34 of 34 pages, numbers included. */
+function stampRunningHead(){
+ // ROOM.meta is repository text and this builds a CSS string, so the quote and the backslash are
+ // escaped for the same reason I14 keeps that text out of markup. A newline is illegal inside a CSS
+ // string, not merely ugly, and would silently drop the whole rule.
+ var esc=function(s){return String(s==null?"":s).replace(/[\\"]/g,"\\$&").replace(/[\r\n\f]+/g," ");};
+ var head=esc((ROOM.meta.title||STR.appTitle)+"  ·  "+ROOM.meta.today);
+ var s=document.createElement("style");
+ s.textContent="@page{margin:16mm 12mm 12mm;"+
+  "@top-left{content:\""+head+"\";font:8pt \"SF Mono\",Menlo,Consolas,monospace;color:#56524d}"+
+  "@top-right{content:counter(page) \" / \" counter(pages);font:8pt \"SF Mono\",Menlo,Consolas,monospace;color:#56524d}}";
+ document.head.appendChild(s);
+}
 function stampPrintIds(){
  var k,p,name;
  for(k in VIEWS)if(VIEWS.hasOwnProperty(k)){
@@ -990,19 +1057,19 @@ function normalize(h){
  return "/";
 }
 function progOf(k){var m=/^\/([^/]+)\/([^/]+)$/.exec(k);return m?m[1]:null;}
-function navLink(href,text,cur){var a=el("a","",text);a.href="#"+href;if(cur)a.setAttribute("aria-current","page");return a;}
+function navLink(href,text){var a=el("a","",text);a.href="#"+href;return a;}
 // Built once. Rebuilding it on every route change destroyed the anchor the user had just pressed
 // and left focus on <body>, so each navigation forced a Tab-from-the-top.
 function buildNav(){
  var progs=document.getElementById("nav-programs"),views=document.getElementById("nav-views"),i,j;
- progs.appendChild(navLink("/",STR.routePortfolio,false));
- for(i=0;i<ROOM.programs.length;i++)progs.appendChild(navLink(key(ROOM.programs[i].id,"exec"),ROOM.programs[i].id,false));
- progs.appendChild(navLink("/options",STR.routeOptions,false));
+ progs.appendChild(navLink("/",STR.routePortfolio));
+ for(i=0;i<ROOM.programs.length;i++)progs.appendChild(navLink(key(ROOM.programs[i].id,"exec"),ROOM.programs[i].id));
+ progs.appendChild(navLink("/options",STR.routeOptions));
  // One set of view tabs, re-pointed at whichever programme is open. They are present from the
  // first screen rather than appearing only after the reader guesses that a lowercase repo id
  // between two sentence-case labels is the primary action.
  for(i=0;i<TABS.length;i++){
-  var a=navLink("/",TABS[i][1](),false);
+  var a=navLink("/",TABS[i][1]());
   a.setAttribute("data-tab",TABS[i][0]);
   views.appendChild(a);
  }
@@ -1013,7 +1080,10 @@ function renderNav(k){
  var links=progs.querySelectorAll("a");
  for(i=0;i<links.length;i++){
   var href=links[i].getAttribute("href").slice(1);
-  if(href===k||(progOf(k)&&href===key(progOf(k),"exec")))links[i].setAttribute("aria-current","page");
+  // "true", not "page". Two landmarks both marking their selection as aria-current="page" made a
+  // screen reader announce "current page" twice on one screen; only ONE of them is the page. The
+  // programme is the current item within its list, which is what the plain token means.
+  if(href===k||(progOf(k)&&href===key(progOf(k),"exec")))links[i].setAttribute("aria-current","true");
   else links[i].removeAttribute("aria-current");
  }
  var tabs=views.querySelectorAll("a");
@@ -1076,7 +1146,7 @@ function start(){
  applyTheme();wireTheme();
  document.getElementById("page-title").textContent=ROOM.meta.title||STR.appTitle;
  document.getElementById("page-stamp").textContent=ROOM.meta.today;
- buildAll();buildNav();
+ buildAll();buildNav();stampRunningHead();
  window.addEventListener("hashchange",onHash);
  window.addEventListener("resize",onResize);
  // Printing un-hides every view, so every chart must be drawn before the dialog opens.

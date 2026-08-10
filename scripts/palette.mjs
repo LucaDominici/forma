@@ -128,7 +128,7 @@ export function parseColor(raw) {
 // hypothetical — a comment containing `body{color:#000}` truncated the print palette to zero tokens,
 // and only the "did this actually measure anything" guard caught it.
 const withoutComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '')
-export function tokensIn(rawCss, selector) {
+export function blockIn(rawCss, selector) {
   const css = withoutComments(rawCss)
   const start = css.indexOf(selector)
   if (start < 0) return null
@@ -142,9 +142,49 @@ export function tokensIn(rawCss, selector) {
     if (css[i] === '{') depth++
     else if (css[i] === '}' && --depth === 0) { close = i; break }
   }
-  if (close < 0) return null
+  return close < 0 ? null : css.slice(open + 1, close)
+}
+export function tokensIn(rawCss, selector) {
+  const body = blockIn(rawCss, selector)
+  if (body === null) return null
   const out = new Map()
-  for (const m of css.slice(open + 1, close).matchAll(/--([\w-]+)\s*:\s*([^;}]+)/g)) out.set(m[1], m[2].trim())
+  for (const m of body.matchAll(/--([\w-]+)\s*:\s*([^;}]+)/g)) out.set(m[1], m[2].trim())
+  return out
+}
+
+// A palette can be DECLARED and still lose. A media query adds no specificity to the rules inside
+// it, so `@media print{ :root{…} }` scored (0,1,0) against `html[data-theme="light"]`'s (0,1,1) and
+// every reader who had ever pressed the theme button printed the SCREEN palette: --muted at 5.05:1
+// instead of 7.75, the hairline at 1.43:1, on cream instead of white. Dark passed only because it
+// tied the base `:root` and won on source order — the accident, not the rule. This audit had no
+// opinion on any of it: it read the declaration and reported the number nobody was getting.
+export function specificity(sel) {
+  const s = sel.trim()
+  return [
+    (s.match(/#[\w-]+/g) || []).length,
+    (s.match(/\.[\w-]+|\[[^\]]*\]|:(?!:)[\w-]+/g) || []).length,
+    (s.replace(/\[[^\]]*\]/g, '').match(/(^|[\s>+~])[a-zA-Z][\w-]*/g) || []).length,
+  ]
+}
+const beats = (a, b) => a[0] !== b[0] ? a[0] > b[0] : a[1] !== b[1] ? a[1] > b[1] : a[2] > b[2]
+// Every selector in the file that declares the ground token — i.e. every rule that IS a palette.
+// Derived rather than listed, so a fourth theme added tomorrow is compared without anyone
+// remembering to add it here.
+export function paletteRules(rawCss, ground) {
+  // The sources are HTML, so the first rule's prelude would otherwise carry the whole document head
+  // in front of `:root` and score (0,1,6) on the tag names in it.
+  const stripped = withoutComments(rawCss)
+  const styles = [...stripped.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1])
+  const css = styles.length ? styles.join('\n') : stripped
+  const out = []
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!new RegExp('--' + ground + '\\s*:').test(m[2])) continue
+    // A selector list is as strong as its strongest member, so each member is compared on its own.
+    for (const one of m[1].split(',')) {
+      const sel = one.trim().replace(/\s+/g, ' ')
+      if (sel) out.push(sel)
+    }
+  }
   return out
 }
 
@@ -213,7 +253,9 @@ const SOURCES = [
       // theme persists to localStorage, the paper output differed depending on what the reader last
       // clicked. A deliverable that prints differently per reader is not a deliverable, so the print
       // palette is declared and measured like the other two.
-      { theme: 'briefing/print', selector: '@media print{' },
+      // `rule` is the selector INSIDE the block that carries the tokens, and it must out-specify
+      // every other palette rule in the file — see `specificity` above for what going without cost.
+      { theme: 'briefing/print', selector: '@media print{', rule: 'html:root:root' },
     ],
   },
   {
@@ -233,9 +275,20 @@ function load() {
   for (const source of SOURCES) {
     let css
     try { css = readFileSync(join(REPO, source.file), 'utf-8') } catch (e) { problems.push(`${source.file}: unreadable — ${(e && e.message) || e}`); continue }
-    for (const { theme, selector } of source.palettes) {
+    for (const { theme, selector, rule } of source.palettes) {
       const raw = tokensIn(css, selector)
       if (!raw) { problems.push(`${source.file}: no \`${selector}\` rule — the palette moved and this audit stopped seeing it`); continue }
+      if (rule) {
+        const body = blockIn(css, selector) || ''
+        const mine = specificity(rule)
+        if (!new RegExp(rule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{').test(body)) {
+          problems.push(`${source.file} · ${theme}: \`${selector}\` no longer contains \`${rule}\` — the measured tokens are declared by some other selector and this audit is checking the wrong one`)
+        }
+        for (const rival of paletteRules(css, source.grounds[0])) {
+          if (rival === rule || beats(mine, specificity(rival))) continue
+          problems.push(`${source.file} · ${theme}: \`${rule}\` scores (${mine}) and \`${rival}\` scores (${specificity(rival)}) — the palette measured here is not the one that applies, so this audit reports a number the reader never gets`)
+        }
+      }
       const tokens = new Map(), unmeasurable = []
       for (const [name, value] of raw) {
         const parsed = parseColor(value)

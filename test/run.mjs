@@ -1754,21 +1754,28 @@ const diffPaths = (a, b, at = '') => {
   const src = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
   const inlineFn = /function inline\(target,text\)\{[\s\S]*?\n\}/.exec(src)
   const elFn = /function el\(t,c,x\)\{[^\n]*\n/.exec(src)
+  const mdFn = /function renderMarkdown\(src\)\{[\s\S]*?\n\}\n/.exec(src)
+  const mdhFn = /function mdHeading\(level\)\{[^\n]*\n/.exec(src)
   if (!inlineFn) die('markdown: inline() not found in control-room.html — the renderer moved')
   if (!elFn) die('markdown: el() not found in control-room.html')
+  if (!mdFn) die('markdown: renderMarkdown() not found in control-room.html — the renderer moved')
+  if (!mdhFn) die('markdown: mdHeading() not found in control-room.html')
   const stub = `
     var document = {
-      createElement: function (t) { return { tagName: t.toUpperCase(), children: [], setAttribute: function () {}, appendChild: function (c) { this.children.push(c) } } },
+      createElement: function (t) { return { tagName: t.toUpperCase(), attrs: {}, children: [], setAttribute: function (k, v) { this.attrs[k] = v }, appendChild: function (c) { this.children.push(c); return c } } },
       createTextNode: function (t) { return { text: String(t) } },
     };
     ${elFn[0]}
     ${inlineFn[0]}
-    return inline;`
+    ${mdhFn[0]}
+    ${mdFn[0]}
+    return {inline: inline, renderMarkdown: renderMarkdown};`
   // new Function over text lifted from a TRACKED first-party file, which is the same no-jsdom trick
   // this suite already uses to test the viewer's pure functions. The interpolated strings are our
   // own source at a reviewed commit, never input; the thing being tested is precisely that the
   // renderer refuses input.
-  const inline = new Function(stub)()
+  const lifted = new Function(stub)()
+  const inline = lifted.inline
   const anchorsFor = (md) => {
     const target = { children: [], appendChild(c) { this.children.push(c) } }
     inline(target, md)
@@ -1787,7 +1794,33 @@ const diffPaths = (a, b, at = '') => {
   const rejected = { children: [], appendChild(c) { this.children.push(c) } }
   inline(rejected, '[go](javascript:alert(1))')
   if (!rejected.children.some((c) => c.text && c.text.indexOf('javascript:') > -1)) die('markdown: a refused link was dropped silently instead of being shown as text (I9)')
-  console.log('  ok markdown — a document cannot inject a scheme through a link, and a refused link is shown rather than dropped')
+
+  // Structure, not the appearance of structure. The renderer emitted `div.md-h` and `div.md-li`,
+  // which looked like nine headings and ten list items and exposed NONE of them: the accessibility
+  // tree for a 111-line document held zero headings and zero lists, so a screen-reader reader got
+  // one undifferentiated run of paragraphs with nothing to navigate by. Ordered lists were worse
+  // than invisible — `1.` was not matched at all, so PRD.md §2, this product's own definition of
+  // itself, was joined into a single run-on sentence on screen AND on paper.
+  const { renderMarkdown } = lifted
+  const tags = (node) => { const out = []; (function walk(n) { for (const c of n.children || []) { if (c.tagName) out.push(c.tagName); walk(c) } })(node); return out }
+  const find = (node, tag) => { let hit = null; (function walk(n) { for (const c of n.children || []) { if (!hit && c.tagName === tag) hit = c; walk(c) } })(node); return hit }
+  const doc = renderMarkdown('# Title\n\n## Section\n\nProse.\n\n- one\n- two\n\n1. first\n2. second\n\n> quoted\n')
+  const t = tags(doc)
+  // Demoted by two: the reader panel is already an h2, so the document\'s `#` is an h3.
+  if (t.indexOf('H3') < 0 || t.indexOf('H4') < 0) die('markdown: `#`/`##` did not become real headings — got ' + t.join(','))
+  if (t.indexOf('DIV') > -1 && !find(doc, 'UL')) die('markdown: list items are still divs')
+  if (!find(doc, 'UL') || !find(doc, 'OL')) die('markdown: a bullet list and a numbered list must be <ul> and <ol> — got ' + t.join(','))
+  if (find(doc, 'UL').children.filter((c) => c.tagName === 'LI').length !== 2) die('markdown: a two-item bullet list did not produce two <li>')
+  const ol = find(doc, 'OL')
+  if (ol.children.filter((c) => c.tagName === 'LI').length !== 2) die('markdown: `1.`/`2.` did not produce two <li> — numbered lists are being joined into a paragraph')
+  if (!find(doc, 'BLOCKQUOTE')) die('markdown: `>` did not become a <blockquote>')
+  // A list that starts at 3 renders as 3, 4 — silently renumbering somebody else\'s document is a
+  // lie about what it says.
+  const off = renderMarkdown('3. third\n4. fourth\n')
+  if (find(off, 'OL').attrs.start !== '3') die('markdown: a list starting at 3 was silently renumbered from 1')
+  // ...but a paragraph opening with a year is prose, not the two-thousand-and-twenty-sixth item.
+  if (find(renderMarkdown('2026. The year the manifest was frozen.\n'), 'OL')) die('markdown: a sentence beginning with a year was turned into a list')
+  console.log('  ok markdown — a document cannot inject a scheme through a link, a refused link is shown rather than dropped, and headings, bullet lists, numbered lists and quotes are real elements')
 }
 
 // Locale parity, now that the tables are files rather than a literal buried in the template. I15
