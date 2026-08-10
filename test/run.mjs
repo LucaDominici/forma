@@ -1858,6 +1858,14 @@ const diffPaths = (a, b, at = '') => {
   const template = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
   const unused = Object.keys(en).filter(function (k) { return template.indexOf('STR.' + k) < 0 })
   if (unused.length) die('strings: declared but never read by the template: ' + unused.join(', '))
+  // A string carrying a {placeholder} has to reach the reader through fmt(). Appending one raw puts
+  // a literal `{closed}` on the page — which is what shipped for the length of one screenshot, in
+  // the sentence written to stop the first screen reading as broken.
+  const raw = Object.keys(en).filter(function (k) {
+    if (!/\{[a-zA-Z]\w*\}/.test(en[k])) return false
+    return !new RegExp('(?:fmt|plural)\\([^)]*STR\\.' + k + '\\b').test(template)
+  })
+  if (raw.length) die('strings: carries a {placeholder} but never reaches fmt(), so it renders literally: ' + raw.join(', '))
   console.log(`  ok strings — ${Object.keys(en).length} keys at en/it parity, every one read by the template`)
 }
 

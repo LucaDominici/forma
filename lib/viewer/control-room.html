@@ -309,6 +309,10 @@ function days(a,b){return Math.round((new Date(b)-new Date(a))/86400000);}
 function byId(id){var i;for(i=0;i<ROOM.programs.length;i++)if(ROOM.programs[i].id===id)return ROOM.programs[i];return null;}
 function sumOf(id){var i;for(i=0;i<ROOM.portfolio.programs.length;i++)if(ROOM.portfolio.programs[i].id===id)return ROOM.portfolio.programs[i];return null;}
 function line(svg,x1,y1,x2,y2){svg.appendChild(svgEl("line",{x1:x1,y1:y1,x2:x2,y2:y2,"class":"axis"}));}
+/* English and Italian both take one/other, and the repo already picks a form by count for snapshot
+   age. "0 things need you out of 0 open across 1 programmes." was on the first screen of the
+   published demo, three times over, in both locales. */
+function plural(n,one,other){return n===1?one:other;}
 function label(svg,x,y,t,anchor,cls){svg.appendChild(svgEl("text",{x:x,y:y,"text-anchor":anchor||"start","class":cls||"svg-label"},t));}
 function hit(svg,a,tip){a=a||{};a["class"]="hit";a.fill="transparent";a.tabindex="0";a.role="img";a["aria-label"]=tip;a["data-tip"]=tip;svg.appendChild(svgEl(a.r!=null?"circle":"rect",a));}
 function statusMark(v){var map={ok:["●",STR.statusOk],warn:["◐",STR.statusWarn],bad:["×",STR.statusBad]},p=map[v]||["◇",STR.notAudited];var s=el("span","status status-"+(map[v]?v:"none")),g=el("span","glyph",p[0]);g.setAttribute("aria-hidden","true");s.appendChild(g);s.appendChild(el("span","",p[1]));return s;}
@@ -365,7 +369,15 @@ function chart(title,prov,headers,rows,draw,cls){
  p.draw=draw;p.viz=viz;p.svg=svg;
  return p;
 }
-function empty(svg,w,h){label(svg,8,h/2,STR.noData,"start","svg-value");hit(svg,{x:8,y:h/2-12,width:Math.min(160,w-16),height:22},STR.noData);}
+/* One voice for "there is nothing to draw", and it says WHY rather than "No data available." A
+   chart that reports its own absence with a stock phrase is indistinguishable from a chart that
+   failed to load, and on a portfolio where everything is closed that was most of the first screen.
+   The reason is the caller's to supply, because only the caller knows the population. */
+function empty(svg,w,h,why){
+ var t=why||STR.noData;
+ label(svg,8,h/2,t,"start","svg-value");
+ hit(svg,{x:8,y:h/2-12,width:Math.max(40,w-16),height:22},t);
+}
 function relayout(p){
  if(!p.draw||!p.viz||p.viz.hidden)return;
  var w=Math.round(p.viz.clientWidth),h=Math.round(p.viz.clientHeight);
@@ -406,19 +418,28 @@ function barsH(svg,w,h,items,opts){
  }
 }
 function chartClosedOpen(t){
- return chart(STR.closedOpenChart,fmt(STR.provPortfolio,{n:t.programs}),[STR.count,STR.total],[[STR.closed,t.closed],[STR.open,t.open]],function(svg,w,h){
+ return chart(STR.closedOpenChart,fmt(plural(t.programs,STR.provPortfolioOne,STR.provPortfolio),{n:t.programs}),[STR.count,STR.total],[[STR.closed,t.closed],[STR.open,t.open]],function(svg,w,h){
   var total=t.closed+t.open,y=Math.round(h/2)-9,bw=w-8;
-  if(!total){empty(svg,w,h);return;}
+  if(!total){empty(svg,w,h,STR.chartNoIssues);return;}
   var cw=bw*t.closed/total;
   if(cw>0)svg.appendChild(svgEl("rect",{x:4,y:y,width:Math.max(0,cw-1),height:18,"class":"mark-series2"}));
   if(bw-cw>0)svg.appendChild(svgEl("rect",{x:4+cw+1,y:y,width:Math.max(0,bw-cw-1),height:18,"class":"mark-accent"}));
+  /* The numbers, on the chart. This drew one grey rectangle with no text in it: 8 and 0 appeared
+     nowhere, the toggle to the table was the only way to read the chart, and it is the first thing
+     on the first screen. A single-value bar is not a chart until it says what the value is. */
+  label(svg,4,y-6,fmt(STR.tipClosed,{n:t.closed}),"start","svg-value");
+  label(svg,4+bw,y-6,fmt(STR.tipOpen,{n:t.open}),"end","svg-label");
   hit(svg,{x:4,y:y-6,width:Math.max(24,cw),height:30},fmt(STR.tipClosed,{n:t.closed}));
   hit(svg,{x:4+cw,y:y-6,width:Math.max(24,bw-cw),height:30},fmt(STR.tipOpen,{n:t.open}));
  });
 }
 function chartLoad(programs){
  var rows=programs.map(function(p){return [p.id,p.open,p.blocked];});
- return chart(STR.portfolioLoad,fmt(STR.provPortfolio,{n:programs.length}),[STR.programme,STR.open,STR.blocked],rows,function(svg,w,h){
+ var anyOpen=programs.some(function(p){return p.open>0;});
+ return chart(STR.portfolioLoad,fmt(plural(programs.length,STR.provPortfolioOne,STR.provPortfolio),{n:programs.length}),[STR.programme,STR.open,STR.blocked],rows,function(svg,w,h){
+  // Every bar zero draws nothing at all, which is a blank box the reader cannot tell from a broken
+  // one. Say the fact instead.
+  if(!anyOpen){empty(svg,w,h,STR.chartNoOpen);return;}
   barsH(svg,w,h,programs.map(function(p){
    return {name:p.id,total:p.open,parts:[{v:Math.max(0,p.open-p.blocked),cls:"mark-accent"},{v:p.blocked,cls:"mark-bad"}],
            showValue:String(p.open),tip:fmt(STR.tipProgramme,{program:p.id,open:p.open,blocked:p.blocked})};
@@ -658,7 +679,15 @@ function renderMarkdown(src){
 function viewPortfolio(view){
  var t=ROOM.portfolio.totals;
  var answer=el("div","answer"),lead=el("section","panel");
- lead.appendChild(el("p","thesis",fmt(STR.thesis,{blocked:t.blocked,open:t.open,programs:t.programs})));
+ /* Nothing open is a RESULT, not a template with zeros in it. "0 things need you out of 0 open
+    across 1 programmes." is the sentence a reader met first on the published demo, and cold, in the
+    ten seconds this artifact gets, it reads as a dead project or a broken tool. Everything on this
+    screen is true either way; only one of the two says which. */
+ var quiet=t.open===0;
+ lead.appendChild(el("p","thesis",quiet
+  ?fmt(plural(t.programs,STR.thesisQuietOne,STR.thesisQuiet),{programs:t.programs,closed:t.closed})
+  :fmt(plural(t.programs,STR.thesisOne,STR.thesis),{blocked:t.blocked,open:t.open,programs:t.programs})));
+ if(quiet)lead.appendChild(el("p","lede",fmt(STR.thesisQuietLede,{closed:t.closed})));
  lead.appendChild(el("p","lede",fmt(STR.generated,{source:ROOM.meta.generatedFrom,date:ROOM.meta.today})));
  answer.appendChild(lead);
  answer.appendChild(chartClosedOpen(t));
@@ -666,9 +695,9 @@ function viewPortfolio(view){
  view.appendChild(answer);
 
  var ev=el("div","evidence");
- ev.appendChild(rowsPanel(panel(STR.now,fmt(STR.provBlocked,{n:t.blocked}),"span2"),ROOM.portfolio.blocked||[],blockedRow,STR.noBlocked));
+ ev.appendChild(rowsPanel(panel(STR.now,fmt(plural(t.blocked,STR.provBlockedOne,STR.provBlocked),{n:t.blocked}),"span2"),ROOM.portfolio.blocked||[],blockedRow,STR.noBlocked));
 
- var mv=panel(STR.moving,fmt(STR.provMoving,{n:ROOM.portfolio.moving.length})),stack=el("div","stack"),i,j,k;
+ var mv=panel(STR.moving,fmt(plural(ROOM.portfolio.moving.length,STR.provMovingOne,STR.provMoving),{n:ROOM.portfolio.moving.length})),stack=el("div","stack"),i,j,k;
  for(i=0;i<ROOM.portfolio.moving.length;i++){
   var m=ROOM.portfolio.moving[i],program=byId(m.program),d=el("details"),sm=el("summary","row-head");
   sm.appendChild(el("span","ref",m.program));sm.appendChild(el("span",""));sm.appendChild(el("span","tally",m.count));
@@ -755,7 +784,7 @@ var i,j;
  view.appendChild(answer);
 
  var ev=el("div","evidence");
- ev.appendChild(rowsPanel(panel(STR.techBlocked,fmt(STR.provBlocked,{n:mine.length}),"span2"),mine,blockedRow,STR.noBlockedHere));
+ ev.appendChild(rowsPanel(panel(STR.techBlocked,fmt(plural(mine.length,STR.provBlockedOne,STR.provBlocked),{n:mine.length}),"span2"),mine,blockedRow,STR.noBlockedHere));
 
  var findings=(program.findings&&program.findings.findings)||[];
  ev.appendChild(rowsPanel(panel(STR.techFindings,STR.provAudit),findings,function(f){
