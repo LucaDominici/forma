@@ -139,3 +139,59 @@ Two catalog entries land, both in Category 9 (failure by negligence, not by inte
 **Exit condition for the F1–F4 loop:** every view has a defined and designed state for zero, one,
 and many; no panel reserves height it does not use; no label names a mechanism. Then re-run
 `/evaluate` against the same seven routes.
+
+---
+
+## Status at 2026-08-10, and what the next session picks up
+
+Three review passes ran against this branch: a hostile code review (nine defects, four of them
+written by the previous round of fixes) and a third hostile UX/a11y audit (fourteen, four blocking).
+The commits from `902a3e6` to `9cd5e58` close everything below marked **done**. Eleven gates green
+at `9cd5e58`; the working tree is clean apart from two untracked scratch files (`PLAN.md`,
+`PLAN-REVIEW-LOG.md`).
+
+### Closed, with the measurement
+
+| | before | after |
+|---|---|---|
+| `renderMarkdown` on a lone CR / U+2028 | **browser hangs, heap death** | renders, ≤1ms |
+| specificity gate vs three gate-green print-palette breaks | 3 of 3 passed | 3 of 3 fail; canonical `prefers-color-scheme` stays green |
+| unreadable token value under `--check` | silently unmeasured, exit 0 | fails, naming the role it holds |
+| landing thesis | "0 things need you out of 0 open across 1 programmes." | "Nothing is open in this programme." + what the panels are showing |
+| landing charts | one grey bar, 0 text elements | "8 closed" / "0 open"; the zero case states why |
+| map theme | L=97% plate in an L=17% page, both themes | follows the theme; 7 palettes measured |
+| map controls reachable by Tab | 7 developer controls | 4 reading controls |
+| printed map | 4.9pt body, blank or racing | 8.7pt body, 11.2pt titles, deterministic |
+| map staleness | absent, beside a green 63% | "Architecture source is 13 commits behind HEAD." |
+| printed identity | 7 of 29 pages | 35 of 35, with page numbers |
+| print vs stored theme | all 29 pages differed | 34 of 35 byte-identical; page 6 differs in 417 of 242,604 px (0.17%) at glyph edges, no colour difference |
+| reduced motion in the map | 4 infinite animations ran | none (WCAG 2.2.2 Level A) |
+| markdown semantics | 9 fake headings, 0 real; `1.` joined into prose | 9 real `h3`–`h4`, 7 lists, ordered lists preserved |
+
+### Open, in the order I would take them
+
+1. **F2 / audit #8 — panels reserve height they do not use.** `/options` is 83% blank at
+   3440×1440, `/` is 69%. The content is honest; the layout is not, and a 320px panel holding one
+   line reads as content that failed to load. `/wireframe`. This is the largest remaining item and
+   the one the client will feel.
+2. **Audit #7 — the map is mouse-only and invisible to assistive technology.** 0 focusable elements
+   for 6 nodes, no `role`, no `<title>`, and instructions written entirely in mouse vocabulary. The
+   product already has the pattern to fix it: every chart ships a table twin. `/include`.
+3. **Audit #9 — `#/` at 1920×900 slices its last panel mid-glyph at the fold.** Recoverable through
+   a 99px inner scroll, which is the only affordance. Related to (1) and probably fixed by it.
+4. **Audit #10 / F4 — client-facing copy carrying internals.** "64074 of 120000 bytes used" is a
+   build budget on a client's page; `lib__gen_mjs` names a node id where the reader's name is
+   `lib/gen.mjs`; "the only file the served page can write" reads like a half-written security note.
+   `/articulate`.
+5. **F3 — four of eight columns in the matrix are constant.** `/organize`.
+6. **Audit #12, #14 — the tooltip ignores Escape; a single-file deliverable requests
+   `/favicon.ico` and logs a 404 in the client's console.** Both small.
+7. **Audit #13 — nested markdown lists flatten.** Latent: the current corpus has none, but this
+   renderer ingests arbitrary client documents.
+8. **F6 — the demo shows 0 of 9 requirements landing on issues**, on the artifact chosen to
+   demonstrate that issues are the whole of the work. Decided 2026-08-10: leave forma as the
+   subject and let the empty states carry it; revisit if the demo is ever pitched as the proof of
+   the chain rather than of the briefing.
+
+Not scheduled, and named rather than owed: no user research exists (`/investigate`), and no success
+metric is defined (`/measure`). Every usability claim in this file remains a hypothesis.
