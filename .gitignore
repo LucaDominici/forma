@@ -20,3 +20,7 @@ forma-social-preview.png
 # Worktree degli agenti: repo git annidati, mai da tracciare (#43)
 .claude/worktrees/
 .playwright-mcp/
+
+# The Control Room is generated (verify -> gen -> room). CI composes it; committing it would
+# make every fixture that copies this repo depend on the briefing being freshly composed.
+docs/architecture/control-room.html

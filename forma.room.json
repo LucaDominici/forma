@@ -1,0 +1,49 @@
+{
+  "today": "2026-08-10",
+  "title": "Forma \u00b7 portfolio briefing",
+  "theme": "dark",
+  "staleAfterDays": 14,
+  "linkMaxFiles": 50,
+  "docs": {
+    "maxBytes": 120000
+  },
+  "programs": [
+    {
+      "id": "forma",
+      "ghRepo": "LucaDominici/forma",
+      "repo": ".",
+      "issues": "docs/architecture/c4-issues.json",
+      "model": "docs/architecture/c4-model.json",
+      "topology": "docs/architecture/c4-topology.json",
+      "blockedBy": {
+        "labels": []
+      },
+      "rtm": {
+        "docs": [
+          {
+            "path": "docs/PRD.md",
+            "idPattern": "^R-\\d+$",
+            "role": "requirement"
+          }
+        ],
+        "requireIssuesFrom": []
+      },
+      "docs": {
+        "include": [
+          "docs/*.md",
+          "docs/adr/*.md"
+        ],
+        "canon": [
+          "docs/PRD.md",
+          "docs/DESIGN.md",
+          "docs/GLOBAL_INVARIANTS.md",
+          "docs/DELIVERY.md",
+          "docs/FEASIBILITY.md",
+          "docs/GOVERNANCE.md",
+          "docs/GLOSSARY.md",
+          "docs/technical-debt.md"
+        ]
+      }
+    }
+  ]
+}

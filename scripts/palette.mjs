@@ -283,7 +283,10 @@ function secondaryEncodingPresent() {
   const fn = /function statusMark\(v\)\{([\s\S]*?)\n\}/.exec(html)
   if (!fn) return { ok: false, why: 'statusMark() not found in control-room.html — the status renderer moved' }
   const body = fn[1]
-  const hasGlyph = /status-glyph/.test(body)
+  // Coupled to the template on purpose. A looser check ("does it render two things") would keep
+  // passing while the glyph became decoration, and the whole point is that the palette is legal
+  // only because this element exists. When the class is renamed, this line should have to change.
+  const hasGlyph = /"glyph"/.test(body)
   const hasWord = /STR\.status(Ok|Warn|Bad)/.test(body)
   if (!hasGlyph) return { ok: false, why: 'statusMark() no longer renders a glyph' }
   if (!hasWord) return { ok: false, why: 'statusMark() no longer renders a word' }

@@ -1,7 +1,13 @@
 name: Pages
-# Deploy the public demo (lib/viewer + the committed docs/demo model) to GitHub Pages on every
-# push to main. The viewer fetches ./c4-model.json (relative), so it works under the /forma/
-# project subpath.
+# Deploy the public demo to GitHub Pages on every push to main. Two artifacts, two subjects, on
+# purpose:
+#
+#   /       the C4 explorer over a repository that is NOT forma (the reasoning is below).
+#   /room/  the Control Room over forma itself, composed here from this repository's own public
+#           issues. The briefing's subject is a portfolio and its plan, so reading forma's own
+#           requirements matrix and documents IS the demonstration.
+#
+# The viewer fetches ./c4-model.json (relative), so it works under the /forma/ project subpath.
 #
 # The demo is forma applied to a repository that is NOT forma (docs/SCOPE.md §1) — a tool proving
 # itself on 28 nodes written by its own author proves nothing a reader cares about. That repository
@@ -17,7 +23,10 @@ on:
   workflow_dispatch:
 
 permissions:
+  # issues: read is what `forma verify` needs to refresh the briefing's fact base against this
+  # repository's own public issues. Nothing here writes to the tracker.
   contents: read
+  issues: read
   pages: write
   id-token: write
 
@@ -33,16 +42,51 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # fetch-depth: 0 — the issue-to-code link and the commit-drift disclosure are read from git
+      # history. On a shallow clone both come out empty, and the briefing would publish a confident
+      # "0% linked" that is an artifact of the checkout rather than a fact about the repository.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: 22
       - id: build
         name: Assemble site (viewer + committed demo model)
         run: |
-          mkdir -p _site
+          mkdir -p _site _site/room
           cp lib/viewer/c4-hologram.html _site/index.html
           cp docs/demo/c4-model.json _site/c4-model.json
           echo "path=_site" >> "$GITHUB_OUTPUT"
       - name: Refuse to publish a demo that is not presentable
         run: node scripts/presentable.mjs docs/demo/c4-model.json
+      # The briefing, composed here rather than committed. Two reasons it is not a checked-in file:
+      # room-presentable refuses a snapshot older than staleAfterDays, so a committed pair of
+      # (snapshot, today) would turn CI red on a date with nothing broken; and the artifact embeds
+      # git-derived numbers that cannot re-derive equal inside a copy without history.
+      #
+      # This is the one place forma is its own subject. The explorer's demo is deliberately another
+      # repository, because a tool proving itself on its own 28 nodes proves nothing — but the
+      # briefing's subject is a PORTFOLIO, and being able to read forma's own plan, matrix and
+      # documents is the demonstration. Public repository, public issues, no disclosure decision.
+      - name: Compose forma's own briefing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node bin/forma.mjs verify --gh-repo "$GITHUB_REPOSITORY"
+          node -e '
+            const fs = require("fs");
+            const m = JSON.parse(fs.readFileSync("forma.room.json", "utf-8"));
+            // `today` is the determinism anchor and is never a clock inside lib/. Stamping it here
+            // is deliberate: this job refreshes the inputs, which is what verify is for, and the
+            // published artifact is then exactly reproducible from the pair it was built with.
+            m.today = new Date().toISOString().slice(0, 10);
+            fs.writeFileSync("forma.room.json", JSON.stringify(m, null, 2) + "\n");
+          '
+          node bin/forma.mjs room --manifest forma.room.json --out _site/room/index.html
+      - name: Refuse to publish a briefing that does not keep its promises
+        run: node scripts/room-presentable.mjs --room _site/room/index.html --manifest forma.room.json
+      - name: The published briefing must survive its own gate
+        run: node bin/forma.mjs check --room _site/room/index.html
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
         with:

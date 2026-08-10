@@ -1,0 +1,98 @@
+{
+  "fetchedAt": "2026-08-10T11:02:33.660Z",
+  "ghRepo": "LucaDominici/forma",
+  "truncated": false,
+  "issues": [
+    {
+      "n": 35,
+      "title": "La demo pubblica è forma che dimostra forma — e fallisce i suoi stessi predicati",
+      "state": "CLOSED",
+      "ms": "confine — sostituire PowerPoint",
+      "labels": [
+        "confine"
+      ],
+      "createdAt": "2026-07-26",
+      "closedAt": "2026-07-26"
+    },
+    {
+      "n": 34,
+      "title": "Un repo a due stack ne mostra uno: init semina solo il linguaggio dominante, in silenzio",
+      "state": "CLOSED",
+      "ms": "confine — sostituire PowerPoint",
+      "labels": [
+        "bug",
+        "confine"
+      ],
+      "createdAt": "2026-07-26",
+      "closedAt": "2026-07-26"
+    },
+    {
+      "n": 33,
+      "title": "La prima schermata è un box vuoto: init non semina nessun attore nel contesto",
+      "state": "CLOSED",
+      "ms": "confine — sostituire PowerPoint",
+      "labels": [
+        "enhancement",
+        "confine"
+      ],
+      "createdAt": "2026-07-26",
+      "closedAt": "2026-07-26"
+    },
+    {
+      "n": 32,
+      "title": "Un box che raggruppa non eredita né gli archi né lo stato dei figli — e il livello che si mostra allo stakeholder resta senza frecce",
+      "state": "CLOSED",
+      "ms": "confine — sostituire PowerPoint",
+      "labels": [
+        "bug",
+        "confine"
+      ],
+      "createdAt": "2026-07-26",
+      "closedAt": "2026-07-26"
+    },
+    {
+      "n": 27,
+      "title": "Il canale scrivibile per c4-status.json è orfano: PR #23 mergiata in un branch che ho chiuso",
+      "state": "CLOSED",
+      "ms": null,
+      "labels": [],
+      "createdAt": "2026-07-26",
+      "closedAt": "2026-07-26"
+    },
+    {
+      "n": 17,
+      "title": "Lo scopo: sostituire PowerPoint davanti a uno stakeholder — testo dai documenti ai livelli alti, avanzamento generato non curato a mano",
+      "state": "CLOSED",
+      "ms": null,
+      "labels": [],
+      "createdAt": "2026-07-25",
+      "closedAt": "2026-07-26"
+    },
+    {
+      "n": 16,
+      "title": "Su un progetto Go reale il modello è ancora inutile: internal/ è un solo container, le foglie sono file, zero archi",
+      "state": "CLOSED",
+      "ms": null,
+      "labels": [],
+      "createdAt": "2026-07-25",
+      "closedAt": "2026-07-25"
+    },
+    {
+      "n": 3,
+      "title": "Publish forma-arch to npm + signed auto-releases (deferred follow-up)",
+      "state": "CLOSED",
+      "ms": null,
+      "labels": [],
+      "createdAt": "2026-07-22",
+      "closedAt": "2026-07-25"
+    }
+  ],
+  "milestones": [
+    {
+      "title": "confine — sostituire PowerPoint",
+      "due": null,
+      "open": 0,
+      "closed": 4
+    }
+  ]
+}

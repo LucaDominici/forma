@@ -445,7 +445,11 @@ const diffPaths = (a, b, at = '') => {
 // 4) §1b attach-mode + check freshness, end-to-end on a copy of the self-repo
 {
   const repo = join(tmp, 'selfrepo')
-  cpSync(join(HERE, '..'), repo, { recursive: true, filter: (s) => !/(^|\/)(node_modules|\.git)(\/|$)/.test(s) })
+  // The copy stands in for a fresh checkout, so it must not carry what a checkout does not have.
+  // control-room.html is generated (verify -> gen -> room) and gitignored; copying it in would make
+  // this block fail for a true reason in a false situation — the git-derived halves of the briefing
+  // (commit drift, the issue-to-code link) cannot re-derive equal inside a tree with no .git.
+  cpSync(join(HERE, '..'), repo, { recursive: true, filter: (s) => !/(^|\/)(node_modules|\.git)(\/|$)/.test(s) && !/control-room\.html$/.test(s) })
   // this test regenerates a synthetic topology over the self-repo copy; the repo's REAL programme
   // overlay refers to the curated topology's ids, so drop it or gen fails loud (correctly) on it
   rmSync(join(repo, 'docs/architecture/c4-status.json'), { force: true })
