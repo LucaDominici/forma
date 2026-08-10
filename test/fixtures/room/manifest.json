@@ -14,21 +14,63 @@
       "topology": "alpha/topology.json",
       "health": "alpha/health.json",
       "findings": "alpha/findings.json",
-      "blockedBy": { "labels": ["needs-human"] },
+      "blockedBy": {
+        "labels": [
+          "needs-human"
+        ]
+      },
       "rtm": {
         "docs": [
-          { "path": "docs/PRD.md", "idPattern": "^R-\\d+$", "role": "requirement" },
-          { "path": "docs/DESIGN.md", "idPattern": "^D-\\d+$", "role": "design" }
+          {
+            "path": "docs/PRD.md",
+            "idPattern": "^R-\\d+$",
+            "role": "requirement"
+          },
+          {
+            "path": "docs/DESIGN.md",
+            "idPattern": "^D-\\d+$",
+            "role": "design"
+          }
         ],
-        "requireIssuesFrom": ["docs/DESIGN.md"]
+        "requireIssuesFrom": [
+          "docs/DESIGN.md"
+        ]
       },
-      "taxonomy": { "order": { "priority": ["p1", "p2", "p3"] }, "minPopulation": 1 }
+      "taxonomy": {
+        "order": {
+          "priority": [
+            "p1",
+            "p2",
+            "p3"
+          ]
+        },
+        "minPopulation": 1
+      },
+      "docs": {
+        "include": [
+          "docs/*.md"
+        ],
+        "canon": [
+          "docs/PRD.md",
+          "docs/DESIGN.md"
+        ]
+      }
     },
     {
       "id": "beta",
       "ghRepo": "acme/beta",
       "repo": "beta",
       "issues": "beta/issues.json"
+    },
+    {
+      "id": "gamma",
+      "ghRepo": "acme/gamma",
+      "repo": "beta",
+      "issues": "beta/issues.json",
+      "enabled": false
     }
-  ]
+  ],
+  "docs": {
+    "maxBytes": 200000
+  }
 }

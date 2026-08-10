@@ -3,8 +3,25 @@
   "ghRepo": "acme/beta",
   "truncated": false,
   "issues": [
-    { "n": 5, "title": "Ship the first cut", "state": "OPEN", "ms": null, "labels": ["priority:p1"] },
-    { "n": 6, "title": "Name the module", "state": "CLOSED", "ms": null, "labels": [] }
+    {
+      "n": 5,
+      "title": "Ship the first cut",
+      "state": "OPEN",
+      "ms": null,
+      "labels": [
+        "priority:p1"
+      ],
+      "createdAt": "2026-06-20"
+    },
+    {
+      "n": 6,
+      "title": "Name the module",
+      "state": "CLOSED",
+      "ms": null,
+      "labels": [],
+      "createdAt": "2026-03-15",
+      "closedAt": "2026-05-09"
+    }
   ],
   "milestones": []
 }

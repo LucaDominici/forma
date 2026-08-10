@@ -28,6 +28,7 @@
         "additionalProperties": false,
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$", "description": "Stable program key used to join portfolio data without depending on a display name." },
+          "enabled": { "type": "boolean", "description": "Default true. A program set to false stays in the manifest and out of the briefing, and the Options view names it as deliberately excluded — deleting the entry would lose that distinction, and `forma scan` never overwrites a false." },
           "ghRepo": { "type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$" },
           "repo": { "type": "string", "description": "Filesystem path to the checkout. Relative paths resolve against the manifest file's own directory so invocation location cannot change the target." },
           "issues": { "type": "string", "description": "Path to this program's c4-issues.json fact base." },
@@ -47,7 +48,8 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "include": { "type": "array", "items": { "type": "string" }, "description": "Globs selecting only git-tracked files, so generated or local files cannot silently enter the room." }
+              "include": { "type": "array", "items": { "type": "string" }, "description": "Globs selecting only git-tracked files, so generated or local files cannot silently enter the room." },
+              "canon": { "type": "array", "items": { "type": "string" }, "description": "Paths carried in full, in this order, so a reading order somebody chose survives into the page. Everything else `include` selects is listed with a link but not embedded. A canon document that would exceed docs.maxBytes is listed with that as its reason, never truncated." }
             }
           },
           "rtm": {

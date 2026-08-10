@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-08-10T08:50:19.181Z",
+  "generatedAt": "2026-08-10T09:20:35.096Z",
   "source": {
     "repo": "forma",
-    "commit": "0b0234cd0bbf5bb793bb4625173e4df52c25f54a",
+    "commit": "ff3aeaa741e63875034e2c1614b1eb8f56faaaf4",
     "branch": "feat/control-room",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
@@ -245,7 +245,7 @@
         {
           "type": "glob",
           "ref": "lib",
-          "count": 20
+          "count": 22
         }
       ],
       "category": "container",
@@ -602,6 +602,25 @@
       "descSource": "docstring"
     },
     {
+      "id": "lib__roomdocs_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "roomdocs",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/roomdocs.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "roomdocs.mjs — the documents a briefing carries, selected from what git tracks and bounded by a declared byte budget. Separate from rtm.mjs on purpose: that module reads tables to derive a matrix, this one carries prose so a reader never ha",
+      "descSource": "docstring"
+    },
+    {
       "id": "lib__roomload_mjs",
       "level": "leaf",
       "parent": "lib",
@@ -637,6 +656,25 @@
       "status2": "unknown",
       "target": "",
       "func": "rtm.mjs — the requirements traceability matrix, DERIVED from the documents a repo already writes and the issues it already has. Pure parsing plus set arithmetic: no network, no LLM, nothing curated into a second file that could disagree wit",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__scan_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "scan",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/scan.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "forma scan — find the programmes under a directory and write them into a manifest. Read-only over every repository it finds; the only file it writes is the manifest itself. Usage: node lib/scan.mjs --root <dir --manifest <path [--depth <n] ",
       "descSource": "docstring"
     },
     {

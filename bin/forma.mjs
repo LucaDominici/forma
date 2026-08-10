@@ -12,7 +12,7 @@ const LIB = join(HERE, '..', 'lib')
 const cmd = process.argv[2]
 const rest = process.argv.slice(3)
 
-const MAP = { init: 'init.mjs', gen: 'gen.mjs', check: 'check.mjs', doc: 'doc.mjs', serve: 'serve.mjs', verify: 'verify.mjs', room: 'room.mjs' }
+const MAP = { init: 'init.mjs', gen: 'gen.mjs', check: 'check.mjs', doc: 'doc.mjs', serve: 'serve.mjs', verify: 'verify.mjs', scan: 'scan.mjs', room: 'room.mjs' }
 
 if (cmd === '-v' || cmd === '--version') {
   const pkg = JSON.parse(readFileSync(join(HERE, '..', 'package.json'), 'utf-8'))
@@ -29,8 +29,11 @@ Usage: forma <command> [--repo <path>]
   doc     project the arc42 scaffold (ARCHITECTURE.scaffold.md) from the model
   serve   open the live explorer at http://localhost:4173
   verify  refresh status from live GitHub issues via your gh CLI (the only networked command)
-  room    compose the Control Room — model + overlays + gh snapshot -> one self-contained HTML
+  scan    find the programmes under a directory and write them into forma.room.json
+          (never overwrites an entry you turned off, and never invents \`today\`)
+  room    compose the Control Room — one briefing over N programmes, self-contained HTML
           (docs/SCOPE-room.md; needs \`forma verify\` and a forma.room.json manifest first)
+          --serve opens it locally so the Options view can write the manifest back
 
 The file contract is lib/schema/c4-model.schema.json. Enrichment (curate the topology, write the
 arc42 prose) is model-agnostic — any agent edits the same JSON/Markdown.`)

@@ -1464,6 +1464,18 @@ const diffPaths = (a, b, at = '') => {
   const topo = join(alpha, 'topology.json'), model = join(alpha, 'model.json'), manifest = join(R, 'manifest.json')
   const roomHtml = join(R, 'control-room.html'), roomHtml2 = join(R, 'second.html')
   let r = run(['init', '--repo', alpha, '--out', topo, '--force']); if (r.status !== 0) die('room: init exit ' + r.status, r)
+  // A governed future, so the checkpoint stepper has something to be measured against. Curated
+  // after init because that is how a real timeline arrives: init seeds structure, a human writes
+  // where it is going.
+  const seeded = readJson(topo)
+  seeded.timeline = {
+    source: 'docs/DESIGN.md',
+    checkpoints: [
+      { id: 'normalize', label: 'Input normalized in one place', patch: { nodes: { update: [{ id: 'core', set: { status2: 'in-progress' }, change: 'core takes over normalization' }] } } },
+      { id: 'one-logger', label: 'Every message through one helper', patch: { nodes: { update: [{ id: 'util', set: { status2: 'done' }, change: 'util owns all output' }] } } },
+    ],
+  }
+  writeFileSync(topo, JSON.stringify(seeded, null, 2))
   r = run(['gen', '--repo', alpha, '--topology', topo, '--out', model]); if (r.status !== 0) die('room: gen exit ' + r.status, r)
   r = run(['room', '--manifest', manifest, '--out', roomHtml]); if (r.status !== 0) die('room: exit ' + r.status, r)
 
@@ -1598,8 +1610,149 @@ const diffPaths = (a, b, at = '') => {
   if (!/docs\/EXTRA\.md contributed no rows \(not tracked by git\)/.test(r.stderr || '')) die('rtm: an untracked document was skipped without being named — got: ' + (r.stderr || '').slice(0, 300))
   rmSync(extra)
 
+  // Where we were. The whole series comes out of ONE snapshot, from createdAt/closedAt, so there is
+  // no register to keep and no second fetch — and the clock stays manifest.today.
+  const history = A.derived.history
+  if (!history) die('room: alpha carries issue dates, so history must derive')
+  const firstPoint = history.points[0], lastPoint = history.points[history.points.length - 1]
+  if (lastPoint.at !== '2026-08-10') die('room: the history series must end on manifest.today, got ' + lastPoint.at)
+  if (lastPoint.open !== 2 || lastPoint.closed !== 1) die('room: today reads 2 open / 1 closed, got ' + JSON.stringify(lastPoint))
+  if (firstPoint.at.slice(0, 7) !== '2026-04') die('room: the series must start at the first issue, not a fixed window back, got ' + firstPoint.at)
+  const june = history.points.filter(function (p) { return p.at.slice(0, 7) === '2026-06' })[0]
+  if (!june || june.open !== 3 || june.closed !== 0) die('room: on 2026-06-30 all three issues were open and none closed, got ' + JSON.stringify(june))
+  if (B.derived.history === null) die('room: beta also carries dates, so it too must derive history')
+  // A snapshot written before the fields existed must say so rather than draw a flat line.
+  const dateless = join(R, 'dateless.json')
+  const stripped = readJson(join(alpha, 'issues.json'))
+  for (const it of stripped.issues) { delete it.createdAt; delete it.closedAt }
+  writeFileSync(dateless, JSON.stringify(stripped))
+  const mfDateless = join(R, 'manifest-dateless.json')
+  const md = readJson(manifest); md.programs[0].issues = 'dateless.json'
+  writeFileSync(mfDateless, JSON.stringify(md, null, 2))
+  r = run(['room', '--manifest', mfDateless, '--out', join(R, 'dateless.html')])
+  if (r.status !== 0) die('room: a snapshot without issue dates must still compose', r)
+  if (roomOf(join(R, 'dateless.html')).programs[0].derived.history !== null) die('room: a snapshot with no dates must derive null history, not an empty or flat series')
+
+  // The checkpoint stepper, given a completion it can be held to. `normalize` patches `core`, and
+  // issue #1 landed on core, so it reads 0 of 1 closed. `one-logger` patches `util`, which no
+  // surviving link reaches, so it reads null — never 0%, which would look like measured failure.
+  const cps = A.derived.checkpoints
+  if (!cps || cps.length !== 2) die('room: alpha declares two checkpoints, got ' + JSON.stringify(cps && cps.length))
+  const normalize = cps[0]
+  if (normalize.nodes.join() !== 'core') die('room: the normalize checkpoint patches core, got ' + JSON.stringify(normalize.nodes))
+  if (normalize.total !== 1 || normalize.closed !== 0 || normalize.pct !== 0) die('room: normalize should read 0 of 1 closed, got ' + JSON.stringify(normalize))
+  if (cps[1].total !== 0 || cps[1].pct !== null) die('room: a checkpoint no issue reaches reports null, not 0% — got ' + JSON.stringify(cps[1]))
+
+  // Documents: the canon in full, in declared order, within the budget.
+  if (!A.docs) die('room: alpha declares docs.include and carried none')
+  if (A.docs.embedded.map(function (d) { return d.path }).join() !== 'docs/PRD.md,docs/DESIGN.md') die('room: the canon must be carried in declared order, got ' + JSON.stringify(A.docs.embedded.map(function (d) { return d.path })))
+  if (!/R-1/.test(A.docs.embedded[0].text)) die('room: a canon document was carried without its text')
+  if (A.docs.bytes > A.docs.maxBytes) die('room: the carried corpus exceeded its own budget')
+  if (B.docs !== null) die('room: beta declares no docs, so it carries null rather than an empty corpus')
+  // The budget refuses, it never truncates: a document that does not fit is listed with its reason.
+  const mfTiny = join(R, 'manifest-tiny.json')
+  const tiny = readJson(manifest); tiny.docs = { maxBytes: 1 }
+  writeFileSync(mfTiny, JSON.stringify(tiny, null, 2))
+  r = run(['room', '--manifest', mfTiny, '--out', join(R, 'tiny.html')])
+  if (r.status !== 0) die('room: a byte budget nothing fits inside must still compose', r)
+  const tinyDocs = roomOf(join(R, 'tiny.html')).programs[0].docs
+  if (tinyDocs.embedded.length) die('room: a document was embedded past the byte budget')
+  if (!tinyDocs.listed.some(function (d) { return /budget/.test(d.why) })) die('room: a document dropped for size must be listed with that as its reason, got ' + JSON.stringify(tinyDocs.listed))
+
+  // A programme turned off is excluded and NAMED. Absent and deliberately excluded differ (I7).
+  if (ROOM.programs.some(function (p) { return p.id === 'gamma' })) die('room: a programme with enabled:false was composed anyway')
+  if (!(ROOM.meta.excluded || []).some(function (p) { return p.id === 'gamma' })) die('room: a programme was excluded without being named in the Options view')
+
+  // The shell: every route is a real element, the pre-tab anchors still resolve, and printing
+  // un-hides all of them — an artifact that replaces a deck has to come out of a printer whole.
+  const shell = readFileSync(roomHtml, 'utf-8')
+  for (const filled of ['window.__ROOM__ = {', 'window.__STRINGS__ = {', 'id="holo-src"']) {
+    if (shell.indexOf(filled) < 0) die('room: the generated file is missing ' + filled + ' — a template seam went unfilled')
+  }
+  if (shell.indexOf('__STRINGS__*/null') >= 0) die('room: the strings seam was left unfilled, so the page would render with no words at all')
+  if (!/@media print[\s\S]*\.view\[hidden\]\{display:block!important\}/.test(shell)) die('room: printing does not un-hide the inactive views, so a printed briefing is one page of seven')
+  for (const legacy of ['verdict', 'now', 'moving', 'mismatch']) {
+    if (shell.indexOf('"' + legacy + '"') < 0) die('room: the pre-tab anchor #' + legacy + ' is no longer a section id, so an existing link breaks')
+  }
+
   console.log('  ok room — the briefing composes deterministically, both gates fire, and both refuse a hand-altered aggregate')
   console.log('  ok rtm — requirements trace to issues, and check names each of the four holes at its source line')
+  console.log('  ok views — history from one snapshot, checkpoints with measured completion, a canon within budget, and a programme deliberately left out')
+}
+
+// `forma scan` and `forma room --serve`: the two halves of "autodetect, with checkboxes". The
+// second exists because static HTML cannot write a file, and the first exists so the answer to
+// "which programmes are there" is not typed by hand. Both are graded on the same thing: a decision
+// a human made must survive the tool running again.
+{
+  const root = join(tmp, 'scan-root'), mf = join(root, 'forma.room.json')
+  const git = (repo, args) => {
+    const r = spawnSync('git', ['-C', repo, ...args], { encoding: 'utf-8', env: { ...process.env, GIT_AUTHOR_DATE: '2026-01-01T00:00:00', GIT_COMMITTER_DATE: '2026-01-01T00:00:00' } })
+    if (r.status !== 0) die('scan fixture: git ' + args.join(' ') + '\n' + (r.stdout || '') + (r.stderr || ''))
+  }
+  for (const name of ['one', 'two']) {
+    const dir = join(root, name)
+    mkdirSync(join(dir, 'docs/architecture'), { recursive: true })
+    writeFileSync(join(dir, 'docs/architecture/c4-issues.json'), '{}')
+    git(dir, ['init', '-q', '.'])
+    git(dir, ['remote', 'add', 'origin', `git@github.com:acme/${name}.git`])
+    git(dir, ['config', 'user.email', 'test@example.invalid'])
+    git(dir, ['config', 'user.name', 'Forma Test'])
+    git(dir, ['add', '-A'])
+    git(dir, ['commit', '-qm', 'init'])
+  }
+  writeFileSync(join(root, 'one/docs/architecture/c4-model.json'), '{}')
+  writeFileSync(join(root, 'one/docs/architecture/c4-topology.json'), '{}')
+  // A directory that is not a checkout, and a checkout Forma knows nothing about, are both skipped:
+  // guessing otherwise would put somebody's dotfiles into a briefing.
+  mkdirSync(join(root, 'not-a-checkout'), { recursive: true })
+  const stranger = join(root, 'stranger')
+  mkdirSync(stranger, { recursive: true })
+  git(stranger, ['init', '-q', '.'])
+
+  let r = run(['scan', '--root', root, '--manifest', mf])
+  if (r.status !== 0) die('scan: exit ' + r.status, r)
+  let found = readJson(mf)
+  if (found.programs.map(function (p) { return p.id }).join() !== 'one,two') die('scan: expected exactly one,two — got ' + JSON.stringify(found.programs.map(function (p) { return p.id })))
+  if (found.programs[0].ghRepo !== 'acme/one') die('scan: ghRepo was not read from the git remote, got ' + found.programs[0].ghRepo)
+  if (!found.programs[0].model || found.programs[1].model) die('scan: model/topology must be named only for the checkout that has both')
+  if (found.today !== null) die('scan: today is the determinism anchor and must never be invented, got ' + JSON.stringify(found.today))
+
+  // The rule that matters on the second run.
+  found.today = '2026-08-10'
+  found.programs[0].enabled = false
+  found.programs[0].taxonomy = { minPopulation: 1 }
+  writeFileSync(mf, JSON.stringify(found, null, 2))
+  r = run(['scan', '--root', root, '--manifest', mf])
+  if (r.status !== 0) die('scan: second run exit ' + r.status, r)
+  const again = readJson(mf)
+  if (again.programs[0].enabled !== false) die('scan: re-running silently switched a programme back on — the decision to exclude it was lost')
+  if (!again.programs[0].taxonomy) die('scan: re-running discarded a hand-curated field')
+  if (again.today !== '2026-08-10') die('scan: re-running overwrote the determinism anchor')
+
+  // Serve mode binds loopback and nothing else. --port 0 asks the OS for a free one, so the test
+  // cannot collide with whatever is already running on this machine.
+  const served = spawnSync(process.execPath, [join(HERE, '..', 'lib', 'room.mjs'), '--manifest', join(tmp, 'room', 'manifest.json'), '--out', join(tmp, 'served.html'), '--port', '0', '--serve'], { encoding: 'utf-8', timeout: 3000 })
+  const spoke = (served.stdout || '') + (served.stderr || '')
+  if (!/serving http:\/\/127\.0\.0\.1:\d+/.test(spoke)) die('room --serve did not bind loopback: ' + spoke)
+  if (/0\.0\.0\.0|::/.test(spoke)) die('room --serve bound something wider than loopback: ' + spoke)
+  console.log('  ok scan+serve — discovery merges instead of replacing, an excluded programme stays excluded, and serve binds loopback only')
+}
+
+// Locale parity, now that the tables are files rather than a literal buried in the template. I15
+// claimed this was enforced for the Control Room; it was only ever true of the single-lens viewer.
+{
+  const en = readJson(join(HERE, '..', 'lib/viewer/strings/en.json'))
+  const it = readJson(join(HERE, '..', 'lib/viewer/strings/it.json'))
+  const missing = Object.keys(en).filter(function (k) { return !(k in it) })
+  const extra = Object.keys(it).filter(function (k) { return !(k in en) })
+  if (missing.length) die('strings: keys present in en and missing from it: ' + missing.join(', '))
+  if (extra.length) die('strings: keys present in it and missing from en: ' + extra.join(', '))
+  // A key the template never reads is dead weight a translator still has to carry.
+  const template = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
+  const unused = Object.keys(en).filter(function (k) { return template.indexOf('STR.' + k) < 0 })
+  if (unused.length) die('strings: declared but never read by the template: ' + unused.join(', '))
+  console.log(`  ok strings — ${Object.keys(en).length} keys at en/it parity, every one read by the template`)
 }
 
 // The dogfood. A traceability convention that cannot read the document THIS repository writes is a
@@ -1631,4 +1784,4 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok rtm-dogfood — forma's own PRD parses as ${rows.length} traceable requirements, every one carrying its verification and its line`)
 }
 
-console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, rtm-dogfood all green.')
+console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, strings, rtm-dogfood all green.')
