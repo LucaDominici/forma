@@ -1,6 +1,6 @@
 ---
 title: 'Design'
-doc_version: '1.0.0'
+doc_version: '1.1.0'
 status: active
 last_review: '2026-08-10'
 owner: 'Luca Dominici'
@@ -106,14 +106,42 @@ checkable.
 documented. It also rules out the two reflexes a tool like this falls into: the navy-blue developer
 dashboard and the green-on-black terminal.
 
-**Verified, not judged by eye.** Both palettes were run through the measurement script. The status
-trio sits in the 6 to 8 CVD separation band, which is legal only with secondary encoding, so every
-status ships as glyph plus word plus colour, never colour alone. The ordinal ramps pass every
-check.
+**Verified, not judged by eye — and for a while that was not true.** This paragraph used to claim
+both palettes had been run through "the measurement script". No such script was in the repository,
+and `scripts/presentable.mjs` carried no colour predicate, so nobody could reproduce the claim.
+Writing [`scripts/palette.mjs`](../scripts/palette.mjs) and running it found what the claim was
+hiding: four contrast failures in the briefing, four more in the explorer, a pure `#ffffff`, and a
+status trio whose worst pair measured **3.1**, not the 6 to 8 this paragraph asserted.
+
+**What the measurement says now.** Every token is OKLCH, and the numbers below come out of
+`node scripts/palette.mjs`, which `npm test` runs.
+
+| Measure | Briefing dark | Briefing light | Explorer holo | Explorer blueprint |
+|---|---:|---:|---:|---:|
+| lowest text ratio | 4.70:1 | 4.61:1 | 4.61:1 | 4.61:1 |
+| lowest chart-mark ratio | 3.25:1 | 3.20:1 | 3.21:1 | 3.21:1 |
+| worst status pair under CVD | 7.2 | 8.5 | 7.2 | 8.5 |
+
+The trio is separated by **lightness on purpose**, because lightness is the one channel that
+survives colour-blind vision: before, `ok` and `bad` sat within 0.02 of each other in OKLCH L and
+collapsed to a separation of 4.2 under simulated deuteranopia. Even so, the worst pair stays inside
+the ambiguous band, which is legal *only* with a secondary encoding — so the script also reads
+`statusMark()` out of the shipped template and fails if the glyph or the word ever stops rendering.
+Two halves of one rule, both enforced.
+
+**The embedded explorer is not a second look.** `blueprint`, the skin the Control Room puts in its
+map view, was a cold blue-grey inside a warm briefing and had a recorded defect where its statuses
+"read alike". It is now literally the briefing's light palette mapped onto the explorer's token
+names. The `holo` skin keeps its own identity: it is the standalone artifact, with its own audience.
 
 **Consequence.** Most charts are emphasis (one accent against a de-emphasis grey) or a single hue.
 There is deliberately no categorical palette, because no view needs to tell many nominal series
 apart.
+
+- **Enforced by:** `node scripts/palette.mjs --check`, inside `npm test`.
+- **Red when:** a text token drops below 4.5:1 or a chart mark below 3:1 against either ground; a
+  pure `#000`/`#fff` appears; chroma is pushed against the ends of the lightness range; or the
+  status trio is ambiguous under CVD while the glyph-and-word encoding is gone.
 
 ## D7. Determinism over freshness
 

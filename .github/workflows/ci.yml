@@ -21,6 +21,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm run lint
+      # The colour rule is a gate, not a preference: npm test runs scripts/palette.mjs --check first.
       - run: npm test
       # dogfood: the product's own gate, on the product. The committed model is deployed to Pages
       # on every push to main — nothing else would notice if it stopped matching the code.

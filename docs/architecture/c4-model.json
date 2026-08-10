@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-08-10T09:53:40.045Z",
+  "generatedAt": "2026-08-10T10:44:11.049Z",
   "source": {
     "repo": "forma",
-    "commit": "bd5603f413fc9905336489f979c309c51f642831",
+    "commit": "25aba08cce7d81f9c6f32c54f999b80349d43922",
     "branch": "feat/control-room",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
@@ -273,7 +273,7 @@
         {
           "type": "glob",
           "ref": "scripts",
-          "count": 5
+          "count": 6
         }
       ],
       "category": "container",
@@ -808,6 +808,25 @@
       "status2": "unknown",
       "target": "",
       "func": "Cross-platform syntax check: node --check over bin + lib.",
+      "descSource": "docstring"
+    },
+    {
+      "id": "scripts__palette_mjs",
+      "level": "leaf",
+      "parent": "scripts",
+      "kind": "leaf",
+      "name": "palette",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "scripts/palette.mjs"
+        }
+      ],
+      "category": "scripts",
+      "status2": "unknown",
+      "target": "",
+      "func": "palette.mjs — the measurement docs/DESIGN.md D6 says it already made. D6 reads \"Verified, not judged by eye. Both palettes were run through the measurement script.\" No such script was in the repository and scripts/presentable.mjs carries no",
       "descSource": "docstring"
     },
     {

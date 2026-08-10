@@ -7,10 +7,10 @@
 <style>
 :root{color-scheme:light;
  --bg:#050d14; --grid:rgba(62,231,255,.04); --halo:rgba(62,231,255,.10);
- --cyan:#3ee7ff; --sec:#6fa8bc; --ter:#4c7f94; --ter2:#41738a; --nm:#bfe9f7;
+ --cyan:#3ee7ff; --sec:#6fa8bc; --ter:#4c7f94; --ter2:oklch(58.3% 0.065 229); --nm:#bfe9f7;
  --stagebg:rgba(4,12,19,.72); --stageborder:#143547; --nodebg:rgba(8,26,38,.92); --detailbg:rgba(6,20,30,.97);
- --border:#1e4a5e; --done:#2fe08a; --prog:#ffc74d; --next:#3ee7ff; --plan:#2d5a72; --planTxt:#7fb3c6; --prob:#ff5d5d; --unk:#7d8f99;
- --edge:#2b6e8a; --edgeplan:#264d61; --elbl:#3d7f9c; --ddtxt:#7fb3c6; --now:#cfeefb; --tgt:#8fd8ec; --src:#4fbf8d;}
+ --border:#1e4a5e; --done:#2fe08a; --prog:#ffc74d; --next:#3ee7ff; --plan:oklch(49.3% 0.063 234); --planTxt:#7fb3c6; --prob:#ff5d5d; --unk:#7d8f99;
+ --edge:#2b6e8a; --edgeplan:oklch(49.3% 0.056 233); --elbl:oklch(58.3% 0.081 229); --ddtxt:#7fb3c6; --now:#cfeefb; --tgt:#8fd8ec; --src:#4fbf8d;}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"SF Mono",Menlo,Consolas,ui-monospace,monospace;background:var(--bg);color:var(--nm);overflow-x:hidden}
 #wrap{padding:14px 18px 26px;min-height:100vh;background:
@@ -151,11 +151,18 @@ svg.dense .edge.hot{opacity:1;stroke-width:2.6}
  #stage{border:1px solid #999;height:auto;min-height:0}
  #stage svg{height:70vh}
 }
-html[data-skin="blueprint"]{--bg:#eef3f9;--grid:rgba(31,119,180,.10);--halo:rgba(31,119,180,.08);
- --cyan:#1f77b4;--sec:#5a6b7d;--ter:#6b7b8c;--ter2:#5a6b7d;--nm:#16273a;
- --stagebg:#ffffff;--stageborder:rgba(31,119,180,.25);--nodebg:#ffffff;--detailbg:#ffffff;--border:rgba(31,119,180,.35);
- --done:#1f9d57;--prog:#c07a12;--next:#1f77b4;--plan:#8592a3;--planTxt:#5a6b7d;--prob:#d1453b;--unk:#8a97a3;
- --edge:#8aa0b4;--edgeplan:#b9c6d3;--elbl:#5a6b7d;--ddtxt:#40536a;--now:#16273a;--tgt:#1f5f8a;--src:#1f9d57}
+/* blueprint is the skin the Control Room embeds, so it is NOT a look of its own: it is the
+   briefing's own measured light palette, mapped onto this viewer's token names. Before, it was a
+   cold blue-grey inside a warm briefing, which read as two applications stapled together — and the
+   ponytail note above records that its statuses were indistinguishable there. They now carry the
+   same deliberate lightness separation as everywhere else, verified by scripts/palette.mjs.
+   The `holo` skin above keeps its own identity: it is the standalone explorer, a different artifact
+   with a different audience. */
+html[data-skin="blueprint"]{--bg:oklch(97.4% 0.006 75);--grid:oklch(54.2% 0.169 255 / 0.10);--halo:oklch(54.2% 0.169 255 / 0.08);
+ --cyan:oklch(54.2% 0.169 255);--sec:oklch(54.0% 0.013 72);--ter:oklch(54.0% 0.013 72);--ter2:oklch(54.0% 0.013 72);--nm:oklch(22.0% 0.009 75);
+ --stagebg:oklch(99.5% 0.005 78);--stageborder:oklch(88.0% 0.010 82);--nodebg:oklch(99.5% 0.005 78);--detailbg:oklch(99.5% 0.005 78);--border:oklch(88.0% 0.010 82);
+ --done:oklch(52.9% 0.141 151);--prog:oklch(44.4% 0.094 73);--next:oklch(54.2% 0.169 255);--plan:oklch(63.3% 0.013 80);--planTxt:oklch(54.0% 0.013 72);--prob:oklch(35.5% 0.144 25);--unk:oklch(63.3% 0.013 80);
+ --edge:oklch(63.3% 0.013 80);--edgeplan:oklch(63.3% 0.013 80);--elbl:oklch(54.0% 0.013 72);--ddtxt:oklch(54.0% 0.013 72);--now:oklch(22.0% 0.009 75);--tgt:oklch(54.2% 0.169 255);--src:oklch(52.9% 0.141 151)}
 html[data-skin="blueprint"] h1{text-shadow:none}
 html[data-skin="blueprint"] .s-done rect,html[data-skin="blueprint"] .s-prog rect,html[data-skin="blueprint"] .s-next rect,html[data-skin="blueprint"] .s-prob rect{filter:none}
 html[data-skin="blueprint"] .nd.pulse rect{animation:none}

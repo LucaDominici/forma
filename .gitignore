@@ -19,3 +19,4 @@ forma-social-preview.png
 
 # Worktree degli agenti: repo git annidati, mai da tracciare (#43)
 .claude/worktrees/
+.playwright-mcp/
