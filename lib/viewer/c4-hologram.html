@@ -7,10 +7,10 @@
 <style>
 :root{color-scheme:light;
  --bg:#050d14; --grid:rgba(62,231,255,.04); --halo:rgba(62,231,255,.10);
- --cyan:#3ee7ff; --sec:#6fa8bc; --ter:#4c7f94; --ter2:#41738a; --nm:#bfe9f7;
+ --cyan:#3ee7ff; --sec:#6fa8bc; --ter:oklch(58.3% 0.064 226); --ter2:oklch(58.3% 0.065 229); --nm:#bfe9f7;
  --stagebg:rgba(4,12,19,.72); --stageborder:#143547; --nodebg:rgba(8,26,38,.92); --detailbg:rgba(6,20,30,.97);
- --border:#1e4a5e; --done:#2fe08a; --prog:#ffc74d; --next:#3ee7ff; --plan:#2d5a72; --planTxt:#7fb3c6; --prob:#ff5d5d; --unk:#7d8f99;
- --edge:#2b6e8a; --edgeplan:#264d61; --elbl:#3d7f9c; --ddtxt:#7fb3c6; --now:#cfeefb; --tgt:#8fd8ec; --src:#4fbf8d;}
+ --border:#1e4a5e; --done:#2fe08a; --prog:#ffc74d; --next:#3ee7ff; --plan:oklch(49.3% 0.063 234); --planTxt:#7fb3c6; --prob:#ff5d5d; --unk:#7d8f99;
+ --edge:#2b6e8a; --edgeplan:oklch(49.3% 0.056 233); --elbl:oklch(58.3% 0.081 229); --ddtxt:#7fb3c6; --now:#cfeefb; --tgt:#8fd8ec; --src:#4fbf8d;}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"SF Mono",Menlo,Consolas,ui-monospace,monospace;background:var(--bg);color:var(--nm);overflow-x:hidden}
 #wrap{padding:14px 18px 26px;min-height:100vh;background:
@@ -111,7 +111,43 @@ svg.dense .edge.hot{opacity:1;stroke-width:2.6}
 @keyframes ndin{from{opacity:0}to{opacity:1}}
 #stage.anim svg{animation:svgin .34s cubic-bezier(.2,.7,.2,1) both;transform-origin:50% 44%}
 #stage.anim .nd{animation:ndin .55s ease both}
-@media(prefers-reduced-motion:reduce){#stage.anim svg,#stage.anim .nd{animation:none}}
+/* All four animations, not the two that run once. `.edge.flow` marches its dash `1.1s linear
+   infinite` and `.nd.pulse` breathes a drop-shadow forever: they start on their own, never stop,
+   and there is no control to pause them — WCAG 2.2.2 at Level A, and the two selectors were
+   already written correctly one block down for print. Motion a reader asked their operating
+   system to stop is not decoration they can look away from. */
+@media(prefers-reduced-motion:reduce){#stage.anim svg,#stage.anim .nd,.edge.flow,.nd.pulse rect{animation:none}}
+/* Paper has no time axis, and `both` holds the FROM state. Printing re-rasterises the frame, which
+   restarts these entrance animations, so every node was captured at opacity 0: the map came out of
+   the Control Room's PDF as an empty box with a few faint edge labels in it — the one page of the
+   briefing that is a picture, and it was blank. The infinite ones are worse than invisible: they
+   would each be frozen at whatever phase the raster happened to catch, so the same document
+   printed twice would not match. */
+@media print{
+ #stage.anim svg,#stage.anim .nd{animation:none}
+ .edge.flow,.nd.pulse rect{animation:none}
+ /* Type sized for the page, not for the screen. The diagram has a fit-to-content viewBox, so on an
+    A4 sheet 942 user units land in ~527pt and everything scales to 0.56: node body text printed at
+    4.9pt against 9.2pt of surrounding prose, a figure at half the legibility of its own caption.
+    Scaling the source type by ~1.8 puts it back on the page's own scale. */
+ .nd .tt{font-size:20px}
+ .nd .dd,.nd .pp,.nd.drill .plus{font-size:16px}
+ .elbl{font-size:14.5px}
+ .nd .kk{font-size:13.5px}
+ .cat,#legend{font-size:15px}
+ /* Paper is light, and the dark skin has to say so HERE rather than be switched off at print time.
+    The host did try: it posted the light skin on `beforeprint`. A message is asynchronous, the
+    rasteriser is not, and a dark-theme reader's page 6 came out dark on a white sheet — the print
+    output back to depending on what the reader last clicked, which is the defect the briefing's own
+    print palette exists to remove. Declared, not switched, and `:root` doubles the score to (0,2,1)
+    so it wins on specificity rather than on being further down the file. */
+ html[data-skin="blueprint-dark"]:root{color-scheme:light;--bg:oklch(97.4% 0.006 75);--grid:oklch(54.2% 0.169 255 / 0.10);--halo:oklch(54.2% 0.169 255 / 0.08);
+  --cyan:oklch(54.2% 0.169 255);--sec:oklch(54.0% 0.013 72);--ter:oklch(54.0% 0.013 72);--ter2:oklch(54.0% 0.013 72);--nm:oklch(22.0% 0.009 75);
+  --stagebg:oklch(99.5% 0.005 78);--stageborder:oklch(88.0% 0.010 82);--nodebg:oklch(99.5% 0.005 78);--detailbg:oklch(99.5% 0.005 78);--border:oklch(88.0% 0.010 82);
+  --done:oklch(52.9% 0.141 151);--prog:oklch(44.4% 0.094 73);--next:oklch(54.2% 0.169 255);--plan:oklch(63.3% 0.013 80);--planTxt:oklch(54.0% 0.013 72);--prob:oklch(35.5% 0.144 25);--unk:oklch(54.0% 0.013 72);
+  --edge:oklch(63.3% 0.013 80);--edgeplan:oklch(63.3% 0.013 80);--elbl:oklch(54.0% 0.013 72);--ddtxt:oklch(54.0% 0.013 72);--now:oklch(22.0% 0.009 75);--tgt:oklch(54.2% 0.169 255);--src:oklch(52.9% 0.141 151);
+  background:var(--bg)}
+}
 #etip{position:absolute;pointer-events:none;display:none;z-index:6;background:var(--detailbg);border:1px solid var(--border);
  color:var(--nm);font-size:10px;letter-spacing:.03em;padding:3px 8px;border-radius:5px;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,.45)}
 #legend{display:flex;gap:13px;font-size:9.5px;color:var(--sec);margin:10px 0 0;flex-wrap:wrap}
@@ -151,16 +187,36 @@ svg.dense .edge.hot{opacity:1;stroke-width:2.6}
  #stage{border:1px solid #999;height:auto;min-height:0}
  #stage svg{height:70vh}
 }
-html[data-skin="blueprint"]{--bg:#eef3f9;--grid:rgba(31,119,180,.10);--halo:rgba(31,119,180,.08);
- --cyan:#1f77b4;--sec:#5a6b7d;--ter:#6b7b8c;--ter2:#5a6b7d;--nm:#16273a;
- --stagebg:#ffffff;--stageborder:rgba(31,119,180,.25);--nodebg:#ffffff;--detailbg:#ffffff;--border:rgba(31,119,180,.35);
- --done:#1f9d57;--prog:#c07a12;--next:#1f77b4;--plan:#8592a3;--planTxt:#5a6b7d;--prob:#d1453b;--unk:#8a97a3;
- --edge:#8aa0b4;--edgeplan:#b9c6d3;--elbl:#5a6b7d;--ddtxt:#40536a;--now:#16273a;--tgt:#1f5f8a;--src:#1f9d57}
-html[data-skin="blueprint"] h1{text-shadow:none}
-html[data-skin="blueprint"] .s-done rect,html[data-skin="blueprint"] .s-prog rect,html[data-skin="blueprint"] .s-next rect,html[data-skin="blueprint"] .s-prob rect{filter:none}
-html[data-skin="blueprint"] .nd.pulse rect{animation:none}
-html[data-skin="blueprint"] button.on{text-shadow:none}
-html[data-skin="blueprint"] .nd.delta rect,html[data-skin="blueprint"] .edge.delta{filter:none}
+/* blueprint is the skin the Control Room embeds, so it is NOT a look of its own: it is the
+   briefing's own measured light palette, mapped onto this viewer's token names. Before, it was a
+   cold blue-grey inside a warm briefing, which read as two applications stapled together — and the
+   ponytail note above records that its statuses were indistinguishable there. They now carry the
+   same deliberate lightness separation as everywhere else, verified by scripts/palette.mjs.
+   The `holo` skin above keeps its own identity: it is the standalone explorer, a different artifact
+   with a different audience. */
+html[data-skin="blueprint"]{--bg:oklch(97.4% 0.006 75);--grid:oklch(54.2% 0.169 255 / 0.10);--halo:oklch(54.2% 0.169 255 / 0.08);
+ --cyan:oklch(54.2% 0.169 255);--sec:oklch(54.0% 0.013 72);--ter:oklch(54.0% 0.013 72);--ter2:oklch(54.0% 0.013 72);--nm:oklch(22.0% 0.009 75);
+ --stagebg:oklch(99.5% 0.005 78);--stageborder:oklch(88.0% 0.010 82);--nodebg:oklch(99.5% 0.005 78);--detailbg:oklch(99.5% 0.005 78);--border:oklch(88.0% 0.010 82);
+ --done:oklch(52.9% 0.141 151);--prog:oklch(44.4% 0.094 73);--next:oklch(54.2% 0.169 255);--plan:oklch(63.3% 0.013 80);--planTxt:oklch(54.0% 0.013 72);--prob:oklch(35.5% 0.144 25);--unk:oklch(54.0% 0.013 72);
+ --edge:oklch(63.3% 0.013 80);--edgeplan:oklch(63.3% 0.013 80);--elbl:oklch(54.0% 0.013 72);--ddtxt:oklch(54.0% 0.013 72);--now:oklch(22.0% 0.009 75);--tgt:oklch(54.2% 0.169 255);--src:oklch(52.9% 0.141 151)}
+html[data-skin="blueprint-dark"]{color-scheme:dark;--bg:oklch(17.1% 0.008 67);--grid:oklch(61.4% 0.130 250 / 0.10);--halo:oklch(61.4% 0.130 250 / 0.08);
+ --cyan:oklch(61.4% 0.130 250);--sec:oklch(61.5% 0.012 63);--ter:oklch(61.5% 0.012 63);--ter2:oklch(61.5% 0.012 63);--nm:oklch(93.0% 0.006 60);
+ --stagebg:oklch(21.5% 0.009 75);--stageborder:oklch(30.9% 0.010 61);--nodebg:oklch(21.5% 0.009 75);--detailbg:oklch(21.5% 0.009 75);--border:oklch(30.9% 0.010 61);
+ --done:oklch(74.6% 0.145 152);--prog:oklch(86.8% 0.126 80);--next:oklch(61.4% 0.130 250);--plan:oklch(52.5% 0.014 67);--planTxt:oklch(61.5% 0.012 63);--prob:oklch(64.7% 0.185 25);--unk:oklch(61.5% 0.012 63);
+ --edge:oklch(52.5% 0.014 67);--edgeplan:oklch(52.5% 0.014 67);--elbl:oklch(61.5% 0.012 63);--ddtxt:oklch(61.5% 0.012 63);--now:oklch(93.0% 0.006 60);--tgt:oklch(61.4% 0.130 250);--src:oklch(74.6% 0.145 152)}
+/* The embedded map was the one view the theme control never reached: a 1250x765 plate at L=97%
+   inside a page at L=17%, because `blueprint` is the briefing's LIGHT palette and there was no
+   other. This is the same mapping onto the dark one, token for token, so the map is the same
+   application in the same theme rather than a white slab someone stapled in.
+   Controls that belong to the standalone explorer and not to a client's briefing: re-verify,
+   reset layout, the export menu (SVG / PNG / layout JSON / a second Print with a different scope)
+   and the skin picker, which the host now drives. Reading controls stay. */
+html[data-embed] #brf,html[data-embed] #brl,html[data-embed] .menuwrap,html[data-embed] #skin{display:none}
+html[data-skin^="blueprint"] h1{text-shadow:none}
+html[data-skin^="blueprint"] .s-done rect,html[data-skin^="blueprint"] .s-prog rect,html[data-skin^="blueprint"] .s-next rect,html[data-skin^="blueprint"] .s-prob rect{filter:none}
+html[data-skin^="blueprint"] .nd.pulse rect{animation:none}
+html[data-skin^="blueprint"] button.on{text-shadow:none}
+html[data-skin^="blueprint"] .nd.delta rect,html[data-skin^="blueprint"] .edge.delta{filter:none}
 </style>
 </head>
 <body>
@@ -274,7 +330,7 @@ function pickLang(model){
 var CATALOG_THRESHOLD=24; // group of same-category siblings above this collapses to one catalogue node
 var LABEL_AUTO_MAX=14;    // above this many arrows in the current level, fixed labels would knot the view
 var LABELS=null;          // null = auto (by arrow count); true/false = user override for this session
-var SKINS=[["holo","◆ holo"],["blueprint","▭ blueprint"]], SKIN_IDS=["holo","blueprint"];
+var SKINS=[["holo","◆ holo"],["blueprint","▭ blueprint"]], SKIN_IDS=["holo","blueprint","blueprint-dark"];
 var STMAP={done:"done","in-progress":"prog",next:"next",planned:"plan",problem:"prob",unknown:"unk"};
 // The per-level tally. The mean is over the nodes that CARRY a completion, and it reports how many
 // those were: on a real Go repo, 25 containers at 100% next to 28 nobody has ruled on rendered as
@@ -1046,7 +1102,19 @@ function loadModel(model,preserveCheckpoint){
  setCheckpoint(wanted||"as-is",false,!preserveCheckpoint,preserveCheckpoint);
  // Minimal hook for embedders (the Cowork artifact re-verifies through its own MCP bridge and
  // needs to push the result back in without forking the viewer).
- window.__C4_API__={model:function(){return M;},checkpoint:function(id){setCheckpoint(id,true,true);},redraw:function(){draw(false);},stamp:function(t){$("stamp").textContent=t;}};
+ window.__C4_API__={model:function(){return M;},checkpoint:function(id){setCheckpoint(id,true,true);},redraw:function(){draw(false);},stamp:function(t){$("stamp").textContent=t;},skin:setSkin};
+}
+/* Embedded, the host owns the theme. The frame is sandboxed with an opaque origin, so it cannot
+   read the briefing's localStorage and the briefing cannot reach into it: a message is the only
+   channel there is. Anything that is not one of the three known skin ids is ignored — setSkin
+   already falls back rather than trusting its argument. */
+function embedded(){
+ if(window.__C4_EMBED__!==true)return;
+ document.documentElement.setAttribute("data-embed","");
+ window.addEventListener("message",function(e){
+  var d=e&&e.data;
+  if(d&&d.forma==="skin"&&typeof d.skin==="string")setSkin(d.skin);
+ });
 }
 function boot(model){loadModel(model,false);}
 function start(){
@@ -1055,6 +1123,7 @@ function start(){
  try{document.documentElement.setAttribute("lang",LANG);}catch(e){}
  applyStrings();
  wire();
+ embedded();
  if(window.__C4_MODEL__){boot(window.__C4_MODEL__);return;}
  FETCHED=true; // the model has a live URL ⇒ RE-VERIFY can re-read it instead of only re-stamping
  try{fetch("./c4-model.json").then(function(r){return r.json();}).then(boot).catch(function(){

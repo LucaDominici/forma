@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-07-27T23:35:13.063Z",
+  "generatedAt": "2026-08-10T10:44:11.049Z",
   "source": {
     "repo": "forma",
-    "commit": "d9a0694a0abba2d1624cdd7ef8f389cd234b8cfe",
-    "branch": "main",
+    "commit": "25aba08cce7d81f9c6f32c54f999b80349d43922",
+    "branch": "feat/control-room",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -245,7 +245,7 @@
         {
           "type": "glob",
           "ref": "lib",
-          "count": 13
+          "count": 22
         }
       ],
       "category": "container",
@@ -273,7 +273,7 @@
         {
           "type": "glob",
           "ref": "scripts",
-          "count": 3
+          "count": 6
         }
       ],
       "category": "container",
@@ -333,6 +333,25 @@
       "status2": "unknown",
       "target": "",
       "func": "forma — present your architecture instead of slides. Thin CLI dispatcher over the lib/ engine. Every subcommand is a plain Node script, so any agent (or a human with no AI) drives the same contract. The engine is model-agnostic.",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__audit_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "audit",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/audit.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "audit.mjs — the async on-demand audit channel behind c4-health.json / c4-findings.json. Same doctrine as lib/enrich.mjs's --enricher agent: emit a plan of prompts instead of calling an API (the agent driving forma already has the model in t",
       "descSource": "docstring"
     },
     {
@@ -507,6 +526,25 @@
       "descSource": "docstring"
     },
     {
+      "id": "lib__link_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "link",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/link.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "link.mjs — issue - commit citing it - files touched - C4 node. Pure, offline, no LLM. The only authority for \"which part of the architecture did this issue touch\" is git: a second, hand-curated map of the same fact is exactly the concurrent",
+      "descSource": "docstring"
+    },
+    {
       "id": "lib__render_mjs",
       "level": "leaf",
       "parent": "lib",
@@ -526,6 +564,120 @@
       "descSource": "docstring"
     },
     {
+      "id": "lib__room_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "room",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/room.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "forma room — compose one portfolio manifest into one self-contained Control Room HTML. Read-only over every input; no network here: issue snapshots must already exist (forma verify). Usage: node lib/room.mjs --manifest <path [--out <path]",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__roomderive_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "roomderive",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/roomderive.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "roomderive.mjs — the ONLY place Control Room aggregates are computed. Imported by both room.mjs (which writes the numbers into window.ROOM.derived) and check.mjs (which recomputes them from the same raw inputs and compares against what room",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__roomdocs_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "roomdocs",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/roomdocs.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "roomdocs.mjs — the documents a briefing carries, selected from what git tracks and bounded by a declared byte budget. Separate from rtm.mjs on purpose: that module reads tables to derive a matrix, this one carries prose so a reader never ha",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__roomload_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "roomload",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/roomload.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "roomload.mjs — how a manifest entry becomes a set of concrete inputs. Shared by room.mjs (which composes) and check.mjs (which re-derives and compares), for the same reason roomderive.mjs is shared: if the two resolved a programme's paths d",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__rtm_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "rtm",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/rtm.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "rtm.mjs — the requirements traceability matrix, DERIVED from the documents a repo already writes and the issues it already has. Pure parsing plus set arithmetic: no network, no LLM, nothing curated into a second file that could disagree wit",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__scan_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "scan",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/scan.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "forma scan — find the programmes under a directory and write them into a manifest. Read-only over every repository it finds; the only file it writes is the manifest itself. Usage: node lib/scan.mjs --root <dir --manifest <path [--depth <n] ",
+      "descSource": "docstring"
+    },
+    {
       "id": "lib__serve_mjs",
       "level": "leaf",
       "parent": "lib",
@@ -542,6 +694,25 @@
       "status2": "unknown",
       "target": "",
       "func": "forma serve — tiny static server for the interactive viewer + model. Local dev only.",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__taxonomy_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "taxonomy",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/taxonomy.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "taxonomy.mjs — auto-detect label \"families\" (priority, size, type, domain, ...) from a repo's own label vocabulary. Pure pattern matching, never semantic inference: a family exists because enough labels share a name<sepvalue shape, not beca",
       "descSource": "docstring"
     },
     {
@@ -602,6 +773,25 @@
       "descSource": "docstring"
     },
     {
+      "id": "scripts__gen_doc_index_mjs",
+      "level": "leaf",
+      "parent": "scripts",
+      "kind": "leaf",
+      "name": "gen-doc-index",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "scripts/gen-doc-index.mjs"
+        }
+      ],
+      "category": "scripts",
+      "status2": "unknown",
+      "target": "",
+      "func": "gen-doc-index.mjs — regenerate docs/INDEX.md from every document's frontmatter. A LOCATOR, not an engine. The generator lives in arbiter, which owns the doc-set standard; this file finds that checkout and calls its exported runCli. Re-imple",
+      "descSource": "docstring"
+    },
+    {
       "id": "scripts__lint_mjs",
       "level": "leaf",
       "parent": "scripts",
@@ -621,6 +811,25 @@
       "descSource": "docstring"
     },
     {
+      "id": "scripts__palette_mjs",
+      "level": "leaf",
+      "parent": "scripts",
+      "kind": "leaf",
+      "name": "palette",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "scripts/palette.mjs"
+        }
+      ],
+      "category": "scripts",
+      "status2": "unknown",
+      "target": "",
+      "func": "palette.mjs — the measurement docs/DESIGN.md D6 says it already made. D6 reads \"Verified, not judged by eye. Both palettes were run through the measurement script.\" No such script was in the repository and scripts/presentable.mjs carries no",
+      "descSource": "docstring"
+    },
+    {
       "id": "scripts__presentable_mjs",
       "level": "leaf",
       "parent": "scripts",
@@ -637,6 +846,25 @@
       "status2": "unknown",
       "target": "",
       "func": "presentable.mjs — the acceptance instrument for docs/SCOPE.md. forma check answers \"is the model still true to the code?\". This answers a different and narrower question: \"would this model survive being projected in front of a stakeholder?\"",
+      "descSource": "docstring"
+    },
+    {
+      "id": "scripts__room_presentable_mjs",
+      "level": "leaf",
+      "parent": "scripts",
+      "kind": "leaf",
+      "name": "room-presentable",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "scripts/room-presentable.mjs"
+        }
+      ],
+      "category": "scripts",
+      "status2": "unknown",
+      "target": "",
+      "func": "room-presentable.mjs — the acceptance instrument for the Control Room (docs/SCOPE-room.md), same role scripts/presentable.mjs plays for the single-lens viewer: forma check grades adherence to the code, this grades whether the rendered artif",
       "descSource": "docstring"
     },
     {
@@ -674,7 +902,7 @@
       "category": "test",
       "status2": "unknown",
       "target": "",
-      "func": "Offline stand-in for the gh CLI, used via forma verify --gh-cmd \"node test/stub-gh.mjs\". Prints the same shape as gh issue list --json number,state. #7 closed, #8 open — nothing else.",
+      "func": "Offline stand-in for the gh CLI, used via forma verify --gh-cmd \"node test/stub-gh.mjs\". Prints the same shape as gh issue list --json number,title,state,milestone,labels. #7 closed (milestone v1), #8 open (no milestone) — nothing else.",
       "descSource": "docstring"
     }
   ],

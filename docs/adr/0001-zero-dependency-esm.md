@@ -1,3 +1,13 @@
+---
+title: 'ADR-0001: Zero-dependency Node ESM CLI'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: '0001'
+tags: ['audience/dev', 'kind/adr']
+related: ['docs/adr/README.md']
+---
 # ADR-0001: Zero-dependency Node ESM CLI
 
 - **Status:** Accepted (2026-07-22)

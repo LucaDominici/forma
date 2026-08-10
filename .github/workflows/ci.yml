@@ -21,19 +21,91 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm run lint
+      # The colour rule is a gate, not a preference: npm test runs scripts/palette.mjs --check first.
       - run: npm test
       # dogfood: the product's own gate, on the product. The committed model is deployed to Pages
       # on every push to main — nothing else would notice if it stopped matching the code.
       - run: node bin/forma.mjs check
+      # ...and the SAME gate over the briefing, which the line above cannot reach. The room block in
+      # check is opt-in by the presence of control-room.html, and that file is generated and
+      # gitignored — so on a fresh checkout the whole Control Room and traceability section was
+      # skipped in silence, and forma's own briefing was first graded only after merge, by the Pages
+      # job, where a failure blocks a deploy instead of a merge. Composing it here needs no network:
+      # the fact base is committed, and only `verify` talks to GitHub.
+      - name: Compose the briefing and gate it, on every pull request
+        run: |
+          node bin/forma.mjs room --manifest forma.room.json --out "$RUNNER_TEMP/room.html"
+          node bin/forma.mjs check --room "$RUNNER_TEMP/room.html"
+          node scripts/room-presentable.mjs --room "$RUNNER_TEMP/room.html" --manifest forma.room.json
+  docs:
+    # The documentation gate. Forma declares WHAT it must carry (standards/gold-doc-set.yml, the
+    # portable manifest; standards/doc-profile, the overlays and the tier floor) and arbiter
+    # supplies the engines that grade it. The engines are checked out here rather than vendored
+    # into lib/ for two reasons: they need a YAML parser, and ADR-0001 forbids a dependency; and a
+    # second implementation of one rule is the divergence roomload.mjs exists to prevent
+    # (DECISION_REGISTRY.md D-04). Nothing here enters forma's dependency tree or its package.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # fetch-depth: 0 — check-doc-freshness compares a doc's last_review against the last commit
+      # touching the code it is coupled to. On a shallow clone that signal silently disappears and
+      # only the age bar is left, which is a weaker gate that still reports success.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { fetch-depth: 0 }
+      # forma is public and arbiter is private, so the default GITHUB_TOKEN cannot read it: the
+      # checkout 404s with "Not Found" and the job dies before any gate runs. Named here rather
+      # than left as a confusing checkout error, and NOT made skippable — a documentation gate that
+      # quietly stands down when its engines are unreachable is the shape of gate this repository
+      # exists to argue against (DECISION_REGISTRY.md D-04, technical-debt.md D-7).
+      - name: the gate engines must be reachable
+        env: { ARBITER_TOKEN: "${{ secrets.ARBITER_TOKEN }}" }
+        run: |
+          [ -n "$ARBITER_TOKEN" ] || {
+            echo "::error::secrets.ARBITER_TOKEN is not set. arbiter is a private repository and"\
+                 "forma is public, so the default GITHUB_TOKEN cannot check it out. Create a"\
+                 "fine-grained PAT with Contents: read on LucaDominici/arbiter and add it as the"\
+                 "repository secret ARBITER_TOKEN."
+            exit 1
+          }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: LucaDominici/arbiter
+          path: .arbiter-gates
+          token: ${{ secrets.ARBITER_TOKEN }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: install the gate engines
+        working-directory: .arbiter-gates
+        run: npm ci --ignore-scripts
+      # --strict: a missing mandatory document fails. Without it the audit reports gaps and exits 0,
+      # which is a gate that cannot go red.
+      - name: canonical doc set is present
+        run: node .arbiter-gates/scripts/check-doc-set.mjs --strict
+      - name: every document carries conforming frontmatter
+        run: node .arbiter-gates/scripts/check-doc-style.mjs
+      - name: no document is stale
+        run: node .arbiter-gates/scripts/check-doc-freshness.mjs
+      - name: every local link resolves
+        run: node .arbiter-gates/scripts/check-doc-links.mjs
+      - name: every cited repository path exists
+        run: node .arbiter-gates/scripts/check-doc-path-citations.mjs
+      # The index is generated from frontmatter; a hand-edit or a new doc must be regenerated,
+      # not described. --check fails rather than rewriting the file in CI.
+      # Through forma's own locator, so CI runs exactly the command CONTRIBUTING.md documents.
+      - name: the doc index is not stale
+        run: node scripts/gen-doc-index.mjs --check
   ci-required:
     # fail-closed aggregate: one required status check that gates the whole matrix, so branch
     # protection lists a single context instead of one per matrix node version.
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: test
+    needs: [test, docs]
     if: always()
     steps:
-      - env: { RESULT: "${{ needs.test.result }}" }
+      - env: { TEST: "${{ needs.test.result }}", DOCS: "${{ needs.docs.result }}" }
         run: |
-          echo "test result: $RESULT"
-          [ "$RESULT" = success ] || { echo "::error::ci test job did not succeed"; exit 1; }
+          echo "test result: $TEST"
+          echo "docs result: $DOCS"
+          [ "$TEST" = success ] || { echo "::error::ci test job did not succeed"; exit 1; }
+          [ "$DOCS" = success ] || { echo "::error::ci docs job did not succeed"; exit 1; }

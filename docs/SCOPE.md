@@ -1,7 +1,19 @@
+---
+title: 'Scope — what "finished" means for Forma'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'scope'
+tags: ['audience/dev', 'kind/governance']
+related: ['docs/SCOPE-room.md']
+---
 # Scope — what "finished" means for Forma
 
 Status: **closed 2026-07-26**, at `v0.10.0`. The boundary in §1 is met and measured — see §8.
-Forma moves to stage 5, *maintained* (§7).
+Forma moves to stage 5, *maintained* (§7). §4 named "no new command" outside this boundary;
+per this document's own §7, that boundary is reopened, for the Control Room only, by
+[`docs/SCOPE-room.md`](SCOPE-room.md) — the rest of this document still governs.
 Instrument: [`scripts/presentable.mjs`](../scripts/presentable.mjs). Measured against `haben`
 (a real, foreign, 53-package Go + React repo) and against Forma's own model.
 
@@ -64,7 +76,7 @@ PASS every drawn level with more than one box draws at least one edge  (edges pe
 ## 2. What was measured, and how
 
 Probe: `git clone --local` of `haben` (53 Go packages, a React frontend, a governed
-`docs/FEATURE_MATRIX.md`), then `forma init` → `forma gen` → `forma serve`, then the viewer
+a feature matrix), then `forma init` → `forma gen` → `forma serve`, then the viewer
 driven by Playwright and read as a screenshot. Not the test suite — the picture.
 
 **The engine delivers.** `init` 0.06 s. `gen` derives **189 container edges from Go `import`

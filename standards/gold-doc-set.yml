@@ -1,0 +1,501 @@
+# Gold Doc-Set manifest (arbiter) — the canonical documentation every arbiter project carries.
+#
+# A deterministic presence audit (scripts/check-doc-set.mjs) grades a repo against this list.
+# The verdict is computed by code, never by an AI. Tiers:
+#   mandatory    — required; a gap is a (strict) gate failure
+#   recommended  — advisory; a gap is a warning
+#   conditional  — only required when its overlay is enabled (per-repo standards/doc-profile)
+#
+# Per check:
+#   path        canonical location (also the stub target for --generate)
+#   tier        mandatory | recommended | conditional — LEGACY, flat, team-size-blind.
+#               Superseded by tiers{} when present (H3, gold-doc-capability Tranche 1);
+#               kept as the fallback for any check not yet carrying tiers{}.
+#   tiers       NEW (#H3): the standard's TIER×doc-type matrix cell, keyed by the
+#               collaborationMode-derived column — { solo, small, enterprise }. Values:
+#                 R = mandatory (gap = strict failure)
+#                 r = recommended (gap = warning)
+#                 o | '-' = not required at this tier (dormant, counted as n/a, never a gap)
+#               When present, tiers{} REPLACES `tier` for requirement resolution (the tier
+#               field conflated enforcement strength with team size; tiers{} separates them).
+#               collaborationMode → column: trunk-solo→solo, peer-review→small,
+#               gated-review→enterprise (mirrors scripts/check-ci-tiers.mjs `resolveCm`).
+#   freshness_class  NEW (#H3/#H4): one of high-churn | policy | decision | operational |
+#               regulatory — selects the max-age bar for the (not-yet-built) freshness gate.
+#               ADR/decision docs are immutable-once-accepted, never re-dated.
+#   applies     always | <overlay-name>
+#   accept_any  equivalent paths; the check PASSES if ANY exists (architecture=blueprint, etc.)
+#   glob        a glob that passes if >=1 file matches (e.g. at least one ADR)
+#   adr         true ⇒ the glob also recognizes repo-prefixed `<PREFIX>-NNN_slug.md`
+#               and legacy `ADR-NNN` records, not just bare `NNN-` (dual recognition, #1415)
+#   template    catalog id resolved by the skeleton generator (src/generators/doc-set.ts,
+#               `arbiter doc-set --plan/--apply`, T3) into a real per-doc-type body — NOT read
+#               by the engine's own `--generate` (that still only ever writes the banner stub).
+#   phase       ISO/IEC/IEEE 12207 lifecycle phase the doc serves:
+#               inception | design | build | release | operate (#1415)
+#   drivers     standards/regulations that mandate the doc — vocabulary (#1415):
+#               diataxis · iso29148 · gamp5 · part11 · iso27001 · gdpr · nis2 ·
+#               dd-impresoft · iso12207 · iso9001 · owasp
+#
+# Anti-cathedral guardrail (docs/design/gold-doc-capability.md §2): a trunk-solo (solo) repo
+# is never handed SLO/on-call, full STRIDE, traceability, or the CODE_OF_CONDUCT/CODEOWNERS
+# cathedral. tiers{} is intentionally added ONLY to the `always`-applying checks below; the
+# `conditional` (overlay-gated) checks further down are untouched by Tranche 1 — a missing
+# conditional doc already only ever produces an advisory (never `--strict`-blocking) gap
+# regardless of tier, so the guardrail holds by construction without extra machinery.
+#
+# --generate write-safety: stubs are scaffolded ONLY for missing docs and NEVER overwrite an
+# existing file. Stub-refresh-in-place is opt-in via --refresh-stubs and overwrites ONLY a file
+# that is byte-equal to the freshly rendered stub template (a real doc is always preserved, #1415).
+version: '1.2.0'
+profile: tooling
+checks:
+  # ---- mandatory (always) ----
+  - path: README.md
+    tier: mandatory
+    tiers: { solo: 'R', small: 'R', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: inception
+    drivers: ['diataxis']
+    purpose: Repo overview — purpose, install, quickstart.
+  - path: AGENTS.md
+    tier: mandatory
+    tiers: { solo: 'R', small: 'R', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: inception
+    drivers: ['diataxis', 'iso12207']
+    accept_any: ['AGENTS.md', 'CLAUDE.md', '.claude/CLAUDE.md']
+    purpose: Governance SSOT (invariants + workflow) for AI-assisted development.
+  - path: CHANGELOG.md
+    tier: mandatory
+    tiers: { solo: 'R', small: 'R', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: release
+    drivers: ['diataxis']
+    purpose: Human-readable change history (semver / Keep a Changelog).
+  - path: CONTRIBUTING.md
+    tier: mandatory
+    # standard §2 row 12: solo has no 2nd contributor to onboard yet (o); required once a repo
+    # is not solo (small/enterprise) — the `2nd contributor` trigger (#4) promotes solo o->R.
+    tiers: { solo: 'o', small: 'R', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: build
+    drivers: ['diataxis', 'iso9001']
+    accept_any: ['CONTRIBUTING.md', 'docs/CONTRIBUTING.md']
+    purpose: How to contribute — workflow, gate, conventions.
+  - path: SECURITY.md
+    tier: mandatory
+    tiers: { solo: 'R', small: 'R', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: operate
+    drivers: ['iso27001', 'owasp']
+    accept_any: ['SECURITY.md', 'docs/SECURITY.md', '.github/SECURITY.md']
+    purpose: Security policy + vulnerability reporting.
+  - path: LICENSE
+    tier: mandatory
+    tiers: { solo: 'R', small: 'R', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: inception
+    drivers: ['iso12207']
+    accept_any: ['LICENSE', 'LICENSE.md', 'LICENSE.txt']
+    purpose: Open-source license.
+  - path: VERSION
+    tier: mandatory
+    tiers: { solo: 'R', small: 'R', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: release
+    drivers: ['iso12207']
+    accept_any: ['VERSION', 'package.json']
+    purpose: Release version SSOT (semver).
+  - path: docs/INDEX.md
+    tier: mandatory
+    # standard §2 row 13: a discoverable index matters more once there's more than one doc
+    # author reading it cold — recommended solo, required small/enterprise.
+    tiers: { solo: 'r', small: 'R', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: build
+    drivers: ['diataxis']
+    purpose: Generated, discoverable index of the doc set.
+  - path: docs/GOVERNANCE.md
+    tier: mandatory
+    # H3 (load-bearing fix): a solo repo has no decision-rights ambiguity to govern — this
+    # was wrongly mandatory-for-all before Tranche 1 (docs/design/gold-doc-capability.md §2).
+    tiers: { solo: 'o', small: 'r', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: inception
+    drivers: ['iso9001', 'iso12207']
+    accept_any: ['docs/GOVERNANCE.md', 'GOVERNANCE.md']
+    template: governance
+    purpose: Governance model — how decisions and gates work.
+  - path: DECISION_REGISTRY.md
+    tier: mandatory
+    # #2036: blocked-project-decision register (D-NN). Solo repos get it advisory
+    # (anti-cathedral guardrail: one committer has fewer decisions to track).
+    tiers: { solo: 'r', small: 'R', enterprise: 'R' }
+    freshness_class: decision
+    applies: always
+    phase: inception
+    drivers: ['iso9001', 'iso12207']
+    # consumer-style adoption: a pre-existing user-owned COSTITUZIONE.md (carrying the
+    # `arbiter:preserve` marker) satisfies the row — never clobbered, never duplicated.
+    accept_any: ['DECISION_REGISTRY.md', 'COSTITUZIONE.md']
+    template: decision-registry
+    purpose: Blocked project decisions (D-NN) with per-decision enforcement or documentale exemption.
+  - path: GLOBAL_INVARIANTS.md
+    tier: conditional
+    # #2036 (AC-2036.6): GLOBAL_INVARIANTS.md was absent from the manifest — verified.
+    # conditional + applies: always ⇒ a missing file is a RECOMMENDED gap (advisory), so a
+    # clean L1 `essential`-preset project (no optional tiers ⇒ generator deliberately
+    # non-emits, src/generators/global-invariants.ts `not-applicable`) never hard-fails.
+    freshness_class: policy
+    applies: always
+    phase: build
+    drivers: ['iso12207']
+    accept_any: ['GLOBAL_INVARIANTS.md', 'docs/GLOBAL_INVARIANTS.md']
+    purpose: Deep-reference invariant companion (generated when optional tiers are selected).
+  - path: docs/architecture/ARCHITECTURE.md
+    tier: mandatory
+    # H3: solo carries a recommended Canvas-level doc, not the full arc42+C4 cathedral,
+    # until the `>2 deployable units` trigger (#6) promotes it to required.
+    tiers: { solo: 'r', small: 'R', enterprise: 'R' }
+    freshness_class: high-churn
+    applies: always
+    phase: design
+    drivers: ['iso12207', 'diataxis']
+    accept_any:
+      [
+        'docs/architecture/ARCHITECTURE.md',
+        'docs/internal/architecture/ARCHITECTURE.md',
+        'docs/architecture/arc42.md',
+        'docs/architecture/blueprint.md',
+        'docs/ARCHITECTURE.md',
+        # H2 (Tranche 2): subtree recognition — real arc42/C4 gold docs often live two-plus
+        # directories deep (e.g. a governed project's docs/architecture/budget/{arc42,c4-model}.md), not
+        # flat under docs/architecture/. `**` is resolved via a real recursive walk (H2).
+        'docs/architecture/**/arc42.md',
+        'docs/**/c4-model.md',
+      ]
+    template: arc42
+    purpose: System architecture (arc42 / C4 / blueprint equivalent).
+  - path: docs/ADR
+    tier: mandatory
+    tiers: { solo: 'R', small: 'R', enterprise: 'R' }
+    freshness_class: decision
+    applies: always
+    phase: design
+    drivers: ['iso12207']
+    glob: 'docs/ADR/[0-9]*.md'
+    # H2 (Tranche 2): adr:true also triggers a recursive, dual-recognition-aware subtree walk
+    # (adrPresentAnywhere) — an ADR directory living anywhere in the repo (e.g. a governed project's
+    # docs/architecture/budget/adr/ADR-006..014_*.md) is recognized, not just docs/ADR|adr.
+    adr: true
+    accept_any:
+      [
+        'docs/ADR/[0-9]*.md',
+        'docs/adr/[0-9]*.md',
+        'docs/ADR/README.md',
+        'docs/internal/ADR/[0-9]*.md',
+        'docs/internal/ADR/README.md',
+        'docs/**/adr/ADR-*.md',
+      ]
+    template: adr-seed
+    purpose: Architecture Decision Records (at least one; legacy or <PREFIX>-NNN).
+  - path: docs/SEMVER.md
+    tier: mandatory
+    # H3: the bare VERSION file (above) stays required at every tier; the elaborated
+    # compatibility/semver *policy write-up* is cathedral for a repo with one committer.
+    tiers: { solo: 'o', small: 'r', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: release
+    drivers: ['iso12207']
+    accept_any: ['docs/SEMVER.md', 'SEMVER.md']
+    purpose: Versioning / compatibility policy.
+  - path: docs/coding-standards.md
+    tier: mandatory
+    # H3: recommended solo (a one-person repo has no cross-author style to converge on
+    # yet), required small/enterprise.
+    tiers: { solo: 'r', small: 'R', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: build
+    drivers: ['iso9001', 'owasp']
+    accept_any:
+      [
+        'docs/coding-standards.md',
+        'docs/naming-convention.md',
+        'docs/SECURE_CODING_CHECKLIST.md',
+        'CONTRIBUTING.md',
+      ]
+    purpose: Code conventions (or naming-convention / secure-coding equivalent).
+  # ---- recommended (advisory) ----
+  - path: CODE_OF_CONDUCT.md
+    tier: recommended
+    tiers: { solo: '-', small: 'r', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: inception
+    drivers: ['diataxis']
+    purpose: Community standards.
+  - path: ROADMAP.md
+    tier: recommended
+    tiers: { solo: 'o', small: 'r', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: inception
+    drivers: ['iso29148']
+    accept_any: ['ROADMAP.md', 'docs/ROADMAP.md', 'docs/PRODUCT/ROADMAP.md']
+    purpose: Forward-looking plan.
+  - path: docs/GLOSSARY.md
+    tier: recommended
+    tiers: { solo: 'o', small: 'r', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: design
+    drivers: ['diataxis', 'iso29148']
+    template: glossary
+    purpose: Domain + project terminology (reduces cross-product confusion).
+  - path: PRIVACY.md
+    tier: recommended
+    tiers: { solo: 'o', small: 'r', enterprise: 'R' }
+    freshness_class: regulatory
+    applies: always
+    phase: operate
+    drivers: ['gdpr']
+    accept_any: ['PRIVACY.md', 'docs/PRIVACY.md']
+    purpose: Privacy / data-handling statement.
+  - path: docs/technical-debt.md
+    tier: recommended
+    tiers: { solo: 'o', small: 'r', enterprise: 'R' }
+    freshness_class: policy
+    applies: always
+    phase: build
+    drivers: ['iso9001', 'iso12207']
+    accept_any: ['docs/technical-debt.md', 'docs/TECHNICAL-DEBT.md', 'TECHNICAL-DEBT.md']
+    template: technical-debt
+    purpose: Technical-debt register — known shortcuts, their cost, and the payback plan.
+  # ---- conditional (overlay-gated) ----
+  - path: docs/PLUGIN-API.md
+    tier: conditional
+    applies: has-plugin-api
+    phase: design
+    drivers: ['diataxis']
+    accept_any: ['docs/PLUGIN-API.md', 'docs/plugin-api.md', 'PLUGIN-API.md']
+    purpose: Public plugin/extension API contract.
+  - path: docs/api
+    tier: conditional
+    applies: has-api
+    phase: design
+    drivers: ['diataxis', 'iso29148']
+    glob: 'docs/api/*'
+    purpose: API reference / OpenAPI.
+  # ---- conditional family: data (customer-data overlay) ----
+  - path: docs/data/er-model.md
+    tier: conditional
+    applies: customer-data
+    phase: design
+    drivers: ['gdpr', 'iso12207']
+    accept_any: ['docs/data/er-model.md', 'docs/data/data-model.md']
+    template: er-model
+    purpose: Entity-relationship / data model.
+  - path: docs/data/classification.md
+    tier: conditional
+    applies: customer-data
+    phase: design
+    drivers: ['gdpr', 'iso27001']
+    purpose: Data classification policy (public / internal / confidential / restricted).
+  - path: docs/data/retention.md
+    tier: conditional
+    applies: customer-data
+    phase: operate
+    drivers: ['gdpr']
+    purpose: Data-retention schedule + deletion policy.
+  - path: docs/data/pii-inventory.md
+    tier: conditional
+    applies: customer-data
+    phase: operate
+    drivers: ['gdpr']
+    purpose: PII inventory / record of processing activities (GDPR Art. 30).
+  # ---- conditional family: security (always-on for governed projects) ----
+  - path: docs/security/threat-model.md
+    tier: conditional
+    applies: customer-data
+    phase: design
+    drivers: ['iso27001', 'owasp']
+    accept_any: ['docs/security/threat-model.md', 'docs/security/THREAT-MODEL.md']
+    template: threat-model
+    purpose: Threat model (STRIDE / attack surface).
+  - path: docs/security/encryption.md
+    tier: conditional
+    applies: customer-data
+    phase: design
+    drivers: ['iso27001', 'gdpr']
+    purpose: Encryption policy — data at rest + in transit, key management.
+  - path: docs/security/vuln-mgmt.md
+    tier: conditional
+    applies: customer-data
+    phase: operate
+    drivers: ['iso27001', 'nis2', 'owasp']
+    accept_any: ['docs/security/vuln-mgmt.md', 'docs/security/vulnerability-management.md']
+    purpose: Vulnerability-management process — scan, triage, SLA, disclosure.
+  - path: docs/security/risk-register.md
+    tier: conditional
+    applies: customer-data
+    phase: operate
+    drivers: ['iso27001', 'nis2']
+    purpose: Risk register — identified risks, likelihood, impact, treatment.
+  # ---- conditional family: operations (deploys overlay) ----
+  - path: docs/operations/observability.md
+    tier: conditional
+    applies: deploys
+    phase: operate
+    drivers: ['nis2', 'iso12207']
+    accept_any: ['docs/operations/observability.md', 'docs/operations/monitoring.md']
+    purpose: Observability — logs, metrics, traces, dashboards, alerts.
+  - path: docs/operations/slo.md
+    tier: conditional
+    applies: deploys
+    phase: operate
+    drivers: ['iso12207']
+    accept_any: ['docs/operations/slo.md', 'docs/operations/sla.md']
+    template: slo
+    purpose: SLO / SLA targets + error budgets.
+  - path: docs/operations/dr-bcp.md
+    tier: conditional
+    applies: deploys
+    phase: operate
+    drivers: ['nis2', 'iso27001']
+    accept_any: ['docs/operations/dr-bcp.md', 'docs/operations/disaster-recovery.md']
+    purpose: Disaster-recovery + business-continuity plan (RTO / RPO).
+  - path: docs/operations/backup.md
+    tier: conditional
+    applies: deploys
+    phase: operate
+    drivers: ['nis2', 'gdpr']
+    purpose: Backup policy — schedule, retention, restore drills.
+  - path: docs/operations/incidents.md
+    tier: conditional
+    applies: deploys
+    phase: operate
+    drivers: ['nis2', 'iso27001']
+    accept_any: ['docs/operations/incidents.md', 'docs/operations/runbook.md']
+    purpose: Incident-response runbook + postmortem template.
+  # ---- conditional family: legal & supply-chain (deploys overlay) ----
+  - path: sbom
+    tier: conditional
+    applies: deploys
+    phase: release
+    drivers: ['nis2', 'dd-impresoft']
+    glob: 'sbom*.json'
+    accept_any: ['sbom.json', 'sbom.cdx.json', 'sbom.spdx.json', 'bom.json', 'docs/legal/sbom.md']
+    purpose: Software Bill of Materials (CycloneDX / SPDX) — NIS2 / supply-chain due diligence.
+  - path: docs/legal/oss-dependencies.md
+    tier: conditional
+    applies: deploys
+    phase: release
+    drivers: ['nis2', 'dd-impresoft']
+    accept_any: ['docs/legal/oss-dependencies.md', 'docs/legal/third-party-licenses.md']
+    purpose: OSS dependency inventory + license obligations (supply-chain due diligence).
+  # ---- conditional family: delivery (deploys overlay) ----
+  - path: docs/delivery/user-manual.md
+    tier: conditional
+    applies: deploys
+    phase: release
+    drivers: ['diataxis', 'iso12207']
+    accept_any: ['docs/delivery/user-manual.md', 'docs/user-guide.md']
+    purpose: End-user manual.
+  - path: docs/delivery/admin-guide.md
+    tier: conditional
+    applies: deploys
+    phase: release
+    drivers: ['diataxis', 'iso12207']
+    accept_any: ['docs/delivery/admin-guide.md', 'docs/admin-guide.md']
+    purpose: Administrator / operator guide.
+  - path: docs/delivery/release-notes.md
+    tier: conditional
+    applies: deploys
+    phase: release
+    drivers: ['diataxis']
+    accept_any: ['docs/delivery/release-notes.md', 'CHANGELOG.md']
+    purpose: Release notes for the latest delivery.
+  # ---- conditional: GxP / 21 CFR Part 11 (gxp overlay) ----
+  - path: docs/quality/csv-validation.md
+    tier: conditional
+    applies: gxp
+    phase: release
+    drivers: ['gamp5', 'part11']
+    accept_any: ['docs/quality/csv-validation.md', 'docs/quality/computer-system-validation.md']
+    purpose: Computerized-system validation plan (GAMP 5 / 21 CFR Part 11).
+  - path: docs/quality/audit-trail.md
+    tier: conditional
+    applies: gxp
+    phase: operate
+    drivers: ['part11', 'gamp5']
+    purpose: Audit-trail + electronic-records/e-signature controls (21 CFR Part 11).
+  # ---- conditional: AI governance (has-ai overlay) ----
+  - path: docs/ai/model-card.md
+    tier: conditional
+    applies: has-ai
+    phase: design
+    drivers: ['iso12207', 'iso29148']
+    accept_any: ['docs/ai/model-card.md', 'docs/ai/MODEL-CARD.md']
+    purpose: Model card — intended use, training data, limitations, eval.
+  - path: docs/ai/ai-risk.md
+    tier: conditional
+    applies: has-ai
+    phase: design
+    drivers: ['iso27001', 'gdpr']
+    accept_any: ['docs/ai/ai-risk.md', 'docs/ai/ai-impact-assessment.md']
+    purpose: AI risk / impact assessment (bias, safety, data provenance).
+  # ---- conditional: mobile (has-mobile overlay) ----
+  - path: docs/mobile/store-compliance.md
+    tier: conditional
+    applies: has-mobile
+    phase: release
+    drivers: ['gdpr', 'iso12207']
+    accept_any: ['docs/mobile/store-compliance.md', 'docs/mobile/app-store.md']
+    purpose: App-store compliance — privacy nutrition labels, permissions, review notes.
+  # ---- anti-falso-green doc dimensions (#1415) ----
+  - path: docs/testing/anti-falso-green.md
+    tier: conditional
+    applies: deploys
+    phase: build
+    drivers: ['iso9001', 'owasp']
+    accept_any: ['docs/testing/anti-falso-green.md', 'docs/REFERENCE/anti-fake-green.md']
+    purpose: Anti-fake-green guard inventory — how a passing signal is tied to the real property.
+  - path: docs/testing/e2e-strategy.md
+    tier: conditional
+    applies: deploys
+    phase: build
+    drivers: ['iso9001']
+    template: test-strategy
+    purpose: End-to-end test strategy — critical paths, environments, data.
+  - path: docs/testing/playwright-coverage.md
+    tier: conditional
+    applies: has-mobile
+    phase: build
+    drivers: ['iso9001']
+    accept_any: ['docs/testing/playwright-coverage.md', 'docs/testing/e2e-coverage.md']
+    purpose: Browser/e2e coverage map (Playwright) — which flows are covered.
+  - path: docs/governance/branch-protection-audit.md
+    tier: conditional
+    applies: deploys
+    phase: operate
+    drivers: ['iso27001', 'iso9001']
+    purpose: Branch-protection audit — required checks, review rules, admin overrides.
+  - path: docs/governance/raci-matrix.md
+    tier: conditional
+    applies: deploys
+    phase: inception
+    drivers: ['iso9001', 'iso12207']
+    accept_any: ['docs/governance/raci-matrix.md', 'docs/governance/RACI.md']
+    purpose: RACI matrix — who is Responsible / Accountable / Consulted / Informed.

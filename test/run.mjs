@@ -445,7 +445,11 @@ const diffPaths = (a, b, at = '') => {
 // 4) §1b attach-mode + check freshness, end-to-end on a copy of the self-repo
 {
   const repo = join(tmp, 'selfrepo')
-  cpSync(join(HERE, '..'), repo, { recursive: true, filter: (s) => !/(^|\/)(node_modules|\.git)(\/|$)/.test(s) })
+  // The copy stands in for a fresh checkout, so it must not carry what a checkout does not have.
+  // control-room.html is generated (verify -> gen -> room) and gitignored; copying it in would make
+  // this block fail for a true reason in a false situation — the git-derived halves of the briefing
+  // (commit drift, the issue-to-code link) cannot re-derive equal inside a tree with no .git.
+  cpSync(join(HERE, '..'), repo, { recursive: true, filter: (s) => !/(^|\/)(node_modules|\.git)(\/|$)/.test(s) && !/control-room\.html$/.test(s) })
   // this test regenerates a synthetic topology over the self-repo copy; the repo's REAL programme
   // overlay refers to the curated topology's ids, so drop it or gen fails loud (correctly) on it
   rmSync(join(repo, 'docs/architecture/c4-status.json'), { force: true })
@@ -1198,6 +1202,12 @@ const diffPaths = (a, b, at = '') => {
   // judged — `internal_budget` on the real demo, named by four DONE rows, rendered as unassessed.
   // The two halves part company: the verdict is still something the document says; a percentage
   // over a reach nobody can state is not.
+  //
+  // This IS the #43 guard, and it lives here rather than against a live checkout of the demo's
+  // source repository. statusFor never branches on MAX_ROWS to compute status2 — the cap reaches
+  // only `completion` — so an over-cap node whose rows are all DONE runs this same path; asserting
+  // it twice bought nothing, and asserting it against an uncommitted working copy meant the fixture
+  // could change under the test, which is exactly what happened.
   if (core.status2 !== 'in-progress') die(`docmap: over-cap node lost its verdict: ${core.status2}`)
   if (core.completion != null) die(`docmap: over-cap node got a percentage over an unstatable reach: ${core.completion}`)
 
@@ -1411,29 +1421,498 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok presentable — the shipped artifact itself passes, not a cleaned copy of it')
 }
 
-// #43: the prose cap must not silence the verdict. MAX_ROWS exists because stitching more than
-// three first sentences together invents a claim no document makes (lib/docmap.mjs:16-21) — a
-// statement about PROSE. statusFor went through describingRows and so inherited it, with the
-// perverse result that the more rows name a module the less verdict it gets. On the shipped demo
-// `internal_budget` is named by FOUR rows, all DONE, and comes out "not assessed" — the owner's
-// literal example of "things that exist are shown as not done".
+// The #43 guard ("a box many rows name is judged by all of them, not silenced by the prose cap")
+// used to be asserted a second time here, against a live checkout of the demo's private source
+// repository. It was removed rather than repaired, for two reasons that are the same reason:
+//   - it read `docs/FEATURE_MATRIX.md` from a path outside this repository, so two people running
+//     `npm test` did not get the same verdict — and it silently SKIPPED when that path was absent,
+//     which is every CI run. Green by absence on CI, red on one machine, is the false green this
+//     project exists to kill;
+//   - the rows it pinned have since been re-declared not-done upstream, so its expectation was
+//     simply wrong: `planned` was the correct answer and the assertion was the stale party.
+// The property itself is asserted on the committed `docmap` fixture, on the `core` node — see the
+// #43 comment there for why one assertion covers both shapes.
+
+// The Control Room, end to end: compose it, gate it, and prove the gate can fail. Until this block
+// existed nothing in the suite touched room.mjs, roomderive.mjs, link.mjs or taxonomy.mjs — and
+// both gates over them were broken in ways a single run would have caught. The fixture carries no
+// .git (a nested repository cannot be committed), so the history the link layer reads is built here
+// with pinned author dates: the month buckets are asserted below and must not drift with the clock.
 {
-  const { loadDocRows, indexByNode, statusFor } = await import(join(HERE, '..', 'lib', 'docmap.mjs'))
-  const model = readJson(join(HERE, '..', 'docs/demo/c4-model.json'))
-  const habenDocs = process.env.FORMA_HABEN_DOCS || '/home/luca/work/repos/haben'
-  if (!existsSync(join(habenDocs, 'docs/FEATURE_MATRIX.md'))) {
-    console.log('  skip docmap-cap — haben checkout not present at ' + habenDocs)
-  } else {
-    const rows = loadDocRows(habenDocs, ['docs/FEATURE_MATRIX.md'])
-    const idx = indexByNode(rows, model.nodes)
-    const e = idx.get('internal_budget')
-    if (!e) die('docmap-cap: internal_budget is not indexed at all — the fixture drifted')
-    if (e.rows.length <= 3) die('docmap-cap: internal_budget is named by ' + e.rows.length + ' rows, the case needs more than the cap')
-    const st = statusFor(idx, 'internal_budget')
-    if (!st) die('docmap-cap: internal_budget is named by ' + e.rows.length + ' DONE rows and got NO verdict — more evidence, less verdict')
-    if (st.status2 !== 'done') die('docmap-cap: ' + e.rows.length + ' rows all done produced status2=' + st.status2)
-    console.log('  ok docmap — a box many rows name is judged by all of them, not silenced by the prose cap')
+  const R = join(tmp, 'room'), alpha = join(R, 'alpha'), beta = join(R, 'beta')
+  cpSync(FIX('room'), R, { recursive: true })
+  const git = (repo, args, date) => {
+    const env = { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date }
+    const r = spawnSync('git', ['-C', repo, ...args], { encoding: 'utf-8', env })
+    if (r.status !== 0) die('room fixture: git ' + args.join(' ') + '\n' + (r.stdout || '') + (r.stderr || ''))
   }
+  const born = (repo) => {
+    git(repo, ['init', '-q', '.'], '2026-01-01T00:00:00')
+    git(repo, ['config', 'user.email', 'test@example.invalid'], '2026-01-01T00:00:00')
+    git(repo, ['config', 'user.name', 'Forma Test'], '2026-01-01T00:00:00')
+  }
+  const commit = (repo, message, date) => { git(repo, ['add', '-A'], date); git(repo, ['commit', '-q', '-m', message], date) }
+  const touch = (file) => writeFileSync(file, readFileSync(file, 'utf-8') + '\n// touched\n')
+
+  born(alpha)
+  commit(alpha, 'chore: scaffold', '2026-06-15T10:00:00')
+  touch(join(alpha, 'src/core/engine.js'))
+  commit(alpha, 'feat(core): the engine (#1)', '2026-07-10T10:00:00')
+  touch(join(alpha, 'src/core/parser.js'))
+  commit(alpha, 'fix(core): parser (#99)', '2026-07-20T10:00:00')
+  for (const f of ['src/core/engine.js', 'src/core/parser.js', 'src/util/log.js']) touch(join(alpha, f))
+  commit(alpha, 'chore: sweep three files (#2)', '2026-08-01T10:00:00')
+  born(beta)
+  commit(beta, 'feat: beta (#5)', '2026-07-05T10:00:00')
+
+  const topo = join(alpha, 'topology.json'), model = join(alpha, 'model.json'), manifest = join(R, 'manifest.json')
+  const roomHtml = join(R, 'control-room.html'), roomHtml2 = join(R, 'second.html')
+  let r = run(['init', '--repo', alpha, '--out', topo, '--force']); if (r.status !== 0) die('room: init exit ' + r.status, r)
+  // A governed future, so the checkpoint stepper has something to be measured against. Curated
+  // after init because that is how a real timeline arrives: init seeds structure, a human writes
+  // where it is going.
+  const seeded = readJson(topo)
+  seeded.timeline = {
+    source: 'docs/DESIGN.md',
+    checkpoints: [
+      { id: 'normalize', label: 'Input normalized in one place', patch: { nodes: { update: [{ id: 'core', set: { status2: 'in-progress' }, change: 'core takes over normalization' }] } } },
+      { id: 'one-logger', label: 'Every message through one helper', patch: { nodes: { update: [{ id: 'util', set: { status2: 'done' }, change: 'util owns all output' }] } } },
+    ],
+  }
+  writeFileSync(topo, JSON.stringify(seeded, null, 2))
+  r = run(['gen', '--repo', alpha, '--topology', topo, '--out', model]); if (r.status !== 0) die('room: gen exit ' + r.status, r)
+  r = run(['room', '--manifest', manifest, '--out', roomHtml]); if (r.status !== 0) die('room: exit ' + r.status, r)
+
+  // Determinism (I12): the only clock is manifest.today, so two renders of unchanged inputs are
+  // byte-identical. This is also the property scripts/room-presentable.mjs re-checks independently.
+  r = run(['room', '--manifest', manifest, '--out', roomHtml2]); if (r.status !== 0) die('room: second render exit ' + r.status, r)
+  if (readFileSync(roomHtml, 'utf-8') !== readFileSync(roomHtml2, 'utf-8')) die('room: two renders of the same manifest are not byte-identical')
+
+  const roomOf = (file) => {
+    const m = /window\.__ROOM__ = ([\s\S]*?);\s*<\/script>/.exec(readFileSync(file, 'utf-8'))
+    if (!m) die('room: __ROOM__ seam not found in ' + file)
+    return JSON.parse(m[1])
+  }
+  const ROOM = roomOf(roomHtml)
+  const progOf = (id) => { const p = (ROOM.programs || []).find((x) => x.id === id); if (!p) die('room: programme ' + id + ' is missing from the artifact'); return p }
+  const A = progOf('alpha'), B = progOf('beta')
+
+  // A commit touching more files than linkMaxFiles is a sweep: excluded from attribution, but
+  // counted and named rather than silently dropped (I9). The manifest declares 2; the sweep is 3.
+  if (A.derived.link.excludedSweeps.length !== 1) die('room: expected 1 excluded sweep at linkMaxFiles=2, got ' + JSON.stringify(A.derived.link.excludedSweeps))
+
+  // One assertion covering two regressions at once. #1 landed in 2026-07 and is a real issue; #99
+  // landed in 2026-07 too but is a PULL REQUEST number, absent from the snapshot; #2's only commit
+  // is the August sweep. So: exactly one month, exactly one landing.
+  //  - if the snapshot intersection were dropped, #99 would make 2026-07 read `landed: 2`;
+  //  - if linkMaxFiles stopped reaching the portfolio path, the sweep would add a 2026-08 bucket.
+  const landing = (ROOM.portfolio.landing || []).find((l) => l.program === 'alpha')
+  if (!landing || landing.months.length !== 1 || landing.months[0].month !== '2026-07' || landing.months[0].landed !== 1) {
+    die('room: alpha landing should be exactly [{2026-07, landed 1}], got ' + JSON.stringify(landing && landing.months))
+  }
+
+  // A programme with no map still derives everything its issues can answer. It used to derive
+  // nothing at all, so the gate had nothing per-programme to re-derive for it.
+  if (B.derived === null) die('room: beta derived nothing — a programme without a map must still derive from its issues')
+  if (B.derived.link !== null || B.derived.commitDrift !== null) die('room: beta has no map, so link and commitDrift must be null, got ' + JSON.stringify({ link: B.derived.link, commitDrift: B.derived.commitDrift }))
+  if (B.derived.kpis.linkCoveragePct !== null) die('room: beta was never asked the issue-to-code question; coverage must be null, not ' + B.derived.kpis.linkCoveragePct)
+  if (!B.derived.kanban || B.derived.kanban.chiuse.join() !== '6') die('room: beta kanban should still bucket its own issues, got ' + JSON.stringify(B.derived.kanban))
+  if (ROOM.portfolio.totals.unknownRule !== 1) die('room: beta declares no blocking rule, so unknownRule must be 1 (absent is not empty, I7), got ' + ROOM.portfolio.totals.unknownRule)
+
+  const presentable = (file) => spawnSync(process.execPath, [join(HERE, '..', 'scripts', 'room-presentable.mjs'), '--room', file, '--manifest', manifest], { encoding: 'utf-8' })
+  r = presentable(roomHtml)
+  if (r.status !== 0) die('room-presentable: the generated briefing does not pass its own publication gate\n' + (r.stdout || '') + (r.stderr || ''))
+
+  const checkRoom = (file, mf) => run(['check', '--repo', alpha, '--model', model, '--topology', topo, '--room', file, '--manifest', mf || manifest])
+  r = checkRoom(roomHtml)
+  if (r.status !== 0) die('room: check fails on an untouched briefing\n' + (r.stdout || '') + (r.stderr || ''))
+
+  // The gate must FAIL on a hand-altered aggregate, or its green proves nothing. Both directions:
+  // the mapped programme and the map-less one, which was ungated entirely before.
+  const tamper = (from, to, find, replace) => {
+    const src = readFileSync(from, 'utf-8'), out = src.replace(find, replace)
+    if (out === src) die('room: tamper pattern did not apply — ' + find)
+    writeFileSync(to, out)
+  }
+  const tamperedA = join(R, 'tampered-alpha.html'), tamperedB = join(R, 'tampered-beta.html')
+  tamper(roomHtml, tamperedA, '"openCount":2', '"openCount":7')
+  r = checkRoom(tamperedA)
+  if (r.status === 0) die('room: check passed a briefing whose Executive KPIs were altered by hand')
+  if (!/alpha — Executive KPIs/.test(r.stderr || '')) die('room: check failed but did not name the programme and the field, got: ' + (r.stderr || ''))
+  const betaAt = readFileSync(roomHtml, 'utf-8').indexOf('"id":"beta"')
+  tamper(roomHtml, tamperedB, /"noMilestoneCount":1/g, '"noMilestoneCount":0')
+  if (betaAt < 0) die('room: beta is not present in the artifact at all')
+  r = checkRoom(tamperedB)
+  if (r.status === 0) die('room: check passed an altered aggregate on the programme with no map — the map-less path is ungated')
+
+  // A manifest and an artifact that disagree about which programmes exist is drift, not a detail.
+  const manifestGamma = join(R, 'manifest-gamma.json')
+  const mf = readJson(manifest)
+  mf.programs.push({ id: 'gamma', ghRepo: 'acme/gamma', repo: 'beta', issues: 'beta/issues.json' })
+  writeFileSync(manifestGamma, JSON.stringify(mf, null, 2))
+  r = checkRoom(roomHtml, manifestGamma)
+  if (r.status === 0) die('room: check passed a manifest declaring a programme the artifact does not render')
+
+  // A truncated snapshot cannot support counts or proportions: refuse rather than degrade (D8).
+  const truncated = join(R, 'truncated.json')
+  const snap = readJson(join(alpha, 'issues.json')); snap.truncated = true
+  writeFileSync(truncated, JSON.stringify(snap))
+  const mfTrunc = join(R, 'manifest-truncated.json')
+  const mt = readJson(manifest); mt.programs[0].issues = 'truncated.json'
+  writeFileSync(mfTrunc, JSON.stringify(mt, null, 2))
+  r = run(['room', '--manifest', mfTrunc, '--out', join(R, 'never.html')])
+  if (r.status === 0) die('room: composed a briefing from a snapshot flagged truncated')
+
+  // The traceability chain. alpha declares two documents: docs/PRD.md carries R-* requirements,
+  // docs/DESIGN.md carries D-* decisions that satisfy them and land on issues. Together the last
+  // two assertions are what makes "the GitHub issues ARE the WBS" falsifiable rather than a wish:
+  // nothing planned may be unaccounted for, and nothing open may be unplanned.
+  const matrix = A.derived.rtm
+  if (!matrix) die('rtm: alpha declares an rtm block and derived no matrix')
+  if (matrix.coverage.requirements !== 5 || matrix.coverage.withIssues !== 3) die('rtm: expected 5 requirements, 3 landing on issues, got ' + JSON.stringify(matrix.coverage))
+  if (matrix.progress['D-3'].pct !== 100) die('rtm: D-3 cites only the closed issue #3, so it reads 100%, got ' + JSON.stringify(matrix.progress['D-3']))
+  if (matrix.progress['R-1'].pct !== null) die('rtm: R-1 cites no issue at all, so it has no percentage rather than a zero (I6), got ' + JSON.stringify(matrix.progress['R-1']))
+  for (const hole of ['duplicateIds', 'danglingRefs', 'uncovered', 'orphanIssues']) {
+    if (matrix.orphans[hole].length) die(`rtm: the fixture matrix is complete, but ${hole} is not empty: ` + JSON.stringify(matrix.orphans[hole]))
+  }
+  if (B.derived.rtm !== null) die('rtm: beta declares no rtm block, so it must derive null — opt-in by presence (I11)')
+
+  // Each hole, one at a time, edited into the document rather than into the artifact: this is the
+  // chain failing at its source, which is where a reader has to fix it.
+  const rtmBreaks = [
+    ['a duplicate id', (s) => s + '| D-1 | A second row answering to D-1 | `R-2` | `#2` |\n', /id "D-1" is declared twice/],
+    ['a reference to a requirement that does not exist', (s) => s.replace('`R-2` | `#2`', '`R-9` | `#2`'), /cites satisfies R-9, which does not exist/],
+    ['a decision that lands on no work', (s) => s.replace('| `R-1` | `#3` |', '| `R-1` | |'), /requirement "D-3" lands on no issue and names no verification/],
+    ['open work no requirement claims', (s) => s.replace('`R-2` | `#2`', '`R-2` | `#1`'), /open issue #2 .* is cited by no requirement/],
+  ]
+  // The document is restored BEFORE the assertions, not after the loop: a die() mid-loop would
+  // otherwise leave the fixture edited, and the next block's failure would point at the wrong thing.
+  const designDoc = join(alpha, 'docs/DESIGN.md'), designSrc = readFileSync(designDoc, 'utf-8')
+  for (const [what, edit, expected] of rtmBreaks) {
+    const broken = edit(designSrc)
+    if (broken === designSrc) die(`rtm: the edit for "${what}" changed nothing — the fixture document drifted`)
+    writeFileSync(designDoc, broken)
+    const rebuilt = join(R, 'rtm-broken.html')
+    const composed = run(['room', '--manifest', manifest, '--out', rebuilt])
+    const graded = composed.status === 0 ? checkRoom(rebuilt) : null
+    writeFileSync(designDoc, designSrc)
+    if (!graded) die(`rtm: room refused to compose with ${what}; the matrix is graded by check, not by the composer`, composed)
+    if (graded.status === 0) die(`rtm: check passed a matrix with ${what}`)
+    if (!expected.test(graded.stderr || '')) die(`rtm: check failed on ${what} but did not say so — got: ` + (graded.stderr || '').slice(0, 400))
+  }
+
+  // A document that contributes nothing is named. Untracked is the case that matters: the matrix
+  // must not depend on what happens to be lying in a working tree.
+  const extra = join(alpha, 'docs/EXTRA.md')
+  writeFileSync(extra, '| id | requirement | issues |\n|---|---|---|\n| R-7 | Never entered git | `#1` |\n')
+  const mfExtra = join(R, 'manifest-extra.json')
+  const withExtra = readJson(manifest)
+  withExtra.programs[0].rtm.docs.push({ path: 'docs/EXTRA.md', idPattern: '^R-\\d+$', role: 'requirement' })
+  writeFileSync(mfExtra, JSON.stringify(withExtra, null, 2))
+  r = run(['room', '--manifest', mfExtra, '--out', join(R, 'rtm-extra.html')])
+  if (r.status !== 0) die('rtm: room refused an untracked rtm document', r)
+  r = checkRoom(join(R, 'rtm-extra.html'), mfExtra)
+  if (r.status === 0) die('rtm: check passed a matrix built from a document git does not track')
+  if (!/docs\/EXTRA\.md contributed no rows \(not tracked by git\)/.test(r.stderr || '')) die('rtm: an untracked document was skipped without being named — got: ' + (r.stderr || '').slice(0, 300))
+  rmSync(extra)
+
+  // Where we were. The whole series comes out of ONE snapshot, from createdAt/closedAt, so there is
+  // no register to keep and no second fetch — and the clock stays manifest.today.
+  const history = A.derived.history
+  if (!history) die('room: alpha carries issue dates, so history must derive')
+  const firstPoint = history.points[0], lastPoint = history.points[history.points.length - 1]
+  if (lastPoint.at !== '2026-08-10') die('room: the history series must end on manifest.today, got ' + lastPoint.at)
+  if (lastPoint.open !== 2 || lastPoint.closed !== 1) die('room: today reads 2 open / 1 closed, got ' + JSON.stringify(lastPoint))
+  if (firstPoint.at.slice(0, 7) !== '2026-04') die('room: the series must start at the first issue, not a fixed window back, got ' + firstPoint.at)
+  const june = history.points.filter(function (p) { return p.at.slice(0, 7) === '2026-06' })[0]
+  if (!june || june.open !== 3 || june.closed !== 0) die('room: on 2026-06-30 all three issues were open and none closed, got ' + JSON.stringify(june))
+  if (B.derived.history === null) die('room: beta also carries dates, so it too must derive history')
+  // A snapshot written before the fields existed must say so rather than draw a flat line.
+  const dateless = join(R, 'dateless.json')
+  const stripped = readJson(join(alpha, 'issues.json'))
+  for (const it of stripped.issues) { delete it.createdAt; delete it.closedAt }
+  writeFileSync(dateless, JSON.stringify(stripped))
+  const mfDateless = join(R, 'manifest-dateless.json')
+  const md = readJson(manifest); md.programs[0].issues = 'dateless.json'
+  writeFileSync(mfDateless, JSON.stringify(md, null, 2))
+  r = run(['room', '--manifest', mfDateless, '--out', join(R, 'dateless.html')])
+  if (r.status !== 0) die('room: a snapshot without issue dates must still compose', r)
+  if (roomOf(join(R, 'dateless.html')).programs[0].derived.history !== null) die('room: a snapshot with no dates must derive null history, not an empty or flat series')
+
+  // The checkpoint stepper, given a completion it can be held to. `normalize` patches `core`, and
+  // issue #1 landed on core, so it reads 0 of 1 closed. `one-logger` patches `util`, which no
+  // surviving link reaches, so it reads null — never 0%, which would look like measured failure.
+  const cps = A.derived.checkpoints
+  if (!cps || cps.length !== 2) die('room: alpha declares two checkpoints, got ' + JSON.stringify(cps && cps.length))
+  const normalize = cps[0]
+  if (normalize.nodes.join() !== 'core') die('room: the normalize checkpoint patches core, got ' + JSON.stringify(normalize.nodes))
+  if (normalize.total !== 1 || normalize.closed !== 0 || normalize.pct !== 0) die('room: normalize should read 0 of 1 closed, got ' + JSON.stringify(normalize))
+  if (cps[1].total !== 0 || cps[1].pct !== null) die('room: a checkpoint no issue reaches reports null, not 0% — got ' + JSON.stringify(cps[1]))
+
+  // Documents: the canon in full, in declared order, within the budget.
+  if (!A.docs) die('room: alpha declares docs.include and carried none')
+  if (A.docs.embedded.map(function (d) { return d.path }).join() !== 'docs/PRD.md,docs/DESIGN.md') die('room: the canon must be carried in declared order, got ' + JSON.stringify(A.docs.embedded.map(function (d) { return d.path })))
+  if (!/R-1/.test(A.docs.embedded[0].text)) die('room: a canon document was carried without its text')
+  if (A.docs.bytes > A.docs.maxBytes) die('room: the carried corpus exceeded its own budget')
+  if (B.docs !== null) die('room: beta declares no docs, so it carries null rather than an empty corpus')
+  // The budget refuses, it never truncates: a document that does not fit is listed with its reason.
+  const mfTiny = join(R, 'manifest-tiny.json')
+  const tiny = readJson(manifest); tiny.docs = { maxBytes: 1 }
+  writeFileSync(mfTiny, JSON.stringify(tiny, null, 2))
+  r = run(['room', '--manifest', mfTiny, '--out', join(R, 'tiny.html')])
+  if (r.status !== 0) die('room: a byte budget nothing fits inside must still compose', r)
+  const tinyDocs = roomOf(join(R, 'tiny.html')).programs[0].docs
+  if (tinyDocs.embedded.length) die('room: a document was embedded past the byte budget')
+  if (!tinyDocs.listed.some(function (d) { return /budget/.test(d.why) })) die('room: a document dropped for size must be listed with that as its reason, got ' + JSON.stringify(tinyDocs.listed))
+
+  // A programme turned off is excluded and NAMED. Absent and deliberately excluded differ (I7).
+  if (ROOM.programs.some(function (p) { return p.id === 'gamma' })) die('room: a programme with enabled:false was composed anyway')
+  if (!(ROOM.meta.excluded || []).some(function (p) { return p.id === 'gamma' })) die('room: a programme was excluded without being named in the Options view')
+
+  // The shell: every route is a real element, the pre-tab anchors still resolve, and printing
+  // un-hides all of them — an artifact that replaces a deck has to come out of a printer whole.
+  const shell = readFileSync(roomHtml, 'utf-8')
+  for (const filled of ['window.__ROOM__ = {', 'window.__STRINGS__ = {', 'id="holo-src"']) {
+    if (shell.indexOf(filled) < 0) die('room: the generated file is missing ' + filled + ' — a template seam went unfilled')
+  }
+  if (shell.indexOf('__STRINGS__*/null') >= 0) die('room: the strings seam was left unfilled, so the page would render with no words at all')
+  if (!/@media print[\s\S]*\.view\[hidden\]\{display:block!important\}/.test(shell)) die('room: printing does not un-hide the inactive views, so a printed briefing is one page of seven')
+  for (const legacy of ['verdict', 'now', 'moving', 'mismatch']) {
+    if (shell.indexOf('"' + legacy + '"') < 0) die('room: the pre-tab anchor #' + legacy + ' is no longer a section id, so an existing link breaks')
+  }
+
+  console.log('  ok room — the briefing composes deterministically, both gates fire, and both refuse a hand-altered aggregate')
+  console.log('  ok rtm — requirements trace to issues, and check names each of the four holes at its source line')
+  console.log('  ok views — history from one snapshot, checkpoints with measured completion, a canon within budget, and a programme deliberately left out')
 }
 
-console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable all green.')
+// `forma scan` and `forma room --serve`: the two halves of "autodetect, with checkboxes". The
+// second exists because static HTML cannot write a file, and the first exists so the answer to
+// "which programmes are there" is not typed by hand. Both are graded on the same thing: a decision
+// a human made must survive the tool running again.
+{
+  const root = join(tmp, 'scan-root'), mf = join(root, 'forma.room.json')
+  const git = (repo, args) => {
+    const r = spawnSync('git', ['-C', repo, ...args], { encoding: 'utf-8', env: { ...process.env, GIT_AUTHOR_DATE: '2026-01-01T00:00:00', GIT_COMMITTER_DATE: '2026-01-01T00:00:00' } })
+    if (r.status !== 0) die('scan fixture: git ' + args.join(' ') + '\n' + (r.stdout || '') + (r.stderr || ''))
+  }
+  for (const name of ['one', 'two']) {
+    const dir = join(root, name)
+    mkdirSync(join(dir, 'docs/architecture'), { recursive: true })
+    writeFileSync(join(dir, 'docs/architecture/c4-issues.json'), '{}')
+    git(dir, ['init', '-q', '.'])
+    git(dir, ['remote', 'add', 'origin', `git@github.com:acme/${name}.git`])
+    git(dir, ['config', 'user.email', 'test@example.invalid'])
+    git(dir, ['config', 'user.name', 'Forma Test'])
+    git(dir, ['add', '-A'])
+    git(dir, ['commit', '-qm', 'init'])
+  }
+  writeFileSync(join(root, 'one/docs/architecture/c4-model.json'), '{}')
+  writeFileSync(join(root, 'one/docs/architecture/c4-topology.json'), '{}')
+  // A directory that is not a checkout, and a checkout Forma knows nothing about, are both skipped:
+  // guessing otherwise would put somebody's dotfiles into a briefing.
+  mkdirSync(join(root, 'not-a-checkout'), { recursive: true })
+  const stranger = join(root, 'stranger')
+  mkdirSync(stranger, { recursive: true })
+  git(stranger, ['init', '-q', '.'])
+
+  let r = run(['scan', '--root', root, '--manifest', mf])
+  if (r.status !== 0) die('scan: exit ' + r.status, r)
+  let found = readJson(mf)
+  if (found.programs.map(function (p) { return p.id }).join() !== 'one,two') die('scan: expected exactly one,two — got ' + JSON.stringify(found.programs.map(function (p) { return p.id })))
+  if (found.programs[0].ghRepo !== 'acme/one') die('scan: ghRepo was not read from the git remote, got ' + found.programs[0].ghRepo)
+  if (!found.programs[0].model || found.programs[1].model) die('scan: model/topology must be named only for the checkout that has both')
+  if (found.today !== null) die('scan: today is the determinism anchor and must never be invented, got ' + JSON.stringify(found.today))
+
+  // The rule that matters on the second run.
+  found.today = '2026-08-10'
+  found.programs[0].enabled = false
+  found.programs[0].taxonomy = { minPopulation: 1 }
+  writeFileSync(mf, JSON.stringify(found, null, 2))
+  r = run(['scan', '--root', root, '--manifest', mf])
+  if (r.status !== 0) die('scan: second run exit ' + r.status, r)
+  const again = readJson(mf)
+  if (again.programs[0].enabled !== false) die('scan: re-running silently switched a programme back on — the decision to exclude it was lost')
+  if (!again.programs[0].taxonomy) die('scan: re-running discarded a hand-curated field')
+  if (again.today !== '2026-08-10') die('scan: re-running overwrote the determinism anchor')
+
+  // Serve mode binds loopback and nothing else. --port 0 asks the OS for a free one, so the test
+  // cannot collide with whatever is already running on this machine.
+  const served = spawnSync(process.execPath, [join(HERE, '..', 'lib', 'room.mjs'), '--manifest', join(tmp, 'room', 'manifest.json'), '--out', join(tmp, 'served.html'), '--port', '0', '--serve'], { encoding: 'utf-8', timeout: 3000 })
+  const spoke = (served.stdout || '') + (served.stderr || '')
+  if (!/serving http:\/\/127\.0\.0\.1:\d+/.test(spoke)) die('room --serve did not bind loopback: ' + spoke)
+  if (/0\.0\.0\.0|::/.test(spoke)) die('room --serve bound something wider than loopback: ' + spoke)
+  console.log('  ok scan+serve — discovery merges instead of replacing, an excluded programme stays excluded, and serve binds loopback only')
+}
+
+// I14 on a surface that did not exist before: the briefing now RENDERS markdown out of a
+// repository's own documents, and a link target read from that prose is attacker-adjacent input.
+// Assigning it to .href unchecked makes `[read me](javascript:...)` live XSS in a document written
+// by somebody else. The renderer is lifted out of the shipped template and driven directly, the
+// same trick this suite already uses for the viewer's pure functions.
+{
+  const src = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
+  const inlineFn = /function inline\(target,text\)\{[\s\S]*?\n\}/.exec(src)
+  const elFn = /function el\(t,c,x\)\{[^\n]*\n/.exec(src)
+  const mdFn = /function renderMarkdown\(src\)\{[\s\S]*?\n\}\n/.exec(src)
+  const mdhFn = /function mdHeading\(level\)\{[^\n]*\n/.exec(src)
+  if (!inlineFn) die('markdown: inline() not found in control-room.html — the renderer moved')
+  if (!elFn) die('markdown: el() not found in control-room.html')
+  if (!mdFn) die('markdown: renderMarkdown() not found in control-room.html — the renderer moved')
+  if (!mdhFn) die('markdown: mdHeading() not found in control-room.html')
+  const stub = `
+    var document = {
+      createElement: function (t) { return { tagName: t.toUpperCase(), attrs: {}, children: [], setAttribute: function (k, v) { this.attrs[k] = v }, appendChild: function (c) { this.children.push(c); return c } } },
+      createTextNode: function (t) { return { text: String(t) } },
+    };
+    ${elFn[0]}
+    ${inlineFn[0]}
+    ${mdhFn[0]}
+    ${mdFn[0]}
+    return {inline: inline, renderMarkdown: renderMarkdown};`
+  // new Function over text lifted from a TRACKED first-party file, which is the same no-jsdom trick
+  // this suite already uses to test the viewer's pure functions. The interpolated strings are our
+  // own source at a reviewed commit, never input; the thing being tested is precisely that the
+  // renderer refuses input.
+  const lifted = new Function(stub)()
+  const inline = lifted.inline
+  const anchorsFor = (md) => {
+    const target = { children: [], appendChild(c) { this.children.push(c) } }
+    inline(target, md)
+    return target.children.filter((c) => c.tagName === 'A')
+  }
+  // `//host/x` is a network-path reference — same scheme, different HOST. It is not a relative path,
+  // and an allow-list that lets it through is letting a document link off-site while looking local.
+  for (const hostile of ['[go](javascript:alert(1))', '[go](JaVaScRiPt:alert(1))', '[go](  javascript:alert(1))', '[go](data:text/html,<script>alert(1)</script>)', '[go](vbscript:msgbox)', '[go](//evil.example/phish)', '[go](\\/\\/evil.example)']) {
+    const a = anchorsFor(hostile)
+    if (a.length) die(`markdown: ${hostile} produced a live anchor with href ${a[0].href} — a document can inject a scheme`)
+  }
+  for (const safe of ['[go](https://example.com/x)', '[go](./docs/PRD.md)', '[go](/docs/PRD.md)', '[go](#section)', '[go](mailto:a@b.c)']) {
+    if (!anchorsFor(safe).length) die(`markdown: ${safe} should be a link and was rendered as text`)
+  }
+  // The rejected link is shown, not swallowed: a link that will not be followed should say so.
+  const rejected = { children: [], appendChild(c) { this.children.push(c) } }
+  inline(rejected, '[go](javascript:alert(1))')
+  if (!rejected.children.some((c) => c.text && c.text.indexOf('javascript:') > -1)) die('markdown: a refused link was dropped silently instead of being shown as text (I9)')
+
+  // Structure, not the appearance of structure. The renderer emitted `div.md-h` and `div.md-li`,
+  // which looked like nine headings and ten list items and exposed NONE of them: the accessibility
+  // tree for a 111-line document held zero headings and zero lists, so a screen-reader reader got
+  // one undifferentiated run of paragraphs with nothing to navigate by. Ordered lists were worse
+  // than invisible — `1.` was not matched at all, so PRD.md §2, this product's own definition of
+  // itself, was joined into a single run-on sentence on screen AND on paper.
+  const { renderMarkdown } = lifted
+  const tags = (node) => { const out = []; (function walk(n) { for (const c of n.children || []) { if (c.tagName) out.push(c.tagName); walk(c) } })(node); return out }
+  const find = (node, tag) => { let hit = null; (function walk(n) { for (const c of n.children || []) { if (!hit && c.tagName === tag) hit = c; walk(c) } })(node); return hit }
+  const doc = renderMarkdown('# Title\n\n## Section\n\nProse.\n\n- one\n- two\n\n1. first\n2. second\n\n> quoted\n')
+  const t = tags(doc)
+  // Demoted by two: the reader panel is already an h2, so the document\'s `#` is an h3.
+  if (t.indexOf('H3') < 0 || t.indexOf('H4') < 0) die('markdown: `#`/`##` did not become real headings — got ' + t.join(','))
+  // The old renderer emitted div.md-h and div.md-li. A DIV anywhere in the output means it is back.
+  if (t.indexOf('DIV') > -1) die('markdown: the renderer emitted a <div> — headings and list items are divs again, which look like structure and expose none')
+  if (!find(doc, 'UL') || !find(doc, 'OL')) die('markdown: a bullet list and a numbered list must be <ul> and <ol> — got ' + t.join(','))
+  if (find(doc, 'UL').children.filter((c) => c.tagName === 'LI').length !== 2) die('markdown: a two-item bullet list did not produce two <li>')
+  const ol = find(doc, 'OL')
+  if (ol.children.filter((c) => c.tagName === 'LI').length !== 2) die('markdown: `1.`/`2.` did not produce two <li> — numbered lists are being joined into a paragraph')
+  if (!find(doc, 'BLOCKQUOTE')) die('markdown: `>` did not become a <blockquote>')
+  // A list that starts at 3 renders as 3, 4 — silently renumbering somebody else\'s document is a
+  // lie about what it says.
+  const off = renderMarkdown('3. third\n4. fourth\n')
+  if (find(off, 'OL').attrs.start !== '3') die('markdown: a list starting at 3 was silently renumbered from 1')
+  // ...but a paragraph opening with a year is prose, not the two-thousand-and-twenty-sixth item.
+  if (find(renderMarkdown('2026. The year the manifest was frozen.\n'), 'OL')) die('markdown: a sentence beginning with a year was turned into a list')
+  // Once a list IS running, a four-digit item is an item. Dropping it into the paragraph buffer is
+  // a silent structural loss (I9), which is worse than rendering it plainly.
+  if (find(renderMarkdown('10. ten\n100. hundred\n1000. thousand\n'), 'OL').children.filter((c) => c.tagName === 'LI').length !== 3) {
+    die('markdown: an item numbered past 999 was dropped out of its own list')
+  }
+  // Nested lists (Audit #13): a deeper indent is a list under the previous item, not a flat row.
+  // The renderer ingests arbitrary client documents, so a nested list that flattens is a structural
+  // lie about what the document says — and the corpus has none today, which is exactly when it rots.
+  const nested = renderMarkdown('- parent\n  - child one\n  - child two\n- sibling\n')
+  const ul = find(nested, 'UL')
+  if (!ul) die('markdown: a bullet list did not produce a <ul>')
+  const lis = ul.children.filter((c) => c.tagName === 'LI')
+  if (lis.length !== 2) die(`markdown: nested list flattened — expected 2 top-level <li>, got ${lis.length}`)
+  const childUl = lis[0].children.filter((c) => c.tagName === 'UL')
+  if (childUl.length !== 1) die('markdown: a deeper indent did not become a nested <ul> under its parent item')
+  if (childUl[0].children.filter((c) => c.tagName === 'LI').length !== 2) die('markdown: the nested list lost its items')
+  // cross-type nesting: an ordered list under a bullet item
+  const mixed = renderMarkdown('- parent\n  1. first\n  2. second\n')
+  const muls = find(mixed, 'UL')
+  if (!muls || !muls.children.filter((c) => c.tagName === 'LI')[0].children.some((c) => c.tagName === 'OL')) {
+    die('markdown: an ordered list under a bullet item was not nested')
+  }
+  // a lone CR, U+2028 or U+2029 inside a document HUNG THE BROWSER: `.` and `$` exclude all three
+  // in JavaScript, so the unanchored list detector matched a line the anchored consumer could not,
+  // the index never advanced, and the loop appended empty <ul>s until the heap died. Repository
+  // text reaches this renderer unfiltered, so it was a hang triggered by somebody else's bytes.
+  // These cases run in-process: a regression hangs the suite, which is the honest failure — a test
+  // for a non-terminating loop cannot both prove termination and return.
+  for (const [why, input, want] of [
+    ['a lone CR inside a bullet', '- item\rmore\n', 'UL'],
+    ['a lone CR inside a numbered item', '1. item\rmore\n', 'OL'],
+    ['U+2028 inside a bullet', '- item\u2028more\n', 'UL'],
+    ['U+2029 inside a bullet', '- item\u2029more\n', 'UL'],
+  ]) {
+    if (!find(renderMarkdown(input), want)) die(`markdown: ${why} did not produce a <${want.toLowerCase()}> — the line terminator was not normalised`)
+  }
+  // Same mismatch, silent instead of fatal: the heading was rendered as a paragraph, hash included.
+  if (!find(renderMarkdown('# Title\u2028more\n'), 'H3')) die('markdown: a heading followed by U+2028 rendered as a paragraph with its hash still in it')
+  console.log('  ok markdown — a document cannot inject a scheme through a link, a refused link is shown rather than dropped, and headings, bullet lists, numbered lists and quotes are real elements')
+}
+
+// Locale parity, now that the tables are files rather than a literal buried in the template. I15
+// claimed this was enforced for the Control Room; it was only ever true of the single-lens viewer.
+{
+  const en = readJson(join(HERE, '..', 'lib/viewer/strings/en.json'))
+  const it = readJson(join(HERE, '..', 'lib/viewer/strings/it.json'))
+  const missing = Object.keys(en).filter(function (k) { return !(k in it) })
+  const extra = Object.keys(it).filter(function (k) { return !(k in en) })
+  if (missing.length) die('strings: keys present in en and missing from it: ' + missing.join(', '))
+  if (extra.length) die('strings: keys present in it and missing from en: ' + extra.join(', '))
+  // A key the template never reads is dead weight a translator still has to carry.
+  const template = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
+  const unused = Object.keys(en).filter(function (k) { return template.indexOf('STR.' + k) < 0 })
+  if (unused.length) die('strings: declared but never read by the template: ' + unused.join(', '))
+  // A string carrying a {placeholder} has to reach the reader through fmt(). Appending one raw puts
+  // a literal `{closed}` on the page — which is what shipped for the length of one screenshot, in
+  // the sentence written to stop the first screen reading as broken.
+  const raw = Object.keys(en).filter(function (k) {
+    if (!/\{[a-zA-Z]\w*\}/.test(en[k])) return false
+    return !new RegExp('(?:fmt|plural)\\([^)]*STR\\.' + k + '\\b').test(template)
+  })
+  if (raw.length) die('strings: carries a {placeholder} but never reaches fmt(), so it renders literally: ' + raw.join(', '))
+  console.log(`  ok strings — ${Object.keys(en).length} keys at en/it parity, every one read by the template`)
+}
+
+// The dogfood. A traceability convention that cannot read the document THIS repository writes is a
+// convention for other people's repositories. docs/PRD.md §6 is a real table, edited by hand for
+// prose reasons, and the parser has to find it without being told anything but the id pattern.
+// The full chain (issues, and therefore the four gate assertions) additionally needs a committed
+// `gh` snapshot; that is a disclosure decision docs/SCOPE-room.md §6 leaves open, so what is
+// asserted here is what can be asserted offline: the rows parse, and they parse as themselves.
+{
+  const { parseRequirements, trackedFiles } = await import(join(HERE, '..', 'lib', 'rtm.mjs'))
+  const repo = join(HERE, '..')
+  const tracked = trackedFiles(repo)
+  if (!tracked) die('rtm-dogfood: forma is not a readable git checkout, so the tracked-files rule cannot be exercised')
+  if (!tracked.has('docs/PRD.md')) die('rtm-dogfood: docs/PRD.md is not tracked by git')
+  const { rows, skipped } = parseRequirements(repo, [{ path: 'docs/PRD.md', idPattern: '^R-\\d+$', role: 'requirement' }], tracked)
+  if (skipped.length) die('rtm-dogfood: forma\'s own PRD contributed nothing — ' + JSON.stringify(skipped))
+  if (rows.length < 9) die(`rtm-dogfood: expected at least 9 R-* rows in docs/PRD.md, got ${rows.length}`)
+  const ids = rows.map((row) => row.id)
+  if (new Set(ids).size !== ids.length) die('rtm-dogfood: forma\'s own PRD declares a duplicate id: ' + ids.join(', '))
+  for (const row of rows) {
+    if (!row.text) die(`rtm-dogfood: ${row.id} parsed with no text`)
+    if (!row.verified.length) die(`rtm-dogfood: ${row.id} has no "verified by" entry — the column exists precisely so this cannot happen`)
+    if (!(row.line > 0)) die(`rtm-dogfood: ${row.id} carries no source line, so nothing could link back to the row`)
+  }
+  // Determinism across the compose→check gap rests on the file list being sorted and git-tracked.
+  // Parsing twice must give the identical answer, or `check` false-reds on an untouched tree.
+  const again = parseRequirements(repo, [{ path: 'docs/PRD.md', idPattern: '^R-\\d+$', role: 'requirement' }], tracked)
+  if (JSON.stringify(again.rows) !== JSON.stringify(rows)) die('rtm-dogfood: two parses of the same document disagree — check would false-red on an untouched tree')
+  console.log(`  ok rtm-dogfood — forma's own PRD parses as ${rows.length} traceable requirements, every one carrying its verification and its line`)
+}
+
+console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood all green.')
