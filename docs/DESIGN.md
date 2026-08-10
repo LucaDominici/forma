@@ -138,10 +138,63 @@ names. The `holo` skin keeps its own identity: it is the standalone artifact, wi
 There is deliberately no categorical palette, because no view needs to tell many nominal series
 apart.
 
+**Paper is the third palette, and declaring it was not enough.** Setting only `body{color:#000}` had
+left every token at its dark value, so chart numbers printed at 1.23:1 against white. Declaring a
+print palette fixed the numbers and not the output: a media query adds no specificity, so
+`@media print{:root{…}}` scores (0,1,0) and `html[data-theme="light"]` scores (0,1,1) and wins.
+Every reader who had ever pressed the theme button printed the screen palette, and the dark case
+passed only by tying the base `:root` on source order. The measurement script was reading the
+declaration and reporting a number half the readers never got — the same defect as the missing
+script, one layer in. It now derives every rule in a file that declares the ground token and fails
+if any of them ties or beats the print rule.
+
+| Measure | Briefing print |
+|---|---:|
+| lowest text ratio | 4.97:1 |
+| chart values (`.svg-value`) | 17.32:1 |
+| provenance and axis labels | 7.78:1 |
+
 - **Enforced by:** `node scripts/palette.mjs --check`, inside `npm test`.
 - **Red when:** a text token drops below 4.5:1 or a chart mark below 3:1 against either ground; a
-  pure `#000`/`#fff` appears; chroma is pushed against the ends of the lightness range; or the
-  status trio is ambiguous under CVD while the glyph-and-word encoding is gone.
+  pure `#000`/`#fff` appears; chroma is pushed against the ends of the lightness range; the status
+  trio is ambiguous under CVD while the glyph-and-word encoding is gone; or a theme selector reaches
+  the specificity of the print palette, so that what is measured is not what applies.
+
+## D10. The screen is the frame, and the floor is declared
+
+**Choice.** The briefing is an application in a fixed shell — `100dvh`, one 52px bar, panels that
+scroll inside themselves — and not a document that scrolls. Width earns columns: two below 1500px,
+three to 2299, four above. There is no `max-width`.
+
+**Why.** Measured before the redesign, on the smallest possible fixture: the executive view ran
+1385px past a 1920×1080 screen, 2.3 screenfuls; and on a 3440px monitor `main` was 1180px wide, so
+2260px — 66% of the display — was blank. That is the worst of both, wasting the axis you have and
+overflowing the one you do not.
+
+**The floor is 1920×1080 as a viewport, which is ~900px of real `innerHeight`.** Browser and system
+chrome take 130–200px off an FHD monitor, so designing against 1080 is designing against a screen
+nobody has. The budget is 900 − 52 bar − 32 padding ≈ **815px of content**.
+
+**At the floor the evidence tier scrolls inside its own frame, and that is the design, not a
+shortfall.** At 1920×900 the portfolio view holds 476px of evidence in a 376px frame: 100px sit
+behind an internal scrollbar rather than lengthening the page. Every view answers its question in
+the fixed tier above; the tier that scrolls is the supporting evidence. On a 3440×1440 monitor the
+same content fits with nothing hidden, which is how the extra pixels pay: more answer, not more
+white.
+
+**Below the floor the shell is released rather than crushed** — the page scrolls, and it is a
+deliberate exit. The two arms are separate rules: below 1199px wide the layout also collapses to one
+column, because it is narrow; below 761px tall it keeps whatever columns the width earned, because
+it is only short. Folding them together turned a half-height ultrawide into a single 3381px column
+with a 2096px document.
+
+**Rejected: a height that adapts by hiding.** Dropping panels at small heights would make the
+briefing say different things on different screens, and a briefing that omits without saying so is
+the artifact this product exists to replace.
+
+- **Enforced by:** measurement in a real browser, in CI, not by a regex over CSS text in `npm test`
+  — a pattern match cannot fail for the right reason. See [`docs/technical-debt.md`](technical-debt.md).
+- **Red when:** any route overflows the viewport at 3440×1440 or 1920×900.
 
 ## D7. Determinism over freshness
 

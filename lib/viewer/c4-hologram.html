@@ -112,6 +112,16 @@ svg.dense .edge.hot{opacity:1;stroke-width:2.6}
 #stage.anim svg{animation:svgin .34s cubic-bezier(.2,.7,.2,1) both;transform-origin:50% 44%}
 #stage.anim .nd{animation:ndin .55s ease both}
 @media(prefers-reduced-motion:reduce){#stage.anim svg,#stage.anim .nd{animation:none}}
+/* Paper has no time axis, and `both` holds the FROM state. Printing re-rasterises the frame, which
+   restarts these entrance animations, so every node was captured at opacity 0: the map came out of
+   the Control Room's PDF as an empty box with a few faint edge labels in it — the one page of the
+   briefing that is a picture, and it was blank. The infinite ones are worse than invisible: they
+   would each be frozen at whatever phase the raster happened to catch, so the same document
+   printed twice would not match. */
+@media print{
+ #stage.anim svg,#stage.anim .nd{animation:none}
+ .edge.flow,.nd.pulse rect{animation:none}
+}
 #etip{position:absolute;pointer-events:none;display:none;z-index:6;background:var(--detailbg);border:1px solid var(--border);
  color:var(--nm);font-size:10px;letter-spacing:.03em;padding:3px 8px;border-radius:5px;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,.45)}
 #legend{display:flex;gap:13px;font-size:9.5px;color:var(--sec);margin:10px 0 0;flex-wrap:wrap}
