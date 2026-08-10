@@ -13,13 +13,18 @@ code.
 
 ## 1. The definition of finished
 
-> `forma room` generates a self-contained, 8-tab HTML from a model + overlays + a `gh` snapshot,
-> with no post-generation hand-editing; `forma check` exits 0 on the same commit and fails on a
-> deliberately altered aggregate, naming what drifted; `scripts/room-presentable.mjs` exits 0 on
-> the generated artifact and fails on a missing evidence ref, an un-piled issue reference, or a
-> non-deterministic re-render.
+> `forma room` generates one self-contained HTML briefing from a manifest of programmes — each a
+> model + overlays + a `gh` snapshot — with no post-generation hand-editing; `forma check` exits 0
+> on the same commit and fails on a deliberately altered aggregate, naming the programme and what
+> drifted; `scripts/room-presentable.mjs` exits 0 on the generated artifact and fails on a missing
+> evidence ref, an un-piled issue reference, or a non-deterministic re-render.
 
 Two people running those three commands on the same inputs get the same three verdicts.
+
+Both gates are exercised by `npm test` against `test/fixtures/room`, in both directions: they pass
+on an untouched briefing and fail on one whose aggregates were altered by hand. That second half is
+the part that was missing — each gate had been written against a shape the composer no longer
+produced, so neither could run at all, and nothing in the suite would have said so.
 
 ## 2. What "mirrors reality" means, operationally
 
@@ -40,9 +45,13 @@ not render.
 
 - `forma verify` gains a second output, `c4-issues.json`, additive and atomic with the existing
   model write.
-- `forma room` composes 8 tabs (`exec`, `holo`, `c4`, `wbs`, `auto`, `kan`, `seg`, `tec`) from
-  model + status overlay + issue snapshot + git linkage + optional audit overlays
-  (`c4-health.json`, `c4-findings.json`).
+- `forma room` composes one briefing in reading order — the verdict, what waits on you, what moves,
+  what does not add up, the map, the programme — from model + status overlay + issue snapshot + git
+  linkage + optional audit overlays (`c4-health.json`, `c4-findings.json`). Eight tabs (`exec`,
+  `holo`, `c4`, `wbs`, `auto`, `kan`, `seg`, `tec`) were this document's original plan; they were
+  built, measured across three programmes and rejected — [ADR-0005](adr/0005-portfolio-briefing-over-per-repo-dashboard.md)
+  records why. Four of the derivations they were to render (`kpis`, `kanban`, `queue`, `link`) are
+  still computed and gated, with no surface reading them yet.
 - `forma check` gains four assertions, all opt-in by presence.
 - The audit channel (`c4-health.json`/`c4-findings.json`) is populated by the same
   plan-then-apply pattern `--enricher agent` already uses for description holes — never a

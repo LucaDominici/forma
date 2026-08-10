@@ -23,7 +23,9 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
   `forma.room.schema.json` — the Control Room overlays (docs/SCOPE-room.md), each its own file
   with its own lifecycle, validated by the same `validateModel(obj, schemaPath)`.
 - `lib/viewer/c4-hologram.html` — the interactive viewer (swappable skins).
-- `lib/viewer/control-room.html` — the 8-tab Control Room shell `forma room` composes into.
+- `lib/viewer/control-room.html` — the Control Room shell `forma room` composes into: one briefing
+  in reading order (the verdict, what waits on you, what moves, what does not add up, the map, the
+  programme), not tabs. Tabs were built, measured and rejected — see ADR-0005.
 - `scripts/` — `lint.mjs` (zero-dep lint), `check-clean.mjs` (prepack `.fuse_hidden` guard).
 - `test/` — `run.mjs` runs `init→gen→check` across the fixtures; `stub-gh.mjs` stands in for the
   `gh` CLI so `verify` is tested offline.
@@ -35,8 +37,12 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
   networked paths, both opt-in — keep it that way.
 - The viewer is one HTML file in ES5 style (var/function); every new UI string goes in BOTH
   locales of `STRINGS`.
-- `npm pack --dry-run` must stay at the 20 shipped files, zero `.fuse_hidden` (the
-  `prepack` guard enforces this).
+- `npm pack --dry-run` must stay clean of editor residue — zero `.fuse_hidden`. That much the
+  `prepack` guard does enforce; it does **not** check the file count. This line used to claim a
+  count of 20 and claim the guard held it: the selection is 31 today, and the number has moved
+  several times unnoticed. Bump it deliberately or enforce the intended list mechanically — see
+  the open item in [`docs/SCOPE-room.md`](docs/SCOPE-room.md) §6 and the defect row in
+  [`docs/DELIVERY.md`](docs/DELIVERY.md).
 - Architecture of Forma itself is modeled with Forma: see `docs/architecture/`
   (the dogfood). `forma check` fails if that model drifts from the code.
 - Conventional commits; keep history clean (squash merge on `main`).
