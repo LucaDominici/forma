@@ -46,12 +46,21 @@ not render.
 - `forma verify` gains a second output, `c4-issues.json`, additive and atomic with the existing
   model write.
 - `forma room` composes one briefing in reading order — the verdict, what waits on you, what moves,
-  what does not add up, the map, the programme — from model + status overlay + issue snapshot + git
-  linkage + optional audit overlays (`c4-health.json`, `c4-findings.json`). Eight tabs (`exec`,
-  `holo`, `c4`, `wbs`, `auto`, `kan`, `seg`, `tec`) were this document's original plan; they were
-  built, measured across three programmes and rejected — [ADR-0005](adr/0005-portfolio-briefing-over-per-repo-dashboard.md)
-  records why. Four of the derivations they were to render (`kpis`, `kanban`, `queue`, `link`) are
-  still computed and gated, with no surface reading them yet.
+  what does not add up — with five views per programme nested under it (`exec`, `tech`, `map`,
+  `wbs`, `docs`) and an `options` view, all in one file, addressed by hash route. Eight flat tabs
+  (`exec`, `holo`, `c4`, `wbs`, `auto`, `kan`, `seg`, `tec`) were this document's original plan;
+  they were built, measured across three programmes and rejected by
+  [ADR-0005](adr/0005-portfolio-briefing-over-per-repo-dashboard.md), and
+  [ADR-0007](adr/0007-views-nested-under-the-briefing.md) records why views came back one level
+  down rather than in place of the briefing.
+- `forma scan` writes the programme list from a directory of checkouts, merging rather than
+  replacing: `enabled: false` and every hand-curated field survive a re-run, and `today` is never
+  invented.
+- `forma room --serve` is the only path that writes anything: loopback, one field per programme,
+  the manifest re-validated before the write (I18).
+- The traceability chain (`lib/rtm.mjs`, [ADR-0006](adr/0006-traceability-as-a-derivation-not-an-overlay.md))
+  turns the issue tracker into a WBS that can be checked: `forma check` fails on a requirement that
+  lands on no work and on open work no requirement claims.
 - `forma check` gains four assertions, all opt-in by presence.
 - The audit channel (`c4-health.json`/`c4-findings.json`) is populated by the same
   plan-then-apply pattern `--enricher agent` already uses for description holes — never a

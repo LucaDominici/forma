@@ -11,3 +11,4 @@ that links back to it. Newest last.
 | [0004](0004-control-room-as-a-forma-rendering.md) | Control Room as a Forma rendering, not a second product | Accepted |
 | [0005](0005-portfolio-briefing-over-per-repo-dashboard.md) | A portfolio briefing, not a per-repository dashboard | Accepted |
 | [0006](0006-traceability-as-a-derivation-not-an-overlay.md) | Traceability derived from the documents, not curated into a file | Accepted |
+| [0007](0007-views-nested-under-the-briefing.md) | Views nested under the briefing, not instead of it | Accepted |

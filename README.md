@@ -59,6 +59,8 @@ npx forma-arch <command>        # or: npm i -D forma-arch
 | `forma doc` | Project the arc42 scaffold (`ARCHITECTURE.scaffold.md`), or `--attach <file>` to inject a governed block into an existing doc |
 | `forma serve` | Open the live explorer at `http://localhost:4173` |
 | `forma verify` | Refresh status from live GitHub issues through your `gh` CLI — the **only** networked command |
+| `forma scan` | Find the programmes under a directory and write them into `forma.room.json` |
+| `forma room` | Compose the Control Room — one briefing over N programmes, in one self-contained HTML |
 
 **Box text comes from your docs.** `gen` fills each box with the module's docstring (Python `"""…"""`, JS/TS leading block), else the directory `README.md`, else a mapped arc42 section — so the explorer shows meaning, not a list of symbols. On a flat directory of many `foo_*` files it also synthesizes a **component** layer, described from its children's docs (`--no-cluster` to disable; `--cluster-min <n>` = leaves before a container is clustered, default 8; `--group-min <n>` = files sharing a prefix before they become a component, default 3).
 
@@ -147,6 +149,60 @@ accepts — the four above, plus `echo`, an offline stub the test suite uses and
 default provider is a silent choice about your network and your API keys — and the old default
 (`anthropic`) meant that anyone without `ANTHROPIC_API_KEY` exported got a skip line, exit 0 and the
 same empty boxes they ran `--enrich` to fill.
+
+## The Control Room
+
+The explorer answers "what is this system". The Control Room answers the other question: **across
+everything you are running, what needs you** — and then, per programme, where it stands and why.
+
+```
+forma verify --repo ../haben          # snapshot the issues (the only networked step)
+forma scan   --root .. --manifest forma.room.json
+forma room   --manifest forma.room.json --out control-room.html
+```
+
+One file. A briefing in reading order at `#/`, five views per programme under it, and an options
+view saying what is included and why:
+
+| Route | What it answers |
+|---|---|
+| `#/` | The verdict, what waits on you, what moves, what does not add up |
+| `#/<prog>/exec` | Where it stands: coverage of the plan, where we were, milestones, landings |
+| `#/<prog>/tech` | What needs a human: blocked work, audit verdicts, findings, and what is *not* known |
+| `#/<prog>/map` | The architecture, plus checkpoints carrying **measured** completion |
+| `#/<prog>/wbs` | Requirement → design → verification → issues, with the holes named |
+| `#/<prog>/docs` | The canon in full; everything else listed with a link |
+| `#/options` | What is in this briefing. With `--serve`, checkboxes that write the manifest |
+
+Printing gives you the whole thing, every view, which is the point: it has to replace the deck.
+
+**The issues become the WBS, checkably.** Declare an `rtm` block and Forma reads the id columns out
+of the documents you already write, joins them to the snapshot, and `forma check` **fails** on a
+requirement that lands on no work and on open work no requirement claims. Both directions, or the
+claim is unfalsifiable ([ADR-0006](docs/adr/0006-traceability-as-a-derivation-not-an-overlay.md)).
+
+```jsonc
+{
+  "today": "2026-08-10",                       // the determinism anchor: nothing calls Date.now()
+  "programs": [{
+    "id": "haben", "ghRepo": "you/haben", "repo": "../haben",
+    "issues": "../haben/docs/architecture/c4-issues.json",
+    "model":  "../haben/docs/architecture/c4-model.json",
+    "topology": "../haben/docs/architecture/c4-topology.json",
+    "blockedBy": { "labels": ["needs-human"] }, // never inferred: repos disagree on what waiting means
+    "rtm": {
+      "docs": [{ "path": "docs/PRD.md",    "idPattern": "^R-\\d+$", "role": "requirement" },
+               { "path": "docs/DESIGN.md", "idPattern": "^D-\\d+$", "role": "design" }],
+      "requireIssuesFrom": ["docs/DESIGN.md"]
+    },
+    "docs": { "include": ["docs/*.md"], "canon": ["docs/PRD.md", "docs/DESIGN.md"] }
+  }]
+}
+```
+
+Everything on screen is re-derivable: `forma check` recomputes every aggregate from the raw inputs
+and fails when the artifact disagrees, and `scripts/room-presentable.mjs` re-renders it and compares
+byte for byte. See [`docs/SCOPE-room.md`](docs/SCOPE-room.md) for what "finished" means here.
 
 ## How it fits together
 

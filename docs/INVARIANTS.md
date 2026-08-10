@@ -142,12 +142,17 @@ Model prose, issue titles, finding text and document bodies are all attacker-adj
 - **Red when:** a `</script>` in a description closes the script element. There is a test that
   plants exactly that.
 
-## I15. Every UI string exists in both locales
+## I15. Every UI string exists in both locales, and every declared string is used
 
-`STRINGS.en` and `STRINGS.it` stay at parity in both the viewer and the Control Room.
+The single-lens viewer keeps its `STRINGS` literal; the Control Room's tables are
+`lib/viewer/strings/{en,it}.json`. Both stay at parity, and the Control Room's are additionally
+checked for keys nothing reads — dead weight a translator still has to carry.
 
-- **Enforced by:** `test/run.mjs` compares key counts.
-- **Red when:** a string is added to one locale only.
+- **Enforced by:** `test/run.mjs` compares the viewer's key counts, and compares the two JSON files
+  key by key plus greps the template for every one of them.
+- **Red when:** a string is added to one locale only, or a key survives the view that used it.
+- **Note:** this rule claimed to cover the Control Room long before it did. The parity half was only
+  ever true of the viewer until the tables became files.
 
 ## I16. Traceability is measured, never inferred
 
@@ -160,6 +165,27 @@ that lands on nothing, and open work no requirement claims.
   issue, and a declared document that contributed no rows.
 - **Red when:** a matrix is missing a link at either end — or a document quietly stops contributing,
   which is how a matrix empties while still looking full.
+
+## I17. History is derived, never stored
+
+"Where we were" comes out of the same snapshot as "where we are": an issue was open on a day when
+it existed and was not yet closed. No register, no second fetch, and the only clock is
+`manifest.today`.
+
+- **Enforced by:** `deriveHistory` in `lib/roomderive.mjs` reads `createdAt`/`closedAt` and returns
+  `null` — not an empty series — when the snapshot predates those fields; `check` re-derives it.
+- **Red when:** a briefing shows a flat line where it should say the snapshot cannot answer, or a
+  series that changes without its inputs changing.
+
+## I18. The only file a briefing writes is the manifest
+
+`forma room --serve` exists because a page of checkboxes cannot write a file. It binds loopback,
+accepts one field per programme (`enabled`), and re-validates the whole manifest against its schema
+before writing, so a rejected edit leaves the file exactly as it was.
+
+- **Enforced by:** the `PUT /programs` handler in `lib/room.mjs`; `npm test` asserts the bind is
+  loopback.
+- **Red when:** anything else becomes writable through the page, or a rejected edit lands half-applied.
 
 ---
 
