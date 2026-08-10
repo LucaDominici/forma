@@ -1,0 +1,13 @@
+{
+  "fetchedAt": "2026-08-09T09:00:00Z",
+  "ghRepo": "acme/alpha",
+  "truncated": false,
+  "issues": [
+    { "n": 1, "title": "The engine mishandles trailing whitespace", "state": "OPEN", "ms": "v1", "labels": ["bug", "priority:p1"] },
+    { "n": 2, "title": "Decide whether parser errors abort the run", "state": "OPEN", "ms": "v1", "labels": ["needs-human", "priority:p2"] },
+    { "n": 3, "title": "Log through a single helper", "state": "CLOSED", "ms": "v1", "labels": ["priority:p3"] }
+  ],
+  "milestones": [
+    { "title": "v1", "due": "2026-09-01", "open": 2, "closed": 1 }
+  ]
+}

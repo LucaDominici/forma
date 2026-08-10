@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-08-10T07:34:58.760Z",
+  "generatedAt": "2026-08-10T08:29:05.145Z",
   "source": {
     "repo": "forma",
-    "commit": "29b1901dd0da4e04a6bc1285f0d29d00f70321bc",
+    "commit": "f41870478efd19516fb4cbfde68f766dcaf079d8",
     "branch": "feat/control-room",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
@@ -245,7 +245,7 @@
         {
           "type": "glob",
           "ref": "lib",
-          "count": 18
+          "count": 19
         }
       ],
       "category": "container",
@@ -599,6 +599,25 @@
       "status2": "unknown",
       "target": "",
       "func": "roomderive.mjs — the ONLY place Control Room aggregates are computed. Imported by both room.mjs (which writes the numbers into window.ROOM.derived) and check.mjs (which recomputes them from the same raw inputs and compares against what room",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__roomload_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "roomload",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/roomload.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "roomload.mjs — how a manifest entry becomes a set of concrete inputs. Shared by room.mjs (which composes) and check.mjs (which re-derives and compares), for the same reason roomderive.mjs is shared: if the two resolved a programme's paths d",
       "descSource": "docstring"
     },
     {

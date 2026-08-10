@@ -1198,6 +1198,12 @@ const diffPaths = (a, b, at = '') => {
   // judged — `internal_budget` on the real demo, named by four DONE rows, rendered as unassessed.
   // The two halves part company: the verdict is still something the document says; a percentage
   // over a reach nobody can state is not.
+  //
+  // This IS the #43 guard, and it lives here rather than against a live checkout of the demo's
+  // source repository. statusFor never branches on MAX_ROWS to compute status2 — the cap reaches
+  // only `completion` — so an over-cap node whose rows are all DONE runs this same path; asserting
+  // it twice bought nothing, and asserting it against an uncommitted working copy meant the fixture
+  // could change under the test, which is exactly what happened.
   if (core.status2 !== 'in-progress') die(`docmap: over-cap node lost its verdict: ${core.status2}`)
   if (core.completion != null) die(`docmap: over-cap node got a percentage over an unstatable reach: ${core.completion}`)
 
@@ -1411,29 +1417,137 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok presentable — the shipped artifact itself passes, not a cleaned copy of it')
 }
 
-// #43: the prose cap must not silence the verdict. MAX_ROWS exists because stitching more than
-// three first sentences together invents a claim no document makes (lib/docmap.mjs:16-21) — a
-// statement about PROSE. statusFor went through describingRows and so inherited it, with the
-// perverse result that the more rows name a module the less verdict it gets. On the shipped demo
-// `internal_budget` is named by FOUR rows, all DONE, and comes out "not assessed" — the owner's
-// literal example of "things that exist are shown as not done".
+// The #43 guard ("a box many rows name is judged by all of them, not silenced by the prose cap")
+// used to be asserted a second time here, against a live checkout of the demo's private source
+// repository. It was removed rather than repaired, for two reasons that are the same reason:
+//   - it read `docs/FEATURE_MATRIX.md` from a path outside this repository, so two people running
+//     `npm test` did not get the same verdict — and it silently SKIPPED when that path was absent,
+//     which is every CI run. Green by absence on CI, red on one machine, is the false green this
+//     project exists to kill;
+//   - the rows it pinned have since been re-declared not-done upstream, so its expectation was
+//     simply wrong: `planned` was the correct answer and the assertion was the stale party.
+// The property itself is asserted on the committed `docmap` fixture, on the `core` node — see the
+// #43 comment there for why one assertion covers both shapes.
+
+// The Control Room, end to end: compose it, gate it, and prove the gate can fail. Until this block
+// existed nothing in the suite touched room.mjs, roomderive.mjs, link.mjs or taxonomy.mjs — and
+// both gates over them were broken in ways a single run would have caught. The fixture carries no
+// .git (a nested repository cannot be committed), so the history the link layer reads is built here
+// with pinned author dates: the month buckets are asserted below and must not drift with the clock.
 {
-  const { loadDocRows, indexByNode, statusFor } = await import(join(HERE, '..', 'lib', 'docmap.mjs'))
-  const model = readJson(join(HERE, '..', 'docs/demo/c4-model.json'))
-  const habenDocs = process.env.FORMA_HABEN_DOCS || '/home/luca/work/repos/haben'
-  if (!existsSync(join(habenDocs, 'docs/FEATURE_MATRIX.md'))) {
-    console.log('  skip docmap-cap — haben checkout not present at ' + habenDocs)
-  } else {
-    const rows = loadDocRows(habenDocs, ['docs/FEATURE_MATRIX.md'])
-    const idx = indexByNode(rows, model.nodes)
-    const e = idx.get('internal_budget')
-    if (!e) die('docmap-cap: internal_budget is not indexed at all — the fixture drifted')
-    if (e.rows.length <= 3) die('docmap-cap: internal_budget is named by ' + e.rows.length + ' rows, the case needs more than the cap')
-    const st = statusFor(idx, 'internal_budget')
-    if (!st) die('docmap-cap: internal_budget is named by ' + e.rows.length + ' DONE rows and got NO verdict — more evidence, less verdict')
-    if (st.status2 !== 'done') die('docmap-cap: ' + e.rows.length + ' rows all done produced status2=' + st.status2)
-    console.log('  ok docmap — a box many rows name is judged by all of them, not silenced by the prose cap')
+  const R = join(tmp, 'room'), alpha = join(R, 'alpha'), beta = join(R, 'beta')
+  cpSync(FIX('room'), R, { recursive: true })
+  const git = (repo, args, date) => {
+    const env = { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date }
+    const r = spawnSync('git', ['-C', repo, ...args], { encoding: 'utf-8', env })
+    if (r.status !== 0) die('room fixture: git ' + args.join(' ') + '\n' + (r.stdout || '') + (r.stderr || ''))
   }
+  const born = (repo) => {
+    git(repo, ['init', '-q', '.'], '2026-01-01T00:00:00')
+    git(repo, ['config', 'user.email', 'test@example.invalid'], '2026-01-01T00:00:00')
+    git(repo, ['config', 'user.name', 'Forma Test'], '2026-01-01T00:00:00')
+  }
+  const commit = (repo, message, date) => { git(repo, ['add', '-A'], date); git(repo, ['commit', '-q', '-m', message], date) }
+  const touch = (file) => writeFileSync(file, readFileSync(file, 'utf-8') + '\n// touched\n')
+
+  born(alpha)
+  commit(alpha, 'chore: scaffold', '2026-06-15T10:00:00')
+  touch(join(alpha, 'src/core/engine.js'))
+  commit(alpha, 'feat(core): the engine (#1)', '2026-07-10T10:00:00')
+  touch(join(alpha, 'src/core/parser.js'))
+  commit(alpha, 'fix(core): parser (#99)', '2026-07-20T10:00:00')
+  for (const f of ['src/core/engine.js', 'src/core/parser.js', 'src/util/log.js']) touch(join(alpha, f))
+  commit(alpha, 'chore: sweep three files (#2)', '2026-08-01T10:00:00')
+  born(beta)
+  commit(beta, 'feat: beta (#5)', '2026-07-05T10:00:00')
+
+  const topo = join(alpha, 'topology.json'), model = join(alpha, 'model.json'), manifest = join(R, 'manifest.json')
+  const roomHtml = join(R, 'control-room.html'), roomHtml2 = join(R, 'second.html')
+  let r = run(['init', '--repo', alpha, '--out', topo, '--force']); if (r.status !== 0) die('room: init exit ' + r.status, r)
+  r = run(['gen', '--repo', alpha, '--topology', topo, '--out', model]); if (r.status !== 0) die('room: gen exit ' + r.status, r)
+  r = run(['room', '--manifest', manifest, '--out', roomHtml]); if (r.status !== 0) die('room: exit ' + r.status, r)
+
+  // Determinism (I12): the only clock is manifest.today, so two renders of unchanged inputs are
+  // byte-identical. This is also the property scripts/room-presentable.mjs re-checks independently.
+  r = run(['room', '--manifest', manifest, '--out', roomHtml2]); if (r.status !== 0) die('room: second render exit ' + r.status, r)
+  if (readFileSync(roomHtml, 'utf-8') !== readFileSync(roomHtml2, 'utf-8')) die('room: two renders of the same manifest are not byte-identical')
+
+  const roomOf = (file) => {
+    const m = /window\.__ROOM__ = ([\s\S]*?);\s*<\/script>/.exec(readFileSync(file, 'utf-8'))
+    if (!m) die('room: __ROOM__ seam not found in ' + file)
+    return JSON.parse(m[1])
+  }
+  const ROOM = roomOf(roomHtml)
+  const progOf = (id) => { const p = (ROOM.programs || []).find((x) => x.id === id); if (!p) die('room: programme ' + id + ' is missing from the artifact'); return p }
+  const A = progOf('alpha'), B = progOf('beta')
+
+  // A commit touching more files than linkMaxFiles is a sweep: excluded from attribution, but
+  // counted and named rather than silently dropped (I9). The manifest declares 2; the sweep is 3.
+  if (A.derived.link.excludedSweeps.length !== 1) die('room: expected 1 excluded sweep at linkMaxFiles=2, got ' + JSON.stringify(A.derived.link.excludedSweeps))
+
+  // One assertion covering two regressions at once. #1 landed in 2026-07 and is a real issue; #99
+  // landed in 2026-07 too but is a PULL REQUEST number, absent from the snapshot; #2's only commit
+  // is the August sweep. So: exactly one month, exactly one landing.
+  //  - if the snapshot intersection were dropped, #99 would make 2026-07 read `landed: 2`;
+  //  - if linkMaxFiles stopped reaching the portfolio path, the sweep would add a 2026-08 bucket.
+  const landing = (ROOM.portfolio.landing || []).find((l) => l.program === 'alpha')
+  if (!landing || landing.months.length !== 1 || landing.months[0].month !== '2026-07' || landing.months[0].landed !== 1) {
+    die('room: alpha landing should be exactly [{2026-07, landed 1}], got ' + JSON.stringify(landing && landing.months))
+  }
+
+  // A programme with no map still derives everything its issues can answer. It used to derive
+  // nothing at all, so the gate had nothing per-programme to re-derive for it.
+  if (B.derived === null) die('room: beta derived nothing — a programme without a map must still derive from its issues')
+  if (B.derived.link !== null || B.derived.commitDrift !== null) die('room: beta has no map, so link and commitDrift must be null, got ' + JSON.stringify({ link: B.derived.link, commitDrift: B.derived.commitDrift }))
+  if (B.derived.kpis.linkCoveragePct !== null) die('room: beta was never asked the issue-to-code question; coverage must be null, not ' + B.derived.kpis.linkCoveragePct)
+  if (!B.derived.kanban || B.derived.kanban.chiuse.join() !== '6') die('room: beta kanban should still bucket its own issues, got ' + JSON.stringify(B.derived.kanban))
+  if (ROOM.portfolio.totals.unknownRule !== 1) die('room: beta declares no blocking rule, so unknownRule must be 1 (absent is not empty, I7), got ' + ROOM.portfolio.totals.unknownRule)
+
+  const presentable = (file) => spawnSync(process.execPath, [join(HERE, '..', 'scripts', 'room-presentable.mjs'), '--room', file, '--manifest', manifest], { encoding: 'utf-8' })
+  r = presentable(roomHtml)
+  if (r.status !== 0) die('room-presentable: the generated briefing does not pass its own publication gate\n' + (r.stdout || '') + (r.stderr || ''))
+
+  const checkRoom = (file, mf) => run(['check', '--repo', alpha, '--model', model, '--topology', topo, '--room', file, '--manifest', mf || manifest])
+  r = checkRoom(roomHtml)
+  if (r.status !== 0) die('room: check fails on an untouched briefing\n' + (r.stdout || '') + (r.stderr || ''))
+
+  // The gate must FAIL on a hand-altered aggregate, or its green proves nothing. Both directions:
+  // the mapped programme and the map-less one, which was ungated entirely before.
+  const tamper = (from, to, find, replace) => {
+    const src = readFileSync(from, 'utf-8'), out = src.replace(find, replace)
+    if (out === src) die('room: tamper pattern did not apply — ' + find)
+    writeFileSync(to, out)
+  }
+  const tamperedA = join(R, 'tampered-alpha.html'), tamperedB = join(R, 'tampered-beta.html')
+  tamper(roomHtml, tamperedA, '"openCount":2', '"openCount":7')
+  r = checkRoom(tamperedA)
+  if (r.status === 0) die('room: check passed a briefing whose Executive KPIs were altered by hand')
+  if (!/alpha — Executive KPIs/.test(r.stderr || '')) die('room: check failed but did not name the programme and the field, got: ' + (r.stderr || ''))
+  const betaAt = readFileSync(roomHtml, 'utf-8').indexOf('"id":"beta"')
+  tamper(roomHtml, tamperedB, /"noMilestoneCount":1/g, '"noMilestoneCount":0')
+  if (betaAt < 0) die('room: beta is not present in the artifact at all')
+  r = checkRoom(tamperedB)
+  if (r.status === 0) die('room: check passed an altered aggregate on the programme with no map — the map-less path is ungated')
+
+  // A manifest and an artifact that disagree about which programmes exist is drift, not a detail.
+  const manifestGamma = join(R, 'manifest-gamma.json')
+  const mf = readJson(manifest)
+  mf.programs.push({ id: 'gamma', ghRepo: 'acme/gamma', repo: 'beta', issues: 'beta/issues.json' })
+  writeFileSync(manifestGamma, JSON.stringify(mf, null, 2))
+  r = checkRoom(roomHtml, manifestGamma)
+  if (r.status === 0) die('room: check passed a manifest declaring a programme the artifact does not render')
+
+  // A truncated snapshot cannot support counts or proportions: refuse rather than degrade (D8).
+  const truncated = join(R, 'truncated.json')
+  const snap = readJson(join(alpha, 'issues.json')); snap.truncated = true
+  writeFileSync(truncated, JSON.stringify(snap))
+  const mfTrunc = join(R, 'manifest-truncated.json')
+  const mt = readJson(manifest); mt.programs[0].issues = 'truncated.json'
+  writeFileSync(mfTrunc, JSON.stringify(mt, null, 2))
+  r = run(['room', '--manifest', mfTrunc, '--out', join(R, 'never.html')])
+  if (r.status === 0) die('room: composed a briefing from a snapshot flagged truncated')
+
+  console.log('  ok room — the briefing composes deterministically, both gates fire, and both refuse a hand-altered aggregate')
 }
 
-console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable all green.')
+console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room all green.')

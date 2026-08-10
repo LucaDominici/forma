@@ -1,0 +1,27 @@
+{
+  "today": "2026-08-10",
+  "title": "Room fixture briefing",
+  "theme": "dark",
+  "staleAfterDays": 14,
+  "linkMaxFiles": 2,
+  "programs": [
+    {
+      "id": "alpha",
+      "ghRepo": "acme/alpha",
+      "repo": "alpha",
+      "issues": "alpha/issues.json",
+      "model": "alpha/model.json",
+      "topology": "alpha/topology.json",
+      "health": "alpha/health.json",
+      "findings": "alpha/findings.json",
+      "blockedBy": { "labels": ["needs-human"] },
+      "taxonomy": { "order": { "priority": ["p1", "p2", "p3"] }, "minPopulation": 1 }
+    },
+    {
+      "id": "beta",
+      "ghRepo": "acme/beta",
+      "repo": "beta",
+      "issues": "beta/issues.json"
+    }
+  ]
+}
