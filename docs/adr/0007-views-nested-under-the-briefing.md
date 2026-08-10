@@ -1,3 +1,13 @@
+---
+title: 'ADR-0007: Views nested under the briefing, not instead of it'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: '0007'
+tags: ['audience/dev', 'kind/adr']
+related: ['docs/adr/README.md']
+---
 # ADR-0007: Views nested under the briefing, not instead of it
 
 - **Status:** Accepted (2026-08-10)

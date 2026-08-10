@@ -1,3 +1,13 @@
+---
+title: 'Delivery status'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'delivery'
+tags: ['audience/dev', 'kind/audit']
+related: ['docs/PRD.md', 'docs/technical-debt.md']
+---
 # Delivery status
 
 This file records realization status for the Control Room branch. A feature is listed as proven only when a named command or recorded measurement can falsify it. Built code without that evidence stays in the next section.
@@ -76,6 +86,6 @@ All numeric entries in this table come from the seven branch commit messages or 
 
 | Defect | Evidence | Consequence |
 |---|---|---|
-| The `docmap-cap` check asserted against a repository outside this one. | It read `docs/FEATURE_MATRIX.md` from a sibling checkout, silently skipping when absent — so it was green by absence on every CI run and red on one machine. Its expectation had also gone stale: the rows it pinned are now declared not-done upstream, making `planned` the correct answer and the assertion the wrong party. | Resolved: the block is removed. The property it guarded (#43, the prose cap must not silence the verdict) is asserted on the committed `docmap` fixture, where `statusFor` runs the identical path — see the #43 comment at [`test/run.mjs:1199-1210`](../test/run.mjs#L1199-L1210). |
-| The engine had no single place stating its rules. | Invariants were scattered across code comments, `CONTRIBUTING.md` and two scope documents; `docs/ORIENTATION.md` had drifted (it claimed the viewer was 746 lines when it is 1068, and that the model was never schema-validated when [`lib/check.mjs:28`](../lib/check.mjs) validates it). | Resolved on this branch: `ORIENTATION.md` is removed and replaced by [`INVARIANTS.md`](INVARIANTS.md), which pairs every rule with its enforcement point. |
+| The `docmap-cap` check asserted against a repository outside this one. | It read a feature matrix from a sibling checkout of the demo's source repository, silently skipping when absent — so it was green by absence on every CI run and red on one machine. Its expectation had also gone stale: the rows it pinned are now declared not-done upstream, making `planned` the correct answer and the assertion the wrong party. | Resolved: the block is removed. The property it guarded (#43, the prose cap must not silence the verdict) is asserted on the committed `docmap` fixture, where `statusFor` runs the identical path — see the #43 comment at [`test/run.mjs:1199-1210`](../test/run.mjs#L1199-L1210). |
+| The engine had no single place stating its rules. | Invariants were scattered across code comments, `CONTRIBUTING.md` and two scope documents; a since-deleted orientation document had drifted (it claimed the viewer was 746 lines when it is 1068, and that the model was never schema-validated when [`lib/check.mjs:28`](../lib/check.mjs) validates it). | Resolved on this branch: `ORIENTATION.md` is removed and replaced by [`GLOBAL_INVARIANTS.md`](GLOBAL_INVARIANTS.md), which pairs every rule with its enforcement point. |
 | The documented shipped-file count is stale and unenforced. | `AGENTS.md` required 20 files and said the `prepack` guard held that; `npm pack --dry-run --json` reports 36 (30 before this branch added the room modules, the RTM derivation and the locale tables), and [`scripts/check-clean.mjs:7-10`](../scripts/check-clean.mjs#L7-L10) checks residue only. | Still open. The false enforcement claim is removed from `AGENTS.md` and the real number stated, so the gap is visible rather than asserted away — but nothing yet fails when the selection changes. Bump deliberately or enforce the intended list mechanically. |

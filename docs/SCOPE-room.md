@@ -1,3 +1,13 @@
+---
+title: 'Scope — what "finished" means for the Control Room'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'scope-room'
+tags: ['audience/dev', 'kind/governance']
+related: ['docs/SCOPE.md']
+---
 # Scope — what "finished" means for the Control Room
 
 Status: **open**, reopens the boundary closed by [`docs/SCOPE.md`](SCOPE.md) (v0.10.0,

@@ -1,3 +1,13 @@
+---
+title: 'Security Policy'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'security'
+tags: ['audience/dev', 'kind/security']
+related: ['PRIVACY.md']
+---
 # Security Policy
 
 ## Supported versions

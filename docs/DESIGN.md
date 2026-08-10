@@ -1,3 +1,13 @@
+---
+title: 'Design'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'design'
+tags: ['audience/dev', 'kind/reference']
+related: ['docs/PRD.md', 'docs/adr/README.md']
+---
 # Design
 
 The choices that shaped Forma, and the alternatives that were rejected. A decision with no

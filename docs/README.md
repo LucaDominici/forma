@@ -1,3 +1,13 @@
+---
+title: 'Forma documentation'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'docs-map'
+tags: ['audience/dev', 'kind/reference']
+related: ['docs/INDEX.md']
+---
 # Forma documentation
 
 A reading map. Start where your question is, not at the top.
@@ -6,13 +16,13 @@ A reading map. Start where your question is, not at the top.
 
 1. [`PRD.md`](PRD.md) — what problem this solves, for whom, and the one requirement everything
    else serves.
-2. [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) — arc42: context, building
+2. [`docs/architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) — arc42: context, building
    blocks, runtime, deployment, with diagrams.
 3. [`DELIVERY.md`](DELIVERY.md) — what is actually built and proven today, and what is not.
 
 ## If you are about to change the code
 
-1. [`INVARIANTS.md`](INVARIANTS.md) — the rules that do not break, each with its enforcement point
+1. [`GLOBAL_INVARIANTS.md`](GLOBAL_INVARIANTS.md) — the rules that do not break, each with its enforcement point
    and what turns red. **Read this first.**
 2. [`../AGENTS.md`](../AGENTS.md) — the layout, the working rules, the gates to run.
 3. [`../CONTRIBUTING.md`](../CONTRIBUTING.md) — including the rule that nothing in `lib/` may know
@@ -37,9 +47,9 @@ either document.
 
 ## Generated, not written
 
-- [`architecture/c4-model.json`](architecture/c4-model.json) — Forma's model of itself, produced by
+- [`docs/architecture/c4-model.json`](architecture/c4-model.json) — Forma's model of itself, produced by
   `forma gen`, kept honest by `forma check` in CI.
-- [`architecture/ARCHITECTURE.scaffold.md`](architecture/ARCHITECTURE.scaffold.md) — projected from
+- [`docs/architecture/ARCHITECTURE.scaffold.md`](architecture/ARCHITECTURE.scaffold.md) — projected from
   the model by `forma doc`. Do not edit it; edit the model.
 - [`demo/`](demo/) — the public demo: Forma applied to a repository that is not Forma.
 

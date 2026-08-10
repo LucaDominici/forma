@@ -1,8 +1,17 @@
+---
+title: 'ADR-0006: Traceability is derived from the documents, not curated into a file'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: '0006'
+tags: ['audience/dev', 'kind/adr']
+related: ['docs/adr/README.md']
+---
 # ADR-0006: Traceability is derived from the documents, not curated into a file
 
 - **Status:** Accepted (2026-08-10)
-- **Refines:** [ADR-0003](0002-single-source-of-truth-model.md) is unrelated; this extends the
-  overlay policy of [ADR-0004](0004-control-room-as-a-forma-rendering.md)
+- **Extends:** the overlay policy of [ADR-0004](0004-control-room-as-a-forma-rendering.md)
 
 ## Context
 The briefing could count issues and colour them, but nothing connected the work to the reasons for

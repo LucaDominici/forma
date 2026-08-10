@@ -1,3 +1,13 @@
+---
+title: 'Forma — product requirements'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'prd'
+tags: ['audience/dev', 'kind/ssot']
+related: ['docs/DESIGN.md', 'docs/DELIVERY.md']
+---
 # Forma — product requirements
 
 Status: living document. Supersedes nothing; it states what the other documents assume.

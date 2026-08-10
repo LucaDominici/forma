@@ -1,3 +1,13 @@
+---
+title: 'Forma Architecture'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'architecture'
+tags: ['audience/dev', 'kind/spine']
+related: ['docs/DESIGN.md', 'docs/GLOSSARY.md']
+---
 # Forma Architecture
 
 This document follows arc42. It describes the implementation on `feat/control-room`, including the Control Room extension, and separates code-derived facts from judgments and unproved claims.
@@ -240,7 +250,7 @@ Accepted ADRs are immutable. A changed decision requires a new ADR that supersed
 ## 11. Risks and technical debt
 
 - **The test suite is not green on the available real corpus.** `npm test` currently fails at `docmap-cap`: four rows reported as DONE produce `status2=planned`, while the test expects `done`. The external-corpus assertion and failure point are at [`test/run.mjs:1421-1434`](../../test/run.mjs#L1421-L1434). This is pre-existing and was not changed by this documentation rewrite.
-- **Static line references rot, and did.** `docs/ORIENTATION.md` accumulated wrong line numbers and two false claims (the viewer at 746 lines when it is 1068; the model never validated against its schema, which [`lib/check.mjs`](../../lib/check.mjs) has done since the schema landed). It was removed on this branch in favour of [`INVARIANTS.md`](../INVARIANTS.md), which pairs each rule with an executable enforcement point. Line citations remain useful evidence at a reviewed commit; they are not a substitute for a check that runs.
+- **Static line references rot, and did.** A since-deleted orientation document accumulated wrong line numbers and two false claims (the viewer at 746 lines when it is 1068; the model never validated against its schema, which [`lib/check.mjs`](../../lib/check.mjs) has done since the schema landed). It was removed on this branch in favour of [`GLOBAL_INVARIANTS.md`](../GLOBAL_INVARIANTS.md), which pairs each rule with an executable enforcement point. Line citations remain useful evidence at a reviewed commit; they are not a substitute for a check that runs.
 - **The shipped-file count is a prose invariant.** `AGENTS.md` says `npm pack --dry-run` must stay at 20 files ([`AGENTS.md:38-39`](../../AGENTS.md#L38-L39)); the current dry run reports 30 entries. `scripts/check-clean.mjs` checks only editor residue, not the count ([`scripts/check-clean.mjs:7-10`](../../scripts/check-clean.mjs#L7-L10)). The number needs a deliberate update or an executable assertion.
 - **Issue-to-code coverage is intentionally partial.** Git can link only issues cited by commits that touch modeled files. Sweeps are excluded and named. Unlinked work remains unknown; it must never be presented as zero.
 - **Offline freshness has a hard limit.** `check` can validate shape and reject an old snapshot relative to manifest `today`, but it cannot know whether GitHub changed after `fetchedAt`. Only a new `verify` can establish a newer fact base.

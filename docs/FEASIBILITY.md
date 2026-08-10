@@ -1,3 +1,13 @@
+---
+title: 'Feasibility'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'feasibility'
+tags: ['audience/dev', 'kind/audit']
+related: ['docs/DESIGN.md']
+---
 # Feasibility
 
 What is measured, what is estimated, and what is unknown. The three are kept apart on purpose: a
@@ -56,8 +66,8 @@ A naive walk of haben finds 8899 files and 70 MB, because 8544 of them are agent
 under `.claude/worktrees`. Any document feature must select from git-tracked files and carry an
 explicit budget.
 
-On haben, three documents carry almost the whole model: `docs/FEATURE_MATRIX.md` supports 27 nodes
-through `verify.source` and describes 25 through `descSource: docmap`; `docs/steering/CONFINE.md`
+On haben, three documents carry almost the whole model: its feature matrix supports 27 nodes
+through `verify.source` and describes 25 through `descSource: docmap`; its product-boundary document
 carries the timeline; `docs/architecture/ARCHITECTURE.md` is the governed document path.
 
 ### The artifact

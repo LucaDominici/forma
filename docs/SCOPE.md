@@ -1,3 +1,13 @@
+---
+title: 'Scope — what "finished" means for Forma'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'scope'
+tags: ['audience/dev', 'kind/governance']
+related: ['docs/SCOPE-room.md']
+---
 # Scope — what "finished" means for Forma
 
 Status: **closed 2026-07-26**, at `v0.10.0`. The boundary in §1 is met and measured — see §8.
@@ -66,7 +76,7 @@ PASS every drawn level with more than one box draws at least one edge  (edges pe
 ## 2. What was measured, and how
 
 Probe: `git clone --local` of `haben` (53 Go packages, a React frontend, a governed
-`docs/FEATURE_MATRIX.md`), then `forma init` → `forma gen` → `forma serve`, then the viewer
+a feature matrix), then `forma init` → `forma gen` → `forma serve`, then the viewer
 driven by Playwright and read as a screenshot. Not the test suite — the picture.
 
 **The engine delivers.** `init` 0.06 s. `gen` derives **189 container edges from Go `import`

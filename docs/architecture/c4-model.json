@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-08-10T09:20:35.096Z",
+  "generatedAt": "2026-08-10T09:53:40.045Z",
   "source": {
     "repo": "forma",
-    "commit": "ff3aeaa741e63875034e2c1614b1eb8f56faaaf4",
+    "commit": "bd5603f413fc9905336489f979c309c51f642831",
     "branch": "feat/control-room",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
@@ -273,7 +273,7 @@
         {
           "type": "glob",
           "ref": "scripts",
-          "count": 4
+          "count": 5
         }
       ],
       "category": "container",
@@ -770,6 +770,25 @@
       "status2": "unknown",
       "target": "",
       "func": "prepack guard: refuse to publish if a stray/editor artifact lurks in shipped dirs.",
+      "descSource": "docstring"
+    },
+    {
+      "id": "scripts__gen_doc_index_mjs",
+      "level": "leaf",
+      "parent": "scripts",
+      "kind": "leaf",
+      "name": "gen-doc-index",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "scripts/gen-doc-index.mjs"
+        }
+      ],
+      "category": "scripts",
+      "status2": "unknown",
+      "target": "",
+      "func": "gen-doc-index.mjs — regenerate docs/INDEX.md from every document's frontmatter. A LOCATOR, not an engine. The generator lives in arbiter, which owns the doc-set standard; this file finds that checkout and calls its exported runCli. Re-imple",
       "descSource": "docstring"
     },
     {

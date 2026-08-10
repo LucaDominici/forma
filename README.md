@@ -1,3 +1,13 @@
+---
+title: 'Forma'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'readme'
+tags: ['audience/dev', 'kind/reference']
+related: ['docs/README.md', 'docs/PRD.md']
+---
 # Forma
 
 [![npm version](https://img.shields.io/npm/v/forma-arch?label=npm)](https://www.npmjs.com/package/forma-arch)
@@ -217,7 +227,7 @@ one deterministic check that keeps them honest. The file contract is
 [`lib/schema/c4-model.schema.json`](lib/schema/c4-model.schema.json).
 
 Working on forma itself? [`docs/README.md`](docs/README.md) is the reading map. Start with
-[`docs/INVARIANTS.md`](docs/INVARIANTS.md): the rules that do not break, each with the file that
+[`docs/GLOBAL_INVARIANTS.md`](docs/GLOBAL_INVARIANTS.md): the rules that do not break, each with the file that
 enforces it and what turns red when it is violated.
 
 ## Model-agnostic by design

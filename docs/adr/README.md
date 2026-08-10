@@ -1,3 +1,13 @@
+---
+title: 'Architecture Decision Records'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'adr-index'
+tags: ['audience/dev', 'kind/reference']
+related: ['docs/GOVERNANCE.md']
+---
 # Architecture Decision Records
 
 Decisions for Forma. Each ADR is immutable once Accepted; supersede one by writing a new ADR

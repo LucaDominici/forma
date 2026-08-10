@@ -1,3 +1,13 @@
+---
+title: 'ADR-0005: A portfolio briefing, not a per-repository dashboard'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: '0005'
+tags: ['audience/dev', 'kind/adr']
+related: ['docs/adr/README.md']
+---
 # ADR-0005: A portfolio briefing, not a per-repository dashboard
 
 - **Status:** Accepted (2026-08-10)

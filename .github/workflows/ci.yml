@@ -25,15 +25,59 @@ jobs:
       # dogfood: the product's own gate, on the product. The committed model is deployed to Pages
       # on every push to main — nothing else would notice if it stopped matching the code.
       - run: node bin/forma.mjs check
+  docs:
+    # The documentation gate. Forma declares WHAT it must carry (standards/gold-doc-set.yml, the
+    # portable manifest; standards/doc-profile, the overlays and the tier floor) and arbiter
+    # supplies the engines that grade it. The engines are checked out here rather than vendored
+    # into lib/ for two reasons: they need a YAML parser, and ADR-0001 forbids a dependency; and a
+    # second implementation of one rule is the divergence roomload.mjs exists to prevent
+    # (DECISION_REGISTRY.md D-04). Nothing here enters forma's dependency tree or its package.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # fetch-depth: 0 — check-doc-freshness compares a doc's last_review against the last commit
+      # touching the code it is coupled to. On a shallow clone that signal silently disappears and
+      # only the age bar is left, which is a weaker gate that still reports success.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { fetch-depth: 0 }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: LucaDominici/arbiter
+          path: .arbiter-gates
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: install the gate engines
+        working-directory: .arbiter-gates
+        run: npm ci --ignore-scripts
+      # --strict: a missing mandatory document fails. Without it the audit reports gaps and exits 0,
+      # which is a gate that cannot go red.
+      - name: canonical doc set is present
+        run: node .arbiter-gates/scripts/check-doc-set.mjs --strict
+      - name: every document carries conforming frontmatter
+        run: node .arbiter-gates/scripts/check-doc-style.mjs
+      - name: no document is stale
+        run: node .arbiter-gates/scripts/check-doc-freshness.mjs
+      - name: every local link resolves
+        run: node .arbiter-gates/scripts/check-doc-links.mjs
+      - name: every cited repository path exists
+        run: node .arbiter-gates/scripts/check-doc-path-citations.mjs
+      # The index is generated from frontmatter; a hand-edit or a new doc must be regenerated,
+      # not described. --check fails rather than rewriting the file in CI.
+      # Through forma's own locator, so CI runs exactly the command CONTRIBUTING.md documents.
+      - name: the doc index is not stale
+        run: node scripts/gen-doc-index.mjs --check
   ci-required:
     # fail-closed aggregate: one required status check that gates the whole matrix, so branch
     # protection lists a single context instead of one per matrix node version.
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: test
+    needs: [test, docs]
     if: always()
     steps:
-      - env: { RESULT: "${{ needs.test.result }}" }
+      - env: { TEST: "${{ needs.test.result }}", DOCS: "${{ needs.docs.result }}" }
         run: |
-          echo "test result: $RESULT"
-          [ "$RESULT" = success ] || { echo "::error::ci test job did not succeed"; exit 1; }
+          echo "test result: $TEST"
+          echo "docs result: $DOCS"
+          [ "$TEST" = success ] || { echo "::error::ci test job did not succeed"; exit 1; }
+          [ "$DOCS" = success ] || { echo "::error::ci docs job did not succeed"; exit 1; }

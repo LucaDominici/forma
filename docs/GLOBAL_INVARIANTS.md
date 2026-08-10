@@ -1,4 +1,14 @@
-# Invariants
+---
+title: 'Global invariants'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'global-invariants'
+tags: ['audience/dev', 'kind/invariant']
+related: ['AGENTS.md', 'CONTRIBUTING.md']
+---
+# Global invariants
 
 The rules Forma does not break. Each one names where it is enforced and what turns red when it is
 violated. An invariant with no enforcement is a preference, and preferences do not belong here.
@@ -43,7 +53,7 @@ never write the model at all.
 
 `gen` rebuilds the model from the topology and overlays. Anything else it holds is transient.
 
-- **Enforced by:** the fact base lives in its own file, `docs/architecture/c4-issues.json`, which
+- **Enforced by:** the fact base lives in its own file under `docs/architecture/`, written only by `forma verify`, which
   `gen` never touches.
 - **Red when:** a fact disappears after a routine `forma gen`.
 - **Why:** discovered the hard way: `verify` used to decorate the model, and every decoration died

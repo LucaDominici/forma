@@ -1,3 +1,13 @@
+---
+title: 'Contributing to Forma'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'contributing'
+tags: ['audience/dev', 'kind/governance']
+related: ['AGENTS.md', 'docs/GLOBAL_INVARIANTS.md']
+---
 # Contributing to Forma
 
 Thanks for your interest! Forma is a small, dependency-free Node tool. The bar for
@@ -21,10 +31,48 @@ npm run lint    # syntax-checks bin + lib
 ## Making a change
 
 1. Open an issue describing the problem or proposal first.
-2. Branch: `feat/<slug>` or `fix/<slug>`.
-3. Add or update a fixture under `test/fixtures/` if behavior changes.
-4. `npm run lint && npm test` must pass.
+2. Branch: `feat/<slug>` or `fix/<slug>`. Never commit to `main`.
+3. Add or update a fixture under `test/fixtures/` if behavior changes. Write the check that would
+   fail if the change broke, and watch it fail on purpose before making it pass.
+4. `npm run lint && npm test && node bin/forma.mjs check` must pass.
 5. Open a PR using the template. Describe the change and its blast radius.
+
+Commit subjects are conventional and carry `(#N)` when the work has an issue — the Control Room
+reads that number out of the subject to link an issue to the files it touched.
+
+## Touching documentation
+
+Forma's documentation is governed by the doc-set standard maintained in `arbiter`: which documents
+must exist ([`standards/gold-doc-set.yml`](standards/gold-doc-set.yml)), on which tier and with
+which overlays ([`standards/doc-profile`](standards/doc-profile)). Forma declares; the engines that
+grade live in `arbiter` and run in the `docs` CI job.
+
+Every hand-authored Markdown file carries eight frontmatter keys — `title`, `doc_version`, `status`,
+`last_review`, `owner`, `canonical_id`, `tags`, `related`. `last_review` is an ISO date and
+`doc_version` is semver for the *document's content*, independent of the product version
+(see [`docs/SEMVER.md`](docs/SEMVER.md)). `tags` is a closed vocabulary: extend the taxonomy in the
+standard before using a new one.
+
+To run the same gates locally, clone `arbiter` beside this repository and run them from forma's
+root — nothing is installed here:
+
+```sh
+git clone https://github.com/LucaDominici/arbiter.git ../arbiter && (cd ../arbiter && npm ci)
+
+A=../arbiter/scripts
+node $A/check-doc-set.mjs --strict          # the canonical set is present
+node $A/check-doc-style.mjs                 # frontmatter, ISO dates, semver, one H1
+node $A/check-doc-freshness.mjs             # nothing past its review bar
+node $A/check-doc-links.mjs                 # every local link resolves
+node $A/check-doc-path-citations.mjs        # every backticked repo path exists
+node scripts/gen-doc-index.mjs              # regenerate docs/INDEX.md, then commit it
+```
+
+`docs/INDEX.md` is generated from frontmatter — add or relabel a document and regenerate it rather
+than editing it. `scripts/gen-doc-index.mjs` is a locator, not a second engine: it finds the arbiter
+checkout (via `FORMA_DOC_GATES`, `.arbiter-gates/`, or `../arbiter`) and calls the generator there.
+`docs/architecture/ARCHITECTURE.scaffold.md` is generated too, by `forma doc`, and emits its own
+frontmatter; edit `lib/doc.mjs`, never the file.
 
 ## Reporting bugs / requesting features
 

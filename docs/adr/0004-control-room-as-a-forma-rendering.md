@@ -1,3 +1,13 @@
+---
+title: 'ADR-0004: Control Room as a Forma rendering, not a second product'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: '0004'
+tags: ['audience/dev', 'kind/adr']
+related: ['docs/adr/README.md']
+---
 # ADR-0004: Control Room as a Forma rendering, not a second product
 
 - **Status:** Accepted (2026-08-09)
