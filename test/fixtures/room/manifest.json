@@ -15,6 +15,13 @@
       "health": "alpha/health.json",
       "findings": "alpha/findings.json",
       "blockedBy": { "labels": ["needs-human"] },
+      "rtm": {
+        "docs": [
+          { "path": "docs/PRD.md", "idPattern": "^R-\\d+$", "role": "requirement" },
+          { "path": "docs/DESIGN.md", "idPattern": "^D-\\d+$", "role": "design" }
+        ],
+        "requireIssuesFrom": ["docs/DESIGN.md"]
+      },
       "taxonomy": { "order": { "priority": ["p1", "p2", "p3"] }, "minPopulation": 1 }
     },
     {

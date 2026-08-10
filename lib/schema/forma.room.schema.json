@@ -50,6 +50,38 @@
               "include": { "type": "array", "items": { "type": "string" }, "description": "Globs selecting only git-tracked files, so generated or local files cannot silently enter the room." }
             }
           },
+          "rtm": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["docs"],
+            "description": "The requirements traceability matrix, opt-in by presence: a program that declares no rtm derives none and sees none of its four gate assertions. Paths are relative to the PROGRAM'S checkout, not the manifest — docs/PRD.md means that repository's PRD.",
+            "properties": {
+              "docs": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["path"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "path": { "type": "string", "description": "Repo-relative markdown file. Must be tracked by git, or its rows never enter the matrix and the document is named as skipped." },
+                    "idPattern": { "type": "string", "description": "Regex an id cell must match for its row to be a requirement, e.g. \"^R-\\\\d+$\". A column called id that does not match is a different table, not a near miss to repair." },
+                    "role": { "type": "string", "description": "What this document contributes to the chain: requirement, design, feasibility, verification. Free text — lib/ never enumerates one project's stages." },
+                    "id": { "type": "string", "description": "Header name of the id column, when it is not auto-detected." },
+                    "describe": { "type": "string", "description": "Header name of the text column, when it is not auto-detected." },
+                    "satisfies": { "type": "string", "description": "Header name of the upstream-reference column, when it is not auto-detected." },
+                    "verified": { "type": "string", "description": "Header name of the verification column, when it is not auto-detected." },
+                    "issues": { "type": "string", "description": "Header name of the issue column, when it is not auto-detected." }
+                  }
+                }
+              },
+              "requireIssuesFrom": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Document paths whose rows MUST land on GitHub issues or name a verification. A row in one of these with neither is reported uncovered and fails `forma check`. This is what makes 'the issues are the complete WBS' a falsifiable claim rather than an aspiration."
+              }
+            }
+          },
           "taxonomy": {
             "type": "object",
             "additionalProperties": false,

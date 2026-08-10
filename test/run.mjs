@@ -1547,7 +1547,88 @@ const diffPaths = (a, b, at = '') => {
   r = run(['room', '--manifest', mfTrunc, '--out', join(R, 'never.html')])
   if (r.status === 0) die('room: composed a briefing from a snapshot flagged truncated')
 
+  // The traceability chain. alpha declares two documents: docs/PRD.md carries R-* requirements,
+  // docs/DESIGN.md carries D-* decisions that satisfy them and land on issues. Together the last
+  // two assertions are what makes "the GitHub issues ARE the WBS" falsifiable rather than a wish:
+  // nothing planned may be unaccounted for, and nothing open may be unplanned.
+  const matrix = A.derived.rtm
+  if (!matrix) die('rtm: alpha declares an rtm block and derived no matrix')
+  if (matrix.coverage.requirements !== 5 || matrix.coverage.withIssues !== 3) die('rtm: expected 5 requirements, 3 landing on issues, got ' + JSON.stringify(matrix.coverage))
+  if (matrix.progress['D-3'].pct !== 100) die('rtm: D-3 cites only the closed issue #3, so it reads 100%, got ' + JSON.stringify(matrix.progress['D-3']))
+  if (matrix.progress['R-1'].pct !== null) die('rtm: R-1 cites no issue at all, so it has no percentage rather than a zero (I6), got ' + JSON.stringify(matrix.progress['R-1']))
+  for (const hole of ['duplicateIds', 'danglingRefs', 'uncovered', 'orphanIssues']) {
+    if (matrix.orphans[hole].length) die(`rtm: the fixture matrix is complete, but ${hole} is not empty: ` + JSON.stringify(matrix.orphans[hole]))
+  }
+  if (B.derived.rtm !== null) die('rtm: beta declares no rtm block, so it must derive null — opt-in by presence (I11)')
+
+  // Each hole, one at a time, edited into the document rather than into the artifact: this is the
+  // chain failing at its source, which is where a reader has to fix it.
+  const rtmBreaks = [
+    ['a duplicate id', (s) => s + '| D-1 | A second row answering to D-1 | `R-2` | `#2` |\n', /id "D-1" is declared twice/],
+    ['a reference to a requirement that does not exist', (s) => s.replace('`R-2` | `#2`', '`R-9` | `#2`'), /cites satisfies R-9, which does not exist/],
+    ['a decision that lands on no work', (s) => s.replace('| `R-1` | `#3` |', '| `R-1` | |'), /requirement "D-3" lands on no issue and names no verification/],
+    ['open work no requirement claims', (s) => s.replace('`R-2` | `#2`', '`R-2` | `#1`'), /open issue #2 .* is cited by no requirement/],
+  ]
+  const designDoc = join(alpha, 'docs/DESIGN.md'), designSrc = readFileSync(designDoc, 'utf-8')
+  for (const [what, edit, expected] of rtmBreaks) {
+    const broken = edit(designSrc)
+    if (broken === designSrc) die(`rtm: the edit for "${what}" changed nothing — the fixture document drifted`)
+    writeFileSync(designDoc, broken)
+    const rebuilt = join(R, 'rtm-broken.html')
+    r = run(['room', '--manifest', manifest, '--out', rebuilt])
+    if (r.status !== 0) die(`rtm: room refused to compose with ${what}; the matrix is graded by check, not by the composer`, r)
+    r = checkRoom(rebuilt)
+    if (r.status === 0) die(`rtm: check passed a matrix with ${what}`)
+    if (!expected.test(r.stderr || '')) die(`rtm: check failed on ${what} but did not say so — got: ` + (r.stderr || '').slice(0, 400))
+  }
+  writeFileSync(designDoc, designSrc)
+
+  // A document that contributes nothing is named. Untracked is the case that matters: the matrix
+  // must not depend on what happens to be lying in a working tree.
+  const extra = join(alpha, 'docs/EXTRA.md')
+  writeFileSync(extra, '| id | requirement | issues |\n|---|---|---|\n| R-7 | Never entered git | `#1` |\n')
+  const mfExtra = join(R, 'manifest-extra.json')
+  const withExtra = readJson(manifest)
+  withExtra.programs[0].rtm.docs.push({ path: 'docs/EXTRA.md', idPattern: '^R-\\d+$', role: 'requirement' })
+  writeFileSync(mfExtra, JSON.stringify(withExtra, null, 2))
+  r = run(['room', '--manifest', mfExtra, '--out', join(R, 'rtm-extra.html')])
+  if (r.status !== 0) die('rtm: room refused an untracked rtm document', r)
+  r = checkRoom(join(R, 'rtm-extra.html'), mfExtra)
+  if (r.status === 0) die('rtm: check passed a matrix built from a document git does not track')
+  if (!/docs\/EXTRA\.md contributed no rows \(not tracked by git\)/.test(r.stderr || '')) die('rtm: an untracked document was skipped without being named — got: ' + (r.stderr || '').slice(0, 300))
+  rmSync(extra)
+
   console.log('  ok room — the briefing composes deterministically, both gates fire, and both refuse a hand-altered aggregate')
+  console.log('  ok rtm — requirements trace to issues, and check names each of the four holes at its source line')
 }
 
-console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room all green.')
+// The dogfood. A traceability convention that cannot read the document THIS repository writes is a
+// convention for other people's repositories. docs/PRD.md §6 is a real table, edited by hand for
+// prose reasons, and the parser has to find it without being told anything but the id pattern.
+// The full chain (issues, and therefore the four gate assertions) additionally needs a committed
+// `gh` snapshot; that is a disclosure decision docs/SCOPE-room.md §6 leaves open, so what is
+// asserted here is what can be asserted offline: the rows parse, and they parse as themselves.
+{
+  const { parseRequirements, trackedFiles } = await import(join(HERE, '..', 'lib', 'rtm.mjs'))
+  const repo = join(HERE, '..')
+  const tracked = trackedFiles(repo)
+  if (!tracked) die('rtm-dogfood: forma is not a readable git checkout, so the tracked-files rule cannot be exercised')
+  if (!tracked.has('docs/PRD.md')) die('rtm-dogfood: docs/PRD.md is not tracked by git')
+  const { rows, skipped } = parseRequirements(repo, [{ path: 'docs/PRD.md', idPattern: '^R-\\d+$', role: 'requirement' }], tracked)
+  if (skipped.length) die('rtm-dogfood: forma\'s own PRD contributed nothing — ' + JSON.stringify(skipped))
+  if (rows.length < 9) die(`rtm-dogfood: expected at least 9 R-* rows in docs/PRD.md, got ${rows.length}`)
+  const ids = rows.map((row) => row.id)
+  if (new Set(ids).size !== ids.length) die('rtm-dogfood: forma\'s own PRD declares a duplicate id: ' + ids.join(', '))
+  for (const row of rows) {
+    if (!row.text) die(`rtm-dogfood: ${row.id} parsed with no text`)
+    if (!row.verified.length) die(`rtm-dogfood: ${row.id} has no "verified by" entry — the column exists precisely so this cannot happen`)
+    if (!(row.line > 0)) die(`rtm-dogfood: ${row.id} carries no source line, so nothing could link back to the row`)
+  }
+  // Determinism across the compose→check gap rests on the file list being sorted and git-tracked.
+  // Parsing twice must give the identical answer, or `check` false-reds on an untouched tree.
+  const again = parseRequirements(repo, [{ path: 'docs/PRD.md', idPattern: '^R-\\d+$', role: 'requirement' }], tracked)
+  if (JSON.stringify(again.rows) !== JSON.stringify(rows)) die('rtm-dogfood: two parses of the same document disagree — check would false-red on an untouched tree')
+  console.log(`  ok rtm-dogfood — forma's own PRD parses as ${rows.length} traceable requirements, every one carrying its verification and its line`)
+}
+
+console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, rtm-dogfood all green.')

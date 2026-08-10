@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-08-10T08:29:05.145Z",
+  "generatedAt": "2026-08-10T08:50:19.181Z",
   "source": {
     "repo": "forma",
-    "commit": "f41870478efd19516fb4cbfde68f766dcaf079d8",
+    "commit": "0b0234cd0bbf5bb793bb4625173e4df52c25f54a",
     "branch": "feat/control-room",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
@@ -245,7 +245,7 @@
         {
           "type": "glob",
           "ref": "lib",
-          "count": 19
+          "count": 20
         }
       ],
       "category": "container",
@@ -618,6 +618,25 @@
       "status2": "unknown",
       "target": "",
       "func": "roomload.mjs — how a manifest entry becomes a set of concrete inputs. Shared by room.mjs (which composes) and check.mjs (which re-derives and compares), for the same reason roomderive.mjs is shared: if the two resolved a programme's paths d",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__rtm_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "rtm",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/rtm.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "rtm.mjs — the requirements traceability matrix, DERIVED from the documents a repo already writes and the issues it already has. Pure parsing plus set arithmetic: no network, no LLM, nothing curated into a second file that could disagree wit",
       "descSource": "docstring"
     },
     {
