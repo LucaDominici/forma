@@ -40,6 +40,20 @@ npm run lint    # syntax-checks bin + lib
 Commit subjects are conventional and carry `(#N)` when the work has an issue — the Control Room
 reads that number out of the subject to link an issue to the files it touched.
 
+## The Control Room, locally
+
+`docs/architecture/control-room.html` is generated and gitignored; CI composes it for Pages. If you
+generate one locally, remember that it embeds how far the architecture layer is behind `HEAD` — so
+your next commit makes it stale and `forma check` will say so. That is the gate being right, not a
+false alarm. Re-run `forma room --manifest forma.room.json --out docs/architecture/control-room.html`,
+or delete the file: the room assertions are opt-in by its presence.
+
+```sh
+forma verify --gh-repo LucaDominici/forma      # refresh the fact base (the only networked step)
+forma room --manifest forma.room.json --out docs/architecture/control-room.html
+forma room --manifest forma.room.json --serve  # ...or serve it, with working Options checkboxes
+```
+
 ## Touching documentation
 
 Forma's documentation is governed by the doc-set standard maintained in `arbiter`: which documents
