@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/LucaDominici/forma/blob/main/lib/schema/c4-issues.schema.json",
+  "title": "c4-issues — gh issue/milestone snapshot for the Control Room",
+  "description": "Written only by `forma verify`, atomically after a live gh fetch parses cleanly. A timestamped, offline-replayable fact base — never hand-edited, never touched by `gen` or `check`.",
+  "type": "object",
+  "required": ["fetchedAt", "ghRepo", "truncated", "issues", "milestones"],
+  "additionalProperties": false,
+  "properties": {
+    "fetchedAt": { "type": "string", "format": "date-time" },
+    "ghRepo": { "type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$" },
+    "truncated": { "type": "boolean", "description": "Required because absence would read as fine on snapshots written before the truncation guard existed." },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["n", "title", "state"],
+        "additionalProperties": false,
+        "properties": {
+          "n": { "type": "integer", "minimum": 1 },
+          "title": { "type": "string" },
+          "state": { "type": "string", "enum": ["OPEN", "CLOSED"] },
+          "ms": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+          "labels": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "milestones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "open", "closed"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string" },
+          "due": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+          "open": { "type": "integer", "minimum": 0 },
+          "closed": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}
