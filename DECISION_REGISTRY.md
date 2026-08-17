@@ -29,9 +29,9 @@ Enforcement: branch protection requiring the `ci-required` context; `docs/GOVERN
 
 Enforcement: `lib/link.mjs` derives the link from the subject, so an unlinked commit shows up as missing coverage in the briefing rather than as a lint error. Partial by construction — see `docs/SCOPE-room.md` §2.
 
-| D-03 | Documentation is graded on the enterprise column of the doc-set standard | Forma is published to npm and depended on by strangers, so the reader who matters is not the one who wrote it | Luca Dominici | 2026-08-10 |
+| D-03 | Documentation is graded on the **solo** column of the doc-set standard | Forma is a one-committer, dogfood-first tool; the enterprise column (GAMP 5 / Part 11 …) is governance theatre for it and its `arbiter` coupling turned CI red. The reader who matters is the owner running it across a personal portfolio | Luca Dominici | 2026-08-17 (was enterprise, 2026-08-10) |
 
-Enforcement: `tier_floor: enterprise` in `standards/doc-profile`, read by `check-doc-set.mjs` and `check-doc-freshness.mjs` in the `docs-gate` CI job.
+Enforcement: `tier_floor: solo` in `standards/doc-profile`, read by the doc-set checks in the `docs-gate` CI job. The grading is also being decoupled from the private `arbiter` checkout (debt D-7) so the gate runs standalone.
 
 | D-04 | The document gates run from a checkout of `arbiter`, never vendored into `lib/` | Re-implementing them here would put two engines behind one rule, which is the divergence `roomderive.mjs` and `roomload.mjs` exist to prevent — and a YAML parser in `lib/` would break ADR-0001 | Luca Dominici | 2026-08-10 |
 
