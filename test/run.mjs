@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 // Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, statSync, existsSync, renameSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, statSync, existsSync, renameSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { materializeTimeline, validateModel } from '../lib/validate.mjs'
-import { indexByNode, statusFor } from '../lib/docmap.mjs'
+import { indexByNode, statusFor, loadDocRows } from '../lib/docmap.mjs'
+import { daysBetween } from '../lib/roomderive.mjs'
+import { deriveRtm } from '../lib/rtm.mjs'
+import { componentsFor } from '../lib/cluster.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const BIN = join(HERE, '..', 'bin', 'forma.mjs')
@@ -380,41 +383,19 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok context-seed — §33 ${actors.length} placeholder actor(s) + ${t.edges.length} edge(s), gen names them once and stops after the rename; a source-less repo still gets a context`)
 }
 
-// 3e) two-stack: a product that is Go AND TypeScript. `init` models ONE stack per run, and the defect
-// was that it never said so — a Go + React monorepo came out as 53 Go packages with the application
-// its users open missing and no line anywhere admitting it. The fixture puts *.go and *.ts/*.tsx in
-// different directories; the assertions are what init SAYS about the stack it skipped, and whether
-// what it says actually WORKS when pasted.
+// 3e) two-stack: a product that is Go AND TypeScript. Both stacks must be modelled by the first init;
+// a passing check over only the dominant one is the vacuous green this fixture prevents.
 {
   const REPO = FIX('two-stack'), topo = join(tmp, '2s-topo.json'), model = join(tmp, '2s-model.json')
   let r = run(['init', '--repo', REPO, '--out', topo, '--force']); if (r.status !== 0) die('two-stack init exit ' + r.status, r)
-  const t = readJson(topo), err = r.stderr || ''
+  const t = readJson(topo)
 
-  // S1 — the dominant stack is still the one seeded, alone (this is option B, deliberately)
-  if (t.meta.stack !== 'Go') die('S1: expected Go as the dominant stack, got ' + t.meta.stack)
-  const off = t.nodes.filter((n) => n.kind === 'container' && n.tech !== 'Go')
-  if (off.length) die('S1: a non-Go container was seeded by default: ' + JSON.stringify(off.map((n) => n.name)))
-
-  // S2 — no silent detection: the stack it walked past is named, and counted
-  if (!/TypeScript/.test(err)) die('S2: init never mentioned the TypeScript sources it walked past:\n' + err)
-  if (!/\b2 director/.test(err)) die('S2: the message does not count the directories it saw:\n' + err)
-
-  // S3 — the entries to paste are exact, one per directory, and cover BOTH extensions of the
-  // language: a `match` of `\.ts$` would model half a React app and call it done.
-  const u = (t._unseeded || []).find((x) => x.stack === 'TypeScript')
-  if (!u) die('S3: no _unseeded entry for TypeScript: ' + JSON.stringify(t._unseeded))
-  if (u.nodes.length !== 2 || u.leafSources.length !== 2) die('S3: expected one node + one leafSource per TS dir, got ' + JSON.stringify(u))
-  if (!new RegExp(u.match).test('view.tsx')) die('S3: the pasted match misses *.tsx: ' + u.match)
-  if (t.nodes.some((n) => u.nodes.some((x) => x.id === n.id))) die('S3: an _unseeded id collides with a seeded one — pasting it would break `gen`')
-  // S3b — a directory already seeded must never be offered again. The report keys on the dirs the
-  // container pass did NOT reach, per language: keyed on "every language but the dominant one" it
-  // handed a React repo back its own `src/ui` (seeded from *.tsx, offered again for *.ts), and
-  // pasting that stacked a second container over a directory already in the model.
-  const seededDirs = new Set(t.leafSources.map((s) => s.dir))
-  for (const e of t._unseeded || []) {
-    if (e.stack !== t.meta.stack) continue
-    for (const s of e.leafSources) if (seededDirs.has(s.dir)) die(`S3b: ${s.dir} is offered as unseeded ${e.stack} but is already a seeded container`)
-  }
+  if (t.meta.stack !== 'Go + TypeScript' || (t.meta.stacks || []).join() !== 'Go,TypeScript') die('S1: both stacks are not declared: ' + JSON.stringify(t.meta))
+  const techs = new Set(t.nodes.filter((n) => n.kind === 'container').map((n) => n.tech))
+  if (!techs.has('Go') || !techs.has('TypeScript')) die('S1: both stacks are not seeded: ' + JSON.stringify([...techs]))
+  if ((t._unseeded || []).length) die('S2: init left an ungoverned stack: ' + JSON.stringify(t._unseeded))
+  const tsSources = t.leafSources.filter((s) => (t.nodes.find((n) => n.id === s.parent) || {}).tech === 'TypeScript')
+  if (!tsSources.length || !tsSources.some((s) => new RegExp(s.match).test('view.tsx'))) die('S3: TypeScript source roots miss *.tsx: ' + JSON.stringify(tsSources))
   // S3c — a *.tsx-dominant repo must seed the *.ts half of the same language too, not report it
   const react = mkdtempSync(join(tmpdir(), 'forma-react-'))
   mkdirSync(join(react, 'src', 'ui'), { recursive: true })
@@ -422,24 +403,88 @@ const diffPaths = (a, b, at = '') => {
   const rTopo = join(tmp, 'react-topo.json'), rModel = join(tmp, 'react-model.json')
   r = run(['init', '--repo', react, '--out', rTopo, '--force']); if (r.status !== 0) die('S3c react init exit ' + r.status, r)
   const rt = readJson(rTopo)
-  if ((rt._unseeded || []).length) die('S3c: the dominant language came back as an unseeded stack: ' + JSON.stringify(rt._unseeded))
   r = run(['gen', '--repo', react, '--topology', rTopo, '--out', rModel]); if (r.status !== 0) die('S3c react gen exit ' + r.status, r)
   const rl = readJson(rModel).nodes.filter((n) => n.kind === 'leaf').map((n) => n.name).sort()
   if (rl.length !== 5) die(`S3c: one match per LANGUAGE — expected all 5 *.ts/*.tsx files, got ${rl.length}: ${rl}`)
 
-  // S4 — the one that decides whether option B was delivered: move the entries in, exactly as the
-  // message instructs, and the model must build AND pass the gate. A printed entry that does not
-  // work is a lie dressed as help.
-  t.nodes.push(...u.nodes); t.leafSources.push(...u.leafSources)
-  const pasted = join(tmp, '2s-topo-pasted.json')
-  writeFileSync(pasted, JSON.stringify(t, null, 2))
-  r = run(['gen', '--repo', REPO, '--topology', pasted, '--out', model]); if (r.status !== 0) die('S4: the pasted _unseeded entries do not gen', r)
+  // Direct first-run: no paste or generated-file editing between init and gen/check.
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('S4: multi-stack topology does not gen directly', r)
   const m = readJson(model)
-  if (!m.nodes.some((n) => n.kind === 'container' && n.tech === 'TypeScript')) die('S4: pasting _unseeded put no TypeScript container in the model')
+  if (!m.nodes.some((n) => n.kind === 'container' && n.tech === 'TypeScript')) die('S4: generated model has no TypeScript container')
   if (!m.nodes.some((n) => n.kind === 'leaf' && n.name === 'view')) die('S4: the *.tsx file never became a leaf — the match under-covers the language')
-  r = run(['check', '--repo', REPO, '--model', model, '--topology', pasted]); if (r.status !== 0) die('S4: the gate rejects a model built from the pasted entries', r)
-  console.log(`  ok two-stack — §34 Go seeded, TypeScript named (${u.files} files, ${u.leafSources.length} dirs) with entries that gen+check accept verbatim`)
+  if (m.edges.filter((e) => e.kind === 'import' && e.estatus === 'inferred').length < 2) die('S4: composing stack adapters lost the declared Go imports: ' + JSON.stringify(m.edges))
+  const pathLeaves = ['billing/A.java', 'billing/B.java', 'billing/C.java', 'orders/D.java', 'orders/E.java', 'orders/F.java'].map((path, i) => ({ id: 'j' + i, name: 'Class' + i, evidence: [{ type: 'path', ref: 'src/main/java/com/acme/' + path }] }))
+  const pathComponents = componentsFor({ id: 'java', category: 'container' }, pathLeaves).components.map((c) => c.name).join()
+  if (pathComponents !== 'billing,orders') die('S4: package paths did not become usable Java components: ' + pathComponents)
+  const twoById = new Map(m.nodes.map((n) => [n.id, n]))
+  if (m.edges.some((e) => e.label === 'imports' && (twoById.get(e.from) || {}).tech === 'TypeScript')) die('S4: Go adapter attributed a Go import to the co-located TypeScript container: ' + JSON.stringify(m.edges))
+  r = run(['check', '--repo', REPO, '--model', model, '--topology', topo]); if (r.status !== 0) die('S4: direct multi-stack model fails check', r)
 
+  const nestedGo = join(tmp, 'go-nested-module'), nestedTopo = join(tmp, 'go-nested-module-topo.json'), nestedModel = join(tmp, 'go-nested-module-model.json')
+  mkdirSync(join(nestedGo, 'service', 'a'), { recursive: true }); mkdirSync(join(nestedGo, 'service', 'b'), { recursive: true })
+  writeFileSync(join(nestedGo, 'service', 'go.mod'), 'module example.com/service\n\ngo 1.22\n')
+  writeFileSync(join(nestedGo, 'service', 'a', 'a.go'), 'package a\nimport "example.com/service/b"\nfunc A() string { return b.B() }\n')
+  writeFileSync(join(nestedGo, 'service', 'b', 'b.go'), 'package b\nfunc B() string { return "b" }\n')
+  r = run(['init', '--repo', nestedGo, '--out', nestedTopo, '--force']); if (r.status !== 0) die('S4: nested Go module init failed', r)
+  r = run(['gen', '--repo', nestedGo, '--topology', nestedTopo, '--out', nestedModel]); if (r.status !== 0) die('S4: nested Go module gen failed', r)
+  if (!readJson(nestedModel).edges.some((e) => e.label === 'imports')) die('S4: nested Go module lost its declared import edge')
+  r = run(['check', '--repo', nestedGo, '--model', nestedModel, '--topology', nestedTopo]); if (r.status !== 0) die('S4: nested Go module check failed', r)
+
+  const testsTopo = join(tmp, '2s-topo-tests.json'), testsModel = join(tmp, '2s-model-tests.json')
+  r = run(['init', '--repo', REPO, '--topology', testsTopo, '--out', testsTopo, '--force', '--include-tests']); if (r.status !== 0) die('S4: Go include-tests init failed', r)
+  const withTests = readJson(testsTopo), goParents = new Set(withTests.nodes.filter((n) => n.tech === 'Go').map((n) => n.id))
+  if (withTests.leafSources.filter((s) => goParents.has(s.parent)).some((s) => s.exclude)) die('S4: Go --include-tests kept the _test.go exclusion')
+  r = run(['gen', '--repo', REPO, '--topology', testsTopo, '--out', testsModel]); if (r.status !== 0) die('S4: Go include-tests gen failed', r)
+  r = run(['check', '--repo', REPO, '--model', testsModel, '--topology', testsTopo]); if (r.status !== 0) die('S4: Go include-tests check failed', r)
+
+  // Removing one whole stack must make check red even though every remaining leafSource recounts.
+  const bad = readJson(topo), badTopo = join(tmp, '2s-topo-missing-ts.json')
+  const tsParents = new Set(bad.nodes.filter((n) => n.tech === 'TypeScript').map((n) => n.id))
+  bad.leafSources = bad.leafSources.filter((s) => !tsParents.has(s.parent))
+  writeFileSync(badTopo, JSON.stringify(bad, null, 2))
+  r = run(['check', '--repo', REPO, '--model', model, '--topology', badTopo])
+  if (r.status === 0 || !/SOURCE COVERAGE TypeScript/.test(r.stderr || '')) die('S5: removing TypeScript coverage did not fail closed', r)
+  const bypass = readJson(topo), bypassTopo = join(tmp, '2s-topo-no-coverage.json')
+  delete bypass.sourceCoverage
+  bypass.leafSources = bypass.leafSources.filter((s) => !tsParents.has(s.parent))
+  writeFileSync(bypassTopo, JSON.stringify(bypass, null, 2))
+  r = run(['check', '--repo', REPO, '--model', model, '--topology', bypassTopo])
+  if (r.status === 0 || !/missing sourceCoverage/.test(r.stderr || '')) die('S5: deleting the coverage contract made the omitted stack pass', r)
+  console.log('  ok two-stack — Go + TypeScript seeded, generated and checked directly; removing one stack fails coverage')
+
+}
+
+// 3f) production cold start: nested workspace roots, valid root-relative doc refs, dead candidate
+// tables and every common test shape. The generated topology must be usable without hand editing.
+{
+  const REPO = FIX('cold-start-closure'), topo = join(tmp, 'cs-topo.json'), model = join(tmp, 'cs-model.json')
+  let r = run(['init', '--repo', REPO, '--out', topo, '--force']); if (r.status !== 0) die('cold-start init exit ' + r.status, r)
+  const t = readJson(topo), sources = JSON.stringify(t.leafSources), exclusions = (t.sourceCoverage || {}).exclusions || []
+  for (const stack of ['Java', 'TypeScript']) if (!(t.meta.stacks || []).includes(stack)) die('cold-start: production stack not detected: ' + stack)
+  if ((t.meta.stacks || []).some((stack) => stack === 'C#' || stack === 'Swift')) die('cold-start: test-only stack entered the production topology: ' + t.meta.stacks)
+  if (!t.docSources.some((s) => (typeof s === 'string' ? s : s.path) === 'docs/FEATURES.md')) die('cold-start: valid rooted docSource not adopted')
+  if (t.docSources.some((s) => (typeof s === 'string' ? s : s.path) === 'docs/BROKEN.md')) die('cold-start: dead docSource adopted and will break gen')
+  for (const unsafe of ['docs/MISSING_REF.md', 'docs/ESCAPE.md']) if (t.docSources.some((s) => (typeof s === 'string' ? s : s.path) === unsafe)) die('cold-start: non-atomic or escaping docSource adopted: ' + unsafe)
+  const symlinkRepo = join(tmp, 'doc-symlink'), outside = join(tmp, 'outside.js')
+  mkdirSync(join(symlinkRepo, 'src'), { recursive: true }); mkdirSync(join(symlinkRepo, 'docs'), { recursive: true })
+  writeFileSync(outside, 'export const outside = true\n'); symlinkSync(outside, join(symlinkRepo, 'src', 'external.js'))
+  writeFileSync(join(symlinkRepo, 'docs', 'FEATURES.md'), '| capability | status | code_ref |\n|---|---|---|\n| Escape | DONE | `src/external.js` |\n')
+  if (!loadDocRows(symlinkRepo, ['docs/FEATURES.md'], true).some((row) => row.dead.length)) die('cold-start: a symlink escaped the doc evidence trust boundary')
+  if (!/frontend/.test(sources) || !/backend/.test(sources)) die('cold-start: backend/frontend roots not seeded')
+  for (const part of ['androidTest', 'testFixtures', 'uiTests']) if (!exclusions.some((x) => String(x.dir || '').includes(part) && x.reason)) die('cold-start: missing reasoned exclusion for ' + part)
+  if (!exclusions.some((x) => x.match && x.reason)) die('cold-start: co-located test files have no reasoned exclusion')
+  r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('cold-start gen exit ' + r.status, r)
+  r = run(['check', '--repo', REPO, '--model', model, '--topology', topo]); if (r.status !== 0) die('cold-start check exit ' + r.status, r)
+  const refs = readJson(model).nodes.flatMap((n) => n.evidence || []).map((e) => e.ref || '').join('\n')
+  if (/(?:^|\/)(?:test|tests|androidTest|testFixtures|uiTests)(?:\/|$)|(?:Test|Tests|\.test|\.spec)\.[^.]+$/m.test(refs)) die('cold-start: test source entered the production model: ' + refs)
+
+  const allTopo = join(tmp, 'cs-all-topo.json'), allModel = join(tmp, 'cs-all-model.json')
+  r = run(['init', '--repo', REPO, '--out', allTopo, '--force', '--include-tests']); if (r.status !== 0) die('cold-start include-tests init exit ' + r.status, r)
+  const all = readJson(allTopo)
+  if (!(all.meta.stacks || []).includes('C#') || (all.sourceCoverage.exclusions || []).some((x) => /test source/.test(x.reason))) die('cold-start: --include-tests did not restore every test stack')
+  r = run(['gen', '--repo', REPO, '--topology', allTopo, '--out', allModel]); if (r.status !== 0) die('cold-start include-tests gen exit ' + r.status, r)
+  r = run(['check', '--repo', REPO, '--model', allModel, '--topology', allTopo]); if (r.status !== 0) die('cold-start include-tests check exit ' + r.status, r)
+  console.log('  ok cold-start-closure — multiroot/multistack, atomic docs, reasoned test exclusions and include-tests all close')
 }
 
 // 4) §1b attach-mode + check freshness, end-to-end on a copy of the self-repo
@@ -708,6 +753,19 @@ const diffPaths = (a, b, at = '') => {
   if (r.status === 0) die('WP-A5: a missing gh must fail loud')
   if (readFileSync(model, 'utf-8') !== before) die('WP-A5: model was modified despite the gh failure')
 
+  // A full first page is not proof of completeness. Verify retries before writing, and a failed
+  // retry must leave an existing snapshot byte-identical.
+  const adaptiveRepo = join(tmp, 'verify-adaptive'), adaptiveIssues = join(adaptiveRepo, 'issues.json')
+  mkdirSync(adaptiveRepo, { recursive: true })
+  const adaptiveStub = process.execPath + ' ' + join(HERE, 'fixtures', 'truth-room', 'stub-gh-adaptive.mjs')
+  r = run(['verify', '--repo', adaptiveRepo, '--issues', adaptiveIssues, '--gh-repo', 'acme/adaptive', '--gh-cmd', adaptiveStub, '--limit', '2'])
+  if (r.status !== 0) die('adaptive verify exit ' + r.status, r)
+  const adaptive = readJson(adaptiveIssues)
+  if (adaptive.truncated !== false || adaptive.issues.length !== 5 || !/retrying with 4/.test(r.stderr || '')) die('adaptive verify did not prove the complete five-issue snapshot', r)
+  const sentinel = readFileSync(adaptiveIssues, 'utf-8')
+  r = run(['verify', '--repo', adaptiveRepo, '--issues', adaptiveIssues, '--gh-repo', 'acme/adaptive', '--gh-cmd', adaptiveStub + ' fail', '--limit', '2'])
+  if (r.status === 0 || readFileSync(adaptiveIssues, 'utf-8') !== sentinel) die('adaptive verify published after a failed retry', r)
+
   // R4-1: the issue fact base is useful without a C4 map. Auto-detect absence instead of making a
   // caller know a second flag, and prove the update orchestrator no longer skips that programme.
   const mapless = join(tmp, 'verify-mapless'), maplessIssues = join(mapless, 'issues.json')
@@ -724,6 +782,9 @@ const diffPaths = (a, b, at = '') => {
   if (r.status !== 0) die('WP-A5: room update skipped or failed its map-less programme', r)
   if (!existsSync(maplessIssues) || !existsSync(maplessRoom)) die('WP-A5: room update did not refresh then compose the map-less programme')
   if (/left as-is|snapshot refresh needs/.test((r.stdout || '') + (r.stderr || ''))) die('WP-A5: room update still reports the map-less programme as skipped')
+  const roomBeforeFailedUpdate = readFileSync(maplessRoom, 'utf-8')
+  r = run(['room', 'update', '--manifest', maplessManifest, '--out', maplessRoom, '--gh-cmd', adaptiveStub + ' fail', '--limit', '2'])
+  if (r.status === 0 || readFileSync(maplessRoom, 'utf-8') !== roomBeforeFailedUpdate) die('WP-A5: room update published after verify failed', r)
   console.log('  ok verify — WP-A5 closed→done with dated evidence, open untouched, idempotent, gh failure leaves the model intact')
 }
 
@@ -1541,6 +1602,12 @@ const diffPaths = (a, b, at = '') => {
   if (B.derived.kpis.linkCoveragePct !== null) die('room: beta was never asked the issue-to-code question; coverage must be null, not ' + B.derived.kpis.linkCoveragePct)
   if (!B.derived.kanban || B.derived.kanban.chiuse.join() !== '6') die('room: beta kanban should still bucket its own issues, got ' + JSON.stringify(B.derived.kanban))
   if (ROOM.portfolio.totals.unknownRule !== 1) die('room: beta declares no blocking rule, so unknownRule must be 1 (absent is not empty, I7), got ' + ROOM.portfolio.totals.unknownRule)
+  if (ROOM.portfolio.totals.blocked !== null) die('room: one unknown blocking rule makes the portfolio blocked total unknown, got ' + ROOM.portfolio.totals.blocked)
+  const betaSummary = ROOM.portfolio.programs.find((p) => p.id === 'beta'), betaMoving = ROOM.portfolio.moving.find((p) => p.program === 'beta')
+  if (!betaSummary || betaSummary.blocked !== null) die('room: beta unknown blocking state collapsed to a number: ' + JSON.stringify(betaSummary))
+  if (!betaMoving || betaMoving.count !== null || betaMoving.byCluster !== null) die('room: beta moving claim collapsed unknown into an empty queue: ' + JSON.stringify(betaMoving))
+  if (A.derived.kpis.snapshotAgeDays !== 1 || betaSummary.snapshotAgeDays !== 1) die('room: snapshot civil age was not derived consistently')
+  if (daysBetween('2026-08-17T23:59:59Z', '2026-08-17') !== 0 || daysBetween('not-a-date', '2026-08-17') !== null) die('room: civil date comparison regressed to timestamp rounding')
 
   const presentable = (file) => spawnSync(process.execPath, [join(HERE, '..', 'scripts', 'room-presentable.mjs'), '--room', file, '--manifest', manifest], { encoding: 'utf-8' })
   r = presentable(roomHtml)
@@ -1732,6 +1799,10 @@ const diffPaths = (a, b, at = '') => {
   }
   writeFileSync(join(root, 'one/docs/architecture/c4-model.json'), '{}')
   writeFileSync(join(root, 'one/docs/architecture/c4-topology.json'), '{}')
+  mkdirSync(join(root, 'one/docs/PRODUCT'), { recursive: true })
+  writeFileSync(join(root, 'one/docs/PRODUCT/REQUIREMENTS_MATRIX.md'), readFileSync(FIX('truth-room/REQUIREMENTS_MATRIX.md'), 'utf-8'))
+  git(join(root, 'one'), ['add', 'docs/PRODUCT/REQUIREMENTS_MATRIX.md'])
+  git(join(root, 'one'), ['commit', '-qm', 'docs: add requirements'])
   // R5-1: R4 made the model optional, so a GitHub checkout with neither generated input must still
   // be onboarded. A local checkout with no resolvable ghRepo cannot produce the required snapshot.
   const mapless = join(root, 'three')
@@ -1776,6 +1847,12 @@ const diffPaths = (a, b, at = '') => {
   if (r.status !== 0) die('room init: seed exit ' + r.status, r)
   let initialized = readJson(initManifest)
   if (initialized.today !== '2026-08-17' || initialized.programs.length !== 1 || initialized.programs[0].ghRepo !== 'acme/one') die('room init: seed did not derive today/repo: ' + JSON.stringify(initialized))
+  if (!initialized.programs[0].docs || initialized.programs[0].docs.include.join() !== 'docs/**/*.md') die('room init: tracked docs corpus was not discovered safely: ' + JSON.stringify(initialized.programs[0].docs))
+  if (!initialized.programs[0].rtm || initialized.programs[0].rtm.docs.length !== 1 || initialized.programs[0].rtm.docs[0].path !== 'docs/PRODUCT/REQUIREMENTS_MATRIX.md') die('room init: parser-confirmed requirements matrix was not discovered: ' + JSON.stringify(initialized.programs[0].rtm))
+  const observedRtm = deriveRtm({ repo: join(root, 'one'), rtm: initialized.programs[0].rtm, issuesSnapshot: { issues: [{ n: 99, title: 'Observed but not claimed', state: 'OPEN' }] } })
+  if (observedRtm.scopeComplete || observedRtm.orphans.orphanIssues.length) die('room init: auto-discovered RTM silently claimed to be the complete WBS: ' + JSON.stringify(observedRtm))
+  const strictRtm = deriveRtm({ repo: join(root, 'one'), rtm: { ...initialized.programs[0].rtm, requireIssuesFrom: ['docs/PRODUCT/REQUIREMENTS_MATRIX.md'] }, issuesSnapshot: { issues: [{ n: 99, title: 'Strictly orphaned', state: 'OPEN' }] } })
+  if (!strictRtm.scopeComplete || strictRtm.orphans.orphanIssues.length !== 1) die('rtm: explicit WBS completeness stopped gating uncited open issues: ' + JSON.stringify(strictRtm))
   initialized.programs[0].enabled = false
   initialized.programs[0].taxonomy = { minPopulation: 1 }
   writeFileSync(initManifest, JSON.stringify(initialized, null, 2) + '\n')
@@ -1785,6 +1862,7 @@ const diffPaths = (a, b, at = '') => {
   initialized = readJson(initManifest)
   if (initialized.programs[0].enabled !== false || !initialized.programs[0].taxonomy) die('room init: merge clobbered a decision')
   if (initialized.programs[0].ghRepo !== 'acme/one') die('room init: transient missing origin erased the known ghRepo')
+  if (!initialized.programs[0].docs || !initialized.programs[0].rtm) die('room init: rediscovery erased safe docs/RTM inputs')
 
   const scannedManifest = join(root, 'init-scan-room.json')
   r = run(['room', 'init', '--scan', '--root', root, '--manifest', scannedManifest, '--today', '2026-08-17'])
@@ -1944,48 +2022,33 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok strings — ${Object.keys(en).length} keys at en/it parity, every one read by the template`)
 }
 
-// The verdict buckets were already derived and checked, but a six-number summary hid every issue.
-// Kanban is a programme route: it must consume the shared derivation and expose every bucket (#61).
+// Queue and Kanban are supporting technical evidence, not two undocumented top-level products.
+// They stay complete through lazy, bounded disclosure inside Tech; legacy hashes remain valid.
 {
   const template = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
-  const view = (template.match(/function viewKanban\([^]*?\n}\n/) || [])[0]
-  if (!view) die('room-kanban: viewKanban is missing')
-  if (!/program\.derived\.kanban/.test(view)) die('room-kanban: the view does not consume the checked kanban derivation')
-  for (const bucket of ['chiuse', 'sane', 'a-meta', 'premessa-falsa', 'aspettano-umano', 'non-auditate']) {
-    if (!view.includes('"' + bucket + '"')) die('room-kanban: the ' + bucket + ' bucket is not rendered')
+  const tabsSource = (/var TABS=([\s\S]*?);\s*var BUILD=/.exec(template) || [])[1] || ''
+  const tabs = [...tabsSource.matchAll(/\["([^"]+)",function/g)].map((m) => m[1])
+  if (tabs.join() !== 'exec,tech,map,wbs,docs') die('room-ia: programme views drifted from the five-view contract: ' + tabs)
+  if (/var BUILD=\{[^}]*\b(?:auto|kanban):/.test(template)) die('room-ia: removed queue/Kanban routes still exist in BUILD')
+  if (!/\^\\\/\(\[\^\/\]\+\)\\\/\(auto\|kanban\)\$/.test(template) || !/return key\(old\[1\],"tech"\)/.test(template)) die('room-ia: legacy /auto and /kanban hashes do not redirect to Tech')
+  if (!/function workflow\(/.test(template) || !/d\.open&&!d\.getAttribute\("data-filled"\)/.test(template)) die('room-tech: supporting workflows are not lazy')
+  const pageSize = Number((/var ISSUE_PAGE_SIZE=(\d+)/.exec(template) || [])[1])
+  if (!(pageSize > 0 && pageSize <= 40) || !/function pagedList\(/.test(template)) die('room-dom: issue rendering has no bounded pager')
+  for (const fn of ['renderQueue', 'renderKanban']) {
+    const body = (new RegExp('function ' + fn + '\\([^]*?\\n}\\n').exec(template) || [])[0] || ''
+    if (!/pagedList\(/.test(body)) die('room-dom: ' + fn + ' bypasses the bounded pager')
   }
-  if (!/\["kanban",function\(\)\{return STR\.routeKanban;\}\]/.test(template)) die('room-kanban: Kanban is not a programme route')
-  if (!/kanban:viewKanban/.test(template)) die('room-kanban: the Kanban route is not wired to its view')
-  if (!/tabs\[i\]\.scrollIntoView\(\{block:"nearest",inline:"nearest"\}\)/.test(template)) die('room-kanban: a narrow deep link can leave the active view tab off-screen')
-  if (!/names\[i\]\[0\]==="chiuse"/.test(view) || !/kanbanClosedFold/.test(view)) die('room-kanban: a large closed bucket must stay countable without turning the dashboard into a long archive')
-  if (!/\.panel,\.panel-head,\.panel-body,\.chart-viz,\.tablewrap\{min-width:0\}/.test(template) || !/\.frame\{[^}]*max-width:100%/.test(template)) die('room-layout: intrinsic chart, table and frame widths can escape a narrow grid')
-  if (!/addEventListener\("focusin",function\(e\)\{e\.target\.scrollIntoView\(\{block:"nearest",inline:"nearest"\}\);\}\)/.test(template)) die('room-nav: keyboard focus can leave a mobile tab partially off-screen')
-  const en = readJson(join(HERE, '..', 'lib/viewer/strings/en.json'))
-  if (!/^Issues: \{n\}/.test(en.kanbanCount)) die('room-kanban: English provenance has an unconditional plural')
-  if (!/^Show \{n\} closed issues$/.test(en.kanbanClosedFold)) die('room-kanban: closed disclosure must state the exact withheld count')
-  console.log('  ok room-kanban — all checked verdict buckets are visible as a programme view')
-}
-
-// Coda /auto is the complete open queue, not a hand-picked shortlist. Its fallback group must be
-// named, every row must carry a command built from the manifest repo, and the route must be real (#62).
-{
-  const template = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
-  const view = (template.match(/function viewQueue\([^]*?\n}\n/) || [])[0]
-  if (!view) die('room-queue: viewQueue is missing')
-  if (!/program\.derived\.queue/.test(view)) die('room-queue: the view does not consume the checked queue derivation')
-  if (!/STR\.queueRest/.test(view)) die('room-queue: the fallback cluster is not named as the rest of the queue')
-  if (!/queueCommand\(program,n\)/.test(view)) die('room-queue: issue rows do not carry a copy-ready command')
-  if (!/return "gh issue view "\+n\+" --repo "\+p\.ghRepo/.test(template)) die('room-queue: the command is not derived from issue number and manifest repository')
-  if (!/\.queue-command code\{[^}]*min-width:0/.test(template)) die('room-queue: long commands push the copy control out of a narrow viewport')
-  if (!/@media\(max-width:1199px\)\{\.queue-board\{grid-template-columns:minmax\(0,1fr\)/.test(template)) die('room-queue: the narrow grid preserves command intrinsic width and overflows')
-  if (!/\.queue-item\{[^}]*min-width:0/.test(template)) die('room-queue: a queue row cannot shrink to its grid track')
-  if (!/\.queue-item \.issue-pill\{display:flex/.test(template)) die('room-queue: queue rows override the shared pill flex layout')
-  if (!/button\.setAttribute\("aria-label",STR\.copied\)/.test(template)) die('room-queue: copy success is hidden from the button accessible name')
-  const en = readJson(join(HERE, '..', 'lib/viewer/strings/en.json'))
-  if (!/^Open issues: \{n\}/.test(en.queueCount)) die('room-queue: English provenance has an unconditional plural')
-  if (!/\["auto",function\(\)\{return STR\.routeQueue;\}\]/.test(template)) die('room-queue: Coda /auto is not a programme route')
-  if (!/auto:viewQueue/.test(template)) die('room-queue: the Coda /auto route is not wired to its view')
-  console.log('  ok room-queue — the complete derived queue has a fallback group and factual copy-ready commands')
+  if (!/for\(i=1;i<names\.length;i\+\+\)/.test(template) || !/if\(items\.length\)/.test(template) || !/closedArchived/.test(template)) die('room-kanban: empty states or closed archive are still mounted as full lanes')
+  if (!/id="mobile-program"/.test(template) || !/id="mobile-view"/.test(template)) die('room-mobile: native route controls are absent')
+  if (!/\.screen-list,\.workflow\{display:none!important\}/.test(template) || /details:not\(\[open\]\)/.test(template)) die('room-print: interactive archives can expand into print')
+  if (!/execHeadlineUnknown/.test(template) || !/techHeadlineUnknown/.test(template) || !/thesisUnknown/.test(template)) die('room-truth: unknown claims have no explicit headline path')
+  if (!/i===4&&!blockedClaim\.known\?null/.test(template)) die('room-truth: Tech maps an unknown blocking rule back to a measured zero')
+  if (!/\.pager button\{min-height:44px/.test(template)) die('room-mobile: pager target is below 44px')
+  if (!/\.skip\{[^}]*min-height:44px/.test(template)) die('room-mobile: skip target is below 44px')
+  if (!/\.prov\{overflow:visible;text-overflow:clip;white-space:normal/.test(template)) die('room-mobile: provenance is truncated without a disclosure')
+  const composer = readFileSync(join(HERE, '..', 'lib/room.mjs'), 'utf-8')
+  if (!/theme: manifest\.theme \|\| 'light'/.test(composer)) die('room-theme: a fresh client briefing does not default to light')
+  console.log('  ok room-workflow — five-view IA, legacy redirects, bounded lazy evidence, mobile and print contracts')
 }
 
 // The shipped Claude adapter is executable guidance, not brochure copy: its init→update sequence
@@ -2047,6 +2110,9 @@ const diffPaths = (a, b, at = '') => {
   const decisions = readFileSync(join(HERE, '..', 'DECISION_REGISTRY.md'), 'utf-8')
   if (!/srcdoc=frameDoc\(program\)/.test(room)) die('room-c4-drill: the map no longer embeds the hologram')
   if (!/data-drill="1"/.test(holo) || !/stack\.push\(id\)/.test(holo)) die('room-c4-drill: the embedded hologram cannot drill into children')
+  if (!/tabindex="0" focusable="true" role="button" aria-label=/.test(holo) || !/stage\.addEventListener\("keydown"/.test(holo) || !/ev\.key!=="Enter"&&ev\.key!==" "/.test(holo)) die('room-c4-drill: SVG nodes are not keyboard controls')
+  if (!/class="detaildrill"/.test(holo) || !/drillTo\(n\.id,true\)/.test(holo)) die('room-c4-drill: touch inspection has no 44px drill action')
+  if (!/@media\(max-width:600px\)\{#stage\{overflow:auto/.test(holo) || !/liveSvg\.style\.width=Math\.ceil\(vw\)/.test(holo)) die('room-c4-drill: mobile still shrinks the entire map instead of panning at readable scale')
   if (!/crumbLevel\+"-L"/.test(holo)) die('room-c4-drill: the embedded hologram does not expose its C4 level')
   if (!/\| D-07 \|[^\n]*embedded hologram[^\n]*sufficient/i.test(decisions)) die('room-c4-drill: the delegated owner decision is not recorded')
   console.log('  ok room-c4-drill — the embedded map is the ratified L1→L4 drill surface')

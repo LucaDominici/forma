@@ -210,12 +210,11 @@ $ forma check --repo <haben> --model docs/demo/c4-model.json --topology docs/dem
 [check-c4] OK   → exit 0
 ```
 
-**A bare `init`.** On the same repo, with no curation at all: predicate 1 passes (three context
-boxes, two of them placeholder actors `init` now seeds), and the stack it did not model is named
-out loud with ready-made `leafSources` under `_unseeded` — `JavaScript: 183 files in 6 directories`.
-Predicates 2 and 3 fail on a bare init, and that is the correct reading: 53 flat boxes and 28 file
-counts are what an uncurated repo *is*. §1 asks a bare init to name its actors and its skipped
-stacks, not to be presentable without a human.
+**A bare `init`.** On a multi-stack repository, with no curation at all: predicate 1 passes (three
+context boxes, two placeholder actors), every detected production stack is seeded from its source
+root, and tests/data are explicit exclusions with reasons. `gen` follows immediately without
+editing generated JSON; `check` reports covered + excluded / recognised for each stack and fails if
+a recognised source is neither. Presentational grouping and naming still require human curation.
 
 ### What closing this does not claim
 

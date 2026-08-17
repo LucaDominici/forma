@@ -40,10 +40,11 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
 - `lib/viewer/control-room.html` — the Control Room shell `forma room` composes into: a briefing in
   reading order at `#/`, with five views per programme nested under it (`exec`, `tech`, `map`,
   `wbs`, `docs`) and an `options` view, all in one file. Flat tabs were built, measured and
-  rejected (ADR-0005); ADR-0007 records why views returned one level down instead. Three seams get
-  filled at compose time: the room JSON, the locale tables and the inlined explorer.
+  rejected (ADR-0005); ADR-0007 records why views returned one level down instead. Queue and
+  Kanban are bounded, lazy evidence inside `tech`, not extra routes. Three seams get filled at
+  compose time: the room JSON, the locale tables and the inlined explorer.
 - `lib/viewer/strings/{en,it}.json` — the Control Room's locale tables. Out of the template because
-  at seven views they were the largest thing in it. `npm test` checks parity AND that the template
+  at five views they were the largest thing in it. `npm test` checks parity AND that the template
   actually reads every declared key.
 - `scripts/` — `lint.mjs` (zero-dep lint), `check-clean.mjs` (prepack `.fuse_hidden` guard),
   `presentable.mjs` (viewer publication gate), `room-presentable.mjs` (briefing publication gate).

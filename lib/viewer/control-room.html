@@ -43,7 +43,7 @@ a:hover{color:var(--accent)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 [hidden]{display:none!important}
-.skip{position:fixed;left:8px;top:6px;z-index:40;padding:6px 10px;background:var(--surface);border:1px solid var(--accent);transform:translateY(-160%)}
+.skip{position:fixed;left:8px;top:6px;z-index:40;min-height:44px;padding:6px 10px;background:var(--surface);border:1px solid var(--accent);transform:translateY(-160%)}
 .skip:focus{transform:none}
 
 /* One bar. The previous shell spent 177px on a header plus two rows of navigation, which is 20% of
@@ -54,13 +54,15 @@ a:hover{color:var(--accent)}
 .brand h1{margin:0;font-size:14px;font-weight:650;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis}
 .brand span{color:var(--muted);font-size:11px;font-family:"SF Mono",Menlo,Consolas,monospace}
 .tabs{display:flex;gap:2px;align-items:center;flex:0 0 auto}
-.tabs a{display:block;padding:5px 10px;color:var(--muted);font-size:12.5px;text-decoration:none;border-radius:5px}
+.tabs a{display:flex;align-items:center;min-height:36px;padding:5px 10px;color:var(--muted);font-size:12.5px;text-decoration:none;border-radius:5px}
 .tabs a:hover{color:var(--ink);background:var(--surface)}
 .tabs a[aria-current]{color:var(--ink);background:var(--surface);box-shadow:inset 0 -2px 0 var(--accent)}
 .bar-sep{width:1px;height:20px;background:var(--line);flex:0 0 auto}
 .bar-end{margin-left:auto;display:flex;gap:8px;align-items:center;flex:0 0 auto}
 .ghost{appearance:none;border:1px solid var(--line);border-radius:999px;background:none;padding:4px 10px;font-size:12px;cursor:pointer}
 .ghost:hover{border-color:var(--accent);color:var(--accent)}
+.mobile-nav{display:none;min-width:0;gap:8px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.mobile-nav select{min-width:0;width:100%;height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 28px 0 10px}
 
 main{min-height:0;padding:var(--pad);overflow:hidden}
 .view{display:grid;grid-template-rows:auto minmax(0,1fr);gap:var(--gap);height:100%;min-height:0}
@@ -79,6 +81,12 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 0 auto}
 .panel-body{min-height:0;overflow:auto;flex:1 1 auto;scrollbar-width:thin}
 .panel-body>p{max-width:72ch}
+.answer-lead{grid-column:1/-1;padding:14px 0 12px}
+.answer-lead .lede{max-width:70ch}
+.empty-state{max-width:68ch;padding:10px 0 4px}
+.empty-state strong{display:block;margin-bottom:4px;font-size:14px}
+.empty-state p{margin:0 0 8px;color:var(--muted)}
+.empty-state .next{color:var(--ink)}
 
 .answer{display:grid;gap:var(--gap);grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
 .evidence{display:grid;gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin;
@@ -161,8 +169,8 @@ details[open]>summary:after{content:"\2212"}
 .group:first-child{border-top:0}
 .group-name{display:block;margin-bottom:3px;color:var(--muted);font-size:10.5px}
 .links{display:flex;gap:6px;flex-wrap:wrap}
-.kanban-board{display:grid;grid-template-columns:repeat(6,minmax(180px,1fr));gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin}
-.kanban-issue{padding:6px 0;border-bottom:1px solid var(--line)}
+.kanban-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin}
+.kanban-issue{padding:6px 0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;min-width:0}
 .kanban-issue .issue-pill{display:flex;line-height:1.35}
 .queue-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin;align-content:start}
 .queue-item{min-width:0;padding:7px 0;border-bottom:1px solid var(--line)}
@@ -170,6 +178,14 @@ details[open]>summary:after{content:"\2212"}
 .queue-command{display:flex;align-items:center;gap:6px;min-width:0}
 .queue-command code{min-width:0;overflow:auto;white-space:nowrap;flex:1 1 auto}
 @media(max-width:1199px){.queue-board{grid-template-columns:minmax(0,1fr)}}
+.workflow{border-top:1px solid var(--line)}
+.workflow>summary{min-height:44px;display:flex;align-items:center;font-weight:650}
+.workflow-body{padding-bottom:8px}
+.pager{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0}
+.pager button{min-height:44px;appearance:none;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:5px 10px;cursor:pointer}
+.pager button:disabled{opacity:.45;cursor:default}
+.pager-status{color:var(--muted);font-size:11px;text-align:center}
+.print-only{display:none}
 .kv{padding:5px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(110px,180px) 1fr;gap:12px;font-size:12.5px}
 .kv>span:first-child{color:var(--muted)}
 
@@ -180,6 +196,7 @@ details[open]>summary:after{content:"\2212"}
    has no intrinsic height, so without this a chart would collapse to its heading. 180px keeps a
    single bar or a short series legible without reserving a whole screen row. */
 .chart-viz{flex:1 1 auto;min-height:180px;position:relative}
+.chart-compact .chart-viz{min-height:112px}
 .chart-viz svg{display:block;width:100%;height:100%}
 .axis{stroke:var(--line);stroke-width:1;shape-rendering:crispEdges}
 .mark-accent{fill:var(--accent)}.mark-series2{fill:var(--series2)}.mark-bad{fill:var(--bad)}
@@ -239,6 +256,27 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
 
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
+@media(max-width:600px){
+ :root{--pad:12px;--gap:14px;--bar:112px}
+ .bar{height:auto;min-height:var(--bar);padding:8px var(--pad);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+ .brand{align-self:center}.brand h1{font-size:15px}.brand span{font-size:11px}
+ .bar-sep,.bar>.tabs{display:none}
+ .bar-end{grid-column:2;grid-row:1;margin:0}
+ .ghost{min-height:44px;min-width:44px;padding:5px 9px}
+ .prov{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere}
+ .mobile-nav{display:grid;grid-column:1/-1;grid-row:2}
+ main{padding:var(--pad)}
+ .thesis{font-size:24px;max-width:22ch}
+ .answer-lead{padding-top:8px}
+ summary,.doclist button,.toggle,.issue-pill{min-height:44px}
+ .issue-pill{align-items:center}
+ .kv,.hole{grid-template-columns:1fr;gap:2px}
+ .detail{grid-template-columns:1fr;gap:2px}
+ .kanban-board,.queue-board{grid-template-columns:minmax(0,1fr)}
+ .workflow,.workflow-body{min-width:0}
+ .kpi{flex-basis:48%;padding:8px 10px}.kpi:nth-child(odd){border-left:0;padding-left:0}
+}
+
 /* Printing hands over the WHOLE briefing. A hash route is not something anyone can put on paper,
    so the shell is released, every view is un-hidden, and each starts a page. */
 @media print{
@@ -268,16 +306,18 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
      measured tokens belong to the compared selector would have been reading a coin flip. */
   color-scheme:light;background:var(--bg)}
  body{height:auto;overflow:visible;display:block;background:var(--bg);color:var(--ink);font-size:10pt}
- .bar,.toggle,.tip,.skip,.ghost{display:none!important}
+ .bar,.toggle,.tip,.skip,.ghost,.mobile-nav{display:none!important}
  main{overflow:visible;height:auto;padding:0}
  .view{height:auto;display:block}
  .view[hidden]{display:block!important}
- .view+.view{break-before:page}
- .answer,.evidence{display:block;overflow:visible}
+ .view{break-after:page}
+ .view:last-child{break-after:auto}
+ .answer,.evidence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:10pt}
+ .answer-lead,.full,.span2{grid-column:1/-1}
  .kanban-board,.queue-board{grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
  .panel{break-inside:avoid;border-top:1px solid #999;margin-bottom:10pt}
  .panel-body,.tablewrap{overflow:visible;max-height:none}
- .chart-viz{height:200pt}
+ .chart-viz{height:112pt;min-height:112pt}
  /* `details>*{display:revert}` does NOT defeat Chrome's disclosure hiding: a controlled A/B showed
     the body of a closed <details> simply absent from the PDF. Every per-issue evidence block —
     verdict, why, evidence refs, nodes, milestone, last landing — was silently dropped from the
@@ -286,7 +326,9 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  .frame{height:340pt}
  /* Each view identifies itself on paper. The bar is hidden when printing, so without this the
     output was eleven anonymous sheets with no product name, date, programme or view on any of them. */
-  .print-all{display:block!important}
+ .print-only{display:block!important}
+ .screen-list,.workflow{display:none!important}
+ .print-all{display:block!important}
  .reader>.md{display:none}
  .doc-reader-head{display:none!important}
  .print-id{display:block!important;margin:0 0 8pt;padding-bottom:4pt;border-bottom:1pt solid var(--line);
@@ -303,6 +345,10 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  <nav class="tabs" id="nav-programs"></nav>
  <div class="bar-sep" aria-hidden="true"></div>
  <nav class="tabs" id="nav-views"></nav>
+ <div class="mobile-nav" id="mobile-nav">
+  <select id="mobile-program"></select>
+  <select id="mobile-view"></select>
+ </div>
  <div class="bar-end"><button class="ghost" id="theme-toggle" type="button"></button></div>
 </header>
 <main id="content" tabindex="-1"></main>
@@ -325,7 +371,16 @@ function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null
 function setAttrs(e,a){var k;for(k in a)if(a.hasOwnProperty(k)&&a[k]!=null)e.setAttribute(k,String(a[k]));return e;}
 function svgEl(t,a,x){var e=document.createElementNS(NS,t);setAttrs(e,a||{});if(x!=null)e.textContent=String(x);return e;}
 function short(s,n){s=String(s==null?"":s);return s.length>n?s.slice(0,n-1)+"…":s;}
-function days(a,b){return Math.round((new Date(b)-new Date(a))/86400000);}
+// Claim wrappers are optional so this renderer accepts both the 1.0 numeric shape and a future
+// `{ claims: { name: { state, value } } }` shape without turning unknown into zero at the seam.
+function claimOf(scope,name,fallback,known){
+ var c=scope&&scope.claims&&scope.claims[name],state;
+ if(c&&typeof c==="object"){
+  state=String(c.state||"").toLowerCase();
+  return {known:state!=="unknown"&&state!=="unavailable"&&state!=="not-measured"&&c.value!=null,value:c.value};
+ }
+ return {known:known!==false&&fallback!=null,value:fallback};
+}
 function byId(id){var i;for(i=0;i<ROOM.programs.length;i++)if(ROOM.programs[i].id===id)return ROOM.programs[i];return null;}
 function sumOf(id){var i;for(i=0;i<ROOM.portfolio.programs.length;i++)if(ROOM.portfolio.programs[i].id===id)return ROOM.portfolio.programs[i];return null;}
 function line(svg,x1,y1,x2,y2){svg.appendChild(svgEl("line",{x1:x1,y1:y1,x2:x2,y2:y2,"class":"axis"}));}
@@ -356,12 +411,19 @@ function panel(title,prov,cls){
  seq++;t.id="p"+seq;p.setAttribute("aria-labelledby",t.id);
  h.appendChild(t);p.appendChild(h);
  if(prov)p.appendChild(el("p","prov",prov));
- var b=el("div","panel-body");p.appendChild(b);
+ var b=el("div","panel-body");b.setAttribute("aria-labelledby",t.id);p.appendChild(b);
  p.body=b;p.head=h;return p;
+}
+function emptyState(p,reason,next){
+ var box=el("div","empty-state");box.appendChild(el("strong","",STR.emptyKnown));
+ box.appendChild(el("p","",reason));box.appendChild(el("p","next",next));p.body.appendChild(box);return p;
 }
 function snapshotProv(program){
  var n=program.issuesSnapshot.issues.length,d=String(program.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
  return fmt(STR.provCounted,{n:n,date:d});
+}
+function snapshotAge(age,date){
+ return age==null?fmt(STR.snapshotAgeUnknown,{date:date}):(age===0?fmt(STR.snapshotToday,{date:date}):(age===1?fmt(STR.snapshotAgeOne,{date:date}):fmt(STR.snapshotAge,{n:age,date:date})));
 }
 
 var tipEl;
@@ -381,6 +443,7 @@ function onTip(e){
    again on resize and on route change, so the drawing always matches the box. */
 function chart(title,prov,headers,rows,draw,cls){
  var p=panel(title,prov,"chart"+(cls?" "+cls:"")),btn=el("button","toggle",STR.showTable);
+ if(rows.length<=1)p.classList.add("chart-compact");
  var viz=el("div","chart-viz"),svg=svgEl("svg",{role:"img","aria-label":fmt(STR.chartFor,{title:title}),preserveAspectRatio:"xMidYMid meet"});
  var tw=document.getElementById("table-template").content.firstChild.cloneNode(true);
  var cap=tw.querySelector("caption"),tr=tw.querySelector("thead tr"),body=tw.querySelector("tbody"),i,j,cell;
@@ -418,6 +481,12 @@ function relayout(p){
 function relayoutAll(root){
  var i,list=root.querySelectorAll?root.querySelectorAll(".chart"):[];
  for(i=0;i<list.length;i++)if(list[i].draw)relayout(list[i]);
+}
+function focusScrollers(root){
+ var list=root&&root.querySelectorAll?root.querySelectorAll(".panel-body,.tablewrap,.queue-board,.kanban-board,.queue-command code"):[],i,e;
+ for(i=0;i<list.length;i++){
+  e=list[i];if(e.scrollHeight>e.clientHeight+1||e.scrollWidth>e.clientWidth+1)e.setAttribute("tabindex","0");else e.removeAttribute("tabindex");
+ }
 }
 
 /* ------------------------------- the charts ------------------------------- */
@@ -590,11 +659,26 @@ function blockedRow(b){
  if(program)pair(dl,STR.issue,pill(program,b.n));
  d.appendChild(dl);return d;
 }
+var ISSUE_PAGE_SIZE=40;
+function pagedList(target,items,render){
+ var wrap=el("div","rows screen-list"),page=0,total=Math.max(1,Math.ceil(items.length/ISSUE_PAGE_SIZE));
+ var nav=el("div","pager"),prev=el("button","",STR.pagePrevious),state=el("span","pager-status"),next=el("button","",STR.pageNext);
+ prev.type="button";next.type="button";
+ function draw(){
+  var start=page*ISSUE_PAGE_SIZE,end=Math.min(items.length,start+ISSUE_PAGE_SIZE),i;
+  wrap.textContent="";for(i=start;i<end;i++)wrap.appendChild(render(items[i]));
+  state.textContent=fmt(STR.pageStatus,{from:items.length?start+1:0,to:end,total:items.length});
+  prev.disabled=page===0;next.disabled=page>=total-1;focusScrollers(target);
+ }
+ prev.addEventListener("click",function(){if(page>0){page--;draw();prev.focus();}});
+ next.addEventListener("click",function(){if(page<total-1){page++;draw();next.focus();}});
+ nav.appendChild(prev);nav.appendChild(state);nav.appendChild(next);target.appendChild(wrap);
+ if(items.length>ISSUE_PAGE_SIZE)target.appendChild(nav);
+ target.appendChild(el("p","print-only",fmt(STR.printRecords,{n:items.length})));draw();
+}
 function rowsPanel(p,items,render,emptyText){
  if(!items.length){p.body.appendChild(el("p","muted",emptyText));return p;}
- var wrap=el("div","rows"),i;
- for(i=0;i<items.length;i++)wrap.appendChild(render(items[i]));
- p.body.appendChild(wrap);return p;
+ pagedList(p.body,items,render);return p;
 }
 
 
@@ -731,7 +815,8 @@ function renderMarkdown(src){
 /* --------------------------------- views --------------------------------- */
 function viewPortfolio(view){
  var t=ROOM.portfolio.totals;
- var answer=el("div","answer"),lead=el("section","panel");
+ var blockedClaim=claimOf(t,"blocked",t.blocked,t.unknownRule===0);
+ var answer=el("div","answer"),lead=el("section","panel answer-lead");
  /* Nothing open is a RESULT, not a template with zeros in it. "0 things need you out of 0 open
     across 1 programmes." is the sentence a reader met first on the published demo, and cold, in the
     ten seconds this artifact gets, it reads as a dead project or a broken tool. Everything on this
@@ -739,7 +824,8 @@ function viewPortfolio(view){
  var quiet=t.open===0;
  lead.appendChild(el("p","thesis",quiet
   ?fmt(plural(t.programs,STR.thesisQuietOne,STR.thesisQuiet),{programs:t.programs,closed:t.closed})
-  :fmt(plural(t.programs,STR.thesisOne,STR.thesis),{blocked:t.blocked,open:t.open,programs:t.programs})));
+  :(blockedClaim.known?fmt(plural(t.programs,STR.thesisOne,STR.thesis),{blocked:blockedClaim.value,open:t.open,programs:t.programs})
+    :fmt(STR.thesisUnknown,{open:t.open,unknown:t.unknownRule,programs:t.programs}))));
  if(quiet)lead.appendChild(el("p","lede",fmt(STR.thesisQuietLede,{closed:t.closed})));
  lead.appendChild(el("p","lede",fmt(STR.generated,{source:ROOM.meta.generatedFrom,date:ROOM.meta.today})));
  answer.appendChild(lead);
@@ -748,20 +834,21 @@ function viewPortfolio(view){
  view.appendChild(answer);
 
  var ev=el("div","evidence");
- ev.appendChild(rowsPanel(panel(STR.now,fmt(plural(t.blocked,STR.provBlockedOne,STR.provBlocked),{n:t.blocked}),"span2"),ROOM.portfolio.blocked||[],blockedRow,STR.noBlocked));
+ ev.appendChild(rowsPanel(panel(STR.now,blockedClaim.known?fmt(plural(t.blocked,STR.provBlockedOne,STR.provBlocked),{n:t.blocked}):STR.provBlockedUnknown,"span2"),ROOM.portfolio.blocked||[],blockedRow,blockedClaim.known?STR.noBlocked:STR.ruleUnknown));
 
- var mv=panel(STR.moving,fmt(plural(ROOM.portfolio.moving.length,STR.provMovingOne,STR.provMoving),{n:ROOM.portfolio.moving.length})),stack=el("div","stack"),i,j,k;
+ var movingUnknown=ROOM.portfolio.moving.some(function(item){return item.count==null;});
+ var mv=panel(STR.moving,movingUnknown?STR.provMovingUnknown:fmt(plural(ROOM.portfolio.moving.length,STR.provMovingOne,STR.provMoving),{n:ROOM.portfolio.moving.length})),stack=el("div","stack"),i,j,k;
  for(i=0;i<ROOM.portfolio.moving.length;i++){
   var m=ROOM.portfolio.moving[i],program=byId(m.program),d=el("details"),sm=el("summary","row-head");
-  sm.appendChild(el("span","ref",m.program));sm.appendChild(el("span",""));sm.appendChild(el("span","tally",m.count));
+  sm.appendChild(el("span","ref",m.program));sm.appendChild(el("span",""));sm.appendChild(el("span","tally",m.count==null?"—":m.count));
   d.appendChild(sm);
   var body=el("div");
-  if(!m.byCluster.length)body.appendChild(el("p","muted",STR.noMoving));
-  for(j=0;j<m.byCluster.length;j++){
-   var g=el("div","group"),lk=el("span","links");
-   g.appendChild(el("span","group-name",m.byCluster[j].key));
-   for(k=0;k<m.byCluster[j].issues.length;k++)lk.appendChild(pill(program,m.byCluster[j].issues[k]));
-   g.appendChild(lk);body.appendChild(g);
+  if(m.byCluster==null)body.appendChild(el("p","muted",STR.ruleUnknown));
+  else if(!m.byCluster.length)body.appendChild(el("p","muted",STR.noMoving));
+  else{
+   var items=[];
+   for(j=0;j<m.byCluster.length;j++)for(k=0;k<m.byCluster[j].issues.length;k++)items.push({cluster:m.byCluster[j].key,n:m.byCluster[j].issues[k]});
+   pagedList(body,items,function(item){var g=el("div","group"),lk=el("span","links");g.appendChild(el("span","group-name",item.cluster));lk.appendChild(pill(program,item.n));g.appendChild(lk);return g;});
   }
   d.appendChild(body);stack.appendChild(d);
  }
@@ -777,9 +864,9 @@ function viewPortfolio(view){
   mm.body.appendChild(r);any=true;
  }
  for(i=0;i<ROOM.programs.length;i++){
-  var pr=ROOM.programs[i],age=days(pr.issuesSnapshot.fetchedAt,ROOM.meta.today),dt=String(pr.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
+  var pr=ROOM.programs[i],ps=sumOf(pr.id),age=ps&&ps.snapshotAgeDays,dt=String(pr.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
   var r2=el("div","kv");r2.appendChild(el("span","data",pr.id));
-  r2.appendChild(el("span","",age===0?fmt(STR.snapshotToday,{date:dt}):(age===1?fmt(STR.snapshotAgeOne,{date:dt}):fmt(STR.snapshotAge,{n:age,date:dt}))));
+  r2.appendChild(el("span","",snapshotAge(age,dt)));
   mm.body.appendChild(r2);
  }
  if(!any)mm.body.appendChild(el("p","muted",STR.rulesComplete));
@@ -794,14 +881,15 @@ function kpi(list,k,v,note){
 }
 function viewExec(view,program,summary){
  var k=program.derived.kpis,rtm=program.derived.rtm,history=program.derived.history;
- var answer=el("div","answer"),lead=el("section","panel");
- lead.appendChild(el("p","thesis",fmt(STR.execHeadline,{open:summary.open,blocked:summary.blocked})));
+ var blockedClaim=claimOf(summary,"blocked",summary.blocked,summary.blockedRule.declared);
+ var answer=el("div","answer"),lead=el("section","panel answer-lead");
+ lead.appendChild(el("p","thesis",blockedClaim.known?fmt(STR.execHeadline,{open:summary.open,blocked:blockedClaim.value}):fmt(STR.execHeadlineUnknown,{open:summary.open})));
  lead.appendChild(el("p","lede",snapshotProv(program)));
  answer.appendChild(lead);
 
  var kp=panel(STR.kpiHeading,STR.provDerived,"span2"),list=el("dl","kpis");
  kpi(list,STR.kpiOpen,k.openCount);
- kpi(list,STR.kpiBlocked,summary.blockedRule.declared?summary.blocked:null,summary.blockedRule.declared?null:STR.ruleUnknown);
+ kpi(list,STR.kpiBlocked,blockedClaim.known?blockedClaim.value:null,blockedClaim.known?null:STR.ruleUnknown);
  kpi(list,STR.kpiNoMilestone,k.noMilestoneCount);
  kpi(list,STR.kpiLinked,k.linkCoveragePct==null?null:k.linkCoveragePct+"%",k.linkCoveragePct==null?STR.notMeasured:STR.kpiLinkedNote);
  kpi(list,STR.kpiRequirements,rtm&&rtm.coverage.pct!=null?rtm.coverage.pct+"%":null,
@@ -822,8 +910,9 @@ function viewExec(view,program,summary){
 
 function viewTech(view,program,summary){
  var mine=(ROOM.portfolio.blocked||[]).filter(function(b){return b.program===program.id;});
- var answer=el("div","answer"),lead=el("section","panel");
- lead.appendChild(el("p","thesis",mine.length?fmt(STR.techHeadline,{n:mine.length}):STR.noBlocked));
+ var blockedClaim=claimOf(summary,"blocked",summary.blocked,summary.blockedRule.declared);
+ var answer=el("div","answer"),lead=el("section","panel answer-lead");
+ lead.appendChild(el("p","thesis",blockedClaim.known?(mine.length?fmt(STR.techHeadline,{n:mine.length}):STR.noBlocked):STR.techHeadlineUnknown));
  lead.appendChild(el("p","lede",STR.techLede));
  answer.appendChild(lead);
 var i,j;
@@ -832,12 +921,12 @@ var i,j;
  for(i=1;i<names.length;i++)openTotal+=(buckets[names[i][0]]||[]).length;
 
  var bp=panel(STR.techBuckets,fmt(STR.provBuckets,{closed:(buckets.chiuse||[]).length,open:openTotal}),"span2"),bl=el("dl","kpis");
- for(i=0;i<names.length;i++)kpi(bl,names[i][1],(buckets[names[i][0]]||[]).length,i===0?STR.bucketClosedNote:null);
+ for(i=0;i<names.length;i++)kpi(bl,names[i][1],i===4&&!blockedClaim.known?null:(buckets[names[i][0]]||[]).length,i===0?STR.bucketClosedNote:(i===4&&!blockedClaim.known?STR.ruleUnknown:null));
  bp.body.appendChild(bl);answer.appendChild(bp);
  view.appendChild(answer);
 
  var ev=el("div","evidence");
- ev.appendChild(rowsPanel(panel(STR.techBlocked,fmt(plural(mine.length,STR.provBlockedOne,STR.provBlocked),{n:mine.length}),"span2"),mine,blockedRow,STR.noBlockedHere));
+ ev.appendChild(rowsPanel(panel(STR.techBlocked,blockedClaim.known?fmt(plural(mine.length,STR.provBlockedOne,STR.provBlocked),{n:mine.length}):STR.provBlockedUnknown,"span2"),mine,blockedRow,blockedClaim.known?STR.noBlockedHere:STR.ruleUnknown));
 
  var findings=(program.findings&&program.findings.findings)||[];
  ev.appendChild(rowsPanel(panel(STR.techFindings,STR.provAudit),findings,function(f){
@@ -858,30 +947,42 @@ var i,j;
  cell.appendChild(el("div","",sweeps.length?fmt(STR.sweepsCount,{n:sweeps.length}):STR.sweepsNone));
  for(i=0;i<sweeps.length;i++){var sw=el("div","muted");sw.appendChild(el("span","data",String(sweeps[i].sha).slice(0,8)+" "));sw.appendChild(document.createTextNode(short(sweeps[i].subject,60)+" — "+fmt(STR.sweepFiles,{n:sweeps[i].files})));cell.appendChild(sw);}
  kv(STR.sweeps,cell);
- var age=days(program.issuesSnapshot.fetchedAt,ROOM.meta.today),dt=String(program.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
- kv(STR.snapshots,age===0?fmt(STR.snapshotToday,{date:dt}):(age===1?fmt(STR.snapshotAgeOne,{date:dt}):fmt(STR.snapshotAge,{n:age,date:dt})));
+ var age=summary.snapshotAgeDays,dt=String(program.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
+ kv(STR.snapshots,snapshotAge(age,dt));
  ev.appendChild(hp);
+
+ // The two projections used to be full routes. They are supporting evidence for the same human
+ // decision, so they now disclose here and build only when opened.
+ ev.appendChild(workflow(program,STR.routeQueue,function(target){renderQueue(target,program);}));
+ ev.appendChild(workflow(program,STR.routeKanban,function(target){renderKanban(target,program);}));
  view.appendChild(ev);
 }
 
-function viewKanban(view,program){
- view.setAttribute("data-single","");
- var buckets=program.derived.kanban,names=[["chiuse",STR.bucketChiuse],["sane",STR.bucketSane],["a-meta",STR.bucketAMeta],["premessa-falsa",STR.bucketPremessaFalsa],["aspettano-umano",STR.bucketAspettanoUmano],["non-auditate",STR.bucketNonAuditate]];
- var issues={},board=el("div","kanban-board"),i,j,n,item,lane,rows,target,closed;
- for(i=0;i<program.issuesSnapshot.issues.length;i++)issues[program.issuesSnapshot.issues[i].n]=program.issuesSnapshot.issues[i];
- for(i=0;i<names.length;i++){
-  rows=buckets[names[i][0]]||[];lane=panel(names[i][1],fmt(STR.kanbanCount,{n:rows.length}));target=lane.body;
-  if(names[i][0]==="chiuse"&&rows.length){closed=el("details","kanban-closed");closed.appendChild(el("summary","",fmt(STR.kanbanClosedFold,{n:rows.length})));target=el("div","kanban-closed-items");closed.appendChild(target);lane.body.appendChild(closed);}
-  for(j=0;j<rows.length;j++){
-   n=buckets[names[i][0]][j];item=el("div","kanban-issue");
-   item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,58):"")));target.appendChild(item);
-  }
-  if(!rows.length)lane.body.appendChild(el("p","muted",STR.none));
-  board.appendChild(lane);
- }
- view.appendChild(board);
+function workflow(program,title,fill){
+ var d=el("details","workflow span2"),s=el("summary","",title),body=el("div","workflow-body");
+ d.appendChild(s);d.appendChild(body);
+ d.addEventListener("toggle",function(){if(d.open&&!d.getAttribute("data-filled")){d.setAttribute("data-filled","true");fill(body);}focusScrollers(d);});
+ return d;
 }
-
+function renderKanban(target,program){
+ var buckets=program.derived.kanban,names=[["chiuse",STR.bucketChiuse],["sane",STR.bucketSane],["a-meta",STR.bucketAMeta],["premessa-falsa",STR.bucketPremessaFalsa],["aspettano-umano",STR.bucketAspettanoUmano],["non-auditate",STR.bucketNonAuditate]];
+ var issues={},board=el("div","kanban-board"),i,j,n,lane,rows,items=[],closed=(buckets.chiuse||[]).length;
+ for(i=0;i<program.issuesSnapshot.issues.length;i++)issues[program.issuesSnapshot.issues[i].n]=program.issuesSnapshot.issues[i];
+ if(closed)target.appendChild(el("p","muted",fmt(STR.closedArchived,{n:closed})));
+ for(i=1;i<names.length;i++){
+  rows=buckets[names[i][0]]||[];
+  for(j=0;j<rows.length;j++)items.push({n:rows[j],state:names[i][1]});
+ }
+ if(items.length){
+  lane=panel(STR.routeKanban,fmt(STR.kanbanCount,{n:items.length}));
+  pagedList(lane.body,items,function(entry){
+   var item=el("div","kanban-issue"),meta=el("span","chip",entry.state);n=entry.n;
+   item.appendChild(meta);item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,58):"")));return item;
+  });
+  board.appendChild(lane);
+ }else board.appendChild(el("p","muted",STR.queueComplete));
+ target.appendChild(board);
+}
 function queueCommand(p,n){return "gh issue view "+n+" --repo "+p.ghRepo;}
 function commandLine(command){
  var row=el("div","queue-command"),code=el("code","data",command),button=el("button","toggle",STR.copyCommand);
@@ -893,24 +994,24 @@ function commandLine(command){
  });
  row.appendChild(code);row.appendChild(button);return row;
 }
-function viewQueue(view,program){
- view.setAttribute("data-single","");
- var queue=program.derived.queue,issues={},board=el("div","queue-board"),i,j,n,lane,item,name;
+function renderQueue(target,program){
+ var queue=program.derived.queue,issues={},board=el("div","queue-board"),i,j,n,lane,item,name,items=[];
  for(i=0;i<program.issuesSnapshot.issues.length;i++)issues[program.issuesSnapshot.issues[i].n]=program.issuesSnapshot.issues[i];
  for(i=0;i<queue.clusters.length;i++){
   name=queue.clusters[i].key==="altro"||queue.clusters[i].key==="tutte"?STR.queueRest:queue.clusters[i].key;
-  lane=panel(name,fmt(STR.queueCount,{n:queue.clusters[i].issues.length}));
-  for(j=0;j<queue.clusters[i].issues.length;j++){
-   n=queue.clusters[i].issues[j];item=el("div","queue-item");
-   item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,64):"")));
-   item.appendChild(commandLine(queueCommand(program,n)));lane.body.appendChild(item);
-  }
-  board.appendChild(lane);
+  for(j=0;j<queue.clusters[i].issues.length;j++)items.push({n:queue.clusters[i].issues[j],cluster:name});
  }
- if(!queue.clusters.length){lane=panel(STR.routeQueue,STR.queueComplete);lane.body.appendChild(el("p","muted",STR.noMoving));board.appendChild(lane);}
- view.appendChild(board);
+ if(items.length){
+  lane=panel(STR.routeQueue,fmt(STR.queueCount,{n:items.length}));
+  pagedList(lane.body,items,function(entry){
+   n=entry.n;item=el("div","queue-item");item.appendChild(el("span","chip",entry.cluster));
+   item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,64):"")));
+   item.appendChild(commandLine(queueCommand(program,n)));return item;
+  });
+  board.appendChild(lane);
+ }else{lane=panel(STR.routeQueue,STR.queueComplete);lane.body.appendChild(el("p","muted",STR.noMoving));board.appendChild(lane);}
+ target.appendChild(board);
 }
-
 /* The architecture skin that matches the briefing's theme. `blueprint` IS the briefing's light
    palette mapped onto the explorer's token names (DESIGN.md §D6); `blueprint-dark` is the same
    mapping onto the dark one. Before this, the map was light in both and the theme control silently
@@ -940,13 +1041,14 @@ function viewMap(view,program){
  else if(drift)prov+="  ·  "+STR.aligned;
  var mp=panel(STR.routeMap,prov,"span2");
  mp.classList.add("span2");
- if(!program.hasMap)mp.body.appendChild(el("p","muted",STR.mapMissing));
+ if(!program.hasMap)emptyState(mp,STR.mapMissing,STR.mapNext);
  else{
   var f=el("iframe","frame");
   f.setAttribute("sandbox","allow-scripts");f.title=fmt(STR.mapFrame,{program:program.id});f.srcdoc=frameDoc(program);
   mp.body.style.overflow="hidden";mp.body.appendChild(f);
  }
  ev.appendChild(mp);
+ if(!program.hasMap){view.appendChild(ev);return;}
 
  var cps=program.derived.checkpoints,cp=panel(STR.timeline,STR.provCheckpoints);
  if(!cps||!cps.length)cp.body.appendChild(el("p","muted",STR.timelineMissing));
@@ -973,7 +1075,12 @@ function viewMap(view,program){
 
 function viewWbs(view,program){
  var rtm=program.derived.rtm,i,j;
- var answer=el("div","answer"),lead=el("section","panel");
+ if(!rtm){
+  view.setAttribute("data-single","");
+  var missing=el("div","evidence"),missingPanel=panel(STR.routeWbs,STR.provRtm,"full");
+  emptyState(missingPanel,STR.wbsMissing,STR.wbsNext);missing.appendChild(missingPanel);view.appendChild(missing);return;
+ }
+ var answer=el("div","answer"),lead=el("section","panel answer-lead");
  lead.appendChild(el("p","thesis",rtm?fmt(STR.wbsHeadline,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements}):STR.wbsMissing));
  lead.appendChild(el("p","lede",rtm?fmt(STR.wbsSplit,{withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly}):""));
  answer.appendChild(lead);
@@ -994,7 +1101,7 @@ function viewWbs(view,program){
    for(j=0;j<holes[i][1].length;j++)cell.appendChild(holes[i][1][j]&&holes[i][1][j].nodeType?holes[i][1][j]:el("div","",holes[i][1][j]));
    hr.appendChild(cell);hp.body.appendChild(hr);
   }
-  if(!anyHole)hp.body.appendChild(el("p","muted",STR.wbsComplete));
+  if(!anyHole)hp.body.appendChild(el("p","muted",rtm.scopeComplete?STR.wbsComplete:STR.wbsObserved));
  }else hp.body.appendChild(el("p","muted",STR.wbsMissing));
  answer.appendChild(hp);
  view.appendChild(answer);
@@ -1056,7 +1163,7 @@ function viewDocs(view,program){
  view.setAttribute("data-single","");
  var docs=program.docs,ev=el("div","evidence");
  if(!docs||(!docs.embedded.length&&!docs.listed.length)){
-  var np=panel(STR.routeDocs,STR.provDocsNone,"full");np.body.appendChild(el("p","muted",STR.docsNone));ev.appendChild(np);view.appendChild(ev);return;
+  var np=panel(STR.routeDocs,STR.provDocsNone,"full");emptyState(np,STR.docsNone,STR.docsNext);ev.appendChild(np);view.appendChild(ev);return;
  }
  var lp=panel(STR.docsCanon,fmt(STR.docsBudget,{n:docs.embedded.length}));
  var rp=panel("",STR.provDocsReader,"span2"),listWrap=el("div","doclist"),i;
@@ -1174,13 +1281,11 @@ function toggle(id,enabled){
 }
 
 /* --------------------------------- routing -------------------------------- */
-var VIEWS={},ORDER=[],PRINT_FILL=[];
+var VIEWS={},VIEW_SPEC={},ORDER=[],PRINT_FILL=[];
 var TABS=[["exec",function(){return STR.routeExec;}],["tech",function(){return STR.routeTech;}],
-          ["auto",function(){return STR.routeQueue;}],
-          ["kanban",function(){return STR.routeKanban;}],
           ["map",function(){return STR.routeMap;}],["wbs",function(){return STR.routeWbs;}],
           ["docs",function(){return STR.routeDocs;}]];
-var BUILD={exec:viewExec,tech:viewTech,auto:viewQueue,kanban:viewKanban,map:viewMap,wbs:viewWbs,docs:viewDocs};
+var BUILD={exec:viewExec,tech:viewTech,map:viewMap,wbs:viewWbs,docs:viewDocs};
 function key(p,t){return p?"/"+p+"/"+t:"/"+t;}
 function mount(k){
  var v=el("section","view");v.id="view-"+k.replace(/[^a-z0-9]+/gi,"-");v.hidden=true;
@@ -1213,21 +1318,33 @@ function stampPrintIds(){
    (ROOM.meta.title||STR.appTitle)+"  ·  "+(p?p+"  ·  ":"")+name+"  ·  "+ROOM.meta.today;
  }
 }
-function buildAll(){
+function registerAll(){
  var i,j;
- viewPortfolio(mount("/"));
+ mount("/");VIEW_SPEC["/"]={kind:"portfolio"};
  for(i=0;i<ROOM.programs.length;i++){
-  var program=ROOM.programs[i],summary=sumOf(program.id);
-  for(j=0;j<TABS.length;j++)BUILD[TABS[j][0]](mount(key(program.id,TABS[j][0])),program,summary);
+  var program=ROOM.programs[i];
+  for(j=0;j<TABS.length;j++){var k=key(program.id,TABS[j][0]);mount(k);VIEW_SPEC[k]={kind:"program",program:program,tab:TABS[j][0]};}
  }
- viewOptions(mount("/options"));
+ mount("/options");VIEW_SPEC["/options"]={kind:"options"};
+}
+function ensureView(k){
+ var view=VIEWS[k],spec=VIEW_SPEC[k];if(!view||view.getAttribute("data-built"))return view;
+ view.setAttribute("data-built","true");
+ if(spec.kind==="portfolio")viewPortfolio(view);
+ else if(spec.kind==="options")viewOptions(view);
+ else BUILD[spec.tab](view,spec.program,sumOf(spec.program.id));
+ return view;
 }
 // The pre-tab anchors stay valid addresses: #now was a link somebody could have sent.
 var LEGACY={verdict:"/",now:"/",moving:"/",mismatch:"/",programs:"/",map:null};
 function normalize(h){
  var raw=String(h||"").replace(/^#/,"");
  if(!raw)return "/";
- if(raw.charAt(0)==="/")return VIEWS[raw]?raw:"/";
+ if(raw.charAt(0)==="/"){
+  var old=/^\/([^/]+)\/(auto|kanban)$/.exec(raw);
+  if(old&&byId(old[1]))return key(old[1],"tech");
+  return VIEWS[raw]?raw:"/";
+ }
  if(LEGACY.hasOwnProperty(raw)){
   if(LEGACY[raw])return LEGACY[raw];
   var f=ROOM.programs[0];return f?key(f.id,raw==="map"?"map":"exec"):"/";
@@ -1253,6 +1370,14 @@ function buildNav(){
  }
  progs.addEventListener("focusin",function(e){e.target.scrollIntoView({block:"nearest",inline:"nearest"});});
  views.addEventListener("focusin",function(e){e.target.scrollIntoView({block:"nearest",inline:"nearest"});});
+ var mobileProgram=document.getElementById("mobile-program"),mobileView=document.getElementById("mobile-view"),o;
+ mobileProgram.setAttribute("aria-label",STR.navMain);mobileView.setAttribute("aria-label",STR.navProgram);
+ o=el("option","",STR.routePortfolio);o.value="/";mobileProgram.appendChild(o);
+ for(i=0;i<ROOM.programs.length;i++){o=el("option","",ROOM.programs[i].id);o.value=ROOM.programs[i].id;mobileProgram.appendChild(o);}
+ o=el("option","",STR.routeOptions);o.value="/options";mobileProgram.appendChild(o);
+ for(i=0;i<TABS.length;i++){o=el("option","",TABS[i][1]());o.value=TABS[i][0];mobileView.appendChild(o);}
+ mobileProgram.addEventListener("change",function(){location.hash=mobileProgram.value.charAt(0)==="/"?mobileProgram.value:key(mobileProgram.value,mobileView.value||"exec");});
+ mobileView.addEventListener("change",function(){var p=mobileProgram.value;if(p.charAt(0)!=="/")location.hash=key(p,mobileView.value);});
 }
 function renderNav(k){
  var progs=document.getElementById("nav-programs"),views=document.getElementById("nav-views"),i;
@@ -1273,16 +1398,18 @@ function renderNav(k){
   if(k===target){tabs[i].setAttribute("aria-current","page");tabs[i].scrollIntoView({block:"nearest",inline:"nearest"});}
   else tabs[i].removeAttribute("aria-current");
  }
+ var mp=document.getElementById("mobile-program"),mv=document.getElementById("mobile-view"),match=/^\/([^/]+)\/([^/]+)$/.exec(k);
+ mp.value=match?match[1]:k;mv.disabled=!match;if(match)mv.value=match[2];
 }
 function show(k){
- var x;
+ var x;ensureView(k);
  for(x in VIEWS)if(VIEWS.hasOwnProperty(x))VIEWS[x].hidden=x!==k;
  renderNav(k);
  var p=progOf(k);
  var name=(k==="/"?STR.routePortfolio:k==="/options"?STR.routeOptions:tabLabel(k));
  document.title=(ROOM.meta.title||STR.appTitle)+(p?" · "+p:"")+" · "+name;
  announce(p?p+" · "+name:name);
- relayoutAll(VIEWS[k]);
+ relayoutAll(VIEWS[k]);focusScrollers(VIEWS[k]);
 }
 function tabLabel(k){
  var m=/^\/[^/]+\/([^/]+)$/.exec(k),i;
@@ -1295,7 +1422,7 @@ function onHash(){show(normalize(location.hash));}
 function applyTheme(){
  var saved=null,t;
  try{saved=localStorage.getItem("forma-room-theme");}catch(e){}
- t=saved==="light"||saved==="dark"?saved:(ROOM&&ROOM.meta&&ROOM.meta.theme==="light"?"light":"dark");
+ t=saved==="light"||saved==="dark"?saved:(ROOM&&ROOM.meta&&ROOM.meta.theme==="dark"?"dark":"light");
  document.documentElement.setAttribute("data-theme",t);themeButton(t);
 }
 function themeButton(t){var b=document.getElementById("theme-toggle"),n=t==="dark"?STR.themeLight:STR.themeDark;b.textContent=n;b.setAttribute("aria-label",n);b.setAttribute("aria-pressed",t==="light"?"true":"false");}
@@ -1311,7 +1438,7 @@ function wireTheme(){
 var resizeTimer=null;
 function onResize(){
  if(resizeTimer)clearTimeout(resizeTimer);
- resizeTimer=setTimeout(function(){var k=normalize(location.hash);if(VIEWS[k])relayoutAll(VIEWS[k]);},120);
+ resizeTimer=setTimeout(function(){var k=normalize(location.hash);if(VIEWS[k]){relayoutAll(VIEWS[k]);focusScrollers(VIEWS[k]);}},120);
 }
 
 function start(){
@@ -1330,27 +1457,18 @@ function start(){
  applyTheme();wireTheme();
  document.getElementById("page-title").textContent=ROOM.meta.title||STR.appTitle;
  document.getElementById("page-stamp").textContent=ROOM.meta.today;
- buildAll();buildNav();stampRunningHead();
+ registerAll();buildNav();stampRunningHead();
  window.addEventListener("hashchange",onHash);
  window.addEventListener("resize",onResize);
  // Printing un-hides every view, so every chart must be drawn before the dialog opens.
- var reopened=null;
  window.addEventListener("beforeprint",function(){
-  var k,i,d;
-  // Captured ONCE per print. Firefox fires this again when a setting changes with the preview open;
-  // recapturing then found nothing closed and discarded the real list, so afterprint restored
-  // nothing and every evidence row stayed expanded permanently.
-  if(reopened===null){
-   reopened=[];d=document.querySelectorAll("details:not([open])");
-   for(i=0;i<d.length;i++){reopened.push(d[i]);d[i].open=true;}
-  }
+  var k,i;
+  for(k in VIEWS)if(VIEWS.hasOwnProperty(k))ensureView(k);
   for(i=0;i<PRINT_FILL.length;i++)PRINT_FILL[i].fill();
   stampPrintIds();
   for(k in VIEWS)if(VIEWS.hasOwnProperty(k)){VIEWS[k].hidden=false;relayoutAll(VIEWS[k]);}
  });
  window.addEventListener("afterprint",function(){
-  if(reopened)for(var i=0;i<reopened.length;i++)reopened[i].open=false;
-  reopened=null;
   show(normalize(location.hash));
  });
  onHash();

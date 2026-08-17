@@ -47,11 +47,6 @@ superseded ADR-0004; ADR-0004 front-matter (`active`) contradicts its body ("Acc
 is `status: open` for shipped work. DoD: each superseded reference removed or corrected; a grep for
 "superseded"/"seg" in schemas returns nothing stale.
 
-**R1-5 · Surface or delete the gated-but-unrendered derivations**
-`area:room kind:debt release:R1` — Why: `deriveKanban`/`deriveQueue` are computed and gated with no
-surface reading them (SCOPE-room; carried into R2). DoD: either a view consumes them (moves to R2) or
-they are removed from the gate so nothing is graded that nothing renders.
-
 **R1-6 · Right-size governance to the solo tier**
 `area:docs kind:chore release:R1` — Why: enterprise grading (D-03) + `arbiter` coupling (D-04/D-07) is
 cathedral-building the adopted standard's own "anti-cathedral guardrail" warns against (owner decision:
@@ -60,22 +55,12 @@ no longer claims the enterprise column; CI no longer red for a governance reason
 
 ## R2 — Per-project parity with CEREBRO
 
-**R2-1 · Restore the Kanban board as a first-class view**
-`area:viewer kind:feat release:R2` — Why: the pivot reduced it to a six-number strip though the board is
-already derived. DoD: a per-programme Kanban with columns by audit verdict (sane / a metà / premessa
-falsa / aspettano-umano / chiuse), fed by `deriveKanban`; `room-presentable` passes on the rich state.
-
-**R2-2 · Restore the Coda/auto queue view**
-`area:viewer kind:feat release:R2` — Why: the execution-queue tab was folded away. DoD: a queue view
-from `deriveQueue` with copy-ready commands and self-covering "the rest of the queue" grouping, matching
-CEREBRO's Coda/auto.
-
-**R2-3 · The per-issue pill, everywhere**
+**R2-1 · The per-issue pill, everywhere**
 `area:viewer kind:feat release:R2` — Why: health became expandable `<details>` rows; there is no
 at-a-glance board where every issue wears its verdict + reason. DoD: one `pill()`-equivalent primitive
 (glyph+word+colour+why) rendered on every issue reference across views.
 
-**R2-4 · Reinstate a C4 drill-down surface (not only checkpoints)**
+**R2-2 · Reinstate a C4 drill-down surface (not only checkpoints)**
 `area:viewer kind:feat release:R2 needs-luca` — Why: the C4 L1→L4 drill tab was dropped for a checkpoint
 timeline. DoD: the map view exposes level drill-down again, or `needs-luca` ratifies that the embedded
 hologram's own drill is sufficient.

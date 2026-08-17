@@ -1,0 +1,65 @@
+// Deterministic high-cardinality room data for browser/DOM acceptance tests.
+// Usage: node test/fixtures/control-room-stress/make.mjs [total] [open]
+//        node test/fixtures/control-room-stress/make.mjs --html <template> <out>
+import { readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+export function makeStressRoom(total = 2500, openCount = 250) {
+  const issues = []
+  for (let n = 1; n <= total; n++) issues.push({
+    n,
+    title: `Deterministic stress issue ${n}`,
+    state: n <= openCount ? 'OPEN' : 'CLOSED',
+    labels: n <= openCount && n % 7 === 0 ? ['priority:p1'] : [],
+    ms: n <= openCount && n % 3 === 0 ? 'R1' : null,
+    createdAt: '2026-01-01',
+    closedAt: n <= openCount ? null : '2026-08-01',
+  })
+  const open = issues.slice(0, openCount).map((issue) => issue.n)
+  const closed = issues.slice(openCount).map((issue) => issue.n)
+  const clusters = []
+  for (let i = 0; i < open.length; i += 50) clusters.push({ key: `priority ${i / 50 + 1}`, issues: open.slice(i, i + 50) })
+  const summary = {
+    id: 'stress', ghRepo: 'example/stress', hasMap: false, open: openCount,
+    closed: total - openCount, total, blockedRule: { declared: true, inert: false, labels: ['needs-human'] },
+    blocked: 0, snapshotAgeDays: 0, milestones: [], workPerNode: null,
+    workPerNodeOpen: null, linkCoverage: null, commitDrift: null,
+    taxonomy: { axes: [], other: [], clusterFamily: null },
+  }
+  return {
+    meta: { title: 'Stress briefing', today: '2026-08-17', generatedFrom: 'stress/forma.room.json', excluded: [] },
+    portfolio: {
+      totals: { programs: 1, issues: total, open: openCount, closed: total - openCount, blocked: 0, unknownRule: 0 },
+      programs: [summary], blocked: [], moving: [{ program: 'stress', count: openCount, byCluster: clusters }], landing: [{ program: 'stress', months: [] }],
+    },
+    programs: [{
+      id: 'stress', ghRepo: 'example/stress', hasMap: false,
+      issuesSnapshot: { fetchedAt: '2026-08-17T12:00:00Z', issues, milestones: [] },
+      health: null, findings: null, docs: null, model: null,
+      derived: {
+        kpis: { openCount, needsHumanCount: 0, staleMilestones: [], noMilestoneCount: openCount, linkCoveragePct: null, snapshotAgeDays: 0 },
+        milestones: [], history: null,
+        kanban: { chiuse: closed, sane: [], 'a-meta': [], 'premessa-falsa': [], 'aspettano-umano': [], 'non-auditate': open },
+        queue: { axes: [], other: [], clusterFamily: null, clusters },
+        commitDrift: null, checkpoints: null, link: null, rtm: null,
+      },
+    }],
+  }
+}
+
+if (fileURLToPath(import.meta.url) === process.argv[1]) {
+  if (process.argv[2] === '--html') {
+    const templatePath = process.argv[3], out = process.argv[4]
+    if (!templatePath || !out) throw new Error('usage: make.mjs --html <template> <out>')
+    const root = dirname(dirname(dirname(dirname(fileURLToPath(import.meta.url)))))
+    const strings = {
+      en: JSON.parse(readFileSync(join(root, 'lib/viewer/strings/en.json'), 'utf8')),
+      it: JSON.parse(readFileSync(join(root, 'lib/viewer/strings/it.json'), 'utf8')),
+    }
+    const html = readFileSync(templatePath, 'utf8')
+      .replace('/*__ROOM_JSON__*/null', JSON.stringify(makeStressRoom()).replace(/</g, '\\u003c'))
+      .replace('/*__STRINGS__*/null', JSON.stringify(strings).replace(/</g, '\\u003c'))
+      .replace('<!--__HOLO_SRC__-->', '')
+    writeFileSync(out, html)
+  } else process.stdout.write(JSON.stringify(makeStressRoom(Number(process.argv[2]) || 2500, Number(process.argv[3]) || 250)))
+}

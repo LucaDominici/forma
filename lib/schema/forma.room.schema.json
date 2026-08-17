@@ -9,7 +9,7 @@
   "properties": {
     "today": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
     "title": { "type": "string", "description": "Control Room page title. Never inherited from model.meta.title, which describes an architecture snapshot, not the room." },
-    "theme": { "type": "string", "enum": ["dark", "light"], "description": "Control Room color theme. Default dark." },
+    "theme": { "type": "string", "enum": ["dark", "light"], "description": "Control Room color theme. Default light; dark remains opt-in." },
     "staleAfterDays": { "type": "integer", "minimum": 1, "description": "room-presentable fails if c4-issues.json.fetchedAt is older than this many days before `today`. Default 14." },
     "linkMaxFiles": { "type": "integer", "minimum": 1, "description": "A commit touching more files than this is a sweep and attributes to no node (still counted, named in `tec`). Default 50." },
     "docs": {
@@ -82,7 +82,7 @@
               "requireIssuesFrom": {
                 "type": "array",
                 "items": { "type": "string" },
-                "description": "Document paths whose rows MUST land on GitHub issues or name a verification. A row in one of these with neither is reported uncovered and fails `forma check`. This is what makes 'the issues are the complete WBS' a falsifiable claim rather than an aspiration."
+                "description": "Document paths whose rows MUST land on GitHub issues or name a verification. Presence also declares that the matrix is the complete WBS, so uncited open issues fail `forma check`. Omit it for an informational, auto-discovered matrix."
               }
             }
           },

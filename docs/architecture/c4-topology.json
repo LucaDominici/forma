@@ -121,6 +121,18 @@
       "match": "\\.mjs$"
     }
   ],
+  "sourceCoverage": {
+    "exclusions": [
+      {
+        "dir": "test/fixtures",
+        "reason": "cross-language fixture source exercised by test/run.mjs, not Forma runtime"
+      },
+      {
+        "dir": "docs/demo",
+        "reason": "worked demonstration input, not Forma runtime"
+      }
+    ]
+  },
   "edges": [
     {
       "from": "dev",
