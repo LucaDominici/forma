@@ -157,6 +157,9 @@ details[open]>summary:after{content:"\2212"}
 .group:first-child{border-top:0}
 .group-name{display:block;margin-bottom:3px;color:var(--muted);font-size:10.5px}
 .links{display:flex;gap:6px;flex-wrap:wrap}
+.kanban-board{display:grid;grid-template-columns:repeat(6,minmax(180px,1fr));gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin}
+.kanban-issue{padding:6px 0;border-bottom:1px solid var(--line)}
+.kanban-issue a{display:block;line-height:1.35}
 .kv{padding:5px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(110px,180px) 1fr;gap:12px;font-size:12.5px}
 .kv>span:first-child{color:var(--muted)}
 
@@ -261,6 +264,7 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  .view[hidden]{display:block!important}
  .view+.view{break-before:page}
  .answer,.evidence{display:block;overflow:visible}
+ .kanban-board{grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
  .panel{break-inside:avoid;border-top:1px solid #999;margin-bottom:10pt}
  .panel-body,.tablewrap{overflow:visible;max-height:none}
  .chart-viz{height:200pt}
@@ -842,6 +846,23 @@ var i,j;
  view.appendChild(ev);
 }
 
+function viewKanban(view,program){
+ view.setAttribute("data-single","");
+ var buckets=program.derived.kanban,names=[["chiuse",STR.bucketChiuse],["sane",STR.bucketSane],["a-meta",STR.bucketAMeta],["premessa-falsa",STR.bucketPremessaFalsa],["aspettano-umano",STR.bucketAspettanoUmano],["non-auditate",STR.bucketNonAuditate]];
+ var issues={},board=el("div","kanban-board"),i,j,n,item,lane;
+ for(i=0;i<program.issuesSnapshot.issues.length;i++)issues[program.issuesSnapshot.issues[i].n]=program.issuesSnapshot.issues[i];
+ for(i=0;i<names.length;i++){
+  lane=panel(names[i][1],fmt(STR.kanbanCount,{n:(buckets[names[i][0]]||[]).length}));
+  for(j=0;j<(buckets[names[i][0]]||[]).length;j++){
+   n=buckets[names[i][0]][j];item=el("div","kanban-issue");
+   item.appendChild(issueLink(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,58):"")));lane.body.appendChild(item);
+  }
+  if(!(buckets[names[i][0]]||[]).length)lane.body.appendChild(el("p","muted",STR.none));
+  board.appendChild(lane);
+ }
+ view.appendChild(board);
+}
+
 /* The architecture skin that matches the briefing's theme. `blueprint` IS the briefing's light
    palette mapped onto the explorer's token names (DESIGN.md §D6); `blueprint-dark` is the same
    mapping onto the dark one. Before this, the map was light in both and the theme control silently
@@ -1119,9 +1140,10 @@ function toggle(id,enabled){
 /* --------------------------------- routing -------------------------------- */
 var VIEWS={},ORDER=[],PRINT_FILL=[];
 var TABS=[["exec",function(){return STR.routeExec;}],["tech",function(){return STR.routeTech;}],
+          ["kanban",function(){return STR.routeKanban;}],
           ["map",function(){return STR.routeMap;}],["wbs",function(){return STR.routeWbs;}],
           ["docs",function(){return STR.routeDocs;}]];
-var BUILD={exec:viewExec,tech:viewTech,map:viewMap,wbs:viewWbs,docs:viewDocs};
+var BUILD={exec:viewExec,tech:viewTech,kanban:viewKanban,map:viewMap,wbs:viewWbs,docs:viewDocs};
 function key(p,t){return p?"/"+p+"/"+t:"/"+t;}
 function mount(k){
  var v=el("section","view");v.id="view-"+k.replace(/[^a-z0-9]+/gi,"-");v.hidden=true;
@@ -1209,7 +1231,8 @@ function renderNav(k){
  for(i=0;i<tabs.length;i++){
   var t=tabs[i].getAttribute("data-tab"),target=p?key(p,t):"/";
   tabs[i].href="#"+target;
-  if(k===target)tabs[i].setAttribute("aria-current","page");else tabs[i].removeAttribute("aria-current");
+  if(k===target){tabs[i].setAttribute("aria-current","page");tabs[i].scrollIntoView({block:"nearest",inline:"nearest"});}
+  else tabs[i].removeAttribute("aria-current");
  }
 }
 function show(k){

@@ -1886,6 +1886,24 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok strings — ${Object.keys(en).length} keys at en/it parity, every one read by the template`)
 }
 
+// The verdict buckets were already derived and checked, but a six-number summary hid every issue.
+// Kanban is a programme route: it must consume the shared derivation and expose every bucket (#61).
+{
+  const template = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
+  const view = (template.match(/function viewKanban\([^]*?\n}\n/) || [])[0]
+  if (!view) die('room-kanban: viewKanban is missing')
+  if (!/program\.derived\.kanban/.test(view)) die('room-kanban: the view does not consume the checked kanban derivation')
+  for (const bucket of ['chiuse', 'sane', 'a-meta', 'premessa-falsa', 'aspettano-umano', 'non-auditate']) {
+    if (!view.includes('"' + bucket + '"')) die('room-kanban: the ' + bucket + ' bucket is not rendered')
+  }
+  if (!/\["kanban",function\(\)\{return STR\.routeKanban;\}\]/.test(template)) die('room-kanban: Kanban is not a programme route')
+  if (!/kanban:viewKanban/.test(template)) die('room-kanban: the Kanban route is not wired to its view')
+  if (!/tabs\[i\]\.scrollIntoView\(\{block:"nearest",inline:"nearest"\}\)/.test(template)) die('room-kanban: a narrow deep link can leave the active view tab off-screen')
+  const en = readJson(join(HERE, '..', 'lib/viewer/strings/en.json'))
+  if (!/^Issues: \{n\}/.test(en.kanbanCount)) die('room-kanban: English provenance has an unconditional plural')
+  console.log('  ok room-kanban — all checked verdict buckets are visible as a programme view')
+}
+
 // The dogfood. A traceability convention that cannot read the document THIS repository writes is a
 // convention for other people's repositories. docs/PRD.md §6 is a real table, edited by hand for
 // prose reasons, and the parser has to find it without being told anything but the id pattern.
