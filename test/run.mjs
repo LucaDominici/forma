@@ -1753,6 +1753,32 @@ const diffPaths = (a, b, at = '') => {
   if (!again.programs[0].taxonomy) die('scan: re-running discarded a hand-curated field')
   if (again.today !== '2026-08-10') die('scan: re-running overwrote the determinism anchor')
 
+  // R4-2: room init is the supported seed/merge surface over the lower-level scanner. Seed one
+  // repo, preserve decisions on a second pass, and never erase a known ghRepo just because origin
+  // is temporarily unavailable.
+  const initManifest = join(root, 'init-room.json')
+  r = run(['room', 'init', '--repo', join(root, 'one'), '--manifest', initManifest, '--today', '2026-08-17'])
+  if (r.status !== 0) die('room init: seed exit ' + r.status, r)
+  let initialized = readJson(initManifest)
+  if (initialized.today !== '2026-08-17' || initialized.programs.length !== 1 || initialized.programs[0].ghRepo !== 'acme/one') die('room init: seed did not derive today/repo: ' + JSON.stringify(initialized))
+  initialized.programs[0].enabled = false
+  initialized.programs[0].taxonomy = { minPopulation: 1 }
+  writeFileSync(initManifest, JSON.stringify(initialized, null, 2) + '\n')
+  git(join(root, 'one'), ['remote', 'remove', 'origin'])
+  r = run(['room', 'init', '--repo', join(root, 'one'), '--manifest', initManifest])
+  if (r.status !== 0) die('room init: merge exit ' + r.status, r)
+  initialized = readJson(initManifest)
+  if (initialized.programs[0].enabled !== false || !initialized.programs[0].taxonomy) die('room init: merge clobbered a decision')
+  if (initialized.programs[0].ghRepo !== 'acme/one') die('room init: transient missing origin erased the known ghRepo')
+
+  const scannedManifest = join(root, 'init-scan-room.json')
+  r = run(['room', 'init', '--scan', '--root', root, '--manifest', scannedManifest, '--today', '2026-08-17'])
+  if (r.status !== 0) die('room init --scan: exit ' + r.status, r)
+  const initializedScan = readJson(scannedManifest)
+  if (initializedScan.today !== '2026-08-17' || initializedScan.programs.map((p) => p.id).join() !== 'one,two') die('room init --scan: did not stamp today over the discovered set: ' + JSON.stringify(initializedScan))
+  r = run(['room', 'init', '--repo', join(root, 'one'), '--manifest', join(root, 'bad-today.json'), '--today', '17-08-2026'])
+  if (r.status === 0 || existsSync(join(root, 'bad-today.json'))) die('room init: invalid today wrote a manifest')
+
   // Serve mode binds loopback and nothing else. --port 0 asks the OS for a free one, so the test
   // cannot collide with whatever is already running on this machine.
   const served = spawnSync(process.execPath, [join(HERE, '..', 'lib', 'room.mjs'), '--manifest', join(tmp, 'room', 'manifest.json'), '--out', join(tmp, 'served.html'), '--port', '0', '--serve'], { encoding: 'utf-8', timeout: 3000 })
