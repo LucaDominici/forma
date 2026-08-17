@@ -85,6 +85,7 @@
   "bucketAspettanoUmano": "Waiting on a human",
   "bucketNonAuditate": "Not audited",
   "kanbanCount": "Issues: {n} · partition re-derived by forma check",
+  "kanbanClosedFold": "Show {n} closed issues",
   "queueRest": "The rest of the queue",
   "queueCount": "Open issues: {n} · order re-derived by forma check",
   "queueComplete": "No open issues remain in the derived queue.",

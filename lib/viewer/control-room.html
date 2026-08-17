@@ -70,6 +70,7 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
    region would add three borders and a shadow to say what one hairline already says, and nesting
    the issue rows inside those boxes would be a card inside a card. */
 .panel{display:flex;flex-direction:column;min-height:0;border-top:1px solid var(--line);padding-top:8px}
+.panel,.panel-head,.panel-body,.chart-viz,.tablewrap{min-width:0}
 .panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex:0 0 auto}
 .panel h2{margin:0;font-size:13px;font-weight:650;letter-spacing:.01em}
 /* THE SIGNATURE. No panel without its provenance: one line saying what was counted and what
@@ -206,7 +207,7 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
 
 /* The map finally gets the area an ultrawide actually has. It is a diagram, not a list: it uses the
    height it reserves, so it keeps an explicit floor now that evidence rows size to content (F2). */
-.frame{width:100%;height:100%;min-height:420px;display:block;border:1px solid var(--line);background:var(--surface)}
+.frame{width:100%;max-width:100%;height:100%;min-height:420px;display:block;border:1px solid var(--line);background:var(--surface)}
 /* Two panes, not an accordion: a document is not a disclosure widget. */
 .reader{margin:0;max-width:78ch;font-size:13px;line-height:1.6}
 .md p{margin:0 0 10px;max-width:72ch}
@@ -866,15 +867,16 @@ var i,j;
 function viewKanban(view,program){
  view.setAttribute("data-single","");
  var buckets=program.derived.kanban,names=[["chiuse",STR.bucketChiuse],["sane",STR.bucketSane],["a-meta",STR.bucketAMeta],["premessa-falsa",STR.bucketPremessaFalsa],["aspettano-umano",STR.bucketAspettanoUmano],["non-auditate",STR.bucketNonAuditate]];
- var issues={},board=el("div","kanban-board"),i,j,n,item,lane;
+ var issues={},board=el("div","kanban-board"),i,j,n,item,lane,rows,target,closed;
  for(i=0;i<program.issuesSnapshot.issues.length;i++)issues[program.issuesSnapshot.issues[i].n]=program.issuesSnapshot.issues[i];
  for(i=0;i<names.length;i++){
-  lane=panel(names[i][1],fmt(STR.kanbanCount,{n:(buckets[names[i][0]]||[]).length}));
-  for(j=0;j<(buckets[names[i][0]]||[]).length;j++){
+  rows=buckets[names[i][0]]||[];lane=panel(names[i][1],fmt(STR.kanbanCount,{n:rows.length}));target=lane.body;
+  if(names[i][0]==="chiuse"&&rows.length){closed=el("details","kanban-closed");closed.appendChild(el("summary","",fmt(STR.kanbanClosedFold,{n:rows.length})));target=el("div","kanban-closed-items");closed.appendChild(target);lane.body.appendChild(closed);}
+  for(j=0;j<rows.length;j++){
    n=buckets[names[i][0]][j];item=el("div","kanban-issue");
-   item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,58):"")));lane.body.appendChild(item);
+   item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,58):"")));target.appendChild(item);
   }
-  if(!(buckets[names[i][0]]||[]).length)lane.body.appendChild(el("p","muted",STR.none));
+  if(!rows.length)lane.body.appendChild(el("p","muted",STR.none));
   board.appendChild(lane);
  }
  view.appendChild(board);
@@ -1249,6 +1251,8 @@ function buildNav(){
   a.setAttribute("data-tab",TABS[i][0]);
   views.appendChild(a);
  }
+ progs.addEventListener("focusin",function(e){e.target.scrollIntoView({block:"nearest",inline:"nearest"});});
+ views.addEventListener("focusin",function(e){e.target.scrollIntoView({block:"nearest",inline:"nearest"});});
 }
 function renderNav(k){
  var progs=document.getElementById("nav-programs"),views=document.getElementById("nav-views"),i;

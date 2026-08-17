@@ -85,6 +85,7 @@
   "bucketAspettanoUmano": "Aspettano un umano",
   "bucketNonAuditate": "Non auditate",
   "kanbanCount": "Issue: {n} · ripartizione ri-derivata da forma check",
+  "kanbanClosedFold": "Mostra {n} issue chiuse",
   "queueRest": "Il resto della coda",
   "queueCount": "Issue aperte: {n} · ordine ri-derivato da forma check",
   "queueComplete": "Nessuna issue aperta resta nella coda derivata.",

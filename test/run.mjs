@@ -1957,8 +1957,12 @@ const diffPaths = (a, b, at = '') => {
   if (!/\["kanban",function\(\)\{return STR\.routeKanban;\}\]/.test(template)) die('room-kanban: Kanban is not a programme route')
   if (!/kanban:viewKanban/.test(template)) die('room-kanban: the Kanban route is not wired to its view')
   if (!/tabs\[i\]\.scrollIntoView\(\{block:"nearest",inline:"nearest"\}\)/.test(template)) die('room-kanban: a narrow deep link can leave the active view tab off-screen')
+  if (!/names\[i\]\[0\]==="chiuse"/.test(view) || !/kanbanClosedFold/.test(view)) die('room-kanban: a large closed bucket must stay countable without turning the dashboard into a long archive')
+  if (!/\.panel,\.panel-head,\.panel-body,\.chart-viz,\.tablewrap\{min-width:0\}/.test(template) || !/\.frame\{[^}]*max-width:100%/.test(template)) die('room-layout: intrinsic chart, table and frame widths can escape a narrow grid')
+  if (!/addEventListener\("focusin",function\(e\)\{e\.target\.scrollIntoView\(\{block:"nearest",inline:"nearest"\}\);\}\)/.test(template)) die('room-nav: keyboard focus can leave a mobile tab partially off-screen')
   const en = readJson(join(HERE, '..', 'lib/viewer/strings/en.json'))
   if (!/^Issues: \{n\}/.test(en.kanbanCount)) die('room-kanban: English provenance has an unconditional plural')
+  if (!/^Show \{n\} closed issues$/.test(en.kanbanClosedFold)) die('room-kanban: closed disclosure must state the exact withheld count')
   console.log('  ok room-kanban — all checked verdict buckets are visible as a programme view')
 }
 
