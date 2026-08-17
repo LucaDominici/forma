@@ -44,10 +44,15 @@ This file records realization status for the Control Room branch. A feature is l
 
 `npm test` is green, with nothing skipped. It was not, and the reason is recorded under known defects below.
 
-## What is built but not yet proven on a second repository
+## Second-repository proof and remaining limits
 
-- The room manifest can describe multiple programmes and allows a programme to omit its model and topology. This is implemented and validated, but only `haben` has exercised the full mapped pipeline. `arbiter` and `viafera` have measured issue corpora but no curated Forma model, so manifest parametricity across independently curated architectures remains unproved ([`docs/SCOPE-room.md:51-59`](SCOPE-room.md#L51-L59), [`docs/SCOPE-room.md:106-108`](SCOPE-room.md#L106-L108)).
-- Portfolio aggregation across programmes is built and was measured over three issue corpora. That proves counting and declared blocking rules, not that a coherent briefing can be produced for a second mapped repository by changing only the manifest.
+On 2026-08-17 a temporary two-programme manifest composed Forma plus the clean `viafera` checkout at
+`9482686`. `verify` wrote Viafera's fact base outside both repositories (2,286 issues, 46 open, 11
+milestones); no model was added or curated. Changing only the manifest produced a 769,240-byte
+briefing, `forma check` stayed green, and all seven `room-presentable` predicates passed, including
+byte determinism and coverage of every open issue. This proves parametricity for a real second
+map-less repository without turning a private/local checkout into a public CI dependency (#72).
+
 - Automatic taxonomy detection was measured across three repositories. It remains syntactic pattern matching, so each new repository still needs review of aliases, exclusions, minimum population, and severity order.
 - The evidence-gated health audit proves rejection mechanics. It does not prove that every human or agent verdict is substantively correct; the mechanism validates anchors, not judgment.
 - Control Room publication is not proven. The generated artifact remains a review artifact, and no Pages or other deployment consumes it.
