@@ -1,6 +1,6 @@
 ---
 title: 'Decision registry'
-doc_version: '1.0.1'
+doc_version: '1.0.2'
 status: active
 last_review: '2026-08-17'
 owner: 'Luca Dominici'
@@ -44,6 +44,10 @@ Enforcement: `documentale`. The doc-set presence glob accepts either form, and a
 | D-06 | The generated arc42 scaffold is not hand-editable and carries generated frontmatter | `forma doc` rewrites the whole file, so any hand-written frontmatter would die at the next run — the generator must satisfy the standard by construction | Luca Dominici | 2026-08-10 |
 
 Enforcement: `lib/render.mjs` emits the frontmatter block; `scripts/check-doc-style.mjs` grades the result like any other document, so a regression is caught by the same gate.
+
+| D-07 | The embedded hologram is sufficient as the Control Room's C4 L1→L4 drill surface; do not add a second C4 tab | The map iframe already exposes explicit `[+] DRILL`, double-click entry, back navigation and an L1→L4 breadcrumb. A parallel tab would duplicate one explorer and revive the flat eight-tab shape rejected in ADR-0005 | Luca Dominici | 2026-08-17 |
+
+Enforcement: the `room-c4-drill` block in `test/run.mjs` proves that the room embeds the hologram and that its drill control, stack navigation and level breadcrumb remain present.
 
 ## Promotion
 

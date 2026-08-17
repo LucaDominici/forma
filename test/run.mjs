@@ -1942,6 +1942,19 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok room-pill — every issue reference shares verdict, reason, glyph, word and closed state')
 }
 
+// The map already embeds Forma's full explorer. Keep one drill surface: prove the iframe carries the
+// explicit [+] control, stack navigation and C4 level breadcrumb, then pin the owner decision (#64).
+{
+  const room = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
+  const holo = readFileSync(join(HERE, '..', 'lib/viewer/c4-hologram.html'), 'utf-8')
+  const decisions = readFileSync(join(HERE, '..', 'DECISION_REGISTRY.md'), 'utf-8')
+  if (!/srcdoc=frameDoc\(program\)/.test(room)) die('room-c4-drill: the map no longer embeds the hologram')
+  if (!/data-drill="1"/.test(holo) || !/stack\.push\(id\)/.test(holo)) die('room-c4-drill: the embedded hologram cannot drill into children')
+  if (!/crumbLevel\+"-L"/.test(holo)) die('room-c4-drill: the embedded hologram does not expose its C4 level')
+  if (!/\| D-07 \|[^\n]*embedded hologram[^\n]*sufficient/i.test(decisions)) die('room-c4-drill: the delegated owner decision is not recorded')
+  console.log('  ok room-c4-drill — the embedded map is the ratified L1→L4 drill surface')
+}
+
 // The dogfood. A traceability convention that cannot read the document THIS repository writes is a
 // convention for other people's repositories. docs/PRD.md §6 is a real table, edited by hand for
 // prose reasons, and the parser has to find it without being told anything but the id pattern.
