@@ -1934,4 +1934,12 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok dogfood — Pages publishes the explorer only; the Control Room stays local')
 }
 
+// audit.mjs has no command-level producer yet. Keep the reusable mechanism, but do not let dead
+// code read as a shipped channel while #65 is open (#57).
+{
+  const audit = readFileSync(join(HERE, '..', 'lib/audit.mjs'), 'utf-8')
+  if (!/EXPERIMENTAL[^\n]*#65/.test(audit)) die('audit-quarantine: lib/audit.mjs is uncalled but not marked experimental with its producer issue')
+  console.log('  ok audit-quarantine — the uncalled audit seam points at its producer issue')
+}
+
 console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood all green.')
