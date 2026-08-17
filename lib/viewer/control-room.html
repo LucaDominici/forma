@@ -151,6 +151,9 @@ details[open]>summary:after{content:"\2212"}
 .status{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;white-space:nowrap}
 .glyph{width:12px;text-align:center;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13px}
 .status-ok{color:var(--ok)}.status-warn{color:var(--warn)}.status-bad{color:var(--bad)}.status-none{color:var(--muted)}
+.issue-pill{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:1px 7px 1px 4px;border:1px solid var(--line);border-radius:999px;text-decoration:none}
+.issue-pill .issue-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.issue-pill.closed .issue-text{text-decoration:line-through}
 .tally{font-size:22px;font-weight:650;font-variant-numeric:tabular-nums}
 .stack{display:flex;flex-direction:column;gap:7px}
 .group{padding:6px 0;border-top:1px solid var(--line)}
@@ -159,7 +162,7 @@ details[open]>summary:after{content:"\2212"}
 .links{display:flex;gap:6px;flex-wrap:wrap}
 .kanban-board{display:grid;grid-template-columns:repeat(6,minmax(180px,1fr));gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin}
 .kanban-issue{padding:6px 0;border-bottom:1px solid var(--line)}
-.kanban-issue a{display:block;line-height:1.35}
+.kanban-issue .issue-pill{display:flex;line-height:1.35}
 .queue-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin;align-content:start}
 .queue-item{min-width:0;padding:7px 0;border-bottom:1px solid var(--line)}
 .queue-item .issue-pill{display:flex;font-weight:600;margin-bottom:4px}
@@ -333,7 +336,16 @@ function label(svg,x,y,t,anchor,cls){svg.appendChild(svgEl("text",{x:x,y:y,"text
 function hit(svg,a,tip){a=a||{};a["class"]="hit";a.fill="transparent";a.tabindex="0";a.role="img";a["aria-label"]=tip;a["data-tip"]=tip;svg.appendChild(svgEl(a.r!=null?"circle":"rect",a));}
 function statusMark(v){var map={ok:["●",STR.statusOk],warn:["◐",STR.statusWarn],bad:["×",STR.statusBad]},p=map[v]||["◇",STR.notAudited];var s=el("span","status status-"+(map[v]?v:"none")),g=el("span","glyph",p[0]);g.setAttribute("aria-hidden","true");s.appendChild(g);s.appendChild(el("span","",p[1]));return s;}
 function chips(v){var w=el("span","chips"),i;if(!v||!v.length){w.appendChild(el("span","muted",STR.none));return w;}for(i=0;i<v.length;i++)w.appendChild(el("span","chip",v[i]));return w;}
-function issueLink(p,n,t){var a=el("a","data",t==null?"#"+n:t);a.href="https://github.com/"+p.ghRepo+"/issues/"+n;a.target="_blank";a.rel="noopener";return a;}
+function pill(p,n,t){
+ var verdicts=(p.health&&p.health.verdicts)||[],v=null,issue=null,i;
+ for(i=0;i<verdicts.length;i++)if(verdicts[i].n===n){v=verdicts[i];break;}
+ for(i=0;i<p.issuesSnapshot.issues.length;i++)if(p.issuesSnapshot.issues[i].n===n){issue=p.issuesSnapshot.issues[i];break;}
+ var why=v?v.why:STR.notAudited,word=v?v.verdict:null,text=t==null?"#"+n:t;
+ var a=el("a","issue-pill"+(issue&&issue.state==="CLOSED"?" closed":"")),mark=statusMark(word);
+ a.href="https://github.com/"+p.ghRepo+"/issues/"+n;a.target="_blank";a.rel="noopener";
+ a.setAttribute("data-tip",why);a.setAttribute("aria-label",text+" — "+mark.lastChild.textContent+" — "+why);
+ a.appendChild(mark);a.appendChild(el("span","issue-text data",text));return a;
+}
 function docLink(p,path,ln,t){var a=el("a","data",t==null?path+(ln?":"+ln:""):t);a.href="https://github.com/"+p.ghRepo+"/blob/HEAD/"+path+(ln?"#L"+ln:"");a.target="_blank";a.rel="noopener";return a;}
 function pair(dl,k,v){var dt=el("dt","",k),dd=el("dd");if(v&&v.nodeType)dd.appendChild(v);else dd.textContent=v==null?STR.none:String(v);dl.appendChild(dt);dl.appendChild(dd);}
 
@@ -563,9 +575,8 @@ function landingText(n){return n==null?STR.neverLanded:(n===1?STR.lastWorkDay:fm
 function blockedRow(b){
  var program=byId(b.program),d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),dl=el("dl","detail"),ev=el("span","chips"),j;
  var land=landingText(b.daysSinceLastLanding);
- meta.appendChild(el("span","ref",b.program+" #"+b.n));
  if(b.priority)meta.appendChild(el("span","chip",b.priority));
- s.appendChild(statusMark(b.verdict));s.appendChild(meta);s.appendChild(el("span","row-title",b.title));
+ s.appendChild(program?pill(program,b.n,b.program+" #"+b.n):statusMark(b.verdict));s.appendChild(meta);s.appendChild(el("span","row-title",b.title));
  d.appendChild(s);
  pair(dl,STR.verdictLabel,statusMark(b.verdict));
  pair(dl,STR.why,b.why||STR.notAudited);
@@ -575,7 +586,7 @@ function blockedRow(b){
  pair(dl,STR.nodes,chips(b.nodes));pair(dl,STR.labels,chips(b.labels));
  pair(dl,STR.milestone,b.ms||STR.none);
  pair(dl,STR.lastLanding,land+(b.lastLanded?" ("+b.lastLanded+")":""));
- if(program)pair(dl,STR.issue,issueLink(program,b.n));
+ if(program)pair(dl,STR.issue,pill(program,b.n));
  d.appendChild(dl);return d;
 }
 function rowsPanel(p,items,render,emptyText){
@@ -748,7 +759,7 @@ function viewPortfolio(view){
   for(j=0;j<m.byCluster.length;j++){
    var g=el("div","group"),lk=el("span","links");
    g.appendChild(el("span","group-name",m.byCluster[j].key));
-   for(k=0;k<m.byCluster[j].issues.length;k++)lk.appendChild(issueLink(program,m.byCluster[j].issues[k]));
+   for(k=0;k<m.byCluster[j].issues.length;k++)lk.appendChild(pill(program,m.byCluster[j].issues[k]));
    g.appendChild(lk);body.appendChild(g);
   }
   d.appendChild(body);stack.appendChild(d);
@@ -861,7 +872,7 @@ function viewKanban(view,program){
   lane=panel(names[i][1],fmt(STR.kanbanCount,{n:(buckets[names[i][0]]||[]).length}));
   for(j=0;j<(buckets[names[i][0]]||[]).length;j++){
    n=buckets[names[i][0]][j];item=el("div","kanban-issue");
-   item.appendChild(issueLink(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,58):"")));lane.body.appendChild(item);
+   item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,58):"")));lane.body.appendChild(item);
   }
   if(!(buckets[names[i][0]]||[]).length)lane.body.appendChild(el("p","muted",STR.none));
   board.appendChild(lane);
@@ -889,7 +900,7 @@ function viewQueue(view,program){
   lane=panel(name,fmt(STR.queueCount,{n:queue.clusters[i].issues.length}));
   for(j=0;j<queue.clusters[i].issues.length;j++){
    n=queue.clusters[i].issues[j];item=el("div","queue-item");
-   item.appendChild(issueLink(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,64):"")));
+   item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,64):"")));
    item.appendChild(commandLine(queueCommand(program,n)));lane.body.appendChild(item);
   }
   board.appendChild(lane);
@@ -947,7 +958,7 @@ function viewMap(view,program){
    d.appendChild(s);
    pair(dl,STR.nodes,chips(c.nodes));
    var lk=el("span","links");
-   for(j=0;j<c.issues.length;j++)lk.appendChild(issueLink(program,c.issues[j]));
+   for(j=0;j<c.issues.length;j++)lk.appendChild(pill(program,c.issues[j]));
    if(!c.issues.length)lk.appendChild(el("span","muted",STR.none));
    pair(dl,STR.issues,lk);
    d.appendChild(dl);wrap.appendChild(d);
@@ -970,7 +981,7 @@ function viewWbs(view,program){
   holes=[[STR.wbsDuplicate,rtm.orphans.duplicateIds.map(function(o){return o.id+" ("+o.from+":"+o.line+")";})],
          [STR.wbsDangling,rtm.orphans.danglingRefs.map(function(o){return o.id+" → "+o.ref;})],
          [STR.wbsUncovered,rtm.orphans.uncovered.map(function(o){return o.id+" — "+short(o.text,70);})],
-         [STR.wbsOrphan,rtm.orphans.orphanIssues.map(function(o){return "#"+o.n+" "+short(o.title,60);})],
+         [STR.wbsOrphan,rtm.orphans.orphanIssues.map(function(o){return pill(program,o.n,"#"+o.n+" "+short(o.title,60));})],
          [STR.wbsSkipped,rtm.skipped.map(function(o){return o.path+" ("+o.why+")";})]];
   var anyHole=false;
   for(i=0;i<holes.length;i++){
@@ -978,7 +989,7 @@ function viewWbs(view,program){
    anyHole=true;
    var hr=el("div","hole"),cell=el("span");
    hr.appendChild(el("span","",holes[i][0]));
-   for(j=0;j<holes[i][1].length;j++)cell.appendChild(el("div","",holes[i][1][j]));
+   for(j=0;j<holes[i][1].length;j++)cell.appendChild(holes[i][1][j]&&holes[i][1][j].nodeType?holes[i][1][j]:el("div","",holes[i][1][j]));
    hr.appendChild(cell);hp.body.appendChild(hr);
   }
   if(!anyHole)hp.body.appendChild(el("p","muted",STR.wbsComplete));
@@ -1015,7 +1026,7 @@ function viewWbs(view,program){
     else if(c===1)tr.appendChild(el("td","",r.role));
     else if(c===2)tr.appendChild(el("td","",r.satisfies.join(", ")||"—"));
     else if(c===3)tr.appendChild(el("td","",short(r.verified.join(", "),40)||"—"));
-    else if(c===4){td=el("td");for(var k=0;k<r.issues.length;k++){td.appendChild(issueLink(program,r.issues[k]));td.appendChild(document.createTextNode(" "));}if(!r.issues.length)td.textContent="—";tr.appendChild(td);}
+    else if(c===4){td=el("td");for(var k=0;k<r.issues.length;k++){td.appendChild(pill(program,r.issues[k]));td.appendChild(document.createTextNode(" "));}if(!r.issues.length)td.textContent="—";tr.appendChild(td);}
     else if(c===5){var pr=rtm.progress[r.id];tr.appendChild(el("td","nums",pr&&pr.pct!=null?pr.closed+"/"+pr.issues+" ("+pr.pct+"%)":"—"));}
     else{td=el("td");td.appendChild(docLink(program,r.from,r.line));tr.appendChild(td);}
    }

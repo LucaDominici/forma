@@ -1926,6 +1926,22 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok room-queue — the complete derived queue has a fallback group and factual copy-ready commands')
 }
 
+// One issue primitive keeps every view honest: colour only from validated health, the same anchored
+// why on hover, a word plus glyph, and closed work visibly closed. No plain issueLink may bypass it (#63).
+{
+  const template = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
+  const pill = (template.match(/function pill\([^]*?\n}/) || [])[0]
+  if (!pill) die('room-pill: the shared pill() primitive is missing')
+  if (!/p\.health\.verdicts/.test(pill)) die('room-pill: colour is not sourced from the validated health overlay')
+  if (!/data-tip/.test(pill)) die('room-pill: the anchored why is not exposed on the issue reference')
+  if (!/statusMark/.test(pill)) die('room-pill: the verdict has no shared glyph + word encoding')
+  if (!/state==="CLOSED"/.test(pill)) die('room-pill: closed issues are not encoded')
+  if (!/\.issue-pill \.issue-text\{[^}]*min-width:0/.test(template)) die('room-pill: long issue titles escape their pill on a narrow board lane')
+  if (!/mark\.lastChild\.textContent/.test(pill)) die('room-pill: the accessible name omits the verdict word')
+  if (/\bissueLink\(/.test(template)) die('room-pill: a plain issue link bypasses pill()')
+  console.log('  ok room-pill — every issue reference shares verdict, reason, glyph, word and closed state')
+}
+
 // The dogfood. A traceability convention that cannot read the document THIS repository writes is a
 // convention for other people's repositories. docs/PRD.md §6 is a real table, edited by hand for
 // prose reasons, and the parser has to find it without being told anything but the id pattern.
