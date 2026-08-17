@@ -1924,4 +1924,14 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok ci-public — required CI has no private repository or credential dependency')
 }
 
+// The Control Room is validated by dogfood over real local work, not by publishing forma's quiet
+// self-portrait as a second Pages demo (#56). The architecture explorer remains the public demo.
+{
+  const pages = readFileSync(join(HERE, '..', '.github/workflows/pages.yml'), 'utf-8')
+  const readme = readFileSync(join(HERE, '..', 'README.md'), 'utf-8')
+  if (/_site\/room|room-presentable|bin\/forma\.mjs room|bin\/forma\.mjs verify/.test(pages)) die('dogfood: Pages still builds or publishes a Control Room')
+  if (/github\.io\/forma\/room\//.test(readme)) die('dogfood: README still advertises the retired public Control Room')
+  console.log('  ok dogfood — Pages publishes the explorer only; the Control Room stays local')
+}
+
 console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood all green.')
