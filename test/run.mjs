@@ -2031,6 +2031,22 @@ const diffPaths = (a, b, at = '') => {
   const milestoneClaim = work.claims.find((claim) => claim.kind === 'milestone-rate')
   if (!/33% \(1 closed of 3\)/.test(milestoneClaim.claim) || !milestoneClaim.where.some((at) => at.type === 'gh')) die('audit: milestone claim does not name its derivation and gh source: ' + JSON.stringify(milestoneClaim))
 
+  const { validateCounterResults } = await import(join(HERE, '..', 'lib/audit.mjs'))
+  const { stubAuditAgent } = await import(join(HERE, 'stub-audit-agent.mjs'))
+  const result = validateCounterResults(work, stubAuditAgent(work))
+  if (result.results.length !== work.claims.length || result.results.some((entry, i) => entry.claimId !== work.claims[i].id)) die('audit: runner result does not cover the plan one-for-one')
+  if (!['holds', 'contradicted', 'unsupported'].every((verdict) => result.results.some((entry) => entry.verdict === verdict))) die('audit: offline agent did not exercise every counter-verdict')
+  if (result.results.some((entry) => !entry.reason || !entry.evidence || !entry.evidence.type || !entry.evidence.ref)) die('audit: runner accepted an unanchored reason')
+  try { validateCounterResults(work, stubAuditAgent(work, true)); die('audit: counter contract accepted a result that omitted claims') } catch (e) { if (!/missing:/.test(e.message)) throw e }
+  r = run(['audit', '--repo', repo, '--run', plan])
+  if (r.status === 0 || !/unknown option: --run/.test(r.stderr || '')) die('audit: the offline engine grew an agent/network runner', r)
+  const auditSource = readFileSync(join(HERE, '..', 'lib/audit.mjs'), 'utf-8')
+  if (/codex exec|--agent-cmd/.test(auditSource)) die('audit: the external Codex adapter leaked into the offline engine')
+  const codexSkill = readFileSync(join(HERE, '..', 'adapters/codex/forma-counterverify/SKILL.md'), 'utf-8')
+  const decisions = readFileSync(join(HERE, '..', 'DECISION_REGISTRY.md'), 'utf-8')
+  if (!/name: forma-counterverify/.test(codexSkill) || !/holds\|contradicted\|unsupported/.test(codexSkill)) die('audit: the default Codex adapter does not declare the counter-verification contract')
+  if (!/\| D-08 \| Codex is the default counter-verification adapter, but runs outside Forma \|/.test(decisions)) die('audit: the delegated Codex CLI decision is not recorded')
+
   const fill = join(tmp, 'audit-fill.json')
   writeFileSync(fill, JSON.stringify({
     verdicts: [{ n: 3, verdict: 'ok', why: 'The committed helper is present.', evidence: [{ type: 'path', ref: 'src/util/log.js' }] }],

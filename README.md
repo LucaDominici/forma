@@ -72,6 +72,7 @@ npx forma-arch <command>        # or: npm i -D forma-arch
 | `forma doc` | Project the arc42 scaffold (`ARCHITECTURE.scaffold.md`), or `--attach <file>` to inject a governed block into an existing doc |
 | `forma serve` | Open the live explorer at `http://localhost:4173` |
 | `forma verify` | Refresh status from live GitHub issues through your `gh` CLI — the **only** networked command |
+| `forma audit` | Emit an offline issue/claim plan, then validate and apply evidence-anchored agent results |
 | `forma scan` | Find the programmes under a directory and write them into `forma.room.json` |
 | `forma room` | Compose the Control Room — one briefing over N programmes, in one self-contained HTML |
 
@@ -170,6 +171,7 @@ everything you are running, what needs you** — and then, per programme, where 
 
 ```
 forma verify --repo ../haben          # snapshot the issues (the only networked step)
+forma audit  --repo ../haben --plan ../haben/docs/architecture/audit-plan.json
 forma scan   --root .. --manifest forma.room.json
 forma room   --manifest forma.room.json --out control-room.html
 ```

@@ -49,6 +49,10 @@ Enforcement: `lib/render.mjs` emits the frontmatter block; `scripts/check-doc-st
 
 Enforcement: the `room-c4-drill` block in `test/run.mjs` proves that the room embeds the hologram and that its drill control, stack navigation and level breadcrumb remain present.
 
+| D-08 | Codex is the default counter-verification adapter, but runs outside Forma | I2 forbids network in the deterministic engine; the external Codex skill can inspect repo/gh and return the model-agnostic JSON contract without making `forma audit` spawn an agent or trust one | Luca agent, delegated by Luca Dominici | 2026-08-17 |
+
+Enforcement: the `audit` block in `test/run.mjs` exercises the offline agent stub and rejects incomplete or unanchored output; it also rejects `forma audit --run` and agent command wiring in `lib/audit.mjs`.
+
 ## Promotion
 
 A row here that stops being an operational preference and becomes structural moves out: to an ADR

@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-08-17T10:04:14.092Z",
+  "generatedAt": "2026-08-17T10:45:23.367Z",
   "source": {
     "repo": "forma",
-    "commit": "ad920f0d089b4dd3caded6390f45e94b940b46a5",
+    "commit": "e4ece0d3d2b4734931c1ef8a38b1cb1e27cb3963",
     "branch": "control-room-rework",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
@@ -301,7 +301,7 @@
         {
           "type": "glob",
           "ref": "test",
-          "count": 2
+          "count": 3
         }
       ],
       "category": "container",
@@ -351,7 +351,7 @@
       "category": "lib",
       "status2": "unknown",
       "target": "",
-      "func": "EXPERIMENTAL until #65 wires this seam into forma audit; no command calls it yet. audit.mjs — the async on-demand audit channel behind c4-health.json / c4-findings.json. Same doctrine as lib/enrich.mjs's --enricher agent: emit a plan of pro",
+      "func": "audit.mjs — the async on-demand audit channel behind c4-health.json / c4-findings.json. Same doctrine as lib/enrich.mjs's --enricher agent: emit a plan of prompts instead of calling an API (the agent driving forma already has the model in t",
       "descSource": "docstring"
     },
     {
@@ -922,6 +922,25 @@
       "status2": "unknown",
       "target": "",
       "func": "Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.",
+      "descSource": "docstring"
+    },
+    {
+      "id": "test__stub_audit_agent_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "stub-audit-agent",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/stub-audit-agent.mjs"
+        }
+      ],
+      "category": "test",
+      "status2": "unknown",
+      "target": "",
+      "func": "Offline contract stand-in for the independent agent that drives Forma from outside the engine.",
       "descSource": "docstring"
     },
     {
