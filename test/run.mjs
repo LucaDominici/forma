@@ -1969,6 +1969,27 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok room-queue — the complete derived queue has a fallback group and factual copy-ready commands')
 }
 
+// The shipped Claude adapter is executable guidance, not brochure copy: its init→update sequence
+// must work on a fresh map-less checkout and tell the agent to link the artifact it produced (#73).
+{
+  const repo = join(tmp, 'skill-target'), manifest = join(repo, 'forma.room.json')
+  const out = join(repo, 'docs/architecture/control-room.html')
+  mkdirSync(join(repo, 'src'), { recursive: true })
+  writeFileSync(join(repo, 'src/main.js'), 'export const ready = true\n')
+  const git = (args) => { const r = spawnSync('git', ['-C', repo, ...args], { encoding: 'utf-8' }); if (r.status !== 0) die('skill target git: ' + args.join(' '), r) }
+  git(['init', '-q', '.']); git(['remote', 'add', 'origin', 'git@github.com:acme/thing.git'])
+  let r = run(['room', 'init', '--repo', repo, '--manifest', manifest, '--today', '2026-08-17'])
+  if (r.status !== 0) die('claude skill: room init exit ' + r.status, r)
+  const gh = process.execPath + ' ' + join(HERE, 'stub-gh.mjs')
+  r = run(['room', 'update', '--manifest', manifest, '--out', out, '--gh-cmd', gh])
+  if (r.status !== 0 || !existsSync(out)) die('claude skill: room update did not produce the linked artifact', r)
+  const skill = readFileSync(join(HERE, '..', 'adapters/claude/SKILL.md'), 'utf-8')
+  const initAt = skill.indexOf('room init'), updateAt = skill.indexOf('room update')
+  if (initAt < 0 || updateAt < initAt) die('claude skill: init→update order is not documented')
+  if (!/room update[^\n]*--out/.test(skill) || !/Markdown link/i.test(skill)) die('claude skill: the adapter does not link the generated output')
+  console.log('  ok claude-skill — init→update runs on a fresh target and the adapter links the artifact')
+}
+
 // One issue primitive keeps every view honest: colour only from validated health, the same anchored
 // why on hover, a word plus glyph, and closed work visibly closed. No plain issueLink may bypass it (#63).
 {
