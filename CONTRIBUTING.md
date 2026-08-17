@@ -1,8 +1,8 @@
 ---
 title: 'Contributing to Forma'
-doc_version: '1.0.0'
+doc_version: '1.0.1'
 status: active
-last_review: '2026-08-10'
+last_review: '2026-08-17'
 owner: 'Luca Dominici'
 canonical_id: 'contributing'
 tags: ['audience/dev', 'kind/governance']
@@ -42,8 +42,8 @@ reads that number out of the subject to link an issue to the files it touched.
 
 ## The Control Room, locally
 
-`docs/architecture/control-room.html` is generated and gitignored; CI composes it for Pages. If you
-generate one locally, remember that it embeds how far the architecture layer is behind `HEAD` — so
+`docs/architecture/control-room.html` is generated, gitignored and local-only. If you generate one,
+remember that it embeds how far the architecture layer is behind `HEAD` — so
 your next commit makes it stale and `forma check` will say so. That is the gate being right, not a
 false alarm. Re-run `forma room --manifest forma.room.json --out docs/architecture/control-room.html`,
 or delete the file: the room assertions are opt-in by its presence.
@@ -56,10 +56,9 @@ forma room --manifest forma.room.json --serve  # ...or serve it, with working Op
 
 ## Touching documentation
 
-Forma's documentation is governed by the doc-set standard maintained in `arbiter`: which documents
-must exist ([`standards/gold-doc-set.yml`](standards/gold-doc-set.yml)), on which tier and with
-which overlays ([`standards/doc-profile`](standards/doc-profile)). Forma declares; the engines that
-grade live in `arbiter` and run in the `docs` CI job.
+Forma keeps the doc-set standard in [`standards/gold-doc-set.yml`](standards/gold-doc-set.yml) and
+selects its solo tier in [`standards/doc-profile`](standards/doc-profile). The external `arbiter`
+engines are an optional local audit; required public CI has no private-repository dependency.
 
 Every hand-authored Markdown file carries eight frontmatter keys — `title`, `doc_version`, `status`,
 `last_review`, `owner`, `canonical_id`, `tags`, `related`. `last_review` is an ISO date and
@@ -67,14 +66,11 @@ Every hand-authored Markdown file carries eight frontmatter keys — `title`, `d
 (see [`docs/SEMVER.md`](docs/SEMVER.md)). `tags` is a closed vocabulary: extend the taxonomy in the
 standard before using a new one.
 
-To run the same gates locally, clone `arbiter` beside this repository and run them from forma's
-root — nothing is installed here:
+If an `arbiter` checkout is already available, run its optional audit from Forma's root:
 
 ```sh
-git clone https://github.com/LucaDominici/arbiter.git ../arbiter && (cd ../arbiter && npm ci)
-
 A=../arbiter/scripts
-node $A/check-doc-set.mjs --strict          # the canonical set is present
+node $A/check-doc-set.mjs --strict          # the solo canonical set is present
 node $A/check-doc-style.mjs                 # frontmatter, ISO dates, semver, one H1
 node $A/check-doc-freshness.mjs             # nothing past its review bar
 node $A/check-doc-links.mjs                 # every local link resolves

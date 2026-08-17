@@ -1,8 +1,8 @@
 ---
 title: 'Governance'
-doc_version: '1.0.0'
+doc_version: '1.0.1'
 status: active
-last_review: '2026-08-10'
+last_review: '2026-08-17'
 owner: 'Luca Dominici'
 canonical_id: 'governance'
 tags: ['audience/dev', 'kind/governance']
@@ -19,10 +19,8 @@ One maintainer, Luca Dominici, named in [`CODEOWNERS`](../.github/CODEOWNERS). E
 owner; there is no area with ambiguous ownership, and pretending otherwise would be governance
 theatre for a repository with one committer.
 
-That is a fact about who *writes* Forma. It is deliberately not the standard Forma is graded
-against: `forma-arch` is published to npm and installed by strangers, so its documentation is
-measured on the enterprise column of the doc-set standard. The reasoning is recorded in
-[`standards/doc-profile`](../standards/doc-profile).
+That fact selects the solo column of the doc-set standard. Publication to npm does not manufacture
+a review team; [`standards/doc-profile`](../standards/doc-profile) records the floor explicitly.
 
 ## Where a decision lives
 
@@ -45,7 +43,7 @@ names the file that turns red.
 2. Make the change, with the check that would fail if it broke. For non-trivial logic that is a
    block in `test/run.mjs`; for a claim about the model it is an assertion in `forma check`.
 3. Run the gate locally: `npm run lint`, `npm test`, `node bin/forma.mjs check`.
-4. Open a PR. CI runs the same gate on Node 18/20/22, plus the documentation gates.
+4. Open a PR. CI runs the same gate on Node 18/20/22.
 5. Squash-merge. One logical change, one commit.
 
 The PR template asks for the blast radius and for the four boxes; those are the questions that have
@@ -62,7 +60,6 @@ settings.
 | `npm run lint` | a shipped file that does not parse |
 | `npm test` | a fixture regression, and every Control Room and traceability assertion |
 | `node bin/forma.mjs check` | the committed model disagreeing with the code, the documents, or a generated artifact |
-| the documentation gates | a missing canonical document, missing or malformed frontmatter, a stale review date, a dead link, a dead path citation |
 
 ## Amending an invariant
 
@@ -79,10 +76,11 @@ rejected, which is information the current layout alone does not carry.
 
 ## Documentation governance
 
-The canonical document set, the tier it is graded on, and the overlays that apply are declared in
+The canonical document set, the solo tier, and the overlays that apply are declared in
 [`standards/gold-doc-set.yml`](../standards/gold-doc-set.yml) and
-[`standards/doc-profile`](../standards/doc-profile). The engines that grade them live in `arbiter`
-and run in CI; the commands are in [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+[`standards/doc-profile`](../standards/doc-profile). The external `arbiter` engines are an optional
+local audit; required public CI does not depend on them. Commands are in
+[`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 Two conventions follow from that standard and apply to every hand-authored document here:
 

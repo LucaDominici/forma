@@ -1,8 +1,8 @@
 ---
 title: 'Decision registry'
-doc_version: '1.0.0'
+doc_version: '1.0.1'
 status: active
-last_review: '2026-08-10'
+last_review: '2026-08-17'
 owner: 'Luca Dominici'
 canonical_id: 'decision-registry'
 tags: ['audience/dev', 'kind/governance']
@@ -31,11 +31,11 @@ Enforcement: `lib/link.mjs` derives the link from the subject, so an unlinked co
 
 | D-03 | Documentation is graded on the **solo** column of the doc-set standard | Forma is a one-committer, dogfood-first tool; the enterprise column (GAMP 5 / Part 11 …) is governance theatre for it and its `arbiter` coupling turned CI red. The reader who matters is the owner running it across a personal portfolio | Luca Dominici | 2026-08-17 (was enterprise, 2026-08-10) |
 
-Enforcement: `tier_floor: solo` in `standards/doc-profile`, read by the doc-set checks in the `docs-gate` CI job. The grading is also being decoupled from the private `arbiter` checkout (debt D-7) so the gate runs standalone.
+Enforcement: `tier_floor: solo` in `standards/doc-profile`; `test/run.mjs` refuses a different floor or stale governance prose.
 
-| D-04 | The document gates run from a checkout of `arbiter`, never vendored into `lib/` | Re-implementing them here would put two engines behind one rule, which is the divergence `roomderive.mjs` and `roomload.mjs` exist to prevent — and a YAML parser in `lib/` would break ADR-0001 | Luca Dominici | 2026-08-10 |
+| D-04 | Required public CI depends only on this repository | A public fork must run every required gate with its default token; private tooling may remain an optional local audit but cannot decide whether Forma is green | Luca Dominici | 2026-08-17 (replaces private checkout, 2026-08-10) |
 
-Enforcement: the `docs-gate` job in `.github/workflows/ci.yml`. The coupling is recorded as debt D-7 in `docs/technical-debt.md`.
+Enforcement: the `ci-public` block in `test/run.mjs` rejects private repository or credential references in `.github/workflows/ci.yml`.
 
 | D-05 | ADR filenames use four digits (`0001-`), not the standard's three | Seven ADRs already carry four-digit names and are cross-referenced by number from code comments and other documents; renumbering would break every reference to buy nothing that a gate checks | Luca Dominici | 2026-08-10 |
 

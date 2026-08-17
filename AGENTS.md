@@ -1,8 +1,8 @@
 ---
 title: 'AGENTS.md — Forma source of truth for humans + AI agents'
-doc_version: '1.0.0'
+doc_version: '1.0.1'
 status: active
-last_review: '2026-08-10'
+last_review: '2026-08-17'
 owner: 'Luca Dominici'
 canonical_id: 'agents'
 tags: ['audience/agent', 'kind/governance']
@@ -54,11 +54,11 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
 
 - No runtime deps, no build step. Run gates with `npm run lint`, `npm test`, and
   `node bin/forma.mjs check`.
-- Documentation is gated too, and the rules are not this repo's: the canonical set, the tier and
-  the overlays are declared in `standards/gold-doc-set.yml` + `standards/doc-profile`, and the
-  engines that grade them live in `arbiter` and run in the `docs` CI job. Every hand-authored `.md`
-  carries eight frontmatter keys; `tags` is a closed vocabulary. The commands to run them locally
-  are in `CONTRIBUTING.md`. Two files are GENERATED and must never be hand-edited:
+- Documentation follows the solo tier declared in `standards/gold-doc-set.yml` +
+  `standards/doc-profile`; the external `arbiter` engines are an optional local audit, not a public
+  CI dependency. Every hand-authored `.md` carries eight frontmatter keys; `tags` is a closed
+  vocabulary. The optional commands are in `CONTRIBUTING.md`. Two files are GENERATED and must
+  never be hand-edited:
   `docs/INDEX.md` (regenerate from frontmatter) and `docs/architecture/ARCHITECTURE.scaffold.md`
   (edit `lib/doc.mjs`, which emits its frontmatter).
 - `gen` and `check` never touch the network. `verify` (gh) and `gen --enrich` (LLM) are the only

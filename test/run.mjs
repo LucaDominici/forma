@@ -1954,4 +1954,18 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok doc-prune — schemas and governance docs carry only the current shape')
 }
 
+// One committer is the solo tier. Governance may keep the external standard as a reference, but
+// required CI and its enforcement prose must not claim the retired enterprise/private gate (#60).
+{
+  const profile = readFileSync(join(HERE, '..', 'standards/doc-profile'), 'utf-8')
+  const governance = readFileSync(join(HERE, '..', 'docs/GOVERNANCE.md'), 'utf-8')
+  const agents = readFileSync(join(HERE, '..', 'AGENTS.md'), 'utf-8')
+  const decisions = readFileSync(join(HERE, '..', 'DECISION_REGISTRY.md'), 'utf-8')
+  if (!/^tier_floor:\s*solo$/m.test(profile)) die('governance-solo: standards/doc-profile is not pinned to solo')
+  if (/enterprise column|documentation gates.*blocks|docs-gate.*CI/i.test(governance)) die('governance-solo: GOVERNANCE still claims enterprise/private CI grading')
+  if (/engines that grade them live in `arbiter` and run in the `docs` CI job/.test(agents)) die('governance-solo: AGENTS still requires the removed private CI job')
+  if (!/\| D-03 \| Documentation is graded on the \*\*solo\*\*/.test(decisions) || /docs-gate.*CI job/.test(decisions)) die('governance-solo: D-03 does not describe its actual solo enforcement')
+  console.log('  ok governance-solo — policy, profile and CI all describe the solo tier')
+}
+
 console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood all green.')

@@ -41,13 +41,8 @@ allow: []
 
 # tier_floor (T1b): a floor only RAISES the resolved column, never lowers it.
 #
-# Forma has one committer, so collaborationMode would resolve this repo to the `small` column and
-# leave six always-rows advisory. That reading measures who WRITES forma. The standard's promotion
-# triggers measure who DEPENDS on it: `forma-arch` is published to npm under a permissive licence,
-# installed by strangers, and its file contract (lib/schema/*.json) is a compatibility surface
-# other repositories build against. Arbiter applies this same floor to itself, for this same
-# reason and against its own trunk-solo mode.
-#
-# Graded on the enterprise column, forma carries the full always-set. That is the intended cost:
-# the anti-cathedral guardrail protects a repo nobody else depends on, and this is not one.
-tier_floor: enterprise
+# Forma has one committer and is dogfooded first on that maintainer's own portfolio. The solo
+# column is the standard's anti-cathedral guardrail applied as written; publication to npm does not
+# manufacture a review team. The profile remains useful for optional local audits, while public CI
+# has no dependency on the private gate engines.
+tier_floor: solo
