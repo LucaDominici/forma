@@ -2014,8 +2014,9 @@ const diffPaths = (a, b, at = '') => {
   r = run(['gen', '--repo', repo, '--topology', topology, '--out', model]); if (r.status !== 0) die('audit: gen exit ' + r.status, r)
   const auditModel = readJson(model)
   const doneNode = auditModel.nodes.find((node) => node.evidence && node.evidence.some((e) => e.type === 'path'))
-  doneNode.status2 = 'done'
-  writeFileSync(model, JSON.stringify(auditModel, null, 2) + '\n')
+  mkdirSync(join(repo, 'docs/architecture'), { recursive: true })
+  writeFileSync(join(repo, 'docs/architecture/c4-status.json'), JSON.stringify({ nodes: { [doneNode.id]: { status2: 'done', current: 'Audited fixture claim.', verify: { source: 'test fixture' } } } }, null, 2))
+  r = run(['gen', '--repo', repo, '--topology', topology, '--out', model]); if (r.status !== 0) die('audit: decorated gen exit ' + r.status, r)
   const planArgs = ['audit', '--repo', repo, '--issues', issues, '--model', model, '--topology', topology, '--health', health, '--findings', findings, '--plan']
   r = run([...planArgs, plan])
   if (r.status !== 0) die('audit: plan exit ' + r.status, r)
@@ -2046,6 +2047,39 @@ const diffPaths = (a, b, at = '') => {
   const decisions = readFileSync(join(HERE, '..', 'DECISION_REGISTRY.md'), 'utf-8')
   if (!/name: forma-counterverify/.test(codexSkill) || !/holds\|contradicted\|unsupported/.test(codexSkill)) die('audit: the default Codex adapter does not declare the counter-verification contract')
   if (!/\| D-08 \| Codex is the default counter-verification adapter, but runs outside Forma \|/.test(decisions)) die('audit: the delegated Codex CLI decision is not recorded')
+
+  // Agent results enter through the same validated apply boundary. A contradicted issue claim is
+  // both a durable finding and a bad health verdict, so the shared pill turns red with this reason.
+  const counter = join(tmp, 'audit-counter.json')
+  writeFileSync(counter, JSON.stringify(result))
+  r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--apply', counter, '--counter-plan', plan])
+  if (r.status !== 0) die('audit: counter apply exit ' + r.status, r)
+  const contradicted = result.results.find((entry) => entry.claimId === 'health:1')
+  const counterHealth = readJson(health).verdicts.find((v) => v.n === 1)
+  if (!contradicted || contradicted.verdict !== 'contradicted' || !counterHealth || counterHealth.verdict !== 'bad' || counterHealth.why !== contradicted.reason) die('audit: contradicted health claim did not become the pill\'s bad verdict and why')
+  if (!readJson(findings).findings.some((f) => f.id === 'counter:health:1' && f.severity === 'bad' && f.text === contradicted.reason)) die('audit: contradicted claim did not become a durable finding')
+  if (!readJson(findings).findings.some((f) => f.id === 'counter:health:2' && f.severity === 'warn')) die('audit: unsupported claim disappeared instead of becoming a warning')
+
+  const manifest = join(repo, 'forma.room.json'), roomHtml = join(repo, 'control-room.html')
+  writeFileSync(manifest, JSON.stringify({ today: '2026-08-10', programs: [{ id: 'audit', ghRepo: 'acme/alpha', repo: '.', issues: 'issues.json', model: 'model.json', topology: 'topology.json', health: 'health.json', findings: 'findings.json' }] }, null, 2))
+  r = run(['room', '--manifest', manifest, '--out', roomHtml]); if (r.status !== 0) die('audit: room after counter apply exit ' + r.status, r)
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topology, '--issues', issues, '--health', health, '--findings', findings, '--room', roomHtml, '--manifest', manifest])
+  if (r.status !== 0) die('audit: re-derivation disagrees after counter apply', r)
+  const goodHealth = readFileSync(health, 'utf-8')
+  const brokenHealth = readJson(health)
+  brokenHealth.verdicts.find((v) => v.n === 1).evidence = [{ type: 'path', ref: 'missing-counter-proof.js' }]
+  writeFileSync(health, JSON.stringify(brokenHealth, null, 2) + '\n')
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topology, '--issues', issues, '--health', health, '--findings', findings])
+  if (r.status === 0 || !/evidence path does not exist/.test(r.stderr || '')) die('audit: check accepted an unresolved counter-verdict', r)
+  writeFileSync(health, goodHealth)
+
+  const beforeCounterHealth = readFileSync(health, 'utf-8'), beforeCounterFindings = readFileSync(findings, 'utf-8')
+  const badCounter = JSON.parse(JSON.stringify(result))
+  badCounter.results.find((entry) => entry.claimId === 'health:1').evidence = { type: 'file', ref: 'missing-agent-proof.js' }
+  writeFileSync(counter, JSON.stringify(badCounter))
+  r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--apply', counter, '--counter-plan', plan])
+  if (r.status === 0) die('audit: counter apply accepted unresolved agent evidence')
+  if (readFileSync(health, 'utf-8') !== beforeCounterHealth || readFileSync(findings, 'utf-8') !== beforeCounterFindings) die('audit: rejected counter result partially replaced an overlay')
 
   const fill = join(tmp, 'audit-fill.json')
   writeFileSync(fill, JSON.stringify({

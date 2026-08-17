@@ -91,10 +91,11 @@ A rule nobody declared and a rule declared as empty are different facts and must
 ## I8. No colour without a resolvable reason
 
 Every health verdict carries a non-empty `why` and at least one evidence reference. A `path` must
-exist on disk; a `commit` must resolve in git.
+exist on disk, a `commit` must resolve in git, and an `issue` must exist in the snapshot.
 
-- **Enforced by:** `applyVerdicts` in `lib/audit.mjs` throws rather than skipping; `lib/check.mjs`
-  re-checks every reference; `scripts/room-presentable.mjs` fails on an unresolvable one.
+- **Enforced by:** `applyVerdicts`/`applyCounterResults` in `lib/audit.mjs` throw rather than
+  skipping; `lib/check.mjs` re-checks every health and finding reference;
+  `scripts/room-presentable.mjs` fails on an unresolvable one.
 - **Red when:** a verdict is written whose evidence points at nothing.
 
 ## I9. Nothing is dropped silently

@@ -18,4 +18,6 @@ Act as an external verifier. Forma stays deterministic and offline; this skill i
 
 Return exactly one result for every claim and no others. Use `unsupported` when the available sources cannot prove or refute the claim. Every result needs a concrete file, commit, issue, or milestone anchor; an agent's confidence is not evidence.
 
+5. Apply the result with `forma audit --repo . --apply docs/architecture/audit-counter.json --counter-plan docs/architecture/audit-plan.json`. Forma rejects unresolved evidence before writing either overlay.
+
 Do not edit the plan, source, issue state, or dashboard. Do not run an agent subprocess from Forma.
