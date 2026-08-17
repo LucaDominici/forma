@@ -36,6 +36,8 @@
           "topology": { "type": "string", "description": "Path to this program's topology overlay when one exists." },
           "health": { "type": "string", "description": "Path to this program's health overlay when one exists." },
           "findings": { "type": "string", "description": "Path to this program's findings overlay when one exists." },
+          "auditPlan": { "type": "string", "description": "Offline counter-verification plan written by `room update --counter`." },
+          "counterResults": { "type": "string", "description": "Agent-written counter-verification results consumed by `room update --counter`." },
           "blockedBy": {
             "type": "object",
             "additionalProperties": false,

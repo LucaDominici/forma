@@ -39,6 +39,7 @@ Usage: forma <command> [--repo <path>]
           --serve opens it locally so the Options view can write the manifest back
     room init    scaffold/seed forma.room.json for a repo (--repo, --today, or --scan --root)
     room update  refresh live gh snapshots then recompose the HTML ("aggiorna dashboard")
+                 --counter applies external agent results before composition
 
 The file contract is lib/schema/c4-model.schema.json. Enrichment (curate the topology, write the
 arc42 prose) is model-agnostic — any agent edits the same JSON/Markdown.`)

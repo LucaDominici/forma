@@ -20,4 +20,6 @@ Return exactly one result for every claim and no others. Use `unsupported` when 
 
 5. Apply the result with `forma audit --repo . --apply docs/architecture/audit-counter.json --counter-plan docs/architecture/audit-plan.json`. Forma rejects unresolved evidence before writing either overlay.
 
+For an unattended portfolio, let the scheduler run `forma room update` first, run this workflow for every active programme, then run `forma room update --skip-verify --counter`. Each programme must declare `health`, `findings`, `auditPlan`, and `counterResults` in the manifest. The final update regenerates the plans and fails if any result is missing or stale.
+
 Do not edit the plan, source, issue state, or dashboard. Do not run an agent subprocess from Forma.

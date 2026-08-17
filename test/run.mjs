@@ -2099,6 +2099,30 @@ const diffPaths = (a, b, at = '') => {
   r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--apply', fill])
   if (r.status === 0) die('audit: unresolved evidence was accepted')
   if (readFileSync(health, 'utf-8') !== beforeHealth || readFileSync(findings, 'utf-8') !== beforeFindings) die('audit: rejected fill partially replaced an overlay')
+
+  // `room update --counter` owns the deterministic half of unattended operation. The external
+  // adapter writes the result; update regenerates the plan, refuses stale/missing output, applies
+  // it per active programme, then composes the briefing (#69).
+  const updateManifest = readJson(manifest)
+  updateManifest.programs[0].auditPlan = plan
+  updateManifest.programs[0].counterResults = counter
+  writeFileSync(manifest, JSON.stringify(updateManifest, null, 2) + '\n')
+  r = run([...planArgs, plan]); if (r.status !== 0) die('audit update: fresh plan exit ' + r.status, r)
+  const updateResult = stubAuditAgent(readJson(plan))
+  const updateContradiction = updateResult.results.find((entry) => entry.claimId === 'health:1')
+  updateContradiction.verdict = 'contradicted'; updateContradiction.reason = 'Update pipeline found a contradiction.'
+  writeFileSync(counter, JSON.stringify(updateResult, null, 2) + '\n')
+  const updatedRoom = join(repo, 'updated-room.html')
+  r = run(['room', 'update', '--manifest', manifest, '--out', updatedRoom, '--skip-verify', '--counter'])
+  if (r.status !== 0) die('audit update: counter-verification exit ' + r.status, r)
+  if (readJson(health).verdicts.find((v) => v.n === 1).why !== updateContradiction.reason) die('audit update: counter result did not reach health before composition')
+  if (!readFileSync(updatedRoom, 'utf-8').includes(updateContradiction.reason)) die('audit update: recomposed briefing does not surface the contradiction')
+  const beforeMissingResult = readFileSync(health, 'utf-8')
+  renameSync(counter, counter + '.away')
+  r = run(['room', 'update', '--manifest', manifest, '--out', updatedRoom, '--skip-verify', '--counter'])
+  renameSync(counter + '.away', counter)
+  if (r.status === 0 || !/counter result missing/.test(r.stderr || '')) die('audit update: missing counter result did not fail loud', r)
+  if (readFileSync(health, 'utf-8') !== beforeMissingResult) die('audit update: missing result changed health')
   console.log('  ok audit — deterministic offline plan, validated health/findings apply, no partial writes')
 }
 

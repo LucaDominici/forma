@@ -176,6 +176,20 @@ forma scan   --root .. --manifest forma.room.json
 forma room   --manifest forma.room.json --out control-room.html
 ```
 
+For scheduled counter-verification, give each active programme `health`, `findings`, `auditPlan`
+and `counterResults` paths in the manifest. The unattended sequence is deliberately split at the
+network boundary:
+
+```text
+forma room update --manifest forma.room.json
+<scheduled Codex task runs $forma-counterverify for each active programme>
+forma room update --manifest forma.room.json --skip-verify --counter
+```
+
+The first command refreshes GitHub facts. The external adapter writes one result per claim. The
+last command regenerates every plan, rejects missing/stale/unresolvable results, applies the
+overlays, and only then recomposes. Forma never launches the agent itself (D-08 / I2).
+
 One file. A briefing in reading order at `#/`, five views per programme under it, and an options
 view saying what is included and why:
 
