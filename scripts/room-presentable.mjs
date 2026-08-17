@@ -49,7 +49,7 @@ const officialViews = [...tabsSource.matchAll(/\["([^"]+)",function/g)].map((m) 
 const officialIa = JSON.stringify(officialViews) === JSON.stringify(['exec', 'tech', 'map', 'wbs', 'docs'])
 const pageSize = Number((/var ISSUE_PAGE_SIZE=(\d+)/.exec(html) || [])[1])
 const boundedDom = pageSize > 0 && pageSize <= 50 && /function pagedList\(/.test(html) && /function ensureView\(/.test(html) && !/function buildAll\(/.test(html)
-const mobileNav = /id="mobile-program"/.test(html) && /id="mobile-view"/.test(html) && /@media\(max-width:600px\)/.test(html)
+const mobileNav = /id="mobile-program"/.test(html) && /id="mobile-view"/.test(html) && /@media\(max-width:1199px\)/.test(html)
 const boundedPrint = /\.screen-list,[^{]*\.workflow[^{]*\{display:none!important\}/.test(html) && !/details:not\(\[open\]\)/.test(html)
 
 for (const program of programs) {
@@ -135,7 +135,7 @@ const predicates = [
   ['every open issue is covered (Kanban or queue), none orphaned', orphanOpen.length === 0, orphanOpen.length ? `orphaned: ${orphanOpen.join(', ')}` : `${openCount} open, 0 orphaned`],
   ['the programme IA is exactly five evidence views', officialIa, officialViews.length ? officialViews.join(', ') : 'TABS contract missing'],
   ['issue DOM is lazy and page-bounded', boundedDom, Number.isFinite(pageSize) ? `${pageSize} issue rows per page` : 'pagination contract missing'],
-  ['mobile navigation has native programme and view controls', mobileNav, mobileNav ? 'two labelled selects at the 600px breakpoint' : 'mobile controls missing'],
+  ['compact navigation has native programme and view controls', mobileNav, mobileNav ? 'two labelled selects below the 1200px shell floor' : 'compact controls missing'],
   ['print does not expand interactive issue archives', boundedPrint, boundedPrint ? 'interactive lists summarized on paper' : 'unbounded print path detected'],
 ]
 

@@ -123,6 +123,12 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
    that occupies 520px at full height. Releasing the height should let the page scroll, not throw
    away 2200px of width. */
 @media(max-width:1199px){
+ :root{--bar:112px}
+ .bar{height:auto;min-height:var(--bar);padding:8px var(--pad);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+ .brand{align-self:center}.brand h1{font-size:15px}.brand span{font-size:11px}
+ .bar-sep,.bar>.tabs{display:none}
+ .bar-end{grid-column:2;grid-row:1;margin:0}
+ .mobile-nav{display:grid;grid-column:1/-1;grid-row:2}
  .answer,.evidence{grid-template-columns:1fr}
  .span2,.full{grid-column:auto}
 }
@@ -259,14 +265,9 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 @media(max-width:600px){
- :root{--pad:12px;--gap:14px;--bar:112px}
- .bar{height:auto;min-height:var(--bar);padding:8px var(--pad);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
- .brand{align-self:center}.brand h1{font-size:15px}.brand span{font-size:11px}
- .bar-sep,.bar>.tabs{display:none}
- .bar-end{grid-column:2;grid-row:1;margin:0}
+ :root{--pad:12px;--gap:14px}
  .ghost{min-height:44px;min-width:44px;padding:5px 9px}
  .prov{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere}
- .mobile-nav{display:grid;grid-column:1/-1;grid-row:2}
  main{padding:var(--pad)}
  .thesis{font-size:24px;max-width:22ch}
  .answer-lead{padding-top:8px}

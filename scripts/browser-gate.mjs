@@ -17,6 +17,9 @@ const sizes = [
   { name: 'wide', width: 3440, height: 1440, axe: false },
   { name: 'desktop', width: 1920, height: 900, axe: true },
   { name: 'laptop', width: 1366, height: 768, axe: false },
+  { name: 'compact', width: 1024, height: 768, axe: false },
+  { name: 'tablet', width: 768, height: 768, axe: false },
+  { name: 'edge', width: 601, height: 768, axe: false },
   { name: 'mobile', width: 390, height: 844, axe: true },
 ]
 const failures = []
@@ -47,6 +50,7 @@ for (const file of rooms) {
           const r = el.getBoundingClientRect(), s = getComputedStyle(el)
           return r.width > 0 && r.height > 0 && s.visibility !== 'hidden'
         }).map((el) => { const r = el.getBoundingClientRect(); return { name: (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 60), w: Math.round(r.width), h: Math.round(r.height) } })
+        const headerTargets = [...document.querySelectorAll('.bar a,.bar button,.bar select')].filter((el) => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' })
         return {
           bodyWidth: document.body.scrollWidth, bodyHeight: document.body.scrollHeight,
           viewportWidth: innerWidth, viewportHeight: innerHeight,
@@ -54,14 +58,16 @@ for (const file of rooms) {
           smallTargets: targets.filter((t) => t.w < 44 || t.h < 44),
           pointerHits: [...document.querySelectorAll('.hit')].filter((el) => getComputedStyle(el).pointerEvents !== 'none').length,
           clippedProvenance: [...visible.querySelectorAll('.prov')].filter((el) => el.scrollWidth > el.clientWidth + 1).map((el) => ({ text: el.textContent.trim().slice(0, 80), width: el.clientWidth, scrollWidth: el.scrollWidth })),
+          unreachableHeader: headerTargets.filter((el) => { const r = el.getBoundingClientRect(); return r.left < 0 || r.right > innerWidth || el.tabIndex < 0 }).map((el) => (el.getAttribute('aria-label') || el.textContent || '').trim().slice(0, 60)),
         }
       })
       if (metrics.bodyWidth > metrics.viewportWidth) fail(where, `body overflows horizontally (${metrics.bodyWidth} > ${metrics.viewportWidth})`)
-      if (size.name !== 'mobile' && metrics.bodyHeight > metrics.viewportHeight) fail(where, `body overflows vertically (${metrics.bodyHeight} > ${metrics.viewportHeight})`)
+      if (size.width >= 1200 && metrics.bodyHeight > metrics.viewportHeight) fail(where, `body overflows vertically (${metrics.bodyHeight} > ${metrics.viewportHeight})`)
       if (metrics.issueLinks > 80) fail(where, `${metrics.issueLinks} issue links mounted; budget is 80`)
       if (metrics.smallTargets.length) fail(where, `targets below 44px: ${JSON.stringify(metrics.smallTargets.slice(0, 5))}`)
       if (metrics.pointerHits) fail(where, `${metrics.pointerHits} overlapping chart hit target(s) remain pointer-active; use the table control`)
       if (metrics.clippedProvenance.length) fail(where, `provenance clipped: ${JSON.stringify(metrics.clippedProvenance)}`)
+      if (metrics.unreachableHeader.length) fail(where, `header controls outside viewport or keyboard order: ${JSON.stringify(metrics.unreachableHeader)}`)
       const claim = await page.evaluate((currentRoute) => {
         const actual = document.querySelector('section.view:not([hidden]) .thesis')
         const fmt = (s, values) => String(s || '').replace(/\{([^}]+)\}/g, (_, key) => values[key] == null ? '' : String(values[key]))
@@ -203,4 +209,4 @@ if (failures.length) {
   console.error(`browser-gate: NO (${failures.length})\n - ${failures.join('\n - ')}`)
   process.exit(1)
 }
-console.log(`browser-gate: YES — ${rooms.length} briefing(s), desktop/mobile/Axe/print`)
+console.log(`browser-gate: YES — ${rooms.length} briefing(s), ${sizes.length} viewports/Axe/print`)
