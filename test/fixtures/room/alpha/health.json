@@ -1,0 +1,16 @@
+{
+  "verdicts": [
+    {
+      "n": 1,
+      "verdict": "warn",
+      "why": "Reproduced on trailing tabs; the trim call covers spaces only.",
+      "evidence": [{ "type": "path", "ref": "src/core/engine.js" }]
+    },
+    {
+      "n": 2,
+      "verdict": "bad",
+      "why": "The question is a product decision, not a defect: nothing in the code can settle it.",
+      "evidence": [{ "type": "path", "ref": "src/core/parser.js" }]
+    }
+  ]
+}

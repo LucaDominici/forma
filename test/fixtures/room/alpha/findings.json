@@ -1,0 +1,11 @@
+{
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "warn",
+      "text": "The logging helper writes straight to stdout, so nothing can capture it in tests.",
+      "evidence": { "type": "path", "ref": "src/util/log.js" },
+      "trace": "azione"
+    }
+  ]
+}

@@ -6,6 +6,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-17
+
+The Control Room contract is now exercised across five real GitHub programmes and frozen for 1.0.
+The portfolio dogfood covered 4,269 issues and 97 open items; independent counter-verification
+covered all 233 emitted claims without turning 193 unsupported completion claims green.
+
+### Added
+- `forma room init` / `room update` provide the repeatable portfolio workflow, including map-less
+  repositories and externally produced counter-verification results.
+- First-class Kanban, execution queue, issue health pills, and embedded C4 drill-down complete the
+  dense per-programme Control Room surface.
+- `forma audit` emits deterministic offline plans and validates evidence-anchored health/findings;
+  the Codex adapter remains outside Forma, so no agent or network path enters the deterministic engine.
+
+### Changed
+- The model contract is frozen on schema major 1. Existing 1.x models remain compatible; an
+  unsupported future major is rejected explicitly.
+- `forma scan` now discovers GitHub-backed map-less repositories and ignores `*.worktrees`
+  directories, while preserving curated manifest decisions on repeated runs.
+
+### Fixed
+- Public CI no longer depends on the private `arbiter` repository, and governance now matches the
+  solo project tier.
+- Room aggregates, health overlays, findings, and issue coverage are all re-derived by gates that
+  have been observed failing on drift and passing on valid portfolio inputs.
+
+## [0.13.0] - 2026-08-10
+
+Minor, not major: every schema addition is optional, every new gate assertion is opt-in by
+presence, and no command or flag changed meaning. A repository that ignores all of it renders and
+gates exactly as before.
+
+### Added
+- **`forma room`** composes a **Control Room**: one self-contained HTML briefing over N programmes,
+  declared in a `forma.room.json` manifest. A briefing in reading order at `#/`, five views per
+  programme under it (`exec`, `tech`, `map`, `wbs`, `docs`), and an options view. Every view fits
+  the viewport at 1920×1080 and gains columns up to 3440×1440; printing hands over the whole thing,
+  one view per page.
+- **A requirements traceability matrix, derived not curated.** Declare an `rtm` block and forma
+  reads id columns out of the markdown tables a repository already writes, joins them to the issue
+  snapshot, and `forma check` fails on five holes: a duplicate id, a reference that resolves to
+  nothing, a requirement that lands on no work, open work no requirement claims, and a declared
+  document that contributed no rows. The middle pair is what makes "the GitHub issues are the whole
+  of the work" falsifiable in both directions ([ADR-0006](docs/adr/0006-traceability-as-a-derivation-not-an-overlay.md)).
+- **`forma scan`** writes the programme list from a directory of checkouts. It merges rather than
+  replaces: `enabled: false` and every hand-curated field survive a re-run, and `today` is never
+  invented.
+- **`forma room --serve`** opens the briefing on loopback so the options view can turn programmes on
+  and off. It writes one field per programme and re-validates the whole manifest before writing, so
+  a rejected edit leaves the file byte-identical. It is the only path in the product that writes
+  anything.
+- **`scripts/palette.mjs`** — a colour gate: OKLab/OKLCH, WCAG 2.1 contrast, and Machado CVD
+  simulation, run by `npm test`. `docs/DESIGN.md` §D6 had claimed a measurement script that did not
+  exist; writing it found eight contrast failures, a pure `#ffffff`, and a status trio whose worst
+  pair measured 3.1 rather than the asserted 6 to 8.
+- **`createdAt` / `closedAt`** on the issue snapshot, so "where we were" is a count over one
+  snapshot rather than a stored series. A snapshot written before these fields derives `null`
+  history rather than a flat line.
+- **Optional manifest fields**: `programs[].enabled`, `programs[].rtm`, `programs[].docs.canon`.
+
+### Changed
+- **Every colour token is OKLCH**, and the status trio is separated by lightness on purpose — the
+  one channel colour blindness leaves. The worst pair under simulated CVD moves from 3.1 to 8.5 in
+  the light theme and 4.2 to 7.2 in the dark one. The `blueprint` skin the briefing embeds is now
+  the briefing's own palette rather than a second, colder one.
+- **`docs/INVARIANTS.md` is now `docs/GLOBAL_INVARIANTS.md`**, the name the documentation standard
+  recognises. Every reference was updated; no content changed.
+- **`forma doc` emits frontmatter** into the arc42 scaffold, so the generated file satisfies the
+  documentation gates by construction instead of being exempted from them.
+
+### Fixed
+- **Both Control Room gates were unrunnable.** `scripts/room-presentable.mjs` threw before its first
+  predicate, and `check`'s room block read a shape the composer had stopped producing and was inert
+  behind a guard. Both now iterate programmes, and `npm test` requires each to reject a hand-altered
+  aggregate.
+- **`linkMaxFiles` was ignored on the portfolio path**, so one artifact carried two sweep thresholds
+  and only one of them was gated.
+- **The landing chart counted pull-request numbers as issues.** GitHub shares one number space, so
+  `(#46)` from a squash merge was indistinguishable from an issue; the series is intersected with
+  the snapshot now, as coverage always was.
+- **A programme without an architecture model derived nothing at all.** It now derives everything
+  its issues can answer, with `null` — never a measured zero — for the two answers that need a map.
+
 ## [0.12.0] - 2026-07-28
 
 ### Changed

@@ -21,19 +21,31 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm run lint
+      # The colour rule is a gate, not a preference: npm test runs scripts/palette.mjs --check first.
       - run: npm test
       # dogfood: the product's own gate, on the product. The committed model is deployed to Pages
       # on every push to main — nothing else would notice if it stopped matching the code.
       - run: node bin/forma.mjs check
+      # ...and the SAME gate over the briefing, which the line above cannot reach. The room block in
+      # check is opt-in by the presence of control-room.html, and that file is generated and
+      # gitignored — so on a fresh checkout the whole Control Room and traceability section was
+      # skipped in silence, and forma's own briefing was first graded only after merge, by the Pages
+      # job, where a failure blocks a deploy instead of a merge. Composing it here needs no network:
+      # the fact base is committed, and only `verify` talks to GitHub.
+      - name: Compose the briefing and gate it, on every pull request
+        run: |
+          node bin/forma.mjs room --manifest forma.room.json --out "$RUNNER_TEMP/room.html"
+          node bin/forma.mjs check --room "$RUNNER_TEMP/room.html"
+          node scripts/room-presentable.mjs --room "$RUNNER_TEMP/room.html" --manifest forma.room.json
   ci-required:
     # fail-closed aggregate: one required status check that gates the whole matrix, so branch
     # protection lists a single context instead of one per matrix node version.
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: test
+    needs: [test]
     if: always()
     steps:
-      - env: { RESULT: "${{ needs.test.result }}" }
+      - env: { TEST: "${{ needs.test.result }}" }
         run: |
-          echo "test result: $RESULT"
-          [ "$RESULT" = success ] || { echo "::error::ci test job did not succeed"; exit 1; }
+          echo "test result: $TEST"
+          [ "$TEST" = success ] || { echo "::error::ci test job did not succeed"; exit 1; }

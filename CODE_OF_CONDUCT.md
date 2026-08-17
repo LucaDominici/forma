@@ -1,3 +1,13 @@
+---
+title: 'Contributor Covenant Code of Conduct'
+doc_version: '1.0.0'
+status: active
+last_review: '2026-08-10'
+owner: 'Luca Dominici'
+canonical_id: 'code-of-conduct'
+tags: ['audience/dev', 'kind/governance']
+related: ['CONTRIBUTING.md']
+---
 # Contributor Covenant Code of Conduct
 
 ## Our Pledge

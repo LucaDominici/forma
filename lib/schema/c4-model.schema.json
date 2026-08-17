@@ -16,8 +16,8 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "description": "Semver. The viewer renders any JSON with the same MAJOR; MINOR/PATCH are additive-only."
+      "pattern": "^1\\.[0-9]+\\.[0-9]+$",
+      "description": "Frozen 1.x contract. The viewer renders any JSON with MAJOR 1; MINOR/PATCH are additive-only."
     },
     "generatedAt": {
       "type": "string",

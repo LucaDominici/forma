@@ -1,0 +1,1362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forma</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23122'/%3E%3Ccircle cx='8' cy='8' r='3.5' fill='%233ee7ff'/%3E%3C/svg%3E">
+<style>
+/* Every value here was produced by `node scripts/palette.mjs`, which is the script docs/DESIGN.md
+   D6 claimed had already been run and which did not exist until it was written. OKLCH because the
+   thing being held constant is perceptual lightness: the status trio is separated by L on purpose,
+   since lightness is the one channel that survives colour-blind vision, and in hex that separation
+   is invisible to the person editing it.
+   Do not hand-tune a value here. Change the target in the script, re-run it, and paste the result. */
+:root{color-scheme:dark;
+ --bg:oklch(17.1% 0.008 67);--surface:oklch(21.5% 0.009 75);--line:oklch(30.9% 0.010 61);
+ --ink:oklch(93.0% 0.006 60);--muted:oklch(61.5% 0.012 63);
+ --ok:oklch(74.6% 0.145 152);--warn:oklch(86.8% 0.126 80);--bad:oklch(64.7% 0.185 25);
+ --accent:oklch(61.4% 0.130 250);--series2:oklch(52.5% 0.014 67);
+ --ramp1:oklch(52.5% 0.070 250);--ramp2:oklch(56.0% 0.090 250);--ramp3:oklch(59.5% 0.110 250);--ramp4:oklch(63.0% 0.132 250)}
+html[data-theme="light"]{color-scheme:light;
+ --bg:oklch(97.4% 0.006 75);--surface:oklch(99.5% 0.005 78);--line:oklch(88.0% 0.010 82);
+ --ink:oklch(22.0% 0.009 75);--muted:oklch(54.0% 0.013 72);
+ --ok:oklch(52.9% 0.141 151);--warn:oklch(44.4% 0.094 73);--bad:oklch(35.5% 0.144 25);
+ --accent:oklch(54.2% 0.169 255);--series2:oklch(63.3% 0.013 80);
+ --ramp1:oklch(63.3% 0.079 255);--ramp2:oklch(59.2% 0.110 255);--ramp3:oklch(55.1% 0.145 255);--ramp4:oklch(51.0% 0.172 255)}
+
+/* THE SHELL. This is a viewport-sized application, not a document: the page never scrolls, panels
+   scroll inside themselves, and every view fits the screen it was opened on. The number that
+   governs the layout is not 1080 — a real 1920x1080 monitor leaves ~900px of viewport once the tab
+   strip, the address bar and the taskbar have taken their share, so ~815px of content is the floor
+   every view is designed against. Below 1200px wide the shell lets go and the page scrolls again,
+   which is the right answer for a phone and is stated rather than pretended away. */
+*{box-sizing:border-box}
+:root{--pad:16px;--gap:16px;--bar:52px}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.5;
+ display:grid;grid-template-rows:auto minmax(0,1fr);height:100dvh;overflow:hidden}
+button,a,summary,select{font:inherit;color:inherit}
+a{color:inherit;text-decoration-color:var(--muted);text-underline-offset:2px}
+a:hover{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+[hidden]{display:none!important}
+.skip{position:fixed;left:8px;top:6px;z-index:40;padding:6px 10px;background:var(--surface);border:1px solid var(--accent);transform:translateY(-160%)}
+.skip:focus{transform:none}
+
+/* One bar. The previous shell spent 177px on a header plus two rows of navigation, which is 20% of
+   the floor's usable height before a single number is shown. */
+.bar{display:flex;align-items:center;gap:18px;height:var(--bar);padding:0 var(--pad);
+ border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap;scrollbar-width:thin}
+.brand{display:flex;align-items:baseline;gap:9px;min-width:0;flex:0 1 auto}
+.brand h1{margin:0;font-size:14px;font-weight:650;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis}
+.brand span{color:var(--muted);font-size:11px;font-family:"SF Mono",Menlo,Consolas,monospace}
+.tabs{display:flex;gap:2px;align-items:center;flex:0 0 auto}
+.tabs a{display:block;padding:5px 10px;color:var(--muted);font-size:12.5px;text-decoration:none;border-radius:5px}
+.tabs a:hover{color:var(--ink);background:var(--surface)}
+.tabs a[aria-current]{color:var(--ink);background:var(--surface);box-shadow:inset 0 -2px 0 var(--accent)}
+.bar-sep{width:1px;height:20px;background:var(--line);flex:0 0 auto}
+.bar-end{margin-left:auto;display:flex;gap:8px;align-items:center;flex:0 0 auto}
+.ghost{appearance:none;border:1px solid var(--line);border-radius:999px;background:none;padding:4px 10px;font-size:12px;cursor:pointer}
+.ghost:hover{border-color:var(--accent);color:var(--accent)}
+
+main{min-height:0;padding:var(--pad);overflow:hidden}
+.view{display:grid;grid-template-rows:auto minmax(0,1fr);gap:var(--gap);height:100%;min-height:0}
+.view[data-single]{grid-template-rows:minmax(0,1fr)}
+
+/* A panel is a region, not a card: a top rule and a heading on the same ground. Boxing every
+   region would add three borders and a shadow to say what one hairline already says, and nesting
+   the issue rows inside those boxes would be a card inside a card. */
+.panel{display:flex;flex-direction:column;min-height:0;border-top:1px solid var(--line);padding-top:8px}
+.panel,.panel-head,.panel-body,.chart-viz,.tablewrap{min-width:0}
+.panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex:0 0 auto}
+.panel h2{margin:0;font-size:13px;font-weight:650;letter-spacing:.01em}
+/* THE SIGNATURE. No panel without its provenance: one line saying what was counted and what
+   re-checks it. Every other dashboard asks to be believed; this one says how to check it. */
+.prov{margin:1px 0 6px;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 0 auto}
+.panel-body{min-height:0;overflow:auto;flex:1 1 auto;scrollbar-width:thin}
+.panel-body>p{max-width:72ch}
+
+.answer{display:grid;gap:var(--gap);grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+.evidence{display:grid;gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin;
+ grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(0,auto);align-content:start}
+.span2{grid-column:span 2}
+.full{grid-column:1/-1}
+@media(min-width:1500px){
+ .answer,.evidence{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(min-width:2300px){
+ :root{--pad:22px;--gap:20px}
+ .answer,.evidence{grid-template-columns:repeat(4,minmax(0,1fr))}
+ body{font-size:15px}
+ .evidence{grid-auto-rows:minmax(0,auto)}
+ .chart-viz{min-height:220px}
+}
+/* Below the floor the shell is released rather than crushed: the page scrolls.
+   Gated on HEIGHT as well as width, because the budget being protected is vertical: a 1920x640
+   window is not a phone, and holding the locked shell there delivered the whole evidence tier
+   through a 97px slot with no page scrollbar. 760px is the height at which 52px of bar, 32px of
+   padding and two usable rows stop fitting. */
+@media(max-width:1199px),(max-height:760px){
+ body{height:auto;overflow:visible;display:block}
+ main{overflow:visible;height:auto}
+ .bar{position:sticky;top:0;z-index:20;background:var(--bg)}
+ .view{height:auto;display:block}
+ .answer,.evidence{overflow:visible;grid-auto-rows:auto}
+ .panel{margin-bottom:var(--gap)}
+ .panel-body{overflow:visible;max-height:none}
+}
+/* Only a NARROW release collapses to one column. Folding the column rule into the query above
+   meant a wide, short window — an ultrawide snapped to half height — released into a single
+   3381px column: `.answer` alone grew to 1535px and "Now" sat 1609px below the fold, for content
+   that occupies 520px at full height. Releasing the height should let the page scroll, not throw
+   away 2200px of width. */
+@media(max-width:1199px){
+ .answer,.evidence{grid-template-columns:1fr}
+ .span2,.full{grid-column:auto}
+}
+
+/* Type. One thing on the page is large: the thesis. Everything else is 10.5-14px, because a
+   briefing that fits a screen buys its density from restraint, not from shrinking the answer. */
+.thesis{margin:0;font-size:clamp(19px,1.55vw,30px);line-height:1.15;letter-spacing:-.02em;font-weight:650;max-width:26ch}
+.lede{margin:6px 0 0;color:var(--muted);font-size:12px;max-width:52ch}
+.muted{color:var(--muted)}
+.data{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:11.5px}
+
+/* KPI strip: one row of numbers, hairline-separated, no boxes. */
+.kpis{display:flex;gap:0;flex-wrap:wrap}
+.kpi{flex:1 1 130px;padding:2px 14px;border-left:1px solid var(--line);min-width:0}
+.kpi:first-child{border-left:0;padding-left:0}
+.kpi dt{margin:0 0 2px;color:var(--muted);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi dd{margin:0;font-size:clamp(20px,1.5vw,28px);font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.1}
+.kpi dd small{display:block;font-size:10.5px;font-weight:400;letter-spacing:0;color:var(--muted);line-height:1.3;white-space:normal}
+
+/* Rows. `details` stays: expanding evidence in place is the product's own reading model (D5). */
+.rows>details{border-bottom:1px solid var(--line)}
+summary{list-style:none;cursor:pointer;padding:7px 22px 7px 0;position:relative}
+summary::-webkit-details-marker{display:none}
+summary:after{content:"+";position:absolute;right:4px;top:6px;color:var(--muted);font-family:"SF Mono",Menlo,Consolas,monospace}
+details[open]>summary:after{content:"\2212"}
+.row-head{display:grid;grid-template-columns:auto auto 1fr;align-items:baseline;gap:9px}
+.row-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ref{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:11px;color:var(--muted);white-space:nowrap}
+.row-title{font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.detail{padding:0 22px 10px 0;display:grid;grid-template-columns:minmax(96px,132px) 1fr;gap:4px 14px;font-size:12.5px}
+.detail dt{color:var(--muted);font-size:11px}
+.detail dd{margin:0;min-width:0}
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace}
+.status{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;white-space:nowrap}
+.glyph{width:12px;text-align:center;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13px}
+.status-ok{color:var(--ok)}.status-warn{color:var(--warn)}.status-bad{color:var(--bad)}.status-none{color:var(--muted)}
+.issue-pill{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:1px 7px 1px 4px;border:1px solid var(--line);border-radius:999px;text-decoration:none}
+.issue-pill .issue-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.issue-pill.closed .issue-text{text-decoration:line-through}
+.tally{font-size:22px;font-weight:650;font-variant-numeric:tabular-nums}
+.stack{display:flex;flex-direction:column;gap:7px}
+.group{padding:6px 0;border-top:1px solid var(--line)}
+.group:first-child{border-top:0}
+.group-name{display:block;margin-bottom:3px;color:var(--muted);font-size:10.5px}
+.links{display:flex;gap:6px;flex-wrap:wrap}
+.kanban-board{display:grid;grid-template-columns:repeat(6,minmax(180px,1fr));gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin}
+.kanban-issue{padding:6px 0;border-bottom:1px solid var(--line)}
+.kanban-issue .issue-pill{display:flex;line-height:1.35}
+.queue-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin;align-content:start}
+.queue-item{min-width:0;padding:7px 0;border-bottom:1px solid var(--line)}
+.queue-item .issue-pill{display:flex;font-weight:600;margin-bottom:4px}
+.queue-command{display:flex;align-items:center;gap:6px;min-width:0}
+.queue-command code{min-width:0;overflow:auto;white-space:nowrap;flex:1 1 auto}
+@media(max-width:1199px){.queue-board{grid-template-columns:minmax(0,1fr)}}
+.kv{padding:5px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(110px,180px) 1fr;gap:12px;font-size:12.5px}
+.kv>span:first-child{color:var(--muted)}
+
+/* Charts fill the box the grid gave them. The old viewBox had a fixed height and took its width
+   from the aspect ratio, which is exactly why a grid row could never contain one. */
+.chart{min-height:0}
+/* A chart is the one panel that needs a floor now that evidence rows size to content (F2): an SVG
+   has no intrinsic height, so without this a chart would collapse to its heading. 180px keeps a
+   single bar or a short series legible without reserving a whole screen row. */
+.chart-viz{flex:1 1 auto;min-height:180px;position:relative}
+.chart-viz svg{display:block;width:100%;height:100%}
+.axis{stroke:var(--line);stroke-width:1;shape-rendering:crispEdges}
+.mark-accent{fill:var(--accent)}.mark-series2{fill:var(--series2)}.mark-bad{fill:var(--bad)}
+.meter-track{fill:var(--accent);opacity:.18}.area-fill{fill:var(--accent);opacity:.16}
+.area-line{fill:none;stroke:var(--accent);stroke-width:2}
+.line-series2{fill:none;stroke:var(--series2);stroke-width:2;stroke-dasharray:4 3}
+.svg-label{fill:var(--muted);font:10.5px "SF Mono",Menlo,Consolas,monospace}
+.svg-value{fill:var(--ink);font:10.5px "SF Mono",Menlo,Consolas,monospace}
+.hit{cursor:help;outline:none}
+.hit:focus{stroke:var(--accent);stroke-width:2}
+.legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:10.5px;flex:0 0 auto;padding-bottom:4px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{display:inline-block;width:14px;height:5px}
+.tip{position:fixed;z-index:50;pointer-events:none;max-width:260px;padding:5px 8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:11.5px;line-height:1.3}
+.toggle{appearance:none;border:1px solid var(--line);border-radius:999px;background:none;padding:2px 8px;font-size:10.5px;cursor:pointer;color:var(--muted);flex:0 0 auto}
+.toggle:hover{border-color:var(--accent);color:var(--accent)}
+.tablewrap{overflow:auto;min-height:0;flex:1 1 auto}
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+th,td{text-align:left;padding:4px 8px 4px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)}
+.nums{font-variant-numeric:tabular-nums}
+.matrix .id{font-family:"SF Mono",Menlo,Consolas,monospace;white-space:nowrap}
+.hole{padding:5px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(120px,170px) 1fr;gap:12px;font-size:12px}
+.hole>span:first-child{color:var(--bad);font-size:11px}
+
+/* The map finally gets the area an ultrawide actually has. It is a diagram, not a list: it uses the
+   height it reserves, so it keeps an explicit floor now that evidence rows size to content (F2). */
+.frame{width:100%;max-width:100%;height:100%;min-height:420px;display:block;border:1px solid var(--line);background:var(--surface)}
+/* Two panes, not an accordion: a document is not a disclosure widget. */
+.reader{margin:0;max-width:78ch;font-size:13px;line-height:1.6}
+.md p{margin:0 0 10px;max-width:72ch}
+.md-h{font-weight:650;letter-spacing:-.01em;margin:16px 0 6px}
+.md-h1{font-size:17px;margin-top:0}.md-h2{font-size:15px}.md-h3{font-size:13.5px}
+.md-h4,.md-h5,.md-h6{font-size:12.5px;color:var(--muted)}
+/* Real ul/ol/li, so the marker is the browser's. The hand-drawn en dash that used to sit in a
+   ::before is gone: keeping it would print twice, once from the pseudo-element and once from the
+   list marker the element now has. */
+.md-ul,.md-ol{margin:0 0 10px;padding-left:20px}
+.md-ul{list-style:disc}.md-ol{list-style:decimal}
+.md-li{margin:0 0 4px;max-width:70ch}
+.md-li::marker{color:var(--muted)}
+.md-q{margin:0 0 10px;padding-left:12px;border-left:2px solid var(--line);color:var(--muted);max-width:70ch}
+.md-q>p:last-child{margin-bottom:0}
+.md-pre{margin:0 0 10px;padding:8px 10px;background:var(--surface);overflow:auto;font:11.5px/1.5 "SF Mono",Menlo,Consolas,monospace}
+.md-code{font:11.5px "SF Mono",Menlo,Consolas,monospace;color:var(--muted)}
+.md-table{margin:0 0 12px;font-size:11.5px}
+.md-hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+.print-all{display:none}
+.doclist button{display:block;width:100%;text-align:left;appearance:none;background:none;border:0;border-bottom:1px solid var(--line);padding:6px 4px;cursor:pointer;font-size:12.5px}
+.doclist button:hover{color:var(--accent)}
+.doclist button[aria-current]{color:var(--ink);box-shadow:inset 2px 0 0 var(--accent);padding-left:9px}
+.doclist small{display:block;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace}
+.opt{padding:7px 0;border-bottom:1px solid var(--line)}
+.flags{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.flag{display:inline-block;padding:1px 7px;border:1px solid var(--line);border-radius:999px;font-size:10.5px;color:var(--muted)}
+.flag.on{border-color:var(--accent);color:var(--accent)}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Printing hands over the WHOLE briefing. A hash route is not something anyone can put on paper,
+   so the shell is released, every view is un-hidden, and each starts a page. */
+@media print{
+ /* The print palette is DECLARED, not inherited. Setting only body{color:#000} left every token at
+    its dark-theme value, so chart numbers printed at 1.23:1 against white — invisible — and every
+    provenance line at 3.73:1. Worse, the theme persists to localStorage, so the paper output
+    differed depending on what the reader last clicked. These are the measured light values.
+
+    Declared is not the same as WINNING. A media query adds no specificity, so `:root` here scored
+    (0,1,0) and `html[data-theme="light"]` scored (0,1,1) and outranked it: every reader who had
+    ever pressed the theme button printed the light UI palette instead, --muted at 5.05:1 and the
+    hairline at 1.43:1, on cream. The dark case only passed because it TIED the base :root and won
+    on source order — the accident, not the rule. Doubling the pseudo-class scores (0,2,1), above
+    any single-attribute theme selector, so this wins on specificity and not on where it sits.
+    scripts/palette.mjs now compares the two and fails if a theme selector ever catches up. */
+ html:root:root{
+  --bg:oklch(100% 0 0);--surface:oklch(100% 0 0);--line:oklch(80% 0 0);
+  --ink:oklch(22.0% 0.009 75);--muted:oklch(44.0% 0.010 72);
+  --ok:oklch(52.9% 0.141 151);--warn:oklch(44.4% 0.094 73);--bad:oklch(35.5% 0.144 25);
+  --accent:oklch(45.0% 0.150 255);--series2:oklch(55.0% 0.012 80);
+  --ramp1:oklch(63.3% 0.079 255);--ramp2:oklch(59.2% 0.110 255);--ramp3:oklch(55.1% 0.145 255);--ramp4:oklch(51.0% 0.172 255);
+  /* `color-scheme:dark` is a UA instruction, not a token, and the print palette could not reach it:
+     the canvas kept being painted #121212 under the white page, so a dark-theme reader's PDF opened
+     on a black sheet. Every token matched and the paper still differed on all 29 sheets.
+     In the SAME rule as the tokens, deliberately. As a second `html:root:root{…}` it gave the audit
+     two candidates for one name, and `indexOf` picked whichever came first: the check that the
+     measured tokens belong to the compared selector would have been reading a coin flip. */
+  color-scheme:light;background:var(--bg)}
+ body{height:auto;overflow:visible;display:block;background:var(--bg);color:var(--ink);font-size:10pt}
+ .bar,.toggle,.tip,.skip,.ghost{display:none!important}
+ main{overflow:visible;height:auto;padding:0}
+ .view{height:auto;display:block}
+ .view[hidden]{display:block!important}
+ .view+.view{break-before:page}
+ .answer,.evidence{display:block;overflow:visible}
+ .kanban-board,.queue-board{grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
+ .panel{break-inside:avoid;border-top:1px solid #999;margin-bottom:10pt}
+ .panel-body,.tablewrap{overflow:visible;max-height:none}
+ .chart-viz{height:200pt}
+ /* `details>*{display:revert}` does NOT defeat Chrome's disclosure hiding: a controlled A/B showed
+    the body of a closed <details> simply absent from the PDF. Every per-issue evidence block —
+    verdict, why, evidence refs, nodes, milestone, last landing — was silently dropped from the
+    printed briefing, which is the one thing the print promise exists to carry. The rows are opened
+    in beforeprint instead, and restored afterwards. */
+ .frame{height:340pt}
+ /* Each view identifies itself on paper. The bar is hidden when printing, so without this the
+    output was eleven anonymous sheets with no product name, date, programme or view on any of them. */
+  .print-all{display:block!important}
+ .reader>.md{display:none}
+ .doc-reader-head{display:none!important}
+ .print-id{display:block!important;margin:0 0 8pt;padding-bottom:4pt;border-bottom:1pt solid var(--line);
+  font:9pt "SF Mono",Menlo,Consolas,monospace;color:var(--muted)}
+}
+.print-id{display:none}
+</style>
+</head>
+<body>
+<button class="skip" id="skip" type="button"></button>
+<header class="bar" id="bar">
+ <div class="brand"><h1 id="page-title"></h1><span id="page-stamp"></span></div>
+ <div class="bar-sep" aria-hidden="true"></div>
+ <nav class="tabs" id="nav-programs"></nav>
+ <div class="bar-sep" aria-hidden="true"></div>
+ <nav class="tabs" id="nav-views"></nav>
+ <div class="bar-end"><button class="ghost" id="theme-toggle" type="button"></button></div>
+</header>
+<main id="content" tabindex="-1"></main>
+<div id="live" class="sr-only" role="status" aria-live="polite"></div>
+<template id="table-template"><div class="tablewrap"><table><caption class="sr-only"></caption><thead><tr><th scope="col"></th></tr></thead><tbody></tbody></table></div></template>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<script>window.__ROOM__ = /*__ROOM_JSON__*/null;</script>
+<script>window.__STRINGS__ = /*__STRINGS__*/null;</script>
+<script>window.__WRITABLE__ = /*__WRITABLE__*/false;</script>
+<script type="text/plain" id="holo-src"><!--__HOLO_SRC__--></script>
+<script>
+(function(){
+"use strict";
+var ROOM=window.__ROOM__,BUNDLE=window.__STRINGS__,NS="http://www.w3.org/2000/svg",seq=0;
+var LANG=(navigator.language||"en").slice(0,2)==="it"?"it":"en";
+var STR=(BUNDLE&&(BUNDLE[LANG]||BUNDLE.en))||{};
+
+function fmt(s,d){return String(s==null?"":s).replace(/\{([^}]+)\}/g,function(_,k){return d[k]==null?"":String(d[k]);});}
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=String(x);return e;}
+function setAttrs(e,a){var k;for(k in a)if(a.hasOwnProperty(k)&&a[k]!=null)e.setAttribute(k,String(a[k]));return e;}
+function svgEl(t,a,x){var e=document.createElementNS(NS,t);setAttrs(e,a||{});if(x!=null)e.textContent=String(x);return e;}
+function short(s,n){s=String(s==null?"":s);return s.length>n?s.slice(0,n-1)+"…":s;}
+function days(a,b){return Math.round((new Date(b)-new Date(a))/86400000);}
+function byId(id){var i;for(i=0;i<ROOM.programs.length;i++)if(ROOM.programs[i].id===id)return ROOM.programs[i];return null;}
+function sumOf(id){var i;for(i=0;i<ROOM.portfolio.programs.length;i++)if(ROOM.portfolio.programs[i].id===id)return ROOM.portfolio.programs[i];return null;}
+function line(svg,x1,y1,x2,y2){svg.appendChild(svgEl("line",{x1:x1,y1:y1,x2:x2,y2:y2,"class":"axis"}));}
+/* English and Italian both take one/other, and the repo already picks a form by count for snapshot
+   age. "0 things need you out of 0 open across 1 programmes." was on the first screen of the
+   published demo, three times over, in both locales. */
+function plural(n,one,other){return n===1?one:other;}
+function label(svg,x,y,t,anchor,cls){svg.appendChild(svgEl("text",{x:x,y:y,"text-anchor":anchor||"start","class":cls||"svg-label"},t));}
+function hit(svg,a,tip){a=a||{};a["class"]="hit";a.fill="transparent";a.tabindex="0";a.role="img";a["aria-label"]=tip;a["data-tip"]=tip;svg.appendChild(svgEl(a.r!=null?"circle":"rect",a));}
+function statusMark(v){var map={ok:["●",STR.statusOk],warn:["◐",STR.statusWarn],bad:["×",STR.statusBad]},p=map[v]||["◇",STR.notAudited];var s=el("span","status status-"+(map[v]?v:"none")),g=el("span","glyph",p[0]);g.setAttribute("aria-hidden","true");s.appendChild(g);s.appendChild(el("span","",p[1]));return s;}
+function chips(v){var w=el("span","chips"),i;if(!v||!v.length){w.appendChild(el("span","muted",STR.none));return w;}for(i=0;i<v.length;i++)w.appendChild(el("span","chip",v[i]));return w;}
+function pill(p,n,t){
+ var verdicts=(p.health&&p.health.verdicts)||[],v=null,issue=null,i;
+ for(i=0;i<verdicts.length;i++)if(verdicts[i].n===n){v=verdicts[i];break;}
+ for(i=0;i<p.issuesSnapshot.issues.length;i++)if(p.issuesSnapshot.issues[i].n===n){issue=p.issuesSnapshot.issues[i];break;}
+ var why=v?v.why:STR.notAudited,word=v?v.verdict:null,text=t==null?"#"+n:t;
+ var a=el("a","issue-pill"+(issue&&issue.state==="CLOSED"?" closed":"")),mark=statusMark(word);
+ a.href="https://github.com/"+p.ghRepo+"/issues/"+n;a.target="_blank";a.rel="noopener";
+ a.setAttribute("data-tip",why);a.setAttribute("aria-label",text+" — "+mark.lastChild.textContent+" — "+why);
+ a.appendChild(mark);a.appendChild(el("span","issue-text data",text));return a;
+}
+function docLink(p,path,ln,t){var a=el("a","data",t==null?path+(ln?":"+ln:""):t);a.href="https://github.com/"+p.ghRepo+"/blob/HEAD/"+path+(ln?"#L"+ln:"");a.target="_blank";a.rel="noopener";return a;}
+function pair(dl,k,v){var dt=el("dt","",k),dd=el("dd");if(v&&v.nodeType)dd.appendChild(v);else dd.textContent=v==null?STR.none:String(v);dl.appendChild(dt);dl.appendChild(dd);}
+
+// A panel is a heading, its provenance, and a body that scrolls on its own.
+function panel(title,prov,cls){
+ var p=el("section","panel"+(cls?" "+cls:"")),h=el("div","panel-head"),t=el("h2","",title);
+ seq++;t.id="p"+seq;p.setAttribute("aria-labelledby",t.id);
+ h.appendChild(t);p.appendChild(h);
+ if(prov)p.appendChild(el("p","prov",prov));
+ var b=el("div","panel-body");p.appendChild(b);
+ p.body=b;p.head=h;return p;
+}
+function snapshotProv(program){
+ var n=program.issuesSnapshot.issues.length,d=String(program.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
+ return fmt(STR.provCounted,{n:n,date:d});
+}
+
+var tipEl;
+function tipTarget(n){while(n&&n!==document&&!(n.getAttribute&&n.getAttribute("data-tip")))n=n.parentNode;return n&&n!==document?n:null;}
+function onTip(e){
+ var t=tipTarget(e.target),r,x,y;
+ if(e.type==="mouseleave"||e.type==="focusout"){if(e.type==="mouseleave"||t)tipEl.hidden=true;return;}
+ if(!t){tipEl.hidden=true;return;}
+ r=t.getBoundingClientRect();x=e.type==="mousemove"?e.clientX:r.left+r.width/2;y=e.type==="mousemove"?e.clientY:r.top+r.height/2;
+ tipEl.textContent=t.getAttribute("data-tip");tipEl.hidden=false;
+ tipEl.style.left=Math.max(4,Math.min(x+12,document.documentElement.clientWidth-tipEl.offsetWidth-4))+"px";
+ tipEl.style.top=Math.max(4,Math.min(y+12,document.documentElement.clientHeight-tipEl.offsetHeight-4))+"px";
+}
+
+/* A chart is a panel whose body is an SVG drawn into the box the grid gave it, plus the table twin
+   that carries the same numbers for anyone the picture does not serve. `draw(svg,w,h)` is called
+   again on resize and on route change, so the drawing always matches the box. */
+function chart(title,prov,headers,rows,draw,cls){
+ var p=panel(title,prov,"chart"+(cls?" "+cls:"")),btn=el("button","toggle",STR.showTable);
+ var viz=el("div","chart-viz"),svg=svgEl("svg",{role:"img","aria-label":fmt(STR.chartFor,{title:title}),preserveAspectRatio:"xMidYMid meet"});
+ var tw=document.getElementById("table-template").content.firstChild.cloneNode(true);
+ var cap=tw.querySelector("caption"),tr=tw.querySelector("thead tr"),body=tw.querySelector("tbody"),i,j,cell;
+ seq++;viz.id="viz"+seq;tw.id="tbl"+seq;
+ btn.type="button";btn.setAttribute("aria-controls",tw.id);
+ p.head.appendChild(btn);
+ viz.appendChild(svg);p.body.appendChild(viz);
+ cap.textContent=fmt(STR.tableFor,{title:title});tr.textContent="";
+ for(i=0;i<headers.length;i++){cell=el("th","",headers[i]);cell.setAttribute("scope","col");tr.appendChild(cell);}
+ for(i=0;i<rows.length;i++){tr=el("tr");for(j=0;j<rows[i].length;j++){cell=el("td",typeof rows[i][j]==="number"||/^\d+(?:\.\d+)?%?$/.test(String(rows[i][j]))?"nums":"",rows[i][j]);tr.appendChild(cell);}body.appendChild(tr);}
+ p.body.appendChild(tw);
+ function show(t){tw.hidden=!t;viz.hidden=t;btn.textContent=t?STR.showChart:STR.showTable;if(!t)relayout(p);}
+ show(false);
+ btn.addEventListener("click",function(){show(tw.hidden);});
+ p.draw=draw;p.viz=viz;p.svg=svg;
+ return p;
+}
+/* One voice for "there is nothing to draw", and it says WHY rather than "No data available." A
+   chart that reports its own absence with a stock phrase is indistinguishable from a chart that
+   failed to load, and on a portfolio where everything is closed that was most of the first screen.
+   The reason is the caller's to supply, because only the caller knows the population. */
+function empty(svg,w,h,why){
+ var t=why||STR.noData;
+ label(svg,8,h/2,t,"start","svg-value");
+ hit(svg,{x:8,y:h/2-12,width:Math.max(40,w-16),height:22},t);
+}
+function relayout(p){
+ if(!p.draw||!p.viz||p.viz.hidden)return;
+ var w=Math.round(p.viz.clientWidth),h=Math.round(p.viz.clientHeight);
+ if(w<60||h<40)return;
+ while(p.svg.firstChild)p.svg.removeChild(p.svg.firstChild);
+ p.svg.setAttribute("viewBox","0 0 "+w+" "+h);
+ p.draw(p.svg,w,h);
+}
+function relayoutAll(root){
+ var i,list=root.querySelectorAll?root.querySelectorAll(".chart"):[];
+ for(i=0;i<list.length;i++)if(list[i].draw)relayout(list[i]);
+}
+
+/* ------------------------------- the charts ------------------------------- */
+function barsH(svg,w,h,items,opts){
+ // A horizontal bar list that sizes to the box: label gutter proportional to width, rows to height.
+ opts=opts||{};
+ var gutter=Math.max(74,Math.min(opts.gutter||190,w*0.34)),right=opts.right||34;
+ var plot=Math.max(24,w-gutter-right),n=items.length;
+ if(!n){empty(svg,w,h);return;}
+ var avail=h-18,step=Math.min(opts.maxStep||40,avail/n),bar=Math.max(6,Math.min(16,step*0.42));
+ // Centre the block: a three-bar chart in a tall panel should look composed, not top-stuck above
+ // a void. Stretching three bars to fill 450px would be worse — it would imply a scale that is not
+ // there.
+ var top=Math.max(4,(h-step*n)/2);
+ var max=1,i;for(i=0;i<n;i++)max=Math.max(max,items[i].total!=null?items[i].total:items[i].value);
+ line(svg,gutter,top,gutter,top+step*n);
+ for(i=0;i<n;i++){
+  var it=items[i],y=top+step*i+step/2,x=gutter,seg;
+  label(svg,gutter-7,y+3.5,short(it.name,Math.max(8,Math.floor(gutter/6.4))),"end");
+  for(var s=0;s<it.parts.length;s++){
+   seg=plot*it.parts[s].v/max;
+   if(seg>0.6)svg.appendChild(svgEl("rect",{x:x,y:y-bar/2,width:Math.max(0.6,seg-1),height:bar,"class":it.parts[s].cls}));
+   x+=seg;
+  }
+  if(it.showValue)label(svg,x+5,y+3.5,it.showValue,"start","svg-value");
+  hit(svg,{x:gutter,y:y-step/2,width:Math.max(20,plot),height:step},it.tip);
+ }
+}
+function chartClosedOpen(t){
+ return chart(STR.closedOpenChart,fmt(plural(t.programs,STR.provPortfolioOne,STR.provPortfolio),{n:t.programs}),[STR.count,STR.total],[[STR.closed,t.closed],[STR.open,t.open]],function(svg,w,h){
+  var total=t.closed+t.open,y=Math.round(h/2)-9,bw=w-8;
+  if(!total){empty(svg,w,h,STR.chartNoIssues);return;}
+  var cw=bw*t.closed/total;
+  if(cw>0)svg.appendChild(svgEl("rect",{x:4,y:y,width:Math.max(0,cw-1),height:18,"class":"mark-series2"}));
+  if(bw-cw>0)svg.appendChild(svgEl("rect",{x:4+cw+1,y:y,width:Math.max(0,bw-cw-1),height:18,"class":"mark-accent"}));
+  /* The numbers, on the chart. This drew one grey rectangle with no text in it: 8 and 0 appeared
+     nowhere, the toggle to the table was the only way to read the chart, and it is the first thing
+     on the first screen. A single-value bar is not a chart until it says what the value is. */
+  label(svg,4,y-6,fmt(STR.tipClosed,{n:t.closed}),"start","svg-value");
+  label(svg,4+bw,y-6,fmt(STR.tipOpen,{n:t.open}),"end","svg-label");
+  hit(svg,{x:4,y:y-6,width:Math.max(24,cw),height:30},fmt(STR.tipClosed,{n:t.closed}));
+  hit(svg,{x:4+cw,y:y-6,width:Math.max(24,bw-cw),height:30},fmt(STR.tipOpen,{n:t.open}));
+ });
+}
+function chartLoad(programs){
+ var rows=programs.map(function(p){return [p.id,p.open,p.blocked];});
+ var anyOpen=programs.some(function(p){return p.open>0;});
+ return chart(STR.portfolioLoad,fmt(plural(programs.length,STR.provPortfolioOne,STR.provPortfolio),{n:programs.length}),[STR.programme,STR.open,STR.blocked],rows,function(svg,w,h){
+  // Every bar zero draws nothing at all, which is a blank box the reader cannot tell from a broken
+  // one. Say the fact instead.
+  if(!anyOpen){empty(svg,w,h,STR.chartNoOpen);return;}
+  barsH(svg,w,h,programs.map(function(p){
+   return {name:p.id,total:p.open,parts:[{v:Math.max(0,p.open-p.blocked),cls:"mark-accent"},{v:p.blocked,cls:"mark-bad"}],
+           showValue:String(p.open),tip:fmt(STR.tipProgramme,{program:p.id,open:p.open,blocked:p.blocked})};
+  }),{gutter:150});
+ },"span2");
+}
+function chartMilestones(s,program){
+ var d=s.milestones||[],rows=d.map(function(m){return [m.title,m.due||STR.none,m.open,m.closed,m.closureRate==null?STR.none:m.closureRate+"%"];});
+ return chart(STR.milestoneChart,snapshotProv(program),[STR.milestone,STR.due,STR.open,STR.closed,STR.closure],rows,function(svg,w,h){
+  barsH(svg,w,h,d.map(function(m){
+   return {name:m.title,total:m.open+m.closed,parts:[{v:m.closed,cls:"mark-series2"},{v:m.open,cls:"mark-accent"}],
+           tip:fmt(STR.tipMilestone,{name:m.title,open:m.open,closed:m.closed})};
+  }),{gutter:200});
+ });
+}
+function chartHistory(history,program){
+ var d=(history&&history.points)||[],rows=d.map(function(p){return [p.at,p.open,p.closed,p.created];});
+ return chart(STR.historyChart,fmt(STR.provHistory,{n:history?history.counted:0}),[STR.date,STR.open,STR.closed,STR.total],rows,function(svg,w,h){
+  if(d.length<2){empty(svg,w,h);return;}
+  var x0=34,y0=6,pw=w-x0-10,ph=h-y0-20,max=1,i,po="",pc="";
+  for(i=0;i<d.length;i++)max=Math.max(max,d[i].created);
+  var t0=new Date(d[0].at).getTime(),span=Math.max(1,new Date(d[d.length-1].at).getTime()-t0);
+  for(i=0;i<4;i++)line(svg,x0,y0+ph*i/3,x0+pw,y0+ph*i/3);
+  line(svg,x0,y0,x0,y0+ph);
+  label(svg,x0-6,y0+8,max,"end");label(svg,x0-6,y0+ph+3,"0","end");
+  for(i=0;i<d.length;i++){
+   var x=x0+pw*(new Date(d[i].at).getTime()-t0)/span,yo=y0+ph-ph*d[i].open/max,yc=y0+ph-ph*d[i].closed/max;
+   po+=(i?" L":"M")+x+","+yo;pc+=(i?" L":"M")+x+","+yc;
+   hit(svg,{cx:x,cy:yo,r:9},fmt(STR.tipHistory,{date:d[i].at,open:d[i].open,closed:d[i].closed}));
+  }
+  svg.insertBefore(svgEl("path",{d:po+" L"+(x0+pw)+","+(y0+ph)+" L"+x0+","+(y0+ph)+" Z","class":"area-fill"}),svg.firstChild);
+  svg.appendChild(svgEl("path",{d:pc,"class":"line-series2"}));
+  svg.appendChild(svgEl("path",{d:po,"class":"area-line"}));
+  label(svg,x0,h-4,d[0].at,"start");label(svg,x0+pw,h-4,d[d.length-1].at,"end");
+ },"span2");
+}
+function chartLanding(s,program){
+ var found=null,i;for(i=0;i<ROOM.portfolio.landing.length;i++)if(ROOM.portfolio.landing[i].program===s.id)found=ROOM.portfolio.landing[i];
+ var d=found?found.months:[],rows=d.map(function(m){return [m.month,m.landed,m.cumulative];});
+ return chart(STR.landingChart,STR.provGit,[STR.month,STR.landed,STR.cumulative],rows,function(svg,w,h){
+  if(d.length<2){
+   // One month is not a series. Drawing an axis with the same date at both ends implies a shape
+   // that does not exist; saying the number is the honest render.
+   label(svg,8,h/2,d.length?fmt(STR.landingSingle,{month:d[0].month,n:d[0].landed}):STR.noData,"start","svg-value");
+   hit(svg,{x:8,y:h/2-14,width:Math.max(40,w-16),height:24},d.length?fmt(STR.landingSingle,{month:d[0].month,n:d[0].landed}):STR.noData);
+   return;
+  }
+  var x0=30,y0=6,pw=w-x0-10,ph=h-y0-20,max=1,i,path="";
+  for(i=0;i<d.length;i++)max=Math.max(max,d[i].cumulative);
+  for(i=0;i<4;i++)line(svg,x0,y0+ph*i/3,x0+pw,y0+ph*i/3);
+  line(svg,x0,y0,x0,y0+ph);
+  label(svg,x0-6,y0+8,max,"end");
+  for(i=0;i<d.length;i++){
+   var x=d.length===1?x0+pw/2:x0+pw*i/(d.length-1),y=y0+ph-ph*d[i].cumulative/max;
+   path+=(i?" L":"M")+x+","+y;
+   hit(svg,{cx:x,cy:y,r:10},fmt(STR.tipLanding,{month:d[i].month,landed:d[i].landed,cumulative:d[i].cumulative}));
+  }
+  if(d.length>1)svg.insertBefore(svgEl("path",{d:path+" L"+(x0+pw)+","+(y0+ph)+" L"+x0+","+(y0+ph)+" Z","class":"area-fill"}),svg.firstChild);
+  svg.appendChild(svgEl("path",{d:d.length===1?path+" m-5,0 l10,0":path,"class":"area-line"}));
+  label(svg,x0,h-4,d[0].month,"start");label(svg,x0+pw,h-4,d[d.length-1].month,"end");
+ });
+}
+function chartPriority(s,program){
+ var axes=(s.taxonomy&&s.taxonomy.axes)||[],axis=null,i;
+ for(i=0;i<axes.length;i++)if(axes[i].family==="priority")axis=axes[i];
+ var d=axis?axis.values:[],rows=d.map(function(v){return [v.value,v.count];});
+ var ramps=["var(--ramp1)","var(--ramp2)","var(--ramp3)","var(--ramp4)"];
+ return chart(STR.priorityChart,snapshotProv(program),[STR.priority,STR.count],rows,function(svg,w,h){
+  if(!d.length){empty(svg,w,h);return;}
+  var gutter=Math.max(60,Math.min(140,w*0.3)),plot=w-gutter-30,max=1,top=4,step=Math.min(30,(h-18)/d.length);
+  for(i=0;i<d.length;i++)max=Math.max(max,d[i].count);
+  line(svg,gutter,top,gutter,top+step*d.length);
+  for(i=0;i<d.length;i++){
+   var y=top+step*i+step/2,bw=plot*d[i].count/max,ri=d.length===1?3:Math.round(i*3/(d.length-1));
+   label(svg,gutter-7,y+3.5,short(d[i].value,18),"end");
+   svg.appendChild(svgEl("rect",{x:gutter,y:y-5,width:Math.max(0.6,bw),height:10,fill:ramps[ri]}));
+   label(svg,gutter+bw+5,y+3.5,d[i].count,"start","svg-value");
+   hit(svg,{x:gutter,y:y-step/2,width:Math.max(20,plot),height:step},fmt(STR.tipPriority,{name:d[i].value,n:d[i].count}));
+  }
+ });
+}
+function chartNodes(s,program){
+ // The reader's name for a node is its path (`lib/audit.mjs`), not the id the topology encodes
+ // (`lib__audit_mjs`). The id is a mechanism; the path is what the reader opens (F4).
+ var pathOf={},i,nodes=program.model&&program.model.nodes||[];
+ for(i=0;i<nodes.length;i++){var nd=nodes[i],ev=(nd.evidence||[]).filter(function(e){return e.type==="path";})[0];pathOf[nd.id]=ev?ev.ref:nd.name;}
+ var all=[],k;for(k in s.workPerNode)if(s.workPerNode.hasOwnProperty(k))all.push([k,s.workPerNode[k]]);
+ all.sort(function(a,b){return b[1]-a[1]||(a[0]<b[0]?-1:1);});
+ // A row of zero-length bars is not information, it is noise that costs the rows that are. The
+ // count of untouched nodes is the information, and it goes in the provenance line (I9).
+ var pairs=all.filter(function(p){return p[1]>0;}),quiet=all.length-pairs.length;
+ var rows=all.map(function(p){return [pathOf[p[0]]||p[0],p[1]];});
+ var prov=STR.provLink+(quiet?" · "+fmt(STR.nodesQuiet,{n:quiet}):"");
+ return chart(STR.nodeChart,prov,[STR.node,STR.count],rows,function(svg,w,h){
+  if(!pairs.length){empty(svg,w,h);return;}
+  var top=Math.max(1,Math.min(pairs.length,Math.floor((h-18)/22)));
+  barsH(svg,w,h,pairs.slice(0,top).map(function(p){
+   var name=pathOf[p[0]]||p[0];
+   return {name:name,total:p[1],parts:[{v:p[1],cls:"mark-accent"}],tip:fmt(STR.tipNode,{name:name,n:p[1]})};
+  }),{gutter:210,maxStep:24});
+ });
+}
+/* ------------------------------- shared rows ------------------------------- */
+function landingText(n){return n==null?STR.neverLanded:(n===1?STR.lastWorkDay:fmt(STR.lastWorkDays,{n:n}));}
+function blockedRow(b){
+ var program=byId(b.program),d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),dl=el("dl","detail"),ev=el("span","chips"),j;
+ var land=landingText(b.daysSinceLastLanding);
+ if(b.priority)meta.appendChild(el("span","chip",b.priority));
+ s.appendChild(program?pill(program,b.n,b.program+" #"+b.n):statusMark(b.verdict));s.appendChild(meta);s.appendChild(el("span","row-title",b.title));
+ d.appendChild(s);
+ pair(dl,STR.verdictLabel,statusMark(b.verdict));
+ pair(dl,STR.why,b.why||STR.notAudited);
+ for(j=0;j<(b.evidence||[]).length;j++)ev.appendChild(el("span","chip",b.evidence[j].type+":"+b.evidence[j].ref));
+ if(!ev.childNodes.length)ev.appendChild(el("span","muted",STR.none));
+ pair(dl,STR.evidence,ev);
+ pair(dl,STR.nodes,chips(b.nodes));pair(dl,STR.labels,chips(b.labels));
+ pair(dl,STR.milestone,b.ms||STR.none);
+ pair(dl,STR.lastLanding,land+(b.lastLanded?" ("+b.lastLanded+")":""));
+ if(program)pair(dl,STR.issue,pill(program,b.n));
+ d.appendChild(dl);return d;
+}
+function rowsPanel(p,items,render,emptyText){
+ if(!items.length){p.body.appendChild(el("p","muted",emptyText));return p;}
+ var wrap=el("div","rows"),i;
+ for(i=0;i<items.length;i++)wrap.appendChild(render(items[i]));
+ p.body.appendChild(wrap);return p;
+}
+
+
+/* A restrained markdown renderer. The reader was handing a client the source: literal `#`, `**`
+   and `|---|---|` rows. This covers what the canon actually uses — headings, bold, inline code,
+   links, list items, pipe tables, block quotes — and falls back to the literal line for anything
+   else rather than guessing. Every node is built with textContent, never innerHTML: repository
+   prose is attacker-adjacent input and never becomes markup (I14). */
+function inline(target,text){
+ var re=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,last=0,m;
+ while((m=re.exec(text))!==null){
+  if(m.index>last)target.appendChild(document.createTextNode(text.slice(last,m.index)));
+  var tok=m[0];
+  if(tok.charAt(0)==="*")target.appendChild(el("strong","",tok.slice(2,-2)));
+  else if(tok.charAt(0)==="`")target.appendChild(el("code","md-code",tok.slice(1,-1)));
+  else{
+   // A link target read out of repository prose is attacker-adjacent input (I14), and assigning it
+   // to .href unchecked makes `[read me](javascript:...)` a live XSS in a document somebody else
+   // wrote. Allow-list the schemes a document legitimately uses; anything else stays TEXT, visibly,
+   // rather than being silently dropped — a link that will not be followed should say so.
+   var cut=tok.indexOf("]("),label=tok.slice(1,cut),href=tok.slice(cut+2,-1);
+   // `//host/x` is a network-path reference: same scheme, DIFFERENT HOST. It is not a relative
+   // path, and the earlier pattern let it through because a leading `/` satisfied `\.{0,2}\/`.
+   var relative=/^(#|\/(?!\/)|\.{1,2}\/)/.test(href),absolute=/^(https?:\/\/|mailto:)/i.test(href);
+   if(relative||absolute){
+    var a=el("a","",label);a.href=href;a.target="_blank";a.rel="noopener noreferrer";target.appendChild(a);
+   }else target.appendChild(document.createTextNode(label+" ("+href+")"));
+  }
+  last=re.lastIndex;
+ }
+ if(last<text.length)target.appendChild(document.createTextNode(text.slice(last)));
+ return target;
+}
+/* Levels are demoted by two. A rendered document sits inside a panel whose heading is an <h2>, so
+   its own `#` is an h3: emitting <h1> would put a second top-level heading on a page that already
+   has one, and a screen reader's heading list would read as two documents. */
+function mdHeading(level){return "h"+Math.min(level+2,6);}
+function renderMarkdown(src){
+ /* EVERY line terminator, not just CRLF. In JavaScript `.` and `$` exclude `\r`, U+2028 and
+    U+2029, so a lone CR or a Unicode line separator inside a document made the unanchored list
+    DETECTOR match a line the `$`-anchored CONSUMER could not, `i` never advanced, and the outer
+    loop appended empty <ul>s until the heap died — a hang, in the browser, from a byte in somebody
+    else's repository. The same mismatch silently rendered `# Title<U+2028>more` as a paragraph with
+    the hash still in it. Normalising here fixes the class; `list()` additionally guarantees it
+    advances, because a detector and a consumer that are two different patterns can drift again. */
+ var out=el("div","md"),lines=String(src).replace(/\r\n?|\u2028|\u2029/g,"\n").split("\n"),i=0,para=[];
+ function flush(){
+  if(!para.length)return;
+  inline(out.appendChild(el("p","")),para.join(" "));
+  para=[];
+ }
+ /* Consecutive item lines become ONE list element. Emitting a <div> per item looked identical and
+    exposed nothing: assistive technology got ten paragraphs where the document had a list of ten,
+    with no "list, 10 items" and no way to skip it. */
+ function list(tag,cls,first,minIndent){
+  // The consumer allows more digits than the detector on purpose. `\d{1,3}` opening a list keeps
+  // "2026. The year the manifest was frozen" as prose; but once a list IS running, item 1000 is an
+  // item, and dropping it into the paragraph buffer was a silent structural loss (I9).
+  var box=el(tag,cls),re=tag==="ol"?/^(\s*)(\d{1,9})\.\s+(.*)$/:/^(\s*)[-*]\s+(.*)$/,m,n=0,base=null,lastLi=null;
+  if(tag==="ol"&&first!==1)box.setAttribute("start",String(first));
+  while(i<lines.length){
+   var ln=lines[i],ind=(/^(\s*)/.exec(ln)||["",""])[1].length;
+   // A line shallower than the parent's level is not ours: it ends this list (Audit #13).
+   // Top-level lists have no parent, so their floor is -1: a list starting at indent 0 is legal.
+   if(ind<=(minIndent==null?-1:minIndent))break;
+   m=re.exec(ln);
+   if(!m){
+    // A deeper-indented line of the OTHER marker type is a nested list too: `- parent` then
+    // `  1. first` is an ordered list under a bullet item, not a new top-level list.
+    var t=/^\s*\d{1,9}\.\s+/.test(ln)?"ol":/^\s*[-*]\s+/.test(ln)?"ul":null;
+    if(t&&lastLi){lastLi.appendChild(list(t,t==="ol"?"md-ol":"md-ul",1,base));continue;}
+    break; // prose: the outer loop owns it
+   }
+   if(base===null)base=ind;
+   if(ind>base){
+    // A deeper indent of our own marker is a nested list under the previous item. The recursive
+    // call consumes the nested lines and leaves i on the next sibling.
+    if(lastLi){lastLi.appendChild(list(tag,cls,1,base));continue;}
+    i++;n++;continue;
+   }
+   lastLi=el("li","md-li","");
+   inline(lastLi,m[tag==="ol"?2:1]);box.appendChild(lastLi);i++;n++;
+  }
+  // Belt and braces: the caller decided this line starts a list using a DIFFERENT pattern from the
+  // one above. If the two ever disagree again, consume the line as prose rather than spin — a
+  // renderer that hangs on a document is worse than one that renders it plainly.
+  if(!n){if(i<lines.length)para.push(lines[i].trim());i++;return null;}
+  return box;
+ }
+ while(i<lines.length){
+  var ln=lines[i],h=/^(#{1,6})\s+(.*)$/.exec(ln);
+  if(/^\s*$/.test(ln)){flush();i++;continue;}
+  if(h){flush();inline(out.appendChild(el(mdHeading(h[1].length),"md-h md-h"+h[1].length,"")),h[2]);i++;continue;}
+  if(/^```/.test(ln)){
+   flush();var buf=[];i++;
+   while(i<lines.length&&!/^```/.test(lines[i]))buf.push(lines[i++]);
+   i++;out.appendChild(el("pre","md-pre",buf.join("\n")));continue;
+  }
+  if(/^\s*\|.*\|\s*$/.test(ln)){
+   flush();
+   var rows=[];
+   while(i<lines.length&&/^\s*\|.*\|\s*$/.test(lines[i])){
+    var cells=lines[i].trim().slice(1,-1).split("|").map(function(c){return c.trim();});
+    if(!/^[\s:|-]+$/.test(lines[i].trim().replace(/^\||\|$/g,"")))rows.push(cells);
+    i++;
+   }
+   if(rows.length){
+    var t=el("table","md-table"),th=el("thead"),htr=el("tr"),tb=el("tbody"),c;
+    for(c=0;c<rows[0].length;c++){var hc=el("th");hc.setAttribute("scope","col");inline(hc,rows[0][c]);htr.appendChild(hc);}
+    th.appendChild(htr);t.appendChild(th);
+    for(var r=1;r<rows.length;r++){var tr=el("tr");for(c=0;c<rows[r].length;c++)inline(tr.appendChild(el("td")),rows[r][c]);tb.appendChild(tr);}
+    t.appendChild(tb);out.appendChild(t);
+   }
+   continue;
+  }
+  if(/^\s*[-*]\s+/.test(ln)){flush();var bl=list("ul","md-ul",1);if(bl)out.appendChild(bl);continue;}
+  /* `\d{1,3}\.` and not `\d+\.`: a paragraph opening "2026. The year the manifest was frozen"
+     is prose, not the two-thousand-and-twenty-sixth item of a list. */
+  var ol=/^\s*(\d{1,3})\.\s+/.exec(ln);
+  if(ol){flush();var bo=list("ol","md-ol",parseInt(ol[1],10));if(bo)out.appendChild(bo);continue;}
+  var q=/^>\s?(.*)$/.exec(ln);
+  if(q){
+   flush();var qb=el("blockquote","md-q");
+   while(i<lines.length&&(q=/^>\s?(.*)$/.exec(lines[i]))!==null){inline(qb.appendChild(el("p","")),q[1]);i++;}
+   out.appendChild(qb);continue;
+  }
+  if(/^---+$/.test(ln)){flush();out.appendChild(el("hr","md-hr"));i++;continue;}
+  para.push(ln.trim());i++;
+ }
+ flush();
+ return out;
+}
+
+/* --------------------------------- views --------------------------------- */
+function viewPortfolio(view){
+ var t=ROOM.portfolio.totals;
+ var answer=el("div","answer"),lead=el("section","panel");
+ /* Nothing open is a RESULT, not a template with zeros in it. "0 things need you out of 0 open
+    across 1 programmes." is the sentence a reader met first on the published demo, and cold, in the
+    ten seconds this artifact gets, it reads as a dead project or a broken tool. Everything on this
+    screen is true either way; only one of the two says which. */
+ var quiet=t.open===0;
+ lead.appendChild(el("p","thesis",quiet
+  ?fmt(plural(t.programs,STR.thesisQuietOne,STR.thesisQuiet),{programs:t.programs,closed:t.closed})
+  :fmt(plural(t.programs,STR.thesisOne,STR.thesis),{blocked:t.blocked,open:t.open,programs:t.programs})));
+ if(quiet)lead.appendChild(el("p","lede",fmt(STR.thesisQuietLede,{closed:t.closed})));
+ lead.appendChild(el("p","lede",fmt(STR.generated,{source:ROOM.meta.generatedFrom,date:ROOM.meta.today})));
+ answer.appendChild(lead);
+ answer.appendChild(chartClosedOpen(t));
+ answer.appendChild(chartLoad(ROOM.portfolio.programs));
+ view.appendChild(answer);
+
+ var ev=el("div","evidence");
+ ev.appendChild(rowsPanel(panel(STR.now,fmt(plural(t.blocked,STR.provBlockedOne,STR.provBlocked),{n:t.blocked}),"span2"),ROOM.portfolio.blocked||[],blockedRow,STR.noBlocked));
+
+ var mv=panel(STR.moving,fmt(plural(ROOM.portfolio.moving.length,STR.provMovingOne,STR.provMoving),{n:ROOM.portfolio.moving.length})),stack=el("div","stack"),i,j,k;
+ for(i=0;i<ROOM.portfolio.moving.length;i++){
+  var m=ROOM.portfolio.moving[i],program=byId(m.program),d=el("details"),sm=el("summary","row-head");
+  sm.appendChild(el("span","ref",m.program));sm.appendChild(el("span",""));sm.appendChild(el("span","tally",m.count));
+  d.appendChild(sm);
+  var body=el("div");
+  if(!m.byCluster.length)body.appendChild(el("p","muted",STR.noMoving));
+  for(j=0;j<m.byCluster.length;j++){
+   var g=el("div","group"),lk=el("span","links");
+   g.appendChild(el("span","group-name",m.byCluster[j].key));
+   for(k=0;k<m.byCluster[j].issues.length;k++)lk.appendChild(pill(program,m.byCluster[j].issues[k]));
+   g.appendChild(lk);body.appendChild(g);
+  }
+  d.appendChild(body);stack.appendChild(d);
+ }
+ mv.body.appendChild(stack);ev.appendChild(mv);
+
+ var mm=panel(STR.mismatch,STR.provAudit),any=false;
+ mm.body.appendChild(el("p","muted",STR.mismatchLede));
+ for(i=0;i<ROOM.portfolio.programs.length;i++){
+  var rule=ROOM.portfolio.programs[i].blockedRule;
+  if(rule.declared&&!rule.inert)continue;
+  var r=el("div","kv");r.appendChild(el("span","data",ROOM.portfolio.programs[i].id));
+  r.appendChild(el("span","",rule.declared?STR.ruleInert:STR.ruleUnknown));
+  mm.body.appendChild(r);any=true;
+ }
+ for(i=0;i<ROOM.programs.length;i++){
+  var pr=ROOM.programs[i],age=days(pr.issuesSnapshot.fetchedAt,ROOM.meta.today),dt=String(pr.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
+  var r2=el("div","kv");r2.appendChild(el("span","data",pr.id));
+  r2.appendChild(el("span","",age===0?fmt(STR.snapshotToday,{date:dt}):(age===1?fmt(STR.snapshotAgeOne,{date:dt}):fmt(STR.snapshotAge,{n:age,date:dt}))));
+  mm.body.appendChild(r2);
+ }
+ if(!any)mm.body.appendChild(el("p","muted",STR.rulesComplete));
+ ev.appendChild(mm);
+ view.appendChild(ev);
+}
+
+function kpi(list,k,v,note){
+ var d=el("div","kpi"),dt=el("dt","",k),dd=el("dd","",v==null?"—":String(v));
+ if(note)dd.appendChild(el("small","",note));
+ d.appendChild(dt);d.appendChild(dd);list.appendChild(d);
+}
+function viewExec(view,program,summary){
+ var k=program.derived.kpis,rtm=program.derived.rtm,history=program.derived.history;
+ var answer=el("div","answer"),lead=el("section","panel");
+ lead.appendChild(el("p","thesis",fmt(STR.execHeadline,{open:summary.open,blocked:summary.blocked})));
+ lead.appendChild(el("p","lede",snapshotProv(program)));
+ answer.appendChild(lead);
+
+ var kp=panel(STR.kpiHeading,STR.provDerived,"span2"),list=el("dl","kpis");
+ kpi(list,STR.kpiOpen,k.openCount);
+ kpi(list,STR.kpiBlocked,summary.blockedRule.declared?summary.blocked:null,summary.blockedRule.declared?null:STR.ruleUnknown);
+ kpi(list,STR.kpiNoMilestone,k.noMilestoneCount);
+ kpi(list,STR.kpiLinked,k.linkCoveragePct==null?null:k.linkCoveragePct+"%",k.linkCoveragePct==null?STR.notMeasured:STR.kpiLinkedNote);
+ kpi(list,STR.kpiRequirements,rtm&&rtm.coverage.pct!=null?rtm.coverage.pct+"%":null,
+     rtm?fmt(STR.planCoverageNote,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements,withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly}):STR.notMeasured);
+ kp.body.appendChild(list);
+ answer.appendChild(kp);
+ view.appendChild(answer);
+
+ var ev=el("div","evidence");
+ if(history)ev.appendChild(chartHistory(history,program));
+ else{var hp=panel(STR.historyChart,STR.provDerived,"span2");hp.body.appendChild(el("p","muted",STR.historyMissing));ev.appendChild(hp);}
+ ev.appendChild(chartMilestones(summary,program));
+ ev.appendChild(chartPriority(summary,program));
+ ev.appendChild(chartLanding(summary,program));
+ if(summary.hasMap)ev.appendChild(chartNodes(summary,program));
+ view.appendChild(ev);
+}
+
+function viewTech(view,program,summary){
+ var mine=(ROOM.portfolio.blocked||[]).filter(function(b){return b.program===program.id;});
+ var answer=el("div","answer"),lead=el("section","panel");
+ lead.appendChild(el("p","thesis",mine.length?fmt(STR.techHeadline,{n:mine.length}):STR.noBlocked));
+ lead.appendChild(el("p","lede",STR.techLede));
+ answer.appendChild(lead);
+var i,j;
+ var buckets=program.derived.kanban,names=[["chiuse",STR.bucketChiuse],["sane",STR.bucketSane],["a-meta",STR.bucketAMeta],["premessa-falsa",STR.bucketPremessaFalsa],["aspettano-umano",STR.bucketAspettanoUmano],["non-auditate",STR.bucketNonAuditate]];
+ var openTotal=0;
+ for(i=1;i<names.length;i++)openTotal+=(buckets[names[i][0]]||[]).length;
+
+ var bp=panel(STR.techBuckets,fmt(STR.provBuckets,{closed:(buckets.chiuse||[]).length,open:openTotal}),"span2"),bl=el("dl","kpis");
+ for(i=0;i<names.length;i++)kpi(bl,names[i][1],(buckets[names[i][0]]||[]).length,i===0?STR.bucketClosedNote:null);
+ bp.body.appendChild(bl);answer.appendChild(bp);
+ view.appendChild(answer);
+
+ var ev=el("div","evidence");
+ ev.appendChild(rowsPanel(panel(STR.techBlocked,fmt(plural(mine.length,STR.provBlockedOne,STR.provBlocked),{n:mine.length}),"span2"),mine,blockedRow,STR.noBlockedHere));
+
+ var findings=(program.findings&&program.findings.findings)||[];
+ ev.appendChild(rowsPanel(panel(STR.techFindings,STR.provAudit),findings,function(f){
+  var d=el("details"),s=el("summary","row-head"),dl=el("dl","detail");
+  s.appendChild(statusMark(f.severity));s.appendChild(el("span","ref",f.id));s.appendChild(el("span","row-title",f.text));
+  d.appendChild(s);
+  pair(dl,STR.evidence,chips(f.evidence?[f.evidence.type+":"+f.evidence.ref]:[]));
+  if(f.trace)pair(dl,STR.techAudit,f.trace);
+  d.appendChild(dl);return d;
+ },STR.techNoFindings));
+
+ var hp=panel(STR.techHonesty,STR.provHonesty),cd=summary.commitDrift;
+ function kv(k,v){var r=el("div","kv");r.appendChild(el("span","",k));r.appendChild(v&&v.nodeType?v:el("span","",v));hp.body.appendChild(r);}
+ kv(STR.drift,!cd?STR.noDrift:(!cd.resolvable?fmt(STR.unresolved,{reason:cd.reason}):(cd.commitsBehind?fmt(STR.behind,{n:cd.commitsBehind}):STR.aligned)));
+ kv(STR.noMilestones,program.derived.kpis.noMilestoneCount?fmt(STR.noMilestoneCount,{n:program.derived.kpis.noMilestoneCount}):STR.allMilestoned);
+ kv(STR.rules,!summary.blockedRule.declared?STR.ruleUnknown:(summary.blockedRule.inert?STR.ruleInert:summary.blockedRule.labels.join(", ")));
+ var sweeps=(program.derived.link&&program.derived.link.excludedSweeps)||[],cell=el("span");
+ cell.appendChild(el("div","",sweeps.length?fmt(STR.sweepsCount,{n:sweeps.length}):STR.sweepsNone));
+ for(i=0;i<sweeps.length;i++){var sw=el("div","muted");sw.appendChild(el("span","data",String(sweeps[i].sha).slice(0,8)+" "));sw.appendChild(document.createTextNode(short(sweeps[i].subject,60)+" — "+fmt(STR.sweepFiles,{n:sweeps[i].files})));cell.appendChild(sw);}
+ kv(STR.sweeps,cell);
+ var age=days(program.issuesSnapshot.fetchedAt,ROOM.meta.today),dt=String(program.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
+ kv(STR.snapshots,age===0?fmt(STR.snapshotToday,{date:dt}):(age===1?fmt(STR.snapshotAgeOne,{date:dt}):fmt(STR.snapshotAge,{n:age,date:dt})));
+ ev.appendChild(hp);
+ view.appendChild(ev);
+}
+
+function viewKanban(view,program){
+ view.setAttribute("data-single","");
+ var buckets=program.derived.kanban,names=[["chiuse",STR.bucketChiuse],["sane",STR.bucketSane],["a-meta",STR.bucketAMeta],["premessa-falsa",STR.bucketPremessaFalsa],["aspettano-umano",STR.bucketAspettanoUmano],["non-auditate",STR.bucketNonAuditate]];
+ var issues={},board=el("div","kanban-board"),i,j,n,item,lane,rows,target,closed;
+ for(i=0;i<program.issuesSnapshot.issues.length;i++)issues[program.issuesSnapshot.issues[i].n]=program.issuesSnapshot.issues[i];
+ for(i=0;i<names.length;i++){
+  rows=buckets[names[i][0]]||[];lane=panel(names[i][1],fmt(STR.kanbanCount,{n:rows.length}));target=lane.body;
+  if(names[i][0]==="chiuse"&&rows.length){closed=el("details","kanban-closed");closed.appendChild(el("summary","",fmt(STR.kanbanClosedFold,{n:rows.length})));target=el("div","kanban-closed-items");closed.appendChild(target);lane.body.appendChild(closed);}
+  for(j=0;j<rows.length;j++){
+   n=buckets[names[i][0]][j];item=el("div","kanban-issue");
+   item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,58):"")));target.appendChild(item);
+  }
+  if(!rows.length)lane.body.appendChild(el("p","muted",STR.none));
+  board.appendChild(lane);
+ }
+ view.appendChild(board);
+}
+
+function queueCommand(p,n){return "gh issue view "+n+" --repo "+p.ghRepo;}
+function commandLine(command){
+ var row=el("div","queue-command"),code=el("code","data",command),button=el("button","toggle",STR.copyCommand);
+ button.type="button";button.setAttribute("aria-label",STR.copyCommand);
+ button.addEventListener("click",function(){
+  function done(){button.textContent=STR.copied;button.setAttribute("aria-label",STR.copied);setTimeout(function(){button.textContent=STR.copyCommand;button.setAttribute("aria-label",STR.copyCommand);},1200);}
+  function fallback(){var t=el("textarea","",command);t.style.position="fixed";t.style.opacity="0";document.body.appendChild(t);t.select();if(document.execCommand("copy"))done();document.body.removeChild(t);}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(command).then(done,fallback);else fallback();
+ });
+ row.appendChild(code);row.appendChild(button);return row;
+}
+function viewQueue(view,program){
+ view.setAttribute("data-single","");
+ var queue=program.derived.queue,issues={},board=el("div","queue-board"),i,j,n,lane,item,name;
+ for(i=0;i<program.issuesSnapshot.issues.length;i++)issues[program.issuesSnapshot.issues[i].n]=program.issuesSnapshot.issues[i];
+ for(i=0;i<queue.clusters.length;i++){
+  name=queue.clusters[i].key==="altro"||queue.clusters[i].key==="tutte"?STR.queueRest:queue.clusters[i].key;
+  lane=panel(name,fmt(STR.queueCount,{n:queue.clusters[i].issues.length}));
+  for(j=0;j<queue.clusters[i].issues.length;j++){
+   n=queue.clusters[i].issues[j];item=el("div","queue-item");
+   item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,64):"")));
+   item.appendChild(commandLine(queueCommand(program,n)));lane.body.appendChild(item);
+  }
+  board.appendChild(lane);
+ }
+ if(!queue.clusters.length){lane=panel(STR.routeQueue,STR.queueComplete);lane.body.appendChild(el("p","muted",STR.noMoving));board.appendChild(lane);}
+ view.appendChild(board);
+}
+
+/* The architecture skin that matches the briefing's theme. `blueprint` IS the briefing's light
+   palette mapped onto the explorer's token names (DESIGN.md §D6); `blueprint-dark` is the same
+   mapping onto the dark one. Before this, the map was light in both and the theme control silently
+   did not apply to one of five programme views. */
+function mapSkin(){return document.documentElement.getAttribute("data-theme")==="light"?"blueprint":"blueprint-dark";}
+function pushSkin(skin){
+ var f=document.querySelectorAll("iframe.frame"),i,s=skin||mapSkin();
+ for(i=0;i<f.length;i++){try{f[i].contentWindow.postMessage({forma:"skin",skin:s},"*");}catch(e){}}
+}
+function frameDoc(program){
+ var src=document.getElementById("holo-src").textContent.replace(/<\\\/script/gi,"<"+"/script");
+ var model=JSON.stringify(program.model).replace(/</g,"\\u003c");
+ var seed="<script>window.__C4_MODEL__="+model+";window.__C4_SKIN__=\""+mapSkin()+"\";window.__C4_EMBED__=true;window.__C4_LANG__="+JSON.stringify(LANG)+";"+"<"+"/script>";
+ return src.replace("<head>","<head>"+seed);
+}
+function viewMap(view,program){
+ view.setAttribute("data-single","");
+ var ev=el("div","evidence"),date=String(program.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
+ /* The staleness belongs HERE, not only 500px away on another view. This is the page most likely
+    to be photographed into a deck, and it presented a snapshot ten commits behind HEAD as
+    "Static architecture snapshot from 2026-08-10" beside a green 63% — the product's own doctrine
+    inverted on its own picture. The same fact `tech` reports, on the surface that shows it. */
+ var drift=(program.derived&&program.derived.commitDrift)||null;
+ var prov=fmt(STR.mapStatic,{date:date});
+ if(drift&&!drift.resolvable)prov+="  ·  "+fmt(STR.unresolved,{reason:drift.reason});
+ else if(drift&&drift.commitsBehind)prov+="  ·  "+fmt(plural(drift.commitsBehind,STR.behindOne,STR.behind),{n:drift.commitsBehind});
+ else if(drift)prov+="  ·  "+STR.aligned;
+ var mp=panel(STR.routeMap,prov,"span2");
+ mp.classList.add("span2");
+ if(!program.hasMap)mp.body.appendChild(el("p","muted",STR.mapMissing));
+ else{
+  var f=el("iframe","frame");
+  f.setAttribute("sandbox","allow-scripts");f.title=fmt(STR.mapFrame,{program:program.id});f.srcdoc=frameDoc(program);
+  mp.body.style.overflow="hidden";mp.body.appendChild(f);
+ }
+ ev.appendChild(mp);
+
+ var cps=program.derived.checkpoints,cp=panel(STR.timeline,STR.provCheckpoints);
+ if(!cps||!cps.length)cp.body.appendChild(el("p","muted",STR.timelineMissing));
+ else{
+  var wrap=el("div","rows"),i,j;
+  for(i=0;i<cps.length;i++){
+   var c=cps[i],d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),dl=el("dl","detail");
+   meta.appendChild(el("span","ref",c.pct==null?STR.notMeasured:c.pct+"%"));
+   meta.appendChild(el("span","muted",c.total?fmt(STR.checkpointIssues,{closed:c.closed,total:c.total}):STR.checkpointNoIssues));
+   s.appendChild(el("span","ref",c.id));s.appendChild(meta);s.appendChild(el("span","row-title",c.label));
+   d.appendChild(s);
+   pair(dl,STR.nodes,chips(c.nodes));
+   var lk=el("span","links");
+   for(j=0;j<c.issues.length;j++)lk.appendChild(pill(program,c.issues[j]));
+   if(!c.issues.length)lk.appendChild(el("span","muted",STR.none));
+   pair(dl,STR.issues,lk);
+   d.appendChild(dl);wrap.appendChild(d);
+  }
+  cp.body.appendChild(wrap);
+ }
+ ev.appendChild(cp);
+ view.appendChild(ev);
+}
+
+function viewWbs(view,program){
+ var rtm=program.derived.rtm,i,j;
+ var answer=el("div","answer"),lead=el("section","panel");
+ lead.appendChild(el("p","thesis",rtm?fmt(STR.wbsHeadline,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements}):STR.wbsMissing));
+ lead.appendChild(el("p","lede",rtm?fmt(STR.wbsSplit,{withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly}):""));
+ answer.appendChild(lead);
+
+ var holes=[],hp=panel(STR.wbsHoles,STR.provRtm,"span2");
+ if(rtm){
+  holes=[[STR.wbsDuplicate,rtm.orphans.duplicateIds.map(function(o){return o.id+" ("+o.from+":"+o.line+")";})],
+         [STR.wbsDangling,rtm.orphans.danglingRefs.map(function(o){return o.id+" → "+o.ref;})],
+         [STR.wbsUncovered,rtm.orphans.uncovered.map(function(o){return o.id+" — "+short(o.text,70);})],
+         [STR.wbsOrphan,rtm.orphans.orphanIssues.map(function(o){return pill(program,o.n,"#"+o.n+" "+short(o.title,60));})],
+         [STR.wbsSkipped,rtm.skipped.map(function(o){return o.path+" ("+o.why+")";})]];
+  var anyHole=false;
+  for(i=0;i<holes.length;i++){
+   if(!holes[i][1].length)continue;
+   anyHole=true;
+   var hr=el("div","hole"),cell=el("span");
+   hr.appendChild(el("span","",holes[i][0]));
+   for(j=0;j<holes[i][1].length;j++)cell.appendChild(holes[i][1][j]&&holes[i][1][j].nodeType?holes[i][1][j]:el("div","",holes[i][1][j]));
+   hr.appendChild(cell);hp.body.appendChild(hr);
+  }
+  if(!anyHole)hp.body.appendChild(el("p","muted",STR.wbsComplete));
+ }else hp.body.appendChild(el("p","muted",STR.wbsMissing));
+ answer.appendChild(hp);
+ view.appendChild(answer);
+
+ var ev=el("div","evidence");
+ var mp=panel(STR.wbsMatrix,STR.provRtm,"span2");
+ if(rtm){
+  var wrap=el("div","tablewrap"),tb=el("table","matrix"),th=el("thead"),htr=el("tr"),tbody=el("tbody");
+  var heads=[STR.wbsRequirement,STR.wbsRole,STR.wbsSatisfies,STR.wbsVerified,STR.wbsIssues,STR.wbsProgress,STR.wbsSource];
+  // A column every row answers identically is a scan that teaches nothing (F3): on the demo, Role
+  // reads "requirement" nine times and Satisfies/Issues/Closed read "—" nine times. Build the raw
+  // values first, drop the constant columns, then render what varies. A single row keeps every
+  // column — its values are all the information there is.
+  var raw=[],i,j;
+  for(i=0;i<rtm.requirements.length;i++){
+   var r=rtm.requirements[i],pr=rtm.progress[r.id];
+   raw.push([r.id,r.role,r.satisfies.join(", ")||"—",r.verified.join(", ")||"—",
+     r.issues.length?r.issues.join(","):"—",pr&&pr.pct!=null?pr.closed+"/"+pr.issues+" ("+pr.pct+"%)":"—",r.from+":"+r.line]);
+  }
+  var keep=[];
+  if(raw.length>1)for(j=0;j<heads.length;j++){var v=raw[0][j],c=true;for(i=1;i<raw.length;i++)if(raw[i][j]!==v){c=false;break;}if(!c)keep.push(j);}
+  else for(j=0;j<heads.length;j++)keep.push(j);
+  if(keep.length<heads.length){var provEl=mp.querySelector("p.prov");if(provEl)provEl.textContent+=" · "+STR.wbsConstant;}
+  for(j=0;j<keep.length;j++){var hc=el("th","",heads[keep[j]]);hc.setAttribute("scope","col");htr.appendChild(hc);}
+  th.appendChild(htr);tb.appendChild(th);
+  for(i=0;i<rtm.requirements.length;i++){
+   var r=rtm.requirements[i],tr=el("tr"),td;
+   for(j=0;j<keep.length;j++){
+    var c=keep[j];
+    if(c===0){td=el("td","id");td.appendChild(el("strong","",r.id));td.appendChild(el("div","muted",short(r.text,70)));tr.appendChild(td);}
+    else if(c===1)tr.appendChild(el("td","",r.role));
+    else if(c===2)tr.appendChild(el("td","",r.satisfies.join(", ")||"—"));
+    else if(c===3)tr.appendChild(el("td","",short(r.verified.join(", "),40)||"—"));
+    else if(c===4){td=el("td");for(var k=0;k<r.issues.length;k++){td.appendChild(pill(program,r.issues[k]));td.appendChild(document.createTextNode(" "));}if(!r.issues.length)td.textContent="—";tr.appendChild(td);}
+    else if(c===5){var pr=rtm.progress[r.id];tr.appendChild(el("td","nums",pr&&pr.pct!=null?pr.closed+"/"+pr.issues+" ("+pr.pct+"%)":"—"));}
+    else{td=el("td");td.appendChild(docLink(program,r.from,r.line));tr.appendChild(td);}
+   }
+   tbody.appendChild(tr);
+  }
+  tb.appendChild(tbody);wrap.appendChild(tb);mp.body.appendChild(wrap);
+  mp.body.style.overflow="hidden";
+ }else mp.body.appendChild(el("p","muted",STR.wbsMissing));
+ ev.appendChild(mp);
+
+ view.appendChild(ev);
+}
+
+/* The title and the body partition the document. `roomdocs` lifts the first `# ` line as the title
+   and leaves it in the text, which was invisible while both were divs — and became a real
+   duplicate the moment they were both real headings: a screen reader's heading list read
+   "Design h2, Design h3, Global invariants h2, Global invariants h3" for all eight documents, on
+   screen and on paper. Removed here rather than in roomdocs, because `text` is what the byte
+   budget counts and what the determinism gate re-derives. */
+function docBody(d){
+ var t=String(d.text||""),m=/^\s*#\s+(.*)(?:\n|$)/.exec(t);
+ return (m&&m[1].trim()===String(d.title||"").trim())?t.slice(m[0].length):t;
+}
+function viewDocs(view,program){
+ view.setAttribute("data-single","");
+ var docs=program.docs,ev=el("div","evidence");
+ if(!docs||(!docs.embedded.length&&!docs.listed.length)){
+  var np=panel(STR.routeDocs,STR.provDocsNone,"full");np.body.appendChild(el("p","muted",STR.docsNone));ev.appendChild(np);view.appendChild(ev);return;
+ }
+ var lp=panel(STR.docsCanon,fmt(STR.docsBudget,{n:docs.embedded.length}));
+ var rp=panel("",STR.provDocsReader,"span2"),listWrap=el("div","doclist"),i;
+ rp.head.className+=" doc-reader-head";
+ rp.classList.add("span2");
+ var body=el("div","reader"),title=rp.head.querySelector("h2"),link=el("span");
+ rp.head.appendChild(link);
+ rp.body.appendChild(body);
+ // On screen the reader shows one document. On paper it must carry all of them: the panel is
+ // headed "N documents embedded" and the PDF contained one, which is the heading lying.
+ //
+ // Built on demand, not at load. Rendering every canon document for every programme cost every
+ // visitor the whole corpus whether or not they ever opened this view or ever pressed print, and it
+ // scales with programmes x each one's byte budget.
+ var all=el("div","print-all");
+ all.fill=function(){
+  if(all.firstChild)return;
+  for(var a=0;a<docs.embedded.length;a++){
+   // h2, matching the panel heading a document sits under on screen, so the demotion in
+   // renderMarkdown lands its `#` at h3 in both places.
+   all.appendChild(el("h2","md-h md-h1",docs.embedded[a].title||docs.embedded[a].path));
+   all.appendChild(el("div","prov",docs.embedded[a].path));
+   all.appendChild(renderMarkdown(docBody(docs.embedded[a])));
+  }
+ };
+ PRINT_FILL.push(all);
+ rp.body.appendChild(all);
+ function open(idx){
+  var d=docs.embedded[idx],b;
+  title.textContent=d.title||d.path;
+  link.textContent="";link.appendChild(docLink(program,d.path,null,STR.docsOpen));
+  body.textContent="";body.appendChild(renderMarkdown(docBody(d)));
+  rp.body.scrollTop=0;
+  announce(d.title||d.path);
+  var btns=listWrap.querySelectorAll("button");
+  for(b=0;b<btns.length;b++){if(b===idx)btns[b].setAttribute("aria-current","true");else btns[b].removeAttribute("aria-current");}
+ }
+ for(i=0;i<docs.embedded.length;i++){
+  (function(idx){
+   var d=docs.embedded[idx],b=el("button");
+   b.type="button";b.appendChild(document.createTextNode(d.title||d.path));
+   b.appendChild(el("small","",d.path+" · "+fmt(STR.docsLines,{n:d.lines})));
+   b.addEventListener("click",function(){open(idx);});
+   listWrap.appendChild(b);
+  })(i);
+ }
+ lp.body.appendChild(listWrap);
+ if(docs.listed.length){
+  var others=el("div","group");
+  others.appendChild(el("span","group-name",STR.docsOther));
+  for(i=0;i<docs.listed.length;i++){
+   var row=el("div","kv"),l=docs.listed[i];
+   row.appendChild(docLink(program,l.path));
+   row.appendChild(el("span","",l.why==="budget"?STR.docsTooLarge:(l.lines==null?"":fmt(STR.docsLines,{n:l.lines}))));
+   others.appendChild(row);
+  }
+  lp.body.appendChild(others);
+ }
+ ev.appendChild(lp);ev.appendChild(rp);
+ view.appendChild(ev);
+ if(docs.embedded.length)open(0);
+}
+
+function viewOptions(view){
+ view.setAttribute("data-single","");
+ var ev=el("div","evidence"),i,j;
+ var ip=panel(STR.optIncluded,fmt(STR.provOptions,{file:ROOM.meta.generatedFrom}),"span2");
+ for(i=0;i<ROOM.programs.length;i++){
+  var p=ROOM.programs[i],row=el("div","opt"),head=el("div"),flags=el("div","flags");
+  head.appendChild(el("strong","",p.id));head.appendChild(el("span","muted"," — "+p.ghRepo));
+  if(SERVED)head.appendChild(toggle(p.id,true));
+  row.appendChild(head);
+  var has=[[STR.optHasMap,p.hasMap],[STR.optHasHealth,((p.health&&p.health.verdicts)||[]).length>0],
+           [STR.optHasFindings,((p.findings&&p.findings.findings)||[]).length>0],
+           [STR.optHasRtm,!!p.derived.rtm],[STR.optHasDocs,!!(p.docs&&p.docs.embedded.length)],
+           [STR.optHasBlockedBy,sumOf(p.id).blockedRule.declared]];
+  for(j=0;j<has.length;j++)flags.appendChild(el("span","flag"+(has[j][1]?" on":""),has[j][0]+": "+(has[j][1]?STR.optYes:STR.optNo)));
+  row.appendChild(flags);ip.body.appendChild(row);
+ }
+ ev.appendChild(ip);
+
+ var xp=panel(STR.optExcluded,STR.provExcluded),ex=ROOM.meta.excluded||[];
+ if(!ex.length)xp.body.appendChild(el("p","muted",STR.optNoneExcluded));
+ for(i=0;i<ex.length;i++){
+  var r=el("div","kv"),why=el("span");
+  r.appendChild(el("span","data",ex[i].id));
+  why.appendChild(el("span","",STR.optReasonDisabled));
+  if(SERVED)why.appendChild(toggle(ex[i].id,false));
+  r.appendChild(why);xp.body.appendChild(r);
+ }
+ xp.body.appendChild(el("p","muted",fmt(STR.optHowToChange,{file:ROOM.meta.generatedFrom})));
+ ev.appendChild(xp);
+ view.appendChild(ev);
+}
+
+// A checkbox appears only when the COMPOSER said this copy has somewhere to write to — which is
+// only true of the page `forma room --serve` hands out. Inferring it from location.protocol was
+// wrong in the way that matters: it is true on any static host, so the public demo on Pages would
+// have rendered live switches whose PUT lands on nothing. A dead switch teaches the reader the page
+// lies, which is the one thing this briefing cannot afford.
+var SERVED=window.__WRITABLE__===true;
+function toggle(id,enabled){
+ var wrap=el("label","flag"+(enabled?" on":"")),box=document.createElement("input"),err=el("span","muted");
+ box.type="checkbox";box.checked=enabled;box.style.marginRight="5px";
+ wrap.style.marginLeft="8px";
+ wrap.appendChild(box);wrap.appendChild(document.createTextNode(enabled?STR.optYes:STR.optNo));
+ box.addEventListener("change",function(){
+  var b={};b[id]=box.checked;box.disabled=true;
+  fetch("/programs",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(b)})
+   .then(function(r){return r.ok?r.json():r.text().then(function(t){throw new Error(t);});})
+   .then(function(){location.reload();})
+   .catch(function(e){box.disabled=false;box.checked=!box.checked;err.textContent=" "+String(e.message||e);});
+ });
+ var span=el("span");span.appendChild(wrap);span.appendChild(err);return span;
+}
+
+/* --------------------------------- routing -------------------------------- */
+var VIEWS={},ORDER=[],PRINT_FILL=[];
+var TABS=[["exec",function(){return STR.routeExec;}],["tech",function(){return STR.routeTech;}],
+          ["auto",function(){return STR.routeQueue;}],
+          ["kanban",function(){return STR.routeKanban;}],
+          ["map",function(){return STR.routeMap;}],["wbs",function(){return STR.routeWbs;}],
+          ["docs",function(){return STR.routeDocs;}]];
+var BUILD={exec:viewExec,tech:viewTech,auto:viewQueue,kanban:viewKanban,map:viewMap,wbs:viewWbs,docs:viewDocs};
+function key(p,t){return p?"/"+p+"/"+t:"/"+t;}
+function mount(k){
+ var v=el("section","view");v.id="view-"+k.replace(/[^a-z0-9]+/gi,"-");v.hidden=true;
+ v.appendChild(el("p","print-id",""));
+ document.getElementById("content").appendChild(v);VIEWS[k]=v;ORDER.push(k);return v;
+}
+/* A running header, because `.print-id` is a block element and a block element stamps the page it
+   starts on: seven identity lines covered seven of twenty-nine sheets, and the twenty in the
+   Documents view came out anonymous. A `@page` margin box repeats on every sheet and is the only
+   place `counter(page)` is legal, so it also carries the page number the briefing never had.
+   Measured in Chrome 151 before being written, not recalled: 34 of 34 pages, numbers included. */
+function stampRunningHead(){
+ // ROOM.meta is repository text and this builds a CSS string, so the quote and the backslash are
+ // escaped for the same reason I14 keeps that text out of markup. A newline is illegal inside a CSS
+ // string, not merely ugly, and would silently drop the whole rule.
+ var esc=function(s){return String(s==null?"":s).replace(/[\\"]/g,"\\$&").replace(/[\r\n\f]+/g," ");};
+ var head=esc((ROOM.meta.title||STR.appTitle)+"  ·  "+ROOM.meta.today);
+ var s=document.createElement("style");
+ s.textContent="@page{margin:16mm 12mm 12mm;"+
+  "@top-left{content:\""+head+"\";font:8pt \"SF Mono\",Menlo,Consolas,monospace;color:var(--muted)}"+
+  "@top-right{content:counter(page) \" / \" counter(pages);font:8pt \"SF Mono\",Menlo,Consolas,monospace;color:var(--muted)}}";
+ document.head.appendChild(s);
+}
+function stampPrintIds(){
+ var k,p,name;
+ for(k in VIEWS)if(VIEWS.hasOwnProperty(k)){
+  p=progOf(k);
+  name=k==="/"?STR.routePortfolio:k==="/options"?STR.routeOptions:tabLabel(k);
+  VIEWS[k].querySelector(".print-id").textContent=
+   (ROOM.meta.title||STR.appTitle)+"  ·  "+(p?p+"  ·  ":"")+name+"  ·  "+ROOM.meta.today;
+ }
+}
+function buildAll(){
+ var i,j;
+ viewPortfolio(mount("/"));
+ for(i=0;i<ROOM.programs.length;i++){
+  var program=ROOM.programs[i],summary=sumOf(program.id);
+  for(j=0;j<TABS.length;j++)BUILD[TABS[j][0]](mount(key(program.id,TABS[j][0])),program,summary);
+ }
+ viewOptions(mount("/options"));
+}
+// The pre-tab anchors stay valid addresses: #now was a link somebody could have sent.
+var LEGACY={verdict:"/",now:"/",moving:"/",mismatch:"/",programs:"/",map:null};
+function normalize(h){
+ var raw=String(h||"").replace(/^#/,"");
+ if(!raw)return "/";
+ if(raw.charAt(0)==="/")return VIEWS[raw]?raw:"/";
+ if(LEGACY.hasOwnProperty(raw)){
+  if(LEGACY[raw])return LEGACY[raw];
+  var f=ROOM.programs[0];return f?key(f.id,raw==="map"?"map":"exec"):"/";
+ }
+ return "/";
+}
+function progOf(k){var m=/^\/([^/]+)\/([^/]+)$/.exec(k);return m?m[1]:null;}
+function navLink(href,text){var a=el("a","",text);a.href="#"+href;return a;}
+// Built once. Rebuilding it on every route change destroyed the anchor the user had just pressed
+// and left focus on <body>, so each navigation forced a Tab-from-the-top.
+function buildNav(){
+ var progs=document.getElementById("nav-programs"),views=document.getElementById("nav-views"),i,j;
+ progs.appendChild(navLink("/",STR.routePortfolio));
+ for(i=0;i<ROOM.programs.length;i++)progs.appendChild(navLink(key(ROOM.programs[i].id,"exec"),ROOM.programs[i].id));
+ progs.appendChild(navLink("/options",STR.routeOptions));
+ // One set of view tabs, re-pointed at whichever programme is open. They are present from the
+ // first screen rather than appearing only after the reader guesses that a lowercase repo id
+ // between two sentence-case labels is the primary action.
+ for(i=0;i<TABS.length;i++){
+  var a=navLink("/",TABS[i][1]());
+  a.setAttribute("data-tab",TABS[i][0]);
+  views.appendChild(a);
+ }
+ progs.addEventListener("focusin",function(e){e.target.scrollIntoView({block:"nearest",inline:"nearest"});});
+ views.addEventListener("focusin",function(e){e.target.scrollIntoView({block:"nearest",inline:"nearest"});});
+}
+function renderNav(k){
+ var progs=document.getElementById("nav-programs"),views=document.getElementById("nav-views"),i;
+ var p=progOf(k)||(ROOM.programs[0]&&ROOM.programs[0].id);
+ var links=progs.querySelectorAll("a");
+ for(i=0;i<links.length;i++){
+  var href=links[i].getAttribute("href").slice(1);
+  // "true", not "page". Two landmarks both marking their selection as aria-current="page" made a
+  // screen reader announce "current page" twice on one screen; only ONE of them is the page. The
+  // programme is the current item within its list, which is what the plain token means.
+  if(href===k||(progOf(k)&&href===key(progOf(k),"exec")))links[i].setAttribute("aria-current","true");
+  else links[i].removeAttribute("aria-current");
+ }
+ var tabs=views.querySelectorAll("a");
+ for(i=0;i<tabs.length;i++){
+  var t=tabs[i].getAttribute("data-tab"),target=p?key(p,t):"/";
+  tabs[i].href="#"+target;
+  if(k===target){tabs[i].setAttribute("aria-current","page");tabs[i].scrollIntoView({block:"nearest",inline:"nearest"});}
+  else tabs[i].removeAttribute("aria-current");
+ }
+}
+function show(k){
+ var x;
+ for(x in VIEWS)if(VIEWS.hasOwnProperty(x))VIEWS[x].hidden=x!==k;
+ renderNav(k);
+ var p=progOf(k);
+ var name=(k==="/"?STR.routePortfolio:k==="/options"?STR.routeOptions:tabLabel(k));
+ document.title=(ROOM.meta.title||STR.appTitle)+(p?" · "+p:"")+" · "+name;
+ announce(p?p+" · "+name:name);
+ relayoutAll(VIEWS[k]);
+}
+function tabLabel(k){
+ var m=/^\/[^/]+\/([^/]+)$/.exec(k),i;
+ if(m)for(i=0;i<TABS.length;i++)if(TABS[i][0]===m[1])return TABS[i][1]();
+ return k;
+}
+function announce(text){var l=document.getElementById("live");if(l)l.textContent=text;}
+function onHash(){show(normalize(location.hash));}
+
+function applyTheme(){
+ var saved=null,t;
+ try{saved=localStorage.getItem("forma-room-theme");}catch(e){}
+ t=saved==="light"||saved==="dark"?saved:(ROOM&&ROOM.meta&&ROOM.meta.theme==="light"?"light":"dark");
+ document.documentElement.setAttribute("data-theme",t);themeButton(t);
+}
+function themeButton(t){var b=document.getElementById("theme-toggle"),n=t==="dark"?STR.themeLight:STR.themeDark;b.textContent=n;b.setAttribute("aria-label",n);b.setAttribute("aria-pressed",t==="light"?"true":"false");}
+function wireTheme(){
+ document.getElementById("theme-toggle").addEventListener("click",function(){
+  var n=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";
+  document.documentElement.setAttribute("data-theme",n);
+  try{localStorage.setItem("forma-room-theme",n);}catch(e){}
+  themeButton(n);pushSkin();
+ });
+}
+
+var resizeTimer=null;
+function onResize(){
+ if(resizeTimer)clearTimeout(resizeTimer);
+ resizeTimer=setTimeout(function(){var k=normalize(location.hash);if(VIEWS[k])relayoutAll(VIEWS[k]);},120);
+}
+
+function start(){
+ document.documentElement.setAttribute("lang",LANG);
+ var skip=document.getElementById("skip");skip.textContent=STR.skip;
+ skip.addEventListener("click",function(){var m=document.getElementById("content");m.focus();announce(STR.skip);});
+ document.getElementById("nav-programs").setAttribute("aria-label",STR.navMain);
+ document.getElementById("nav-views").setAttribute("aria-label",STR.navProgram);
+ tipEl=document.getElementById("tip");
+ document.addEventListener("mousemove",onTip);document.addEventListener("focusin",onTip);
+ document.addEventListener("mouseleave",onTip);document.addEventListener("focusout",onTip);
+ // A tooltip that only a mouse can dismiss is a trap for a keyboard reader: Escape closes it, and
+ // the next focusin re-opens it for the element that owns it (Audit #12).
+ document.addEventListener("keydown",function(e){if(e.key==="Escape")tipEl.hidden=true;});
+ if(!ROOM){document.getElementById("content").appendChild(el("p","muted",STR.emptyRoom));return;}
+ applyTheme();wireTheme();
+ document.getElementById("page-title").textContent=ROOM.meta.title||STR.appTitle;
+ document.getElementById("page-stamp").textContent=ROOM.meta.today;
+ buildAll();buildNav();stampRunningHead();
+ window.addEventListener("hashchange",onHash);
+ window.addEventListener("resize",onResize);
+ // Printing un-hides every view, so every chart must be drawn before the dialog opens.
+ var reopened=null;
+ window.addEventListener("beforeprint",function(){
+  var k,i,d;
+  // Captured ONCE per print. Firefox fires this again when a setting changes with the preview open;
+  // recapturing then found nothing closed and discarded the real list, so afterprint restored
+  // nothing and every evidence row stayed expanded permanently.
+  if(reopened===null){
+   reopened=[];d=document.querySelectorAll("details:not([open])");
+   for(i=0;i<d.length;i++){reopened.push(d[i]);d[i].open=true;}
+  }
+  for(i=0;i<PRINT_FILL.length;i++)PRINT_FILL[i].fill();
+  stampPrintIds();
+  for(k in VIEWS)if(VIEWS.hasOwnProperty(k)){VIEWS[k].hidden=false;relayoutAll(VIEWS[k]);}
+ });
+ window.addEventListener("afterprint",function(){
+  if(reopened)for(var i=0;i<reopened.length;i++)reopened[i].open=false;
+  reopened=null;
+  show(normalize(location.hash));
+ });
+ onHash();
+}
+start();
+})();
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 {
   "name": "forma-arch",
-  "version": "0.12.0",
-  "description": "Forma — present your architecture instead of slides. An interactive, stack-agnostic C4 explorer (context → container → component → leaf) generated from your code and kept true to it by a deterministic drift check.",
+  "version": "1.0.0",
+  "description": "Forma \u2014 present your architecture instead of slides. An interactive, stack-agnostic C4 explorer (context \u2192 container \u2192 component \u2192 leaf) generated from your code and kept true to it by a deterministic drift check.",
   "keywords": [
     "architecture",
     "c4",
@@ -42,8 +42,9 @@
   },
   "scripts": {
     "lint": "node scripts/lint.mjs",
-    "test": "node test/run.mjs",
-    "prepack": "node scripts/check-clean.mjs"
+    "test": "node scripts/palette.mjs --check && node test/run.mjs",
+    "prepack": "node scripts/check-clean.mjs",
+    "palette": "node scripts/palette.mjs --check"
   },
   "publishConfig": {
     "access": "public"

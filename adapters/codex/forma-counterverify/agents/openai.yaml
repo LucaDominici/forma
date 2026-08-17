@@ -1,0 +1,4 @@
+interface:
+  display_name: "Forma Counterverify"
+  short_description: "Counter-verify Forma claims with anchored evidence"
+  default_prompt: "Use $forma-counterverify to independently verify this Forma Control Room plan."

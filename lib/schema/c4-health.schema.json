@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/LucaDominici/forma/blob/main/lib/schema/c4-health.schema.json",
+  "title": "c4-health — evidence-anchored verdicts, one per audited issue",
+  "description": "Populated by the audit channel (lib/audit.mjs: auditPlan/applyVerdicts) — never by gen or check, and never network. `n` is an issue number, not a node id: one node can carry several verdicts, one per issue that touched it. `check`/`room` validate only that a verdict's evidence resolves — never the prose in `why`. Array shape (not an object keyed by issue number) so the existing hand-rolled schema walker (lib/validate.mjs, no patternProperties support) can validate it directly.",
+  "type": "object",
+  "required": ["verdicts"],
+  "additionalProperties": false,
+  "properties": {
+    "verdicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["n", "verdict", "why", "evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "n": { "type": "integer", "minimum": 1 },
+          "verdict": { "type": "string", "enum": ["ok", "warn", "bad"] },
+          "why": { "type": "string", "pattern": "\\S" },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["type", "ref"],
+              "additionalProperties": false,
+              "properties": {
+                "type": { "type": "string", "enum": ["path", "commit", "issue"] },
+                "ref": { "type": "string", "pattern": "\\S" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

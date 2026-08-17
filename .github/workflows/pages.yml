@@ -1,7 +1,6 @@
 name: Pages
-# Deploy the public demo (lib/viewer + the committed docs/demo model) to GitHub Pages on every
-# push to main. The viewer fetches ./c4-model.json (relative), so it works under the /forma/
-# project subpath.
+# Deploy the public C4 explorer demo to GitHub Pages on every push to main.
+# The viewer fetches ./c4-model.json (relative), so it works under the /forma/ project subpath.
 #
 # The demo is forma applied to a repository that is NOT forma (docs/SCOPE.md §1) — a tool proving
 # itself on 28 nodes written by its own author proves nothing a reader cares about. That repository
@@ -33,7 +32,14 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # fetch-depth: 0 — the issue-to-code link and the commit-drift disclosure are read from git
+      # history. On a shallow clone both come out empty, and the briefing would publish a confident
+      # "0% linked" that is an artifact of the checkout rather than a fact about the repository.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: 22
       - id: build
         name: Assemble site (viewer + committed demo model)
         run: |

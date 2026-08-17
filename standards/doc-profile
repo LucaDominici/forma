@@ -1,0 +1,48 @@
+# Overlays enabled for THIS repo, read by arbiter's doc-governance gates
+# (check-doc-set.mjs, check-doc-freshness.mjs). Forma is a zero-dependency CLI published to npm:
+# a library and a command, not a deployed service, and it stores nothing.
+#
+# Available overlays (they gate the conditional doc families in standards/gold-doc-set.yml):
+#   has-plugin-api  — project exposes a public plugin/extension API
+#   has-api         — project ships an HTTP/RPC API (docs/api reference)
+#   customer-data   — project stores/processes customer or personal data
+#   deploys         — project is deployed/operated (not a library)
+#   gxp             — regulated GxP context → GAMP 5 / 21 CFR Part 11
+#   has-ai          — ships AI/ML features → model card + AI risk assessment
+#   has-mobile      — ships a mobile app
+#   self-charter    — arbiter-specific; inert here by construction
+#
+# NONE are enabled, and each absence is a decision rather than an oversight:
+#
+#   has-plugin-api  Forma's extension point is a JSON contract, not an API surface: a project
+#                   changes lib/schema/c4-topology + overlays, never links against forma. The
+#                   Claude adapter in adapters/ is a wrapper over the CLI, explicitly "not the
+#                   product" (AGENTS.md).
+#   has-api         No socket is ever opened except by `forma verify` (I2). There is nothing to
+#                   document as an API reference.
+#   customer-data   Forma reads a repository and writes files beside it. It has no store, no
+#                   account, no telemetry, and no personal data of any kind. See PRIVACY.md.
+#   deploys         Forma is a library and a CLI. `forma serve` and `forma room --serve` bind
+#                   loopback on a developer's own machine; nothing is operated for anyone else,
+#                   so there is no SLO to commit to and no on-call to run. GitHub Pages carries a
+#                   demo artifact, not the product.
+#   gxp             Forma is not used in a regulated GxP context. The GAMP 5 V-model shapes the
+#                   traceability chain (ADR-0006) as a borrowed structure, not as a compliance
+#                   claim — see docs/GLOSSARY.md.
+#   has-ai          `gen --enrich` calls a model the user chooses, opt-in behind an explicit flag,
+#                   to fill prose holes only. Forma ships no model, trains nothing, and no LLM
+#                   output ever reaches a gate. A model card would describe a model that is not
+#                   ours; the honest disclosure lives in PRIVACY.md and docs/GOVERNANCE.md.
+#   has-mobile      No mobile app.
+overlays: []
+
+# Extra doc paths intentionally present that the audit should not flag.
+allow: []
+
+# tier_floor (T1b): a floor only RAISES the resolved column, never lowers it.
+#
+# Forma has one committer and is dogfooded first on that maintainer's own portfolio. The solo
+# column is the standard's anti-cathedral guardrail applied as written; publication to npm does not
+# manufacture a review team. The profile remains useful for optional local audits, while public CI
+# has no dependency on the private gate engines.
+tier_floor: solo
