@@ -2,7 +2,7 @@
 title: 'Delivery status'
 doc_version: '1.0.0'
 status: active
-last_review: '2026-08-10'
+last_review: '2026-08-17'
 owner: 'Luca Dominici'
 canonical_id: 'delivery'
 tags: ['audience/dev', 'kind/audit']
@@ -35,6 +35,7 @@ This file records realization status for the Control Room branch. A feature is l
 | Scheduled updates cannot silently skip counter-verification. | Refresh with `room update`, run the external adapter, then `room update --skip-verify --counter` | The counter pass regenerates a plan for every active programme and fails before composition when a configured result is missing; accepted contradictions are embedded in the recomposed briefing. The fixture exercises both success and missing-result failure. |
 | Room onboarding and refresh preserve operator decisions across repeated runs. | `forma room init` once, curate the manifest, then run it again or use `--scan`; refresh with `room update` | The suite covers seed, merge, `--today`, invalid dates, scan, verify→compose, `--skip-verify`, counter apply, and a map-less programme. A transient missing `origin` cannot erase an existing `ghRepo`, and `enabled:false`/taxonomy survive rediscovery. |
 | The Claude adapter drives onboarding through to a usable artifact. | Follow its `room init`, then `room update --out` recipe | The offline suite runs both commands against a fresh git target and requires the skill to return a Markdown link to the generated Control Room. |
+| The personal GitHub portfolio composes as one checked briefing. | `room init --scan --root /home/luca/work/repos --depth 1`, refresh snapshots, then `room update --skip-verify` | The 2026-08-17 run included `arbiter`, `forma`, `haben`, `ripme-main`, and `viafera`: 4,269 issues, 97 open, 1,362,899 output bytes. `room-presentable` passed all seven predicates and `forma check` passed against the same manifest. Repositories without a GitHub origin cannot produce the required fact base and were not silently invented. |
 | Requirements trace to work, and the gate fails at both ends. | `npm test` (the `rtm` block) | The test edits the fixture's design document four ways — a duplicate id, a reference to nothing, a decision landing on no work, and open work no requirement claims — and requires `forma check` to exit 1 each time, naming the document and the line ([`lib/rtm.mjs`](../lib/rtm.mjs), [`lib/check.mjs`](../lib/check.mjs)). |
 | The convention survives a document written by hand for prose reasons. | `npm test` (the `rtm-dogfood` block) | Forma's own `docs/PRD.md` §6 parses as nine traceable requirements, each carrying its verification and its source line, and parsing it twice gives an identical answer. |
 | "Where we were" needs no stored history. | `npm test` (the `views` block) | The whole series is a count over `createdAt`/`closedAt` in one snapshot; a snapshot predating those fields derives `null` rather than a flat line ([`lib/roomderive.mjs`](../lib/roomderive.mjs)). |
@@ -45,7 +46,7 @@ This file records realization status for the Control Room branch. A feature is l
 
 `npm test` is green, with nothing skipped. It was not, and the reason is recorded under known defects below.
 
-## Second-repository proof and remaining limits
+## Parametricity and portfolio proof
 
 On 2026-08-17 a temporary two-programme manifest composed Forma plus the clean `viafera` checkout at
 `9482686`. `verify` wrote Viafera's fact base outside both repositories (2,286 issues, 46 open, 11
@@ -53,6 +54,13 @@ milestones); no model was added or curated. Changing only the manifest produced 
 briefing, `forma check` stayed green, and all seven `room-presentable` predicates passed, including
 byte determinism and coverage of every open issue. This proves parametricity for a real second
 map-less repository without turning a private/local checkout into a public CI dependency (#72).
+
+The R5 run then used `room init --scan --depth 1` over the home repository root. Five personal
+GitHub checkouts were discovered, including two with curated maps and three map-less programmes.
+Snapshots and the generated briefing lived in `/tmp`, so none of the target checkouts was changed.
+Directories ending in `.worktrees` are now excluded by a regression test; the depth boundary also
+kept the nested work checkout outside the personal portfolio. The three direct local-only checkouts
+have no `ghRepo`, so including them would violate the manifest schema and make `verify` impossible.
 
 - Automatic taxonomy detection was measured across three repositories. It remains syntactic pattern matching, so each new repository still needs review of aliases, exclusions, minimum population, and severity order.
 - The evidence-gated health audit proves rejection mechanics. It does not prove that every human or agent verdict is substantively correct; the mechanism validates anchors, not judgment.
@@ -71,14 +79,14 @@ map-less repository without turning a private/local checkout into a public CI de
 
 ## The measured numbers
 
-All numeric entries in this table come from the seven branch commit messages or `docs/SCOPE-room.md`. No value is extrapolated.
+Every row names its measurement date or its durable source. No value is extrapolated.
 
 | Measurement | Value | Source and meaning |
 |---|---:|---|
-| Real repositories in the portfolio measurement | 3 | `haben`, `arbiter`, and `viafera`, from the portfolio derivation commit. |
-| Issues in that portfolio corpus | 4,141 | Whole-programme issue snapshots across those three repositories. |
-| Open issues in that corpus | 53 | Count reported by the portfolio derivation commit. |
-| Issues waiting on a human | 11 | Uses a declared rule per programme, never a global inferred label. |
+| Real repositories in the portfolio measurement | 5 | `arbiter`, `forma`, `haben`, `ripme-main`, and `viafera`, live run on 2026-08-17. |
+| Issues in that portfolio corpus | 4,269 | Whole-programme issue snapshots from the same run. |
+| Open issues in that corpus | 97 | Re-derived from those snapshots. |
+| Issues waiting on a human | 11 | Historical 2026-08-09 measurement using a declared rule per programme, never a global inferred label. |
 | `haben` issue-to-code coverage | 69% | Issues with at least one linked modeled node, measured 2026-08-09. |
 | `arbiter` issue-to-code coverage | 54% | Same definition and date. |
 | `viafera` issue-to-code coverage | 56% | Same definition and date. |
@@ -90,9 +98,9 @@ All numeric entries in this table come from the seven branch commit messages or 
 | Sweep commits excluded from issue attribution | 1% to 3% | Commits over the file threshold are named and counted but linked to no node. |
 | Sweep-size p99 across measured repositories | 64 to 101 files | Supports treating broad sweeps as non-attributable changes. |
 | Control Room routes | 2 + 5N | The composition contract: the briefing and the options view, plus five views per programme. Eight flat tabs were the ADR-0004 shape, replaced by ADR-0005 and re-nested by ADR-0007. |
-| Control Room locale keys | 179 | At en/it parity, and every one read by the template — both halves asserted by `npm test`. |
+| Control Room locale keys | 204 | At en/it parity, and every one read by the template — both halves asserted by `npm test`. |
 | Control Room charts | 13 | Each chart has a table twin carrying the same numbers. |
-| Generated Control Room artifact size | 975,986 bytes for three programmes | Measured on the generated portfolio briefing (haben, arbiter, viafera), architecture viewer embedded once. |
+| Generated Control Room artifact size | 1,362,899 bytes for five programmes | Measured on the 2026-08-17 portfolio briefing, architecture viewer embedded once. |
 
 ## Known defects, each with its evidence
 

@@ -1726,19 +1726,28 @@ const diffPaths = (a, b, at = '') => {
   }
   writeFileSync(join(root, 'one/docs/architecture/c4-model.json'), '{}')
   writeFileSync(join(root, 'one/docs/architecture/c4-topology.json'), '{}')
-  // A directory that is not a checkout, and a checkout Forma knows nothing about, are both skipped:
-  // guessing otherwise would put somebody's dotfiles into a briefing.
+  // R5-1: R4 made the model optional, so a GitHub checkout with neither generated input must still
+  // be onboarded. A local checkout with no resolvable ghRepo cannot produce the required snapshot.
+  const mapless = join(root, 'three')
+  mkdirSync(mapless, { recursive: true })
+  git(mapless, ['init', '-q', '.'])
+  git(mapless, ['remote', 'add', 'origin', 'git@github.com:acme/three.git'])
+  // A directory that is not a checkout and a checkout with no origin are both skipped.
   mkdirSync(join(root, 'not-a-checkout'), { recursive: true })
   const stranger = join(root, 'stranger')
   mkdirSync(stranger, { recursive: true })
   git(stranger, ['init', '-q', '.'])
+  const worktree = join(root, 'one.worktrees', 'topic')
+  mkdirSync(worktree, { recursive: true })
+  git(worktree, ['init', '-q', '.'])
+  git(worktree, ['remote', 'add', 'origin', 'git@github.com:acme/one.git'])
 
   let r = run(['scan', '--root', root, '--manifest', mf])
   if (r.status !== 0) die('scan: exit ' + r.status, r)
   let found = readJson(mf)
-  if (found.programs.map(function (p) { return p.id }).join() !== 'one,two') die('scan: expected exactly one,two — got ' + JSON.stringify(found.programs.map(function (p) { return p.id })))
+  if (found.programs.map(function (p) { return p.id }).join() !== 'one,three,two') die('scan: expected the map-less GitHub checkout too — got ' + JSON.stringify(found.programs.map(function (p) { return p.id })))
   if (found.programs[0].ghRepo !== 'acme/one') die('scan: ghRepo was not read from the git remote, got ' + found.programs[0].ghRepo)
-  if (!found.programs[0].model || found.programs[1].model) die('scan: model/topology must be named only for the checkout that has both')
+  if (!found.programs[0].model || found.programs[1].model || found.programs[2].model) die('scan: model/topology must be named only for the checkout that has both')
   if (found.today !== null) die('scan: today is the determinism anchor and must never be invented, got ' + JSON.stringify(found.today))
 
   // The rule that matters on the second run.
@@ -1775,7 +1784,7 @@ const diffPaths = (a, b, at = '') => {
   r = run(['room', 'init', '--scan', '--root', root, '--manifest', scannedManifest, '--today', '2026-08-17'])
   if (r.status !== 0) die('room init --scan: exit ' + r.status, r)
   const initializedScan = readJson(scannedManifest)
-  if (initializedScan.today !== '2026-08-17' || initializedScan.programs.map((p) => p.id).join() !== 'one,two') die('room init --scan: did not stamp today over the discovered set: ' + JSON.stringify(initializedScan))
+  if (initializedScan.today !== '2026-08-17' || initializedScan.programs.map((p) => p.id).join() !== 'three,two') die('room init --scan: did not stamp today over the valid discovered set: ' + JSON.stringify(initializedScan))
   r = run(['room', 'init', '--repo', join(root, 'one'), '--manifest', join(root, 'bad-today.json'), '--today', '17-08-2026'])
   if (r.status === 0 || existsSync(join(root, 'bad-today.json'))) die('room init: invalid today wrote a manifest')
 
