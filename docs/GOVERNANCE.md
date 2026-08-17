@@ -43,7 +43,8 @@ names the file that turns red.
 2. Make the change, with the check that would fail if it broke. For non-trivial logic that is a
    block in `test/run.mjs`; for a claim about the model it is an assertion in `forma check`.
 3. Run the gate locally: `npm run lint`, `npm test`, `node bin/forma.mjs check`.
-4. Open a PR. CI runs the same gate on Node 18/20/22.
+4. Open a PR. CI runs the source gate on Node 18/20/22 and the browser publication gate once on
+   dogfood plus the deterministic 2,500-issue fixture.
 5. Squash-merge. One logical change, one commit.
 
 The PR template asks for the blast radius and for the four boxes; those are the questions that have
@@ -60,6 +61,7 @@ settings.
 | `npm run lint` | a shipped file that does not parse |
 | `npm test` | a fixture regression, and every Control Room and traceability assertion |
 | `node bin/forma.mjs check` | the committed model disagreeing with the code, the documents, or a generated artifact |
+| `scripts/browser-gate.mjs` | runtime overflow, unbounded issue DOM, false rendered claim state, Axe A/AA findings, keyboard-inoperable maps, sub-44 targets or an unbounded/static-incomplete PDF |
 
 ## Amending an invariant
 

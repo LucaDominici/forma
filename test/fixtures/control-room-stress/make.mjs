@@ -21,16 +21,16 @@ export function makeStressRoom(total = 2500, openCount = 250) {
   for (let i = 0; i < open.length; i += 50) clusters.push({ key: `priority ${i / 50 + 1}`, issues: open.slice(i, i + 50) })
   const summary = {
     id: 'stress', ghRepo: 'example/stress', hasMap: false, open: openCount,
-    closed: total - openCount, total, blockedRule: { declared: true, inert: false, labels: ['needs-human'] },
-    blocked: 0, snapshotAgeDays: 0, milestones: [], workPerNode: null,
+    closed: total - openCount, total, blockedRule: { declared: false, inert: false, labels: [] },
+    blocked: null, snapshotAgeDays: 0, milestones: [], workPerNode: null,
     workPerNodeOpen: null, linkCoverage: null, commitDrift: null,
     taxonomy: { axes: [], other: [], clusterFamily: null },
   }
   return {
     meta: { title: 'Stress briefing', today: '2026-08-17', generatedFrom: 'stress/forma.room.json', excluded: [] },
     portfolio: {
-      totals: { programs: 1, issues: total, open: openCount, closed: total - openCount, blocked: 0, unknownRule: 0 },
-      programs: [summary], blocked: [], moving: [{ program: 'stress', count: openCount, byCluster: clusters }], landing: [{ program: 'stress', months: [] }],
+      totals: { programs: 1, issues: total, open: openCount, closed: total - openCount, blocked: null, unknownRule: 1 },
+      programs: [summary], blocked: [], moving: [{ program: 'stress', count: null, byCluster: null }], landing: [{ program: 'stress', months: [] }],
     },
     programs: [{
       id: 'stress', ghRepo: 'example/stress', hasMap: false,

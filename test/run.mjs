@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.
-import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, statSync, existsSync, renameSync, symlinkSync } from 'node:fs'
+import { spawn, spawnSync } from 'node:child_process'
+import { get } from 'node:http'
+import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, statSync, existsSync, renameSync, symlinkSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, dirname } from 'node:path'
+import { join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { materializeTimeline, validateModel } from '../lib/validate.mjs'
 import { indexByNode, statusFor, loadDocRows } from '../lib/docmap.mjs'
@@ -255,7 +256,7 @@ const diffPaths = (a, b, at = '') => {
     internal_server: { status2: 'in-progress', completion: 40 } } }, null, 2))
   r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model, '--status', status])
   if (r.status !== 0) die('gg gen exit ' + r.status, r)
-  r = run(['check', '--repo', REPO, '--model', model, '--topology', topo]); if (r.status !== 0) die('gg check exit ' + r.status, r)
+  r = run(['check', '--repo', REPO, '--model', model, '--topology', topo, '--status', status]); if (r.status !== 0) die('gg check exit ' + r.status, r)
   const m = readJson(model)
 
   // P0 — the premise: keeping kind:"container" preserves every import edge across the regrouping.
@@ -470,6 +471,21 @@ const diffPaths = (a, b, at = '') => {
   writeFileSync(outside, 'export const outside = true\n'); symlinkSync(outside, join(symlinkRepo, 'src', 'external.js'))
   writeFileSync(join(symlinkRepo, 'docs', 'FEATURES.md'), '| capability | status | code_ref |\n|---|---|---|\n| Escape | DONE | `src/external.js` |\n')
   if (!loadDocRows(symlinkRepo, ['docs/FEATURES.md'], true).some((row) => row.dead.length)) die('cold-start: a symlink escaped the doc evidence trust boundary')
+  r = run(['init', '--repo', symlinkRepo, '--out', join(tmp, 'symlink-topo.json'), '--force'])
+  if (r.status === 0 || !/symbolic links are not source evidence/.test(r.stderr || '')) die('cold-start: source discovery followed or silently ignored a symlink', r)
+
+  const deepRepo = join(tmp, 'deep-source'), deepDir = join(deepRepo, ...Array.from({ length: 18 }, (_, i) => 'd' + String(i + 1).padStart(2, '0')))
+  mkdirSync(deepDir, { recursive: true }); writeFileSync(join(deepDir, 'deep.ts'), 'export const deep = true\n')
+  const deepTopo = join(tmp, 'deep-topo.json'), deepModel = join(tmp, 'deep-model.json')
+  r = run(['init', '--repo', deepRepo, '--out', deepTopo, '--force']); if (r.status !== 0) die('cold-start: depth-18 source was not discovered', r)
+  r = run(['gen', '--repo', deepRepo, '--topology', deepTopo, '--out', deepModel]); if (r.status !== 0) die('cold-start: depth-18 source did not generate', r)
+  r = run(['check', '--repo', deepRepo, '--model', deepModel, '--topology', deepTopo]); if (r.status !== 0) die('cold-start: depth-18 source was absent from the closure gate', r)
+  if (!readJson(deepModel).nodes.some((n) => n.kind === 'leaf' && n.name === 'deep')) die('cold-start: depth-18 source was silently dropped from the model')
+  mkdirSync(join(deepRepo, 'docs'), { recursive: true }); symlinkSync(outside, join(deepRepo, 'docs/leak.md'))
+  const escapeTopology = readJson(deepTopo), escapeTopo = join(tmp, 'deep-escape-topo.json')
+  escapeTopology.docPath = 'docs/leak.md'; writeFileSync(escapeTopo, JSON.stringify(escapeTopology, null, 2))
+  r = run(['gen', '--repo', deepRepo, '--topology', escapeTopo, '--out', join(tmp, 'deep-escape-model.json')])
+  if (r.status === 0 || !/escapes repository/.test(r.stderr || '')) die('cold-start: gen read a topology document through an escaping symlink', r)
   if (!/frontend/.test(sources) || !/backend/.test(sources)) die('cold-start: backend/frontend roots not seeded')
   for (const part of ['androidTest', 'testFixtures', 'uiTests']) if (!exclusions.some((x) => String(x.dir || '').includes(part) && x.reason)) die('cold-start: missing reasoned exclusion for ' + part)
   if (!exclusions.some((x) => x.match && x.reason)) die('cold-start: co-located test files have no reasoned exclusion')
@@ -753,6 +769,30 @@ const diffPaths = (a, b, at = '') => {
   if (r.status === 0) die('WP-A5: a missing gh must fail loud')
   if (readFileSync(model, 'utf-8') !== before) die('WP-A5: model was modified despite the gh failure')
 
+  const issuesPath = join(repo, 'docs/architecture/c4-issues.json'), pairBeforeIssues = readFileSync(issuesPath, 'utf-8'), pairBeforeModel = readFileSync(model, 'utf-8')
+  const pairStub = join(tmp, 'stub-gh-pair-failure.mjs')
+  writeFileSync(pairStub, `import { mkdirSync, writeFileSync } from 'node:fs'; import { join } from 'node:path'; const backup=${JSON.stringify(model)}+'.forma-'+process.ppid+'-1.bak'; mkdirSync(backup,{recursive:true}); writeFileSync(join(backup,'occupied'),'x'); process.stdout.write(JSON.stringify([{number:7,title:'closed',state:'CLOSED',milestone:null,labels:[]}]))\n`)
+  r = run(['verify', '--repo', repo, '--model', model, '--gh-repo', 'acme/thing', '--gh-cmd', process.execPath + ' ' + pairStub])
+  if (r.status === 0) die('WP-A5: injected second-output publication failure unexpectedly succeeded')
+  if (readFileSync(issuesPath, 'utf-8') !== pairBeforeIssues || readFileSync(model, 'utf-8') !== pairBeforeModel) die('WP-A5: snapshot/model pair was partially published')
+  for (const name of readdirSync(dirname(model))) if (name.startsWith(basename(model) + '.forma-')) rmSync(join(dirname(model), name), { recursive: true, force: true })
+
+  const same = join(tmp, 'verify-same.json'), sameAlias = join(tmp, 'verify-same-alias.json')
+  writeFileSync(same, pairBeforeModel); symlinkSync(same, sameAlias)
+  const sameBefore = readFileSync(same, 'utf-8')
+  r = run(['verify', '--repo', repo, '--model', same, '--issues', sameAlias, '--gh-repo', 'acme/thing', '--gh-cmd', 'forma-no-such-gh-binary'])
+  if (r.status === 0 || !/resolve to the same file/.test(r.stderr || '')) die('WP-A5: aliased model/snapshot collision was not rejected before fetch', r)
+  if (readFileSync(same, 'utf-8') !== sameBefore || readdirSync(dirname(same)).some((name) => name.startsWith(basename(same) + '.forma-'))) die('WP-A5: rejected model/snapshot collision changed bytes or left staging files')
+
+  const invalidStub = join(tmp, 'stub-gh-invalid.mjs'), duplicateStub = join(tmp, 'stub-gh-duplicate.mjs')
+  writeFileSync(invalidStub, `process.stdout.write(JSON.stringify([{title:'missing number',state:'bogus',milestone:null,labels:[]}]))\n`)
+  const invalidBefore = [issuesPath, model].map((path) => readFileSync(path, 'utf-8'))
+  r = run(['verify', '--repo', repo, '--model', model, '--issues', issuesPath, '--gh-repo', 'acme/thing', '--gh-cmd', process.execPath + ' ' + invalidStub])
+  if (r.status === 0 || !/invalid issue snapshot/.test(r.stderr || '') || [issuesPath, model].some((path, i) => readFileSync(path, 'utf-8') !== invalidBefore[i])) die('WP-A5: invalid produced snapshot was published or changed the model', r)
+  writeFileSync(duplicateStub, `process.stdout.write(JSON.stringify([{number:7,title:'one',state:'OPEN',milestone:null,labels:[]},{number:7,title:'two',state:'CLOSED',milestone:null,labels:[]}]))\n`)
+  r = run(['verify', '--repo', repo, '--model', model, '--issues', issuesPath, '--gh-repo', 'acme/thing', '--gh-cmd', process.execPath + ' ' + duplicateStub])
+  if (r.status === 0 || !/duplicate issue number/.test(r.stderr || '') || [issuesPath, model].some((path, i) => readFileSync(path, 'utf-8') !== invalidBefore[i])) die('WP-A5: duplicate issue numbers were published or changed the model', r)
+
   // A full first page is not proof of completeness. Verify retries before writing, and a failed
   // retry must leave an existing snapshot byte-identical.
   const adaptiveRepo = join(tmp, 'verify-adaptive'), adaptiveIssues = join(adaptiveRepo, 'issues.json')
@@ -785,6 +825,31 @@ const diffPaths = (a, b, at = '') => {
   const roomBeforeFailedUpdate = readFileSync(maplessRoom, 'utf-8')
   r = run(['room', 'update', '--manifest', maplessManifest, '--out', maplessRoom, '--gh-cmd', adaptiveStub + ' fail', '--limit', '2'])
   if (r.status === 0 || readFileSync(maplessRoom, 'utf-8') !== roomBeforeFailedUpdate) die('WP-A5: room update published after verify failed', r)
+
+  const portfolio = join(tmp, 'verify-portfolio'), one = join(portfolio, 'one'), two = join(portfolio, 'two'), portfolioManifest = join(portfolio, 'forma.room.json'), portfolioRoom = join(portfolio, 'room.html')
+  mkdirSync(one, { recursive: true }); mkdirSync(two, { recursive: true })
+  const snapshot = (gh, n) => ({ fetchedAt: '2026-08-17T00:00:00Z', ghRepo: gh, truncated: false, issues: [{ n, title: gh, state: 'OPEN', ms: null, labels: [] }], milestones: [] })
+  writeFileSync(join(one, 'issues.json'), JSON.stringify(snapshot('acme/one', 1), null, 2)); writeFileSync(join(two, 'issues.json'), JSON.stringify(snapshot('acme/two', 2), null, 2))
+  writeFileSync(portfolioManifest, JSON.stringify({ today: '2026-08-17', programs: [{ id: 'one', ghRepo: 'acme/one', repo: 'one', issues: 'one/issues.json' }, { id: 'two', ghRepo: 'acme/two', repo: 'two', issues: 'two/issues.json' }] }, null, 2))
+  r = run(['room', '--manifest', portfolioManifest, '--out', portfolioRoom]); if (r.status !== 0) die('portfolio atomicity fixture did not compose', r)
+  const selectiveStub = join(tmp, 'stub-gh-selective.mjs')
+  writeFileSync(selectiveStub, `const a=process.argv;const repo=a[a.indexOf('--repo')+1];if(repo==='acme/two'){process.stderr.write('second programme failed');process.exit(1)}process.stdout.write(JSON.stringify([{number:1,title:'updated',state:'OPEN',milestone:null,labels:[]}]))\n`)
+  const oneBefore = readFileSync(join(one, 'issues.json'), 'utf-8'), twoBefore = readFileSync(join(two, 'issues.json'), 'utf-8'), roomBefore = readFileSync(portfolioRoom, 'utf-8')
+  r = run(['room', 'update', '--manifest', portfolioManifest, '--out', portfolioRoom, '--gh-cmd', process.execPath + ' ' + selectiveStub])
+  if (r.status === 0) die('portfolio atomicity: a later verify failure unexpectedly succeeded')
+  if (readFileSync(join(one, 'issues.json'), 'utf-8') !== oneBefore || readFileSync(join(two, 'issues.json'), 'utf-8') !== twoBefore || readFileSync(portfolioRoom, 'utf-8') !== roomBefore) die('portfolio atomicity: a later failure published an earlier programme or HTML')
+
+  const collisionManifest = join(portfolio, 'collision.json'), shared = join(portfolio, 'shared.json')
+  writeFileSync(shared, oneBefore)
+  writeFileSync(collisionManifest, JSON.stringify({ today: '2026-08-17', programs: [{ id: 'one', ghRepo: 'acme/one', repo: 'one', issues: 'shared.json' }, { id: 'two', ghRepo: 'acme/two', repo: 'two', issues: 'shared.json' }] }, null, 2))
+  r = run(['room', 'update', '--manifest', collisionManifest, '--out', portfolioRoom, '--gh-cmd', GH])
+  if (r.status === 0 || !/write target collision/.test(r.stderr || '') || readFileSync(shared, 'utf-8') !== oneBefore) die('portfolio atomicity: colliding snapshot targets were not rejected before writing', r)
+  r = run(['room', 'update', '--manifest', portfolioManifest, '--out', join(one, 'issues.json'), '--skip-verify'])
+  if (r.status === 0 || !/write target collision/.test(r.stderr || '') || readFileSync(join(one, 'issues.json'), 'utf-8') !== oneBefore) die('portfolio atomicity: Control Room output could overwrite a source input', r)
+  const duplicateManifest = join(portfolio, 'duplicate.json')
+  writeFileSync(duplicateManifest, JSON.stringify({ today: '2026-08-17', programs: [{ id: 'same', ghRepo: 'acme/one', repo: 'one', issues: 'one/issues.json' }, { id: 'same', ghRepo: 'acme/two', repo: 'two', issues: 'two/issues.json' }] }, null, 2))
+  r = run(['room', '--manifest', duplicateManifest, '--out', join(portfolio, 'duplicate-room.html')])
+  if (r.status === 0 || !/duplicate programme id/.test(r.stderr || '')) die('portfolio identity: duplicate programme ids were accepted', r)
   console.log('  ok verify — WP-A5 closed→done with dated evidence, open untouched, idempotent, gh failure leaves the model intact')
 }
 
@@ -1310,7 +1375,7 @@ const diffPaths = (a, b, at = '') => {
   r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model2, '--status', status]); if (r.status !== 0) die('dm gen --status exit ' + r.status, r)
   const over = readJson(model2).nodes.find((n) => n.id === 'billing')
   if (over.status2 !== 'problem' || over.completion !== 10) die(`docmap: the curated overlay lost to the derived state (${over.status2}/${over.completion})`)
-  r = run(['check', '--repo', REPO, '--model', model2, '--topology', topo])
+  r = run(['check', '--repo', REPO, '--model', model2, '--topology', topo, '--status', status])
   if (r.status !== 0) die('docmap: check flagged an overlay-owned field as doc drift', r)
 
   // The gate — a derived percentage nobody re-derives is a false green. Tamper with the committed
@@ -1607,11 +1672,17 @@ const diffPaths = (a, b, at = '') => {
   if (!betaSummary || betaSummary.blocked !== null) die('room: beta unknown blocking state collapsed to a number: ' + JSON.stringify(betaSummary))
   if (!betaMoving || betaMoving.count !== null || betaMoving.byCluster !== null) die('room: beta moving claim collapsed unknown into an empty queue: ' + JSON.stringify(betaMoving))
   if (A.derived.kpis.snapshotAgeDays !== 1 || betaSummary.snapshotAgeDays !== 1) die('room: snapshot civil age was not derived consistently')
-  if (daysBetween('2026-08-17T23:59:59Z', '2026-08-17') !== 0 || daysBetween('not-a-date', '2026-08-17') !== null) die('room: civil date comparison regressed to timestamp rounding')
+  if (daysBetween('2026-08-17T23:59:59Z', '2026-08-17') !== 0 || daysBetween('2026-08-18', '2026-08-17') !== -1 || daysBetween('not-a-date', '2026-08-17') !== null) die('room: civil date comparison regressed to timestamp rounding or lost future-date state')
 
   const presentable = (file) => spawnSync(process.execPath, [join(HERE, '..', 'scripts', 'room-presentable.mjs'), '--room', file, '--manifest', manifest], { encoding: 'utf-8' })
   r = presentable(roomHtml)
   if (r.status !== 0) die('room-presentable: the generated briefing does not pass its own publication gate\n' + (r.stdout || '') + (r.stderr || ''))
+  const futureSnapshot = join(R, 'future-snapshot.json'), futureManifest = join(R, 'future-manifest.json'), futureHtml = join(R, 'future.html')
+  const future = readJson(join(alpha, 'issues.json')); future.fetchedAt = '2026-08-11T00:00:00Z'; writeFileSync(futureSnapshot, JSON.stringify(future, null, 2))
+  const fm = readJson(manifest); fm.programs[0].issues = 'future-snapshot.json'; writeFileSync(futureManifest, JSON.stringify(fm, null, 2))
+  r = run(['room', '--manifest', futureManifest, '--out', futureHtml]); if (r.status !== 0) die('room: future snapshot state did not compose explicitly', r)
+  r = presentable(futureHtml)
+  if (r.status === 0 || !/no gh snapshot is stale/.test(r.stdout || '')) die('room-presentable: a snapshot after the briefing date was accepted as fresh', r)
 
   const checkRoom = (file, mf) => run(['check', '--repo', alpha, '--model', model, '--topology', topo, '--room', file, '--manifest', mf || manifest])
   r = checkRoom(roomHtml)
@@ -1634,6 +1705,10 @@ const diffPaths = (a, b, at = '') => {
   if (betaAt < 0) die('room: beta is not present in the artifact at all')
   r = checkRoom(tamperedB)
   if (r.status === 0) die('room: check passed an altered aggregate on the programme with no map — the map-less path is ungated')
+  const tamperedPortfolio = join(R, 'tampered-portfolio.html')
+  tamper(roomHtml, tamperedPortfolio, '"totals":{"programs":2', '"totals":{"programs":9')
+  r = checkRoom(tamperedPortfolio)
+  if (r.status === 0 || !/portfolio aggregates/.test(r.stderr || '')) die('room: check passed hand-altered portfolio aggregates', r)
 
   // A manifest and an artifact that disagree about which programmes exist is drift, not a detail.
   const manifestGamma = join(R, 'manifest-gamma.json')
@@ -1652,6 +1727,8 @@ const diffPaths = (a, b, at = '') => {
   writeFileSync(mfTrunc, JSON.stringify(mt, null, 2))
   r = run(['room', '--manifest', mfTrunc, '--out', join(R, 'never.html')])
   if (r.status === 0) die('room: composed a briefing from a snapshot flagged truncated')
+  r = checkRoom(roomHtml, mfTrunc)
+  if (r.status === 0 || !/snapshot is truncated/.test(r.stderr || '')) die('room: check accepted a truncated manifest snapshot', r)
 
   // The traceability chain. alpha declares two documents: docs/PRD.md carries R-* requirements,
   // docs/DESIGN.md carries D-* decisions that satisfy them and land on issues. Together the last
@@ -1666,6 +1743,17 @@ const diffPaths = (a, b, at = '') => {
     if (matrix.orphans[hole].length) die(`rtm: the fixture matrix is complete, but ${hole} is not empty: ` + JSON.stringify(matrix.orphans[hole]))
   }
   if (B.derived.rtm !== null) die('rtm: beta declares no rtm block, so it must derive null — opt-in by presence (I11)')
+
+  const epistemic = join(R, 'rtm-epistemic')
+  mkdirSync(join(epistemic, 'docs'), { recursive: true })
+  writeFileSync(join(epistemic, 'docs', 'UNKNOWN.md'), '| id | description |\n|---|---|\n| R-1 | A requirement |\n')
+  let measured = deriveRtm({ repo: epistemic, rtm: { docs: [{ path: 'docs/UNKNOWN.md' }] }, issuesSnapshot: { issues: [] } })
+  if (measured.coverage.pct !== null || measured.coverage.unknown !== 1) die('rtm: an absent issue/verification column became numeric coverage: ' + JSON.stringify(measured.coverage))
+  writeFileSync(join(epistemic, 'docs', 'TESTS.md'), '| req_id | description | tests_ref |\n|---|---|---|\n| R-1 | Proven | `test/a.test.js` |\n| R-2 | Gap | — |\n| R-3 | Gap | - |\n| R-4 | Gap | none |\n| R-5 | Gap | n/a |\n| R-6 | Gap | NA |\n| R-7 | Gap | TBD |\n| R-8 | Gap | null |\n| R-9 | Gap | – |\n')
+  measured = deriveRtm({ repo: epistemic, rtm: { docs: [{ path: 'docs/TESTS.md', id: 'req_id', describe: 'description' }] }, issuesSnapshot: { issues: [] } })
+  if (measured.coverage.pct !== 11 || measured.coverage.verifiedOnly !== 1 || measured.requirements.slice(1).some((row) => row.verified.length)) die('rtm: conventional tests_ref verification or absence markers were not measured deterministically: ' + JSON.stringify(measured.coverage))
+  measured = deriveRtm({ repo: epistemic, rtm: { docs: [{ path: 'docs/TESTS.md', id: 'req_id', describe: 'description' }], requireIssuesFrom: ['docs/TYPO.md'] }, issuesSnapshot: { issues: [] } })
+  if (measured.scopeComplete || !measured.skipped.some((s) => s.path === 'docs/TYPO.md' && /not declared/.test(s.why))) die('rtm: an invalid requireIssuesFrom path claimed complete scope: ' + JSON.stringify(measured))
 
   // Each hole, one at a time, edited into the document rather than into the artifact: this is the
   // chain failing at its source, which is where a reader has to fix it.
@@ -1754,6 +1842,10 @@ const diffPaths = (a, b, at = '') => {
   const tinyDocs = roomOf(join(R, 'tiny.html')).programs[0].docs
   if (tinyDocs.embedded.length) die('room: a document was embedded past the byte budget')
   if (!tinyDocs.listed.some(function (d) { return /budget/.test(d.why) })) die('room: a document dropped for size must be listed with that as its reason, got ' + JSON.stringify(tinyDocs.listed))
+  const zero = readJson(manifest); zero.docs = { maxBytes: 0 }
+  const zeroManifest = join(R, 'manifest-zero.json'); writeFileSync(zeroManifest, JSON.stringify(zero, null, 2))
+  r = run(['room', '--manifest', zeroManifest, '--out', join(R, 'zero.html')])
+  if (r.status !== 0 || roomOf(join(R, 'zero.html')).programs[0].docs.embedded.length) die('room: maxBytes 0 was replaced by the default budget', r)
 
   // A programme turned off is excluded and NAMED. Absent and deliberately excluded differ (I7).
   if (ROOM.programs.some(function (p) { return p.id === 'gamma' })) die('room: a programme with enabled:false was composed anyway')
@@ -1818,11 +1910,15 @@ const diffPaths = (a, b, at = '') => {
   mkdirSync(worktree, { recursive: true })
   git(worktree, ['init', '-q', '.'])
   git(worktree, ['remote', 'add', 'origin', 'git@github.com:acme/one.git'])
+  const outside = join(tmp, 'scan-outside')
+  mkdirSync(outside, { recursive: true }); git(outside, ['init', '-q', '.']); git(outside, ['remote', 'add', 'origin', 'git@github.com:acme/outside.git'])
+  symlinkSync(outside, join(root, 'linked-outside'), 'dir')
 
   let r = run(['scan', '--root', root, '--manifest', mf])
   if (r.status !== 0) die('scan: exit ' + r.status, r)
   let found = readJson(mf)
   if (found.programs.map(function (p) { return p.id }).join() !== 'one,three,two') die('scan: expected the map-less GitHub checkout too — got ' + JSON.stringify(found.programs.map(function (p) { return p.id })))
+  if (found.programs.some((p) => p.ghRepo === 'acme/outside')) die('scan: followed a linked checkout outside the discovery root')
   if (found.programs[0].ghRepo !== 'acme/one') die('scan: ghRepo was not read from the git remote, got ' + found.programs[0].ghRepo)
   if (!found.programs[0].model || found.programs[1].model || found.programs[2].model) die('scan: model/topology must be named only for the checkout that has both')
   if (found.today !== null) die('scan: today is the determinism anchor and must never be invented, got ' + JSON.stringify(found.today))
@@ -1878,6 +1974,22 @@ const diffPaths = (a, b, at = '') => {
   const spoke = (served.stdout || '') + (served.stderr || '')
   if (!/serving http:\/\/127\.0\.0\.1:\d+/.test(spoke)) die('room --serve did not bind loopback: ' + spoke)
   if (/0\.0\.0\.0|::/.test(spoke)) die('room --serve bound something wider than loopback: ' + spoke)
+  const standalone = spawnSync(process.execPath, [join(HERE, '..', 'lib', 'serve.mjs'), '--repo', join(root, 'one'), '--port', '0'], { encoding: 'utf-8', timeout: 3000 })
+  const standaloneSpoke = (standalone.stdout || '') + (standalone.stderr || '')
+  if (!/http:\/\/127\.0\.0\.1:\d+/.test(standaloneSpoke) || /0\.0\.0\.0|::/.test(standaloneSpoke)) die('forma serve did not bind loopback at runtime: ' + standaloneSpoke)
+
+  const secret = join(tmp, 'serve-secret.txt'), leak = join(root, 'one/docs/architecture/leak.txt')
+  writeFileSync(secret, 'outside bytes'); symlinkSync(secret, leak)
+  const live = spawn(process.execPath, [join(HERE, '..', 'lib', 'serve.mjs'), '--repo', join(root, 'one'), '--port', '0'], { stdio: ['ignore', 'pipe', 'pipe'] })
+  const port = await new Promise((resolvePort, reject) => { let output = ''; const timer = setTimeout(() => reject(new Error('serve start timeout')), 3000); live.stdout.on('data', (chunk) => { output += chunk; const match = /127\.0\.0\.1:(\d+)/.exec(output); if (match) { clearTimeout(timer); resolvePort(Number(match[1])) } }); live.on('exit', () => reject(new Error('serve exited before listening'))) })
+  const request = (path) => new Promise((resolveResponse, reject) => get(`http://127.0.0.1:${port}${path}`, (response) => { let body = ''; response.on('data', (chunk) => { body += chunk }); response.on('end', () => resolveResponse({ status: response.statusCode, body })) }).on('error', reject))
+  const leaked = await request('/leak.txt')
+  const directory = await request('/schema')
+  const malformed = await request('/%E0%A4%A')
+  const stillAlive = await request('/c4-topology.json')
+  live.kill()
+  if (leaked.status !== 403 || leaked.body.includes('outside bytes')) die('forma serve followed a symlink outside docs/architecture: ' + JSON.stringify(leaked))
+  if (directory.status !== 404 || malformed.status !== 400 || stillAlive.status !== 200) die('forma serve did not survive directory/malformed requests: ' + JSON.stringify({ directory, malformed, stillAlive }))
   console.log('  ok scan+serve — discovery merges instead of replacing, an excluded programme stays excluded, and serve binds loopback only')
 }
 
@@ -2034,18 +2146,41 @@ const diffPaths = (a, b, at = '') => {
   if (!/function workflow\(/.test(template) || !/d\.open&&!d\.getAttribute\("data-filled"\)/.test(template)) die('room-tech: supporting workflows are not lazy')
   const pageSize = Number((/var ISSUE_PAGE_SIZE=(\d+)/.exec(template) || [])[1])
   if (!(pageSize > 0 && pageSize <= 40) || !/function pagedList\(/.test(template)) die('room-dom: issue rendering has no bounded pager')
+  if (!/function pagedTable\(/.test(template) || !/pagedTable\(mp\.body,wrap,tbody,rtm\.requirements/.test(template)) die('room-dom: the RTM matrix bypasses the bounded pager')
   for (const fn of ['renderQueue', 'renderKanban']) {
     const body = (new RegExp('function ' + fn + '\\([^]*?\\n}\\n').exec(template) || [])[0] || ''
     if (!/pagedList\(/.test(body)) die('room-dom: ' + fn + ' bypasses the bounded pager')
   }
   if (!/for\(i=1;i<names\.length;i\+\+\)/.test(template) || !/if\(items\.length\)/.test(template) || !/closedArchived/.test(template)) die('room-kanban: empty states or closed archive are still mounted as full lanes')
   if (!/id="mobile-program"/.test(template) || !/id="mobile-view"/.test(template)) die('room-mobile: native route controls are absent')
-  if (!/\.screen-list,\.workflow\{display:none!important\}/.test(template) || /details:not\(\[open\]\)/.test(template)) die('room-print: interactive archives can expand into print')
+  if (!/\.screen-list,[^{]*\.workflow[^{]*\{display:none!important\}/.test(template) || /details:not\(\[open\]\)/.test(template)) die('room-print: interactive archives can expand into print')
   if (!/execHeadlineUnknown/.test(template) || !/techHeadlineUnknown/.test(template) || !/thesisUnknown/.test(template)) die('room-truth: unknown claims have no explicit headline path')
   if (!/i===4&&!blockedClaim\.known\?null/.test(template)) die('room-truth: Tech maps an unknown blocking rule back to a measured zero')
   if (!/\.pager button\{min-height:44px/.test(template)) die('room-mobile: pager target is below 44px')
   if (!/\.skip\{[^}]*min-height:44px/.test(template)) die('room-mobile: skip target is below 44px')
+  if (!/if\(a\.r!=null\)a\.r=Math\.max\(22,a\.r\)/.test(template) || !/if\(w<44\)/.test(template) || !/if\(h<44\)/.test(template)) die('room-a11y: chart focus targets can shrink below 44px')
   if (!/\.prov\{overflow:visible;text-overflow:clip;white-space:normal/.test(template)) die('room-mobile: provenance is truncated without a disclosure')
+  if (!/function mapTable\(/.test(template) || !/pagedList\(np\.body,nodes/.test(template) || !/pagedList\(ep\.body,edges/.test(template)) die('map-a11y: the screen-readable node/relationship twin is absent or unbounded')
+  if (!/limit=Math\.min\(12,docs\.embedded\.length\)/.test(template) || !/STR\.docsPrintSummary/.test(template)) die('room-print: canon documents can expand the bounded briefing')
+  const focusBlock = (/function focusScrollers\([^]*?\n}\n/.exec(template) || [])[0] || ''
+  const focusScrollers = new Function(focusBlock + '; return focusScrollers')()
+  const attrs = { 'aria-labelledby': 'panel-title' }
+  const scroller = {
+    scrollHeight: 100, clientHeight: 40, scrollWidth: 40, clientWidth: 40,
+    getAttribute: (name) => attrs[name] || null,
+    setAttribute: (name, value) => { attrs[name] = value },
+    removeAttribute: (name) => { delete attrs[name] },
+  }
+  focusScrollers({ querySelectorAll: () => [scroller] })
+  if (attrs.tabindex !== '0' || attrs.role !== 'region') die('room-a11y: a named overflow scroller is focusable without a nameable region role')
+  scroller.scrollHeight = scroller.clientHeight; focusScrollers({ querySelectorAll: () => [scroller] })
+  if (attrs.tabindex || attrs.role) die('room-a11y: a scroller that stopped overflowing kept a stale focus stop or nested region')
+  const map = readFileSync(join(HERE, '..', 'lib/viewer/c4-hologram.html'), 'utf-8')
+  if (!/id="stage" role="region"/.test(map) || !/stage\.setAttribute\("aria-label",STR\.stageLabel\)/.test(map)) die('map-a11y: the pan surface is not a named region')
+  if (!/class="edgehit"[^>]*tabindex="0" role="img" aria-label=/.test(map)) die('map-a11y: relationships remain hover-only')
+  if (!/@media\(max-width:600px\)\{[\s\S]*button,select\{min-height:44px\}/.test(map)) die('map-mobile: embedded controls are below the 44px target baseline')
+  if (!/scrollLeft=same\?oldLeft:Math\.max\(0,\(st2\.scrollWidth-st2\.clientWidth\)\/2\)/.test(map)) die('map-mobile: first render does not centre the scrollable architecture canvas')
+  if (!/function closeDetail\(/.test(map) || !/DETAIL_RETURN=document\.activeElement/.test(map) || !/closeDetail\(\);return;/.test(map)) die('map-a11y: detail focus and Escape return are not explicit')
   const composer = readFileSync(join(HERE, '..', 'lib/room.mjs'), 'utf-8')
   if (!/theme: manifest\.theme \|\| 'light'/.test(composer)) die('room-theme: a fresh client briefing does not default to light')
   console.log('  ok room-workflow — five-view IA, legacy redirects, bounded lazy evidence, mobile and print contracts')
@@ -2081,8 +2216,20 @@ const diffPaths = (a, b, at = '') => {
   if (!/googleapis\/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7/.test(release) || !/release-type:\s*node/.test(release)) die('release: conventional versioning is not pinned to Release Please')
   if (!/git tag --list 'v1\.\*'/.test(release)) die('release: automated bumps must wait for the deliberate 1.0 bootstrap tag')
   if (!/release_created/.test(release) || !/id-token:\s*write/.test(release)) die('release: automatic publication is not gated by a created release and npm OIDC')
+  if (!/release-gate:[\s\S]*git merge-base --is-ancestor HEAD origin\/main/.test(release) || !/Pack and install the exact candidate/.test(release) || !/Replay the installed customer path/.test(release)) die('release: publication is not gated by an installed exact-tag customer replay')
+  if (!/publish:[\s\S]*needs:\s*\[release-please, release-gate\][\s\S]*needs\.release-gate\.result == 'success'/.test(release)) die('release: publish can bypass the exact-tag acceptance job')
   if (/npm@latest/.test(release) || !/npm@11\.16\.0/.test(release)) die('release: the npm publishing CLI must be an explicit supported version, never latest')
   if (!/package-manager-cache:\s*false/.test(release)) die('release: release builds must not reuse a package-manager cache')
+  const partial = join(tmp, 'partial-package')
+  mkdirSync(join(partial, 'scripts'), { recursive: true }); mkdirSync(join(partial, 'lib'), { recursive: true })
+  cpSync(join(HERE, '..', 'scripts', 'check-clean.mjs'), join(partial, 'scripts', 'check-clean.mjs'))
+  const partialGuard = spawnSync(process.execPath, [join(partial, 'scripts', 'check-clean.mjs')], { encoding: 'utf-8' })
+  if (partialGuard.status === 0 || !/missing:/.test(partialGuard.stderr || '')) die('release: prepack guard fabricated missing top-level runtime files', partialGuard)
+  const fake = join(tmp, 'symlink-package'), outsideBin = join(tmp, 'outside-bin.mjs')
+  mkdirSync(join(fake, 'scripts'), { recursive: true }); mkdirSync(join(fake, 'bin'), { recursive: true }); mkdirSync(join(fake, 'lib'), { recursive: true })
+  cpSync(join(HERE, '..', 'scripts', 'check-clean.mjs'), join(fake, 'scripts', 'check-clean.mjs')); writeFileSync(outsideBin, '#!/usr/bin/env node\n'); symlinkSync(outsideBin, join(fake, 'bin/forma.mjs'))
+  const symlinkGuard = spawnSync(process.execPath, [join(fake, 'scripts', 'check-clean.mjs')], { encoding: 'utf-8' })
+  if (symlinkGuard.status === 0 || !/stray artifacts[\s\S]*bin\/forma\.mjs/.test(symlinkGuard.stderr || '')) die('release: prepack accepted a symlinked top-level runtime entry', symlinkGuard)
   console.log('  ok release — conventional commits create reviewable version bumps and OIDC publishes only matching releases')
 }
 
@@ -2112,7 +2259,7 @@ const diffPaths = (a, b, at = '') => {
   if (!/data-drill="1"/.test(holo) || !/stack\.push\(id\)/.test(holo)) die('room-c4-drill: the embedded hologram cannot drill into children')
   if (!/tabindex="0" focusable="true" role="button" aria-label=/.test(holo) || !/stage\.addEventListener\("keydown"/.test(holo) || !/ev\.key!=="Enter"&&ev\.key!==" "/.test(holo)) die('room-c4-drill: SVG nodes are not keyboard controls')
   if (!/class="detaildrill"/.test(holo) || !/drillTo\(n\.id,true\)/.test(holo)) die('room-c4-drill: touch inspection has no 44px drill action')
-  if (!/@media\(max-width:600px\)\{#stage\{overflow:auto/.test(holo) || !/liveSvg\.style\.width=Math\.ceil\(vw\)/.test(holo)) die('room-c4-drill: mobile still shrinks the entire map instead of panning at readable scale')
+  if (!/@media\(max-width:600px\)\{[\s\S]*?#stage\{overflow:auto/.test(holo) || !/liveSvg\.style\.width=Math\.ceil\(vw\)/.test(holo)) die('room-c4-drill: mobile still shrinks the entire map instead of panning at readable scale')
   if (!/crumbLevel\+"-L"/.test(holo)) die('room-c4-drill: the embedded hologram does not expose its C4 level')
   if (!/\| D-07 \|[^\n]*embedded hologram[^\n]*sufficient/i.test(decisions)) die('room-c4-drill: the delegated owner decision is not recorded')
   console.log('  ok room-c4-drill — the embedded map is the ratified L1→L4 drill surface')
@@ -2144,6 +2291,18 @@ const diffPaths = (a, b, at = '') => {
   // Parsing twice must give the identical answer, or `check` false-reds on an untouched tree.
   const again = parseRequirements(repo, [{ path: 'docs/PRD.md', idPattern: '^R-\\d+$', role: 'requirement' }], tracked)
   if (JSON.stringify(again.rows) !== JSON.stringify(rows)) die('rtm-dogfood: two parses of the same document disagree — check would false-red on an untouched tree')
+
+  const symlinkRepo = join(tmp, 'document-symlink'), outsideDoc = join(tmp, 'outside-private.md'), outsideDir = join(tmp, 'outside-doc-dir')
+  mkdirSync(join(symlinkRepo, 'docs'), { recursive: true }); mkdirSync(outsideDir, { recursive: true })
+  writeFileSync(outsideDoc, '# PRIVATE\nsecret prose\n\n| ID | Requirement |\n|---|---|\n| R-SECRET | must not escape |\n')
+  writeFileSync(join(outsideDir, 'requirements.md'), '| ID | Requirement |\n|---|---|\n| R-DIR | must not escape |\n')
+  symlinkSync(outsideDoc, join(symlinkRepo, 'docs/leak.md')); symlinkSync(outsideDir, join(symlinkRepo, 'docs/linked'), 'dir')
+  spawnSync('git', ['-C', symlinkRepo, 'init', '-q']); spawnSync('git', ['-C', symlinkRepo, 'add', 'docs/leak.md'])
+  const { loadDocs } = await import(join(HERE, '..', 'lib', 'roomdocs.mjs'))
+  const leakedDocs = loadDocs(symlinkRepo, { include: ['docs/**/*.md'], canon: ['docs/leak.md'] })
+  if (leakedDocs.embedded.length || !leakedDocs.listed.some((entry) => entry.path === 'docs/leak.md' && entry.why === 'outside repository')) die('documents: tracked symlink escaped the repository into the briefing')
+  const linkedRtm = parseRequirements(symlinkRepo, [{ path: 'docs/linked/requirements.md', idPattern: '^R-' }], null)
+  if (linkedRtm.rows.length || !linkedRtm.skipped.some((entry) => entry.why === 'outside repository')) die('rtm: directory symlink escaped the repository into the matrix')
   console.log(`  ok rtm-dogfood — forma's own PRD parses as ${rows.length} traceable requirements, every one carrying its verification and its line`)
 }
 
@@ -2152,8 +2311,9 @@ const diffPaths = (a, b, at = '') => {
 {
   const ci = readFileSync(join(HERE, '..', '.github/workflows/ci.yml'), 'utf-8')
   if (/LucaDominici\/arbiter|ARBITER_TOKEN|\.arbiter-gates/.test(ci)) die('ci-public: required CI still depends on private arbiter access')
-  if (!/needs:\s*\[test\]/.test(ci)) die('ci-public: ci-required is not reduced to the self-contained test job')
-  console.log('  ok ci-public — required CI has no private repository or credential dependency')
+  if (!/needs:\s*\[test, browser\]/.test(ci)) die('ci-public: ci-required does not aggregate the self-contained source and browser jobs')
+  if (!/scripts\/browser-gate\.mjs/.test(ci) || !/control-room-stress/.test(ci)) die('ci-public: runtime layout/accessibility is not gated on the deterministic stress briefing')
+  console.log('  ok ci-public — required source/browser CI has no private repository or credential dependency')
 }
 
 // The Control Room is validated by dogfood over real local work, not by publishing forma's quiet
@@ -2262,6 +2422,10 @@ const diffPaths = (a, b, at = '') => {
   r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--apply', fill])
   if (r.status === 0) die('audit: unresolved evidence was accepted')
   if (readFileSync(health, 'utf-8') !== beforeHealth || readFileSync(findings, 'utf-8') !== beforeFindings) die('audit: rejected fill partially replaced an overlay')
+  const outsideEvidence = join(tmp, 'outside-evidence.txt'); writeFileSync(outsideEvidence, 'private\n'); symlinkSync(outsideEvidence, join(repo, 'linked-evidence.txt'))
+  writeFileSync(fill, JSON.stringify({ verdicts: [{ n: 3, verdict: 'bad', why: 'Escaping.', evidence: [{ type: 'path', ref: 'linked-evidence.txt' }] }], findings: [] }))
+  r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--apply', fill])
+  if (r.status === 0 || readFileSync(health, 'utf-8') !== beforeHealth || readFileSync(findings, 'utf-8') !== beforeFindings) die('audit: escaping symlink evidence was accepted or partially written', r)
 
   // `room update --counter` owns the deterministic half of unattended operation. The external
   // adapter writes the result; update regenerates the plan, refuses stale/missing output, applies
@@ -2280,6 +2444,18 @@ const diffPaths = (a, b, at = '') => {
   if (r.status !== 0) die('audit update: counter-verification exit ' + r.status, r)
   if (readJson(health).verdicts.find((v) => v.n === 1).why !== updateContradiction.reason) die('audit update: counter result did not reach health before composition')
   if (!readFileSync(updatedRoom, 'utf-8').includes(updateContradiction.reason)) die('audit update: recomposed briefing does not surface the contradiction')
+
+  // A result is accepted against the plan regenerated from the same staged inputs, never the old
+  // plan beside it. Changing the snapshot must reject the old result without publishing anything.
+  const changedIssues = readJson(issues)
+  changedIssues.issues.push({ n: 4, title: 'New milestone work', state: 'OPEN', ms: 'v2', labels: [], createdAt: '2026-08-10' })
+  changedIssues.milestones.push({ title: 'v2', due: null, open: 1, closed: 0 })
+  writeFileSync(issues, JSON.stringify(changedIssues, null, 2) + '\n')
+  const beforeStale = [plan, health, findings, updatedRoom].map((path) => readFileSync(path, 'utf-8'))
+  r = run(['room', 'update', '--manifest', manifest, '--out', updatedRoom, '--skip-verify', '--counter'])
+  if (r.status === 0 || !/missing:.*milestone:v2/.test(r.stderr || '')) die('audit update: stale counter result was accepted against the prior plan', r)
+  if ([plan, health, findings, updatedRoom].some((path, i) => readFileSync(path, 'utf-8') !== beforeStale[i])) die('audit update: stale counter result partially published a plan, overlay or room')
+
   const beforeMissingResult = readFileSync(health, 'utf-8')
   renameSync(counter, counter + '.away')
   r = run(['room', 'update', '--manifest', manifest, '--out', updatedRoom, '--skip-verify', '--counter'])

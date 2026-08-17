@@ -66,12 +66,9 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
   networked paths, both opt-in — keep it that way.
 - The viewer is one HTML file in ES5 style (var/function); every new UI string goes in BOTH
   locales of `STRINGS`.
-- `npm pack --dry-run` must stay clean of editor residue — zero `.fuse_hidden`. That much the
-  `prepack` guard does enforce; it does **not** check the file count. This line used to claim a
-  count of 20 and claim the guard held it: the selection is 38 today, and the number has moved
-  several times unnoticed. Bump it deliberately or enforce the intended list mechanically — see
-  the open item in [`docs/SCOPE-room.md`](docs/SCOPE-room.md) §6 and the defect row in
-  [`docs/DELIVERY.md`](docs/DELIVERY.md).
+- `npm pack --dry-run` must stay on the reviewed 38-file runtime allowlist and clean of editor
+  residue — zero `.fuse_hidden`. The `prepack` guard enforces both names and count; change its
+  allowlist deliberately whenever the public runtime surface changes.
 - Architecture of Forma itself is modeled with Forma: see `docs/architecture/`
   (the dogfood). `forma check` fails if that model drifts from the code.
 - Conventional commits; keep history clean (squash merge on `main`).

@@ -30,11 +30,89 @@ jobs:
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           release-type: node
-  publish:
+  release-gate:
     needs: release-please
     if: always() && (startsWith(github.ref, 'refs/tags/v') || needs.release-please.outputs.release_created == 'true')
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      RELEASE_TAG: ${{ needs.release-please.outputs.tag_name || github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Assert tag matches package version
+        run: |
+          PKG="v$(node -p "require('./package.json').version")"
+          echo "tag=$RELEASE_TAG pkg=$PKG"
+          test "$RELEASE_TAG" = "$PKG" || { echo "::error::tag $RELEASE_TAG != package version $PKG"; exit 1; }
+          git fetch origin main
+          git merge-base --is-ancestor HEAD origin/main || { echo "::error::release tag is not on main"; exit 1; }
+      - run: npm run lint && npm test
+      - run: node bin/forma.mjs check
+      - name: Pack and install the exact candidate
+        run: |
+          mkdir -p "$RUNNER_TEMP/acceptance" "$RUNNER_TEMP/install"
+          npm pack --dry-run
+          TARBALL=$(npm pack --pack-destination "$RUNNER_TEMP/acceptance" | tail -1)
+          npm install --prefix "$RUNNER_TEMP/install" --ignore-scripts "$RUNNER_TEMP/acceptance/$TARBALL"
+          echo "FORMA_BIN=$RUNNER_TEMP/install/node_modules/.bin/forma" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/install/node_modules/.bin/forma" --version
+      - name: Replay the installed customer path
+        run: |
+          exec > >(tee "$RUNNER_TEMP/acceptance/customer.log") 2>&1
+          CUSTOMER="$RUNNER_TEMP/acceptance/customer"
+          mkdir -p "$CUSTOMER"
+          cp -R test/fixtures/cold-start-closure/. "$CUSTOMER/"
+          git -C "$CUSTOMER" init -q
+          git -C "$CUSTOMER" config user.name 'Forma release gate'
+          git -C "$CUSTOMER" config user.email 'forma-release@example.invalid'
+          git -C "$CUSTOMER" remote add origin https://github.com/acme/customer.git
+          git -C "$CUSTOMER" add . && git -C "$CUSTOMER" commit -qm 'feat: seed customer'
+          "$FORMA_BIN" init --repo "$CUSTOMER" --force
+          "$FORMA_BIN" gen --repo "$CUSTOMER"
+          "$FORMA_BIN" check --repo "$CUSTOMER"
+          "$FORMA_BIN" verify --repo "$CUSTOMER" --gh-repo acme/customer --gh-cmd "node $GITHUB_WORKSPACE/test/stub-gh.mjs"
+          "$FORMA_BIN" room init --repo "$CUSTOMER" --manifest "$CUSTOMER/forma.room.json" --today 2026-08-17
+          "$FORMA_BIN" room update --manifest "$CUSTOMER/forma.room.json" --out "$CUSTOMER/control-room.html" --gh-cmd "node $GITHUB_WORKSPACE/test/stub-gh.mjs"
+          "$FORMA_BIN" check --repo "$CUSTOMER" --room "$CUSTOMER/control-room.html" --manifest "$CUSTOMER/forma.room.json"
+          node scripts/room-presentable.mjs --room "$CUSTOMER/control-room.html" --manifest "$CUSTOMER/forma.room.json"
+      - name: Compose and gate the release briefing
+        run: |
+          "$FORMA_BIN" room --manifest forma.room.json --out "$RUNNER_TEMP/acceptance/room.html"
+          "$FORMA_BIN" check --room "$RUNNER_TEMP/acceptance/room.html"
+          node scripts/room-presentable.mjs --room "$RUNNER_TEMP/acceptance/room.html" --manifest forma.room.json
+          node test/fixtures/control-room-stress/make.mjs --html lib/viewer/control-room.html "$RUNNER_TEMP/acceptance/stress-room.html"
+      - name: Install browser publication instruments
+        run: |
+          npm install --prefix "$RUNNER_TEMP/browser-tools" --ignore-scripts --no-save playwright@1.61.1 axe-core@4.12.1
+          "$RUNNER_TEMP/browser-tools/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Gate desktop, mobile, accessibility and print
+        env:
+          BROWSER_GATE_MODULES: ${{ runner.temp }}/browser-tools/node_modules
+          BROWSER_GATE_REPORT: ${{ runner.temp }}/acceptance/browser-report.json
+        run: node scripts/browser-gate.mjs "$RUNNER_TEMP/acceptance/room.html" "$RUNNER_TEMP/acceptance/stress-room.html"
+      - name: Retain release acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-acceptance-${{ env.RELEASE_TAG }}
+          path: ${{ runner.temp }}/acceptance
+          if-no-files-found: error
+          retention-days: 90
+
+  publish:
+    needs: [release-please, release-gate]
+    if: always() && needs.release-gate.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || needs.release-please.outputs.release_created == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
@@ -52,12 +130,7 @@ jobs:
       - name: Use the supported npm CLI
         run: npm install --global npm@11.16.0
       - name: Assert tag matches package version
-        run: |
-          PKG="v$(node -p "require('./package.json').version")"
-          echo "tag=$RELEASE_TAG pkg=$PKG"
-          test "$RELEASE_TAG" = "$PKG" || { echo "::error::tag $RELEASE_TAG != package version $PKG"; exit 1; }
-      - run: npm run lint && npm test
-      - run: npm pack --dry-run
+        run: test "$RELEASE_TAG" = "v$(node -p "require('./package.json').version")"
       # Trusted publishing (OIDC): no token. The publisher on npmjs.com points at this exact
       # workflow filename, and npm generates provenance for this public repository automatically.
       - run: npm publish

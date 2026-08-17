@@ -1,8 +1,8 @@
 ---
 title: 'Forma Architecture'
-doc_version: '1.0.0'
+doc_version: '1.0.1'
 status: active
-last_review: '2026-08-10'
+last_review: '2026-08-17'
 owner: 'Luca Dominici'
 canonical_id: 'architecture'
 tags: ['audience/dev', 'kind/spine']
@@ -10,7 +10,7 @@ related: ['docs/DESIGN.md', 'docs/GLOSSARY.md']
 ---
 # Forma Architecture
 
-This document follows arc42. It describes the implementation on `feat/control-room`, including the Control Room extension, and separates code-derived facts from judgments and unproved claims.
+This document follows arc42. It describes the current main-line design, including the Control Room, and separates code-derived facts from judgments and unproved claims.
 
 ## 1. Introduction and goals
 
@@ -106,7 +106,7 @@ flowchart TB
 
 ### Level 3: engine modules
 
-The 18 top-level `lib/*.mjs` modules each have one primary responsibility:
+The 24 top-level `lib/*.mjs` modules each have one primary responsibility:
 
 | Module | Single responsibility |
 |---|---|
@@ -124,6 +124,12 @@ The 18 top-level `lib/*.mjs` modules each have one primary responsibility:
 | `render.mjs` | Render the deterministic arc42 block shared by `doc` and `check`. |
 | `room.mjs` | Validate one portfolio manifest and compose one self-contained Control Room HTML file. |
 | `roomderive.mjs` | Compute all repository and portfolio Control Room aggregates for both writer and checker. |
+| `roomdocs.mjs` | Select and carry a bounded, repository-confined document corpus. |
+| `roominit.mjs` | Discover deterministic manifest inputs without inventing programme semantics. |
+| `roomload.mjs` | Resolve active programmes and canonical paths shared by room writers and checkers. |
+| `roomupdate.mjs` | Stage and atomically publish a complete multi-programme refresh. |
+| `rtm.mjs` | Derive requirements traceability from declared Markdown tables. |
+| `scan.mjs` | Discover repositories into a manifest while preserving operator decisions. |
 | `serve.mjs` | Serve architecture files and the fallback viewer locally with traversal protection. |
 | `taxonomy.mjs` | Detect label families by syntax and population without semantic inference. |
 | `validate.mjs` | Validate the shipped schema subset and materialize typed cumulative timelines. |
@@ -196,11 +202,11 @@ The boundary data is explicit:
 
 ## 7. Deployment view
 
-Forma is installed locally with `npx forma-arch` or as a development dependency. The npm package is selected by [`package.json:33-39`](../../package.json#L33-L39): `bin/forma.mjs`, all of `lib/`, `LICENSE`, `NOTICE`, `README.md`, and npm's package metadata ship. Repository docs, tests, scripts, fixtures, and GitHub workflows do not ship. A current `npm pack --dry-run --json` reports 30 package entries; this conflicts with the hard-coded 20-file statement in `AGENTS.md` and is recorded as debt in section 11.
+Forma is installed locally with `npx forma-arch` or as a development dependency. The npm package is selected by `package.json`: `bin/forma.mjs`, all of `lib/`, `LICENSE`, `NOTICE`, `README.md`, and npm's package metadata ship. Repository docs, tests, scripts, fixtures, and GitHub workflows do not ship. `scripts/check-clean.mjs` enforces the reviewed 38-file runtime allowlist before packing.
 
 GitHub Pages is a separate static deployment. On pushes to `main`, it copies only `lib/viewer/c4-hologram.html` and the committed `docs/demo/c4-model.json`, runs the single-model presentation gate, and deploys `_site` ([`.github/workflows/pages.yml:38-52`](../../.github/workflows/pages.yml#L38-L52)). It does not regenerate the private-source demo and does not publish a Control Room.
 
-Release deployment starts with a `v*` tag. The workflow checks that the tag matches `package.json`, runs lint and tests, and calls `npm publish` with `id-token: write` and no long-lived npm token ([`.github/workflows/release.yml:18-31`](../../.github/workflows/release.yml#L18-L31)). [ADR-0003](../adr/0003-npm-oidc-trusted-publishing.md) records why OIDC and provenance are required.
+Release deployment starts with a `v*` tag on `main`. A no-OIDC acceptance job checks the version, runs all source and browser gates, packs and installs the exact tarball, and replays the customer path before a separate job may call `npm publish` with `id-token: write`. [ADR-0003](../adr/0003-npm-oidc-trusted-publishing.md) records why OIDC and provenance are required.
 
 ## 8. Cross-cutting concepts
 
@@ -241,21 +247,18 @@ Accepted ADRs are immutable. A changed decision requires a new ADR that supersed
 |---|---|---|
 | Every shipped JavaScript entry parses. | `npm run lint` | Passes on this branch; the command checks `bin/forma.mjs`, every top-level `lib/*.mjs`, `scripts/lint.mjs`, and `test/run.mjs` ([`scripts/lint.mjs:2-12`](../../scripts/lint.mjs#L2-L12)). |
 | Forma's committed model remains adherent to Forma's source. | `node bin/forma.mjs check` | Passes on this branch. CI runs the same command after lint and tests ([`.github/workflows/ci.yml:23-27`](../../.github/workflows/ci.yml#L23-L27)). |
-| Generation and contract behavior remain deterministic across fixtures. | `npm test` | The fixture blocks pass through the final external-corpus check, then the known `docmap-cap` defect fails the process. The suite is therefore not globally green. |
+| Generation and contract behavior remain deterministic across fixtures. | `npm test` | The self-contained fixture suite is green with nothing skipped. |
 | The public single-model demo is suitable for presentation. | `node scripts/presentable.mjs docs/demo/c4-model.json` | The test suite invokes this exact shipped artifact and requires exit 0 ([`test/run.mjs:1407-1411`](../../test/run.mjs#L1407-L1411)). |
 | A Control Room is adherent and keeps its briefing promises. | `forma check` followed by `node scripts/room-presentable.mjs ...` | The checker re-derives aggregates through `roomderive.mjs`; the publication gate checks evidence, issue coverage, freshness, closure-rate naming, and identical re-render bytes ([`scripts/room-presentable.mjs:93-109`](../../scripts/room-presentable.mjs#L93-L109)). |
-| The npm surface contains only intended runtime files and no editor residue. | `npm pack --dry-run --json` | The prepack guard passes, but the documented file count is stale; see section 11. |
-| Releases use the declared version and token-free provenance. | Push a matching `v*` tag and require the `release` workflow to pass. | The workflow checks version equality, lint, tests, and OIDC publish before release. |
+| The npm surface contains only intended runtime files and no editor residue. | `npm pack --dry-run --json` | The prepack guard fails on any addition, omission, symlink or editor residue outside the reviewed 38-file selection. |
+| Releases use the declared version and token-free provenance. | Push a matching `v*` tag on `main` and require the `release` workflow to pass. | Publication waits for exact-tag source, browser, print, tarball-install and customer-path acceptance; only the final publish job receives OIDC. |
 
 ## 11. Risks and technical debt
 
-- **The test suite is not green on the available real corpus.** `npm test` currently fails at `docmap-cap`: four rows reported as DONE produce `status2=planned`, while the test expects `done`. The external-corpus assertion and failure point are at [`test/run.mjs:1421-1434`](../../test/run.mjs#L1421-L1434). This is pre-existing and was not changed by this documentation rewrite.
 - **Static line references rot, and did.** A since-deleted orientation document accumulated wrong line numbers and two false claims (the viewer at 746 lines when it is 1068; the model never validated against its schema, which [`lib/check.mjs`](../../lib/check.mjs) has done since the schema landed). It was removed on this branch in favour of [`GLOBAL_INVARIANTS.md`](../GLOBAL_INVARIANTS.md), which pairs each rule with an executable enforcement point. Line citations remain useful evidence at a reviewed commit; they are not a substitute for a check that runs.
-- **The shipped-file count is a prose invariant.** `AGENTS.md` says `npm pack --dry-run` must stay at 20 files ([`AGENTS.md:38-39`](../../AGENTS.md#L38-L39)); the current dry run reports 30 entries. `scripts/check-clean.mjs` checks only editor residue, not the count ([`scripts/check-clean.mjs:7-10`](../../scripts/check-clean.mjs#L7-L10)). The number needs a deliberate update or an executable assertion.
 - **Issue-to-code coverage is intentionally partial.** Git can link only issues cited by commits that touch modeled files. Sweeps are excluded and named. Unlinked work remains unknown; it must never be presented as zero.
 - **Offline freshness has a hard limit.** `check` can validate shape and reject an old snapshot relative to manifest `today`, but it cannot know whether GitHub changed after `fetchedAt`. Only a new `verify` can establish a newer fact base.
 - **Heuristic parsing has bounded precision.** Non-Go edges use name references; Go imports and source docstrings use regular expressions rather than language ASTs. This is acceptable for an explorer, not for compiler-grade analysis ([`lib/validate.mjs:1-13`](../../lib/validate.mjs#L1-L13), [ADR-0001](../adr/0001-zero-dependency-esm.md)).
-- **Control Room parametricity is not proven across curated models.** One repository exercises the complete mapped path. Additional programme issue corpora were measured, but their Forma models have not been curated and run end to end.
 
 ## 12. Glossary
 

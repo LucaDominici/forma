@@ -54,12 +54,12 @@ a:hover{color:var(--accent)}
 .brand h1{margin:0;font-size:14px;font-weight:650;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis}
 .brand span{color:var(--muted);font-size:11px;font-family:"SF Mono",Menlo,Consolas,monospace}
 .tabs{display:flex;gap:2px;align-items:center;flex:0 0 auto}
-.tabs a{display:flex;align-items:center;min-height:36px;padding:5px 10px;color:var(--muted);font-size:12.5px;text-decoration:none;border-radius:5px}
+.tabs a{display:flex;align-items:center;min-height:44px;padding:5px 10px;color:var(--muted);font-size:12.5px;text-decoration:none;border-radius:5px}
 .tabs a:hover{color:var(--ink);background:var(--surface)}
 .tabs a[aria-current]{color:var(--ink);background:var(--surface);box-shadow:inset 0 -2px 0 var(--accent)}
 .bar-sep{width:1px;height:20px;background:var(--line);flex:0 0 auto}
 .bar-end{margin-left:auto;display:flex;gap:8px;align-items:center;flex:0 0 auto}
-.ghost{appearance:none;border:1px solid var(--line);border-radius:999px;background:none;padding:4px 10px;font-size:12px;cursor:pointer}
+.ghost{min-width:44px;min-height:44px;appearance:none;border:1px solid var(--line);border-radius:999px;background:none;padding:4px 10px;font-size:12px;cursor:pointer}
 .ghost:hover{border-color:var(--accent);color:var(--accent)}
 .mobile-nav{display:none;min-width:0;gap:8px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .mobile-nav select{min-width:0;width:100%;height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 28px 0 10px}
@@ -144,7 +144,7 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
 
 /* Rows. `details` stays: expanding evidence in place is the product's own reading model (D5). */
 .rows>details{border-bottom:1px solid var(--line)}
-summary{list-style:none;cursor:pointer;padding:7px 22px 7px 0;position:relative}
+summary{min-height:44px;list-style:none;cursor:pointer;padding:7px 22px 7px 0;position:relative}
 summary::-webkit-details-marker{display:none}
 summary:after{content:"+";position:absolute;right:4px;top:6px;color:var(--muted);font-family:"SF Mono",Menlo,Consolas,monospace}
 details[open]>summary:after{content:"\2212"}
@@ -160,7 +160,7 @@ details[open]>summary:after{content:"\2212"}
 .status{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;white-space:nowrap}
 .glyph{width:12px;text-align:center;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13px}
 .status-ok{color:var(--ok)}.status-warn{color:var(--warn)}.status-bad{color:var(--bad)}.status-none{color:var(--muted)}
-.issue-pill{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:1px 7px 1px 4px;border:1px solid var(--line);border-radius:999px;text-decoration:none}
+.issue-pill{display:inline-flex;align-items:center;min-height:44px;gap:6px;max-width:100%;padding:1px 7px 1px 4px;border:1px solid var(--line);border-radius:999px;text-decoration:none}
 .issue-pill .issue-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .issue-pill.closed .issue-text{text-decoration:line-through}
 .tally{font-size:22px;font-weight:650;font-variant-numeric:tabular-nums}
@@ -187,6 +187,7 @@ details[open]>summary:after{content:"\2212"}
 .pager-status{color:var(--muted);font-size:11px;text-align:center}
 .print-only{display:none}
 .kv{padding:5px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(110px,180px) 1fr;gap:12px;font-size:12.5px}
+.kv>*{min-width:0;overflow-wrap:anywhere}
 .kv>span:first-child{color:var(--muted)}
 
 /* Charts fill the box the grid gave them. The old viewBox had a fixed height and took its width
@@ -205,13 +206,13 @@ details[open]>summary:after{content:"\2212"}
 .line-series2{fill:none;stroke:var(--series2);stroke-width:2;stroke-dasharray:4 3}
 .svg-label{fill:var(--muted);font:10.5px "SF Mono",Menlo,Consolas,monospace}
 .svg-value{fill:var(--ink);font:10.5px "SF Mono",Menlo,Consolas,monospace}
-.hit{cursor:help;outline:none}
+.hit{pointer-events:none;outline:none}
 .hit:focus{stroke:var(--accent);stroke-width:2}
 .legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:10.5px;flex:0 0 auto;padding-bottom:4px}
 .legend span{display:inline-flex;align-items:center;gap:5px}
 .legend i{display:inline-block;width:14px;height:5px}
 .tip{position:fixed;z-index:50;pointer-events:none;max-width:260px;padding:5px 8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:11.5px;line-height:1.3}
-.toggle{appearance:none;border:1px solid var(--line);border-radius:999px;background:none;padding:2px 8px;font-size:10.5px;cursor:pointer;color:var(--muted);flex:0 0 auto}
+.toggle{min-height:44px;appearance:none;border:1px solid var(--line);border-radius:999px;background:none;padding:2px 8px;font-size:10.5px;cursor:pointer;color:var(--muted);flex:0 0 auto}
 .toggle:hover{border-color:var(--accent);color:var(--accent)}
 .tablewrap{overflow:auto;min-height:0;flex:1 1 auto}
 table{width:100%;border-collapse:collapse;font-size:11.5px}
@@ -246,6 +247,7 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
 .md-hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 .print-all{display:none}
 .doclist button{display:block;width:100%;text-align:left;appearance:none;background:none;border:0;border-bottom:1px solid var(--line);padding:6px 4px;cursor:pointer;font-size:12.5px}
+.kv a,.matrix a,.doc-reader-head a{display:inline-flex;align-items:center;min-height:44px}
 .doclist button:hover{color:var(--accent)}
 .doclist button[aria-current]{color:var(--ink);box-shadow:inset 2px 0 0 var(--accent);padding-left:9px}
 .doclist small{display:block;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace}
@@ -269,6 +271,7 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  .thesis{font-size:24px;max-width:22ch}
  .answer-lead{padding-top:8px}
  summary,.doclist button,.toggle,.issue-pill{min-height:44px}
+ .kv a,.matrix a{display:inline-flex;align-items:center;min-height:44px}
  .issue-pill{align-items:center}
  .kv,.hole{grid-template-columns:1fr;gap:2px}
  .detail{grid-template-columns:1fr;gap:2px}
@@ -314,6 +317,9 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  .view:last-child{break-after:auto}
  .answer,.evidence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:10pt}
  .answer-lead,.full,.span2{grid-column:1/-1}
+ .answer>.chart{grid-column:auto}
+ .view[id$="-exec"]>.evidence{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .view[id$="-exec"]>.evidence>.span2{grid-column:span 2}
  .kanban-board,.queue-board{grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
  .panel{break-inside:avoid;border-top:1px solid #999;margin-bottom:10pt}
  .panel-body,.tablewrap{overflow:visible;max-height:none}
@@ -327,10 +333,13 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  /* Each view identifies itself on paper. The bar is hidden when printing, so without this the
     output was eleven anonymous sheets with no product name, date, programme or view on any of them. */
  .print-only{display:block!important}
- .screen-list,.workflow{display:none!important}
+ .screen-list,.workflow,.pager,.frame,.doclist{display:none!important}
+ .map-print{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10pt}
  .print-all{display:block!important}
  .reader>.md{display:none}
  .doc-reader-head{display:none!important}
+ .prov{overflow:visible;text-overflow:clip;white-space:normal}
+ summary,.issue-pill,.kv a,.matrix a,.doc-reader-head a{min-height:0}
  .print-id{display:block!important;margin:0 0 8pt;padding-bottom:4pt;border-bottom:1pt solid var(--line);
   font:9pt "SF Mono",Menlo,Consolas,monospace;color:var(--muted)}
 }
@@ -370,7 +379,6 @@ function fmt(s,d){return String(s==null?"":s).replace(/\{([^}]+)\}/g,function(_,
 function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=String(x);return e;}
 function setAttrs(e,a){var k;for(k in a)if(a.hasOwnProperty(k)&&a[k]!=null)e.setAttribute(k,String(a[k]));return e;}
 function svgEl(t,a,x){var e=document.createElementNS(NS,t);setAttrs(e,a||{});if(x!=null)e.textContent=String(x);return e;}
-function short(s,n){s=String(s==null?"":s);return s.length>n?s.slice(0,n-1)+"…":s;}
 // Claim wrappers are optional so this renderer accepts both the 1.0 numeric shape and a future
 // `{ claims: { name: { state, value } } }` shape without turning unknown into zero at the seam.
 function claimOf(scope,name,fallback,known){
@@ -381,6 +389,8 @@ function claimOf(scope,name,fallback,known){
  }
  return {known:known!==false&&fallback!=null,value:fallback};
 }
+function claimState(claim){return !claim.known?"unknown":Number(claim.value)===0?"declared-zero":"measured";}
+function headline(text,state){var p=el("p","thesis",text);p.setAttribute("data-claim-state",state);return p;}
 function byId(id){var i;for(i=0;i<ROOM.programs.length;i++)if(ROOM.programs[i].id===id)return ROOM.programs[i];return null;}
 function sumOf(id){var i;for(i=0;i<ROOM.portfolio.programs.length;i++)if(ROOM.portfolio.programs[i].id===id)return ROOM.portfolio.programs[i];return null;}
 function line(svg,x1,y1,x2,y2){svg.appendChild(svgEl("line",{x1:x1,y1:y1,x2:x2,y2:y2,"class":"axis"}));}
@@ -389,7 +399,21 @@ function line(svg,x1,y1,x2,y2){svg.appendChild(svgEl("line",{x1:x1,y1:y1,x2:x2,y
    published demo, three times over, in both locales. */
 function plural(n,one,other){return n===1?one:other;}
 function label(svg,x,y,t,anchor,cls){svg.appendChild(svgEl("text",{x:x,y:y,"text-anchor":anchor||"start","class":cls||"svg-label"},t));}
-function hit(svg,a,tip){a=a||{};a["class"]="hit";a.fill="transparent";a.tabindex="0";a.role="img";a["aria-label"]=tip;a["data-tip"]=tip;svg.appendChild(svgEl(a.r!=null?"circle":"rect",a));}
+function fittedLabel(svg,x,y,t,anchor,maxWidth){
+ var text=svgEl("text",{x:x,y:y,"text-anchor":anchor||"start","class":"svg-label"},t),estimated=String(t).length*6.4;
+ if(estimated>maxWidth){text.setAttribute("textLength",maxWidth);text.setAttribute("lengthAdjust","spacingAndGlyphs");}
+ svg.appendChild(text);
+}
+function hit(svg,a,tip){
+ a=a||{};
+ if(a.r!=null)a.r=Math.max(22,a.r);
+ else{
+  var w=Number(a.width)||0,h=Number(a.height)||0;
+  if(w<44){a.x=(Number(a.x)||0)-(44-w)/2;a.width=44;}
+  if(h<44){a.y=(Number(a.y)||0)-(44-h)/2;a.height=44;}
+ }
+ a["class"]="hit";a.fill="transparent";a.tabindex="0";a.role="img";a["aria-label"]=tip;a["data-tip"]=tip;svg.appendChild(svgEl(a.r!=null?"circle":"rect",a));
+}
 function statusMark(v){var map={ok:["●",STR.statusOk],warn:["◐",STR.statusWarn],bad:["×",STR.statusBad]},p=map[v]||["◇",STR.notAudited];var s=el("span","status status-"+(map[v]?v:"none")),g=el("span","glyph",p[0]);g.setAttribute("aria-hidden","true");s.appendChild(g);s.appendChild(el("span","",p[1]));return s;}
 function chips(v){var w=el("span","chips"),i;if(!v||!v.length){w.appendChild(el("span","muted",STR.none));return w;}for(i=0;i<v.length;i++)w.appendChild(el("span","chip",v[i]));return w;}
 function pill(p,n,t){
@@ -399,7 +423,7 @@ function pill(p,n,t){
  var why=v?v.why:STR.notAudited,word=v?v.verdict:null,text=t==null?"#"+n:t;
  var a=el("a","issue-pill"+(issue&&issue.state==="CLOSED"?" closed":"")),mark=statusMark(word);
  a.href="https://github.com/"+p.ghRepo+"/issues/"+n;a.target="_blank";a.rel="noopener";
- a.setAttribute("data-tip",why);a.setAttribute("aria-label",text+" — "+mark.lastChild.textContent+" — "+why);
+ a.setAttribute("data-tip",why);a.setAttribute("aria-label",text+" — "+mark.lastChild.textContent+" — "+why);a.title=text+" — "+why;
  a.appendChild(mark);a.appendChild(el("span","issue-text data",text));return a;
 }
 function docLink(p,path,ln,t){var a=el("a","data",t==null?path+(ln?":"+ln:""):t);a.href="https://github.com/"+p.ghRepo+"/blob/HEAD/"+path+(ln?"#L"+ln:"");a.target="_blank";a.rel="noopener";return a;}
@@ -423,7 +447,7 @@ function snapshotProv(program){
  return fmt(STR.provCounted,{n:n,date:d});
 }
 function snapshotAge(age,date){
- return age==null?fmt(STR.snapshotAgeUnknown,{date:date}):(age===0?fmt(STR.snapshotToday,{date:date}):(age===1?fmt(STR.snapshotAgeOne,{date:date}):fmt(STR.snapshotAge,{n:age,date:date})));
+ return age==null?fmt(STR.snapshotAgeUnknown,{date:date}):(age<0?fmt(age===-1?STR.snapshotFutureOne:STR.snapshotFuture,{n:-age,date:date}):(age===0?fmt(STR.snapshotToday,{date:date}):(age===1?fmt(STR.snapshotAgeOne,{date:date}):fmt(STR.snapshotAge,{n:age,date:date}))));
 }
 
 var tipEl;
@@ -485,7 +509,7 @@ function relayoutAll(root){
 function focusScrollers(root){
  var list=root&&root.querySelectorAll?root.querySelectorAll(".panel-body,.tablewrap,.queue-board,.kanban-board,.queue-command code"):[],i,e;
  for(i=0;i<list.length;i++){
-  e=list[i];if(e.scrollHeight>e.clientHeight+1||e.scrollWidth>e.clientWidth+1)e.setAttribute("tabindex","0");else e.removeAttribute("tabindex");
+  e=list[i];if(e.scrollHeight>e.clientHeight+1||e.scrollWidth>e.clientWidth+1){e.setAttribute("tabindex","0");if(e.getAttribute("aria-labelledby"))e.setAttribute("role","region");}else{e.removeAttribute("tabindex");e.removeAttribute("role");}
  }
 }
 
@@ -505,7 +529,7 @@ function barsH(svg,w,h,items,opts){
  line(svg,gutter,top,gutter,top+step*n);
  for(i=0;i<n;i++){
   var it=items[i],y=top+step*i+step/2,x=gutter,seg;
-  label(svg,gutter-7,y+3.5,short(it.name,Math.max(8,Math.floor(gutter/6.4))),"end");
+  fittedLabel(svg,gutter-7,y+3.5,it.name,"end",gutter-14);
   for(var s=0;s<it.parts.length;s++){
    seg=plot*it.parts[s].v/max;
    if(seg>0.6)svg.appendChild(svgEl("rect",{x:x,y:y-bar/2,width:Math.max(0.6,seg-1),height:bar,"class":it.parts[s].cls}));
@@ -605,14 +629,14 @@ function chartPriority(s,program){
  for(i=0;i<axes.length;i++)if(axes[i].family==="priority")axis=axes[i];
  var d=axis?axis.values:[],rows=d.map(function(v){return [v.value,v.count];});
  var ramps=["var(--ramp1)","var(--ramp2)","var(--ramp3)","var(--ramp4)"];
- return chart(STR.priorityChart,snapshotProv(program),[STR.priority,STR.count],rows,function(svg,w,h){
+ return chart(STR.priorityChart,snapshotProv(program)+" · "+STR.rawLabelDisclosure,[STR.priority,STR.count],rows,function(svg,w,h){
   if(!d.length){empty(svg,w,h);return;}
   var gutter=Math.max(60,Math.min(140,w*0.3)),plot=w-gutter-30,max=1,top=4,step=Math.min(30,(h-18)/d.length);
   for(i=0;i<d.length;i++)max=Math.max(max,d[i].count);
   line(svg,gutter,top,gutter,top+step*d.length);
   for(i=0;i<d.length;i++){
    var y=top+step*i+step/2,bw=plot*d[i].count/max,ri=d.length===1?3:Math.round(i*3/(d.length-1));
-   label(svg,gutter-7,y+3.5,short(d[i].value,18),"end");
+   fittedLabel(svg,gutter-7,y+3.5,d[i].value,"end",gutter-14);
    svg.appendChild(svgEl("rect",{x:gutter,y:y-5,width:Math.max(0.6,bw),height:10,fill:ramps[ri]}));
    label(svg,gutter+bw+5,y+3.5,d[i].count,"start","svg-value");
    hit(svg,{x:gutter,y:y-step/2,width:Math.max(20,plot),height:step},fmt(STR.tipPriority,{name:d[i].value,n:d[i].count}));
@@ -659,13 +683,13 @@ function blockedRow(b){
  if(program)pair(dl,STR.issue,pill(program,b.n));
  d.appendChild(dl);return d;
 }
-var ISSUE_PAGE_SIZE=40;
-function pagedList(target,items,render){
- var wrap=el("div","rows screen-list"),page=0,total=Math.max(1,Math.ceil(items.length/ISSUE_PAGE_SIZE));
+var ISSUE_PAGE_SIZE=40,MAP_PAGE_SIZE=20;
+function pagedList(target,items,render,size){
+ var step=size||ISSUE_PAGE_SIZE,wrap=el("div","rows screen-list"),page=0,total=Math.max(1,Math.ceil(items.length/step));
  var nav=el("div","pager"),prev=el("button","",STR.pagePrevious),state=el("span","pager-status"),next=el("button","",STR.pageNext);
  prev.type="button";next.type="button";
  function draw(){
-  var start=page*ISSUE_PAGE_SIZE,end=Math.min(items.length,start+ISSUE_PAGE_SIZE),i;
+  var start=page*step,end=Math.min(items.length,start+step),i;
   wrap.textContent="";for(i=start;i<end;i++)wrap.appendChild(render(items[i]));
   state.textContent=fmt(STR.pageStatus,{from:items.length?start+1:0,to:end,total:items.length});
   prev.disabled=page===0;next.disabled=page>=total-1;focusScrollers(target);
@@ -673,8 +697,16 @@ function pagedList(target,items,render){
  prev.addEventListener("click",function(){if(page>0){page--;draw();prev.focus();}});
  next.addEventListener("click",function(){if(page<total-1){page++;draw();next.focus();}});
  nav.appendChild(prev);nav.appendChild(state);nav.appendChild(next);target.appendChild(wrap);
- if(items.length>ISSUE_PAGE_SIZE)target.appendChild(nav);
+ if(items.length>step)target.appendChild(nav);
  target.appendChild(el("p","print-only",fmt(STR.printRecords,{n:items.length})));draw();
+}
+function pagedTable(target,wrap,body,items,render){
+ var page=0,total=Math.max(1,Math.ceil(items.length/ISSUE_PAGE_SIZE));
+ var nav=el("div","pager"),prev=el("button","",STR.pagePrevious),state=el("span","pager-status"),next=el("button","",STR.pageNext);
+ prev.type="button";next.type="button";wrap.className+=" screen-list";
+ function draw(){var start=page*ISSUE_PAGE_SIZE,end=Math.min(items.length,start+ISSUE_PAGE_SIZE),i;body.textContent="";for(i=start;i<end;i++)body.appendChild(render(items[i]));state.textContent=fmt(STR.pageStatus,{from:items.length?start+1:0,to:end,total:items.length});prev.disabled=page===0;next.disabled=page>=total-1;focusScrollers(target);}
+ prev.addEventListener("click",function(){if(page>0){page--;draw();prev.focus();}});next.addEventListener("click",function(){if(page<total-1){page++;draw();next.focus();}});
+ nav.appendChild(prev);nav.appendChild(state);nav.appendChild(next);target.appendChild(wrap);if(items.length>ISSUE_PAGE_SIZE)target.appendChild(nav);target.appendChild(el("p","print-only",fmt(STR.printRecords,{n:items.length})));draw();
 }
 function rowsPanel(p,items,render,emptyText){
  if(!items.length){p.body.appendChild(el("p","muted",emptyText));return p;}
@@ -822,12 +854,13 @@ function viewPortfolio(view){
     ten seconds this artifact gets, it reads as a dead project or a broken tool. Everything on this
     screen is true either way; only one of the two says which. */
  var quiet=t.open===0;
- lead.appendChild(el("p","thesis",quiet
+ lead.appendChild(headline(quiet
   ?fmt(plural(t.programs,STR.thesisQuietOne,STR.thesisQuiet),{programs:t.programs,closed:t.closed})
   :(blockedClaim.known?fmt(plural(t.programs,STR.thesisOne,STR.thesis),{blocked:blockedClaim.value,open:t.open,programs:t.programs})
-    :fmt(STR.thesisUnknown,{open:t.open,unknown:t.unknownRule,programs:t.programs}))));
+    :fmt(STR.thesisUnknown,{open:t.open,unknown:t.unknownRule,programs:t.programs})),quiet?"declared-zero":claimState(blockedClaim)));
  if(quiet)lead.appendChild(el("p","lede",fmt(STR.thesisQuietLede,{closed:t.closed})));
  lead.appendChild(el("p","lede",fmt(STR.generated,{source:ROOM.meta.generatedFrom,date:ROOM.meta.today})));
+ if(!blockedClaim.known){var missingRules=ROOM.portfolio.programs.filter(function(p){return !p.blockedRule.declared;}).map(function(p){return p.id;}).join(", ");lead.appendChild(el("p","lede",fmt(STR.ruleUnknownNext,{programs:missingRules})));}
  answer.appendChild(lead);
  answer.appendChild(chartClosedOpen(t));
  answer.appendChild(chartLoad(ROOM.portfolio.programs));
@@ -876,6 +909,7 @@ function viewPortfolio(view){
 
 function kpi(list,k,v,note){
  var d=el("div","kpi"),dt=el("dt","",k),dd=el("dd","",v==null?"—":String(v));
+ d.setAttribute("data-claim-state",v==null?"unknown":Number(v)===0?"declared-zero":"measured");
  if(note)dd.appendChild(el("small","",note));
  d.appendChild(dt);d.appendChild(dd);list.appendChild(d);
 }
@@ -883,7 +917,7 @@ function viewExec(view,program,summary){
  var k=program.derived.kpis,rtm=program.derived.rtm,history=program.derived.history;
  var blockedClaim=claimOf(summary,"blocked",summary.blocked,summary.blockedRule.declared);
  var answer=el("div","answer"),lead=el("section","panel answer-lead");
- lead.appendChild(el("p","thesis",blockedClaim.known?fmt(STR.execHeadline,{open:summary.open,blocked:blockedClaim.value}):fmt(STR.execHeadlineUnknown,{open:summary.open})));
+ lead.appendChild(headline(blockedClaim.known?fmt(STR.execHeadline,{open:summary.open,blocked:blockedClaim.value}):fmt(STR.execHeadlineUnknown,{open:summary.open}),claimState(blockedClaim)));
  lead.appendChild(el("p","lede",snapshotProv(program)));
  answer.appendChild(lead);
 
@@ -893,7 +927,7 @@ function viewExec(view,program,summary){
  kpi(list,STR.kpiNoMilestone,k.noMilestoneCount);
  kpi(list,STR.kpiLinked,k.linkCoveragePct==null?null:k.linkCoveragePct+"%",k.linkCoveragePct==null?STR.notMeasured:STR.kpiLinkedNote);
  kpi(list,STR.kpiRequirements,rtm&&rtm.coverage.pct!=null?rtm.coverage.pct+"%":null,
-     rtm?fmt(STR.planCoverageNote,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements,withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly}):STR.notMeasured);
+     rtm?(rtm.coverage.pct==null?fmt(STR.rtmCoverageUnknown,{n:rtm.coverage.unknown}):fmt(STR.planCoverageNote,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements,withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly})):STR.notMeasured);
  kp.body.appendChild(list);
  answer.appendChild(kp);
  view.appendChild(answer);
@@ -912,7 +946,7 @@ function viewTech(view,program,summary){
  var mine=(ROOM.portfolio.blocked||[]).filter(function(b){return b.program===program.id;});
  var blockedClaim=claimOf(summary,"blocked",summary.blocked,summary.blockedRule.declared);
  var answer=el("div","answer"),lead=el("section","panel answer-lead");
- lead.appendChild(el("p","thesis",blockedClaim.known?(mine.length?fmt(STR.techHeadline,{n:mine.length}):STR.noBlocked):STR.techHeadlineUnknown));
+ lead.appendChild(headline(blockedClaim.known?(mine.length?fmt(STR.techHeadline,{n:mine.length}):STR.noBlocked):STR.techHeadlineUnknown,claimState(blockedClaim)));
  lead.appendChild(el("p","lede",STR.techLede));
  answer.appendChild(lead);
 var i,j;
@@ -945,7 +979,7 @@ var i,j;
  kv(STR.rules,!summary.blockedRule.declared?STR.ruleUnknown:(summary.blockedRule.inert?STR.ruleInert:summary.blockedRule.labels.join(", ")));
  var sweeps=(program.derived.link&&program.derived.link.excludedSweeps)||[],cell=el("span");
  cell.appendChild(el("div","",sweeps.length?fmt(STR.sweepsCount,{n:sweeps.length}):STR.sweepsNone));
- for(i=0;i<sweeps.length;i++){var sw=el("div","muted");sw.appendChild(el("span","data",String(sweeps[i].sha).slice(0,8)+" "));sw.appendChild(document.createTextNode(short(sweeps[i].subject,60)+" — "+fmt(STR.sweepFiles,{n:sweeps[i].files})));cell.appendChild(sw);}
+ for(i=0;i<sweeps.length;i++){var sw=el("div","muted screen-list");sw.appendChild(el("span","data",String(sweeps[i].sha).slice(0,8)+" "));sw.appendChild(document.createTextNode(sweeps[i].subject+" — "+fmt(STR.sweepFiles,{n:sweeps[i].files})));cell.appendChild(sw);}
  kv(STR.sweeps,cell);
  var age=summary.snapshotAgeDays,dt=String(program.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
  kv(STR.snapshots,snapshotAge(age,dt));
@@ -977,7 +1011,7 @@ function renderKanban(target,program){
   lane=panel(STR.routeKanban,fmt(STR.kanbanCount,{n:items.length}));
   pagedList(lane.body,items,function(entry){
    var item=el("div","kanban-issue"),meta=el("span","chip",entry.state);n=entry.n;
-   item.appendChild(meta);item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,58):"")));return item;
+   item.appendChild(meta);item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+issues[n].title:"")));return item;
   });
   board.appendChild(lane);
  }else board.appendChild(el("p","muted",STR.queueComplete));
@@ -1005,7 +1039,7 @@ function renderQueue(target,program){
   lane=panel(STR.routeQueue,fmt(STR.queueCount,{n:items.length}));
   pagedList(lane.body,items,function(entry){
    n=entry.n;item=el("div","queue-item");item.appendChild(el("span","chip",entry.cluster));
-   item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,64):"")));
+   item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+issues[n].title:"")));
    item.appendChild(commandLine(queueCommand(program,n)));return item;
   });
   board.appendChild(lane);
@@ -1027,6 +1061,31 @@ function frameDoc(program){
  var seed="<script>window.__C4_MODEL__="+model+";window.__C4_SKIN__=\""+mapSkin()+"\";window.__C4_EMBED__=true;window.__C4_LANG__="+JSON.stringify(LANG)+";"+"<"+"/script>";
  return src.replace("<head>","<head>"+seed);
 }
+function mapPrint(program){
+ var out=el("div","print-only map-print"),nodes=(program.model&&program.model.nodes)||[],edges=(program.model&&program.model.edges)||[],top=nodes.filter(function(n){return !n.parent;}),ids={},by={},i;
+ var states={done:STR.mapStateDone,"in-progress":STR.mapStateProgress,next:STR.mapStateNext,planned:STR.mapStatePlanned,problem:STR.mapStateProblem,unknown:STR.mapStateUnknown};
+ var np=el("section"),ep=el("section");np.appendChild(el("h3","",STR.mapPrintNodes));ep.appendChild(el("h3","",STR.mapPrintRelations));
+ for(i=0;i<top.length;i++){var n=top[i],row=el("div","kv"),refs=nodeEvidence(n),state=n.status2||(n.status==="planned"?"planned":"unknown");ids[n.id]=true;by[n.id]=n;row.appendChild(el("strong","",n.name));row.appendChild(el("span","",(n.category||n.kind||"")+" · "+(states[state]||STR.mapStateUnknown)+" · "+STR.evidence+": "+(refs.join(", ")||STR.none)));np.appendChild(row);}
+ var shown=0;for(i=0;i<edges.length;i++){var e=edges[i];if(!ids[e.from]||!ids[e.to])continue;var er=el("div","kv");er.appendChild(el("strong","",by[e.from].name+" → "+by[e.to].name));er.appendChild(el("span","",e.label||STR.none));ep.appendChild(er);shown++;}
+ if(!shown)ep.appendChild(el("p","muted",STR.mapPrintNoRelations));out.appendChild(np);out.appendChild(ep);return out;
+}
+function nodeEvidence(n){
+ var refs=(n.evidence||[]).map(function(e){return e.ref;});
+ if(n.verify&&n.verify.source&&refs.indexOf(n.verify.source)<0)refs.push(n.verify.source);
+ return refs;
+}
+function mapTable(program){
+ var d=workflow(program,STR.mapTable,function(target){
+  var nodes=(program.model&&program.model.nodes)||[],edges=(program.model&&program.model.edges)||[],by={},board=el("div","evidence");
+  var states={done:STR.mapStateDone,"in-progress":STR.mapStateProgress,next:STR.mapStateNext,planned:STR.mapStatePlanned,problem:STR.mapStateProblem,unknown:STR.mapStateUnknown};
+  for(var i=0;i<nodes.length;i++)by[nodes[i].id]=nodes[i];
+  var np=panel(STR.mapPrintNodes,fmt(STR.mapTableCount,{n:nodes.length,pageSize:MAP_PAGE_SIZE})),ep=panel(STR.mapPrintRelations,fmt(STR.mapTableCount,{n:edges.length,pageSize:MAP_PAGE_SIZE}));
+  pagedList(np.body,nodes,function(n){var row=el("div","kv"),state=n.status2||(n.status==="planned"?"planned":"unknown");row.appendChild(el("strong","",n.name));row.appendChild(el("span","",(n.category||n.kind||"")+" · "+(states[state]||STR.mapStateUnknown)+" · "+STR.evidence+": "+(nodeEvidence(n).join(", ")||STR.none)));return row;},MAP_PAGE_SIZE);
+  pagedList(ep.body,edges,function(e){var row=el("div","kv"),from=by[e.from],to=by[e.to];row.appendChild(el("strong","",(from?from.name:e.from)+" → "+(to?to.name:e.to)));row.appendChild(el("span","",e.label||STR.none));return row;},MAP_PAGE_SIZE);
+  board.appendChild(np);board.appendChild(ep);target.appendChild(board);
+ });
+ d.classList.add("map-table");return d;
+}
 function viewMap(view,program){
  view.setAttribute("data-single","");
  var ev=el("div","evidence"),date=String(program.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
@@ -1046,6 +1105,11 @@ function viewMap(view,program){
   var f=el("iframe","frame");
   f.setAttribute("sandbox","allow-scripts");f.title=fmt(STR.mapFrame,{program:program.id});f.srcdoc=frameDoc(program);
   mp.body.style.overflow="hidden";mp.body.appendChild(f);
+  var unknown=(program.model.nodes||[]).filter(function(n){return (n.status2||(n.status==="planned"?"planned":"unknown"))==="unknown";}).length;
+  var actors=(program.model.nodes||[]).filter(function(n){return !n.parent&&/^TODO:/.test(String(n.name||""));}).length;
+  if(unknown)mp.body.appendChild(el("p","muted",fmt(STR.mapUnknownNext,{n:unknown})));
+  if(actors)mp.body.appendChild(el("p","muted",fmt(STR.mapActorNext,{n:actors})));
+  mp.body.appendChild(mapPrint(program));
  }
  ev.appendChild(mp);
  if(!program.hasMap){view.appendChild(ev);return;}
@@ -1070,6 +1134,7 @@ function viewMap(view,program){
   cp.body.appendChild(wrap);
  }
  ev.appendChild(cp);
+ ev.appendChild(mapTable(program));
  view.appendChild(ev);
 }
 
@@ -1081,16 +1146,17 @@ function viewWbs(view,program){
   emptyState(missingPanel,STR.wbsMissing,STR.wbsNext);missing.appendChild(missingPanel);view.appendChild(missing);return;
  }
  var answer=el("div","answer"),lead=el("section","panel answer-lead");
- lead.appendChild(el("p","thesis",rtm?fmt(STR.wbsHeadline,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements}):STR.wbsMissing));
- lead.appendChild(el("p","lede",rtm?fmt(STR.wbsSplit,{withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly}):""));
+ lead.appendChild(headline(rtm?(rtm.coverage.pct==null?fmt(STR.rtmCoverageUnknown,{n:rtm.coverage.unknown}):fmt(STR.wbsHeadline,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements})):STR.wbsMissing,!rtm||rtm.coverage.pct==null?"unknown":rtm.coverage.accounted===0?"declared-zero":"measured"));
+ lead.appendChild(el("p","lede",rtm?(rtm.coverage.pct==null?STR.rtmCoverageNext:fmt(STR.wbsSplit,{withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly,unaccounted:rtm.coverage.requirements-rtm.coverage.accounted})):""));
  answer.appendChild(lead);
 
  var holes=[],hp=panel(STR.wbsHoles,STR.provRtm,"span2");
  if(rtm){
+  var unaccounted=rtm.coverage.unknown?[]:rtm.requirements.filter(function(o){return !o.issues.length&&!o.verified.length;});
   holes=[[STR.wbsDuplicate,rtm.orphans.duplicateIds.map(function(o){return o.id+" ("+o.from+":"+o.line+")";})],
          [STR.wbsDangling,rtm.orphans.danglingRefs.map(function(o){return o.id+" → "+o.ref;})],
-         [STR.wbsUncovered,rtm.orphans.uncovered.map(function(o){return o.id+" — "+short(o.text,70);})],
-         [STR.wbsOrphan,rtm.orphans.orphanIssues.map(function(o){return pill(program,o.n,"#"+o.n+" "+short(o.title,60));})],
+         [STR.wbsUncovered,unaccounted.map(function(o){return o.id+" — "+o.text;})],
+         [STR.wbsOrphan,rtm.orphans.orphanIssues.map(function(o){return pill(program,o.n,"#"+o.n+" "+o.title);})],
          [STR.wbsSkipped,rtm.skipped.map(function(o){return o.path+" ("+o.why+")";})]];
   var anyHole=false;
   for(i=0;i<holes.length;i++){
@@ -1127,21 +1193,21 @@ function viewWbs(view,program){
   if(keep.length<heads.length){var provEl=mp.querySelector("p.prov");if(provEl)provEl.textContent+=" · "+STR.wbsConstant;}
   for(j=0;j<keep.length;j++){var hc=el("th","",heads[keep[j]]);hc.setAttribute("scope","col");htr.appendChild(hc);}
   th.appendChild(htr);tb.appendChild(th);
-  for(i=0;i<rtm.requirements.length;i++){
-   var r=rtm.requirements[i],tr=el("tr"),td;
+  tb.appendChild(tbody);wrap.appendChild(tb);
+  pagedTable(mp.body,wrap,tbody,rtm.requirements,function(r){
+   var tr=el("tr"),td;
    for(j=0;j<keep.length;j++){
     var c=keep[j];
-    if(c===0){td=el("td","id");td.appendChild(el("strong","",r.id));td.appendChild(el("div","muted",short(r.text,70)));tr.appendChild(td);}
+    if(c===0){td=el("td","id");td.appendChild(el("strong","",r.id));td.appendChild(el("div","muted",r.text));tr.appendChild(td);}
     else if(c===1)tr.appendChild(el("td","",r.role));
     else if(c===2)tr.appendChild(el("td","",r.satisfies.join(", ")||"—"));
-    else if(c===3)tr.appendChild(el("td","",short(r.verified.join(", "),40)||"—"));
+    else if(c===3)tr.appendChild(el("td","",r.verified.join(", ")||"—"));
     else if(c===4){td=el("td");for(var k=0;k<r.issues.length;k++){td.appendChild(pill(program,r.issues[k]));td.appendChild(document.createTextNode(" "));}if(!r.issues.length)td.textContent="—";tr.appendChild(td);}
     else if(c===5){var pr=rtm.progress[r.id];tr.appendChild(el("td","nums",pr&&pr.pct!=null?pr.closed+"/"+pr.issues+" ("+pr.pct+"%)":"—"));}
     else{td=el("td");td.appendChild(docLink(program,r.from,r.line));tr.appendChild(td);}
    }
-   tbody.appendChild(tr);
-  }
-  tb.appendChild(tbody);wrap.appendChild(tb);mp.body.appendChild(wrap);
+   return tr;
+  });
   mp.body.style.overflow="hidden";
  }else mp.body.appendChild(el("p","muted",STR.wbsMissing));
  ev.appendChild(mp);
@@ -1172,22 +1238,15 @@ function viewDocs(view,program){
  var body=el("div","reader"),title=rp.head.querySelector("h2"),link=el("span");
  rp.head.appendChild(link);
  rp.body.appendChild(body);
- // On screen the reader shows one document. On paper it must carry all of them: the panel is
- // headed "N documents embedded" and the PDF contained one, which is the heading lying.
- //
- // Built on demand, not at load. Rendering every canon document for every programme cost every
- // visitor the whole corpus whether or not they ever opened this view or ever pressed print, and it
- // scales with programmes x each one's byte budget.
+ // The HTML reader carries full canon text. Paper is a bounded briefing, so it carries a truthful
+ // index and points back to the HTML instead of turning the document corpus into unbounded pages.
  var all=el("div","print-all");
  all.fill=function(){
   if(all.firstChild)return;
-  for(var a=0;a<docs.embedded.length;a++){
-   // h2, matching the panel heading a document sits under on screen, so the demotion in
-   // renderMarkdown lands its `#` at h3 in both places.
-   all.appendChild(el("h2","md-h md-h1",docs.embedded[a].title||docs.embedded[a].path));
-   all.appendChild(el("div","prov",docs.embedded[a].path));
-   all.appendChild(renderMarkdown(docBody(docs.embedded[a])));
-  }
+  all.appendChild(el("p","muted",STR.docsPrintSummary));
+  var limit=Math.min(12,docs.embedded.length);
+  for(var a=0;a<limit;a++){var row=el("div","kv");row.appendChild(el("strong","",docs.embedded[a].title||docs.embedded[a].path));row.appendChild(el("span","",docs.embedded[a].path+" · "+fmt(STR.docsLines,{n:docs.embedded[a].lines})));all.appendChild(row);}
+  if(limit<docs.embedded.length)all.appendChild(el("p","muted",fmt(STR.docsPrintMore,{n:docs.embedded.length-limit})));
  };
  PRINT_FILL.push(all);
  rp.body.appendChild(all);
@@ -1211,18 +1270,15 @@ function viewDocs(view,program){
   })(i);
  }
  lp.body.appendChild(listWrap);
+ if(!docs.embedded.length)emptyState(lp,STR.docsCanonMissing,STR.docsCanonNext);
  if(docs.listed.length){
   var others=el("div","group");
   others.appendChild(el("span","group-name",STR.docsOther));
-  for(i=0;i<docs.listed.length;i++){
-   var row=el("div","kv"),l=docs.listed[i];
-   row.appendChild(docLink(program,l.path));
-   row.appendChild(el("span","",l.why==="budget"?STR.docsTooLarge:(l.lines==null?"":fmt(STR.docsLines,{n:l.lines}))));
-   others.appendChild(row);
-  }
+  var listed=el("div");others.appendChild(listed);
+  pagedList(listed,docs.listed,function(l){var row=el("div","kv");row.appendChild(docLink(program,l.path));row.appendChild(el("span","",l.why==="budget"?STR.docsTooLarge:(l.lines==null?"":fmt(STR.docsLines,{n:l.lines}))));return row;});
   lp.body.appendChild(others);
  }
- ev.appendChild(lp);ev.appendChild(rp);
+ ev.appendChild(lp);if(docs.embedded.length)ev.appendChild(rp);
  view.appendChild(ev);
  if(docs.embedded.length)open(0);
 }

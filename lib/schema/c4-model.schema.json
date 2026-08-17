@@ -49,6 +49,10 @@
           "type": "string",
           "description": "Repo-relative curated programme-status overlay applied by `forma gen` (c4-status.json). The gate fails if it decorates a node id the model no longer has."
         },
+        "statusRequired": {
+          "type": "boolean",
+          "description": "True when generation used an explicit status file outside the repository. `forma check` then requires that file again through `--status`; no external path is persisted."
+        },
         "attachedDocs": {
           "type": "array",
           "items": {

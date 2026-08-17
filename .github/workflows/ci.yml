@@ -37,15 +37,50 @@ jobs:
           node bin/forma.mjs room --manifest forma.room.json --out "$RUNNER_TEMP/room.html"
           node bin/forma.mjs check --room "$RUNNER_TEMP/room.html"
           node scripts/room-presentable.mjs --room "$RUNNER_TEMP/room.html" --manifest forma.room.json
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      # Browser tools are CI instrumentation, not Forma runtime dependencies. Pin them here and
+      # install into the runner's temporary directory so the published zero-dependency package and
+      # its lock-free source tree stay unchanged.
+      - name: Install browser publication instruments
+        run: |
+          npm install --prefix "$RUNNER_TEMP/browser-tools" --ignore-scripts --no-save playwright@1.61.1 axe-core@4.12.1
+          "$RUNNER_TEMP/browser-tools/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Compose real and 2,500-issue briefings
+        run: |
+          mkdir -p "$RUNNER_TEMP/acceptance"
+          node bin/forma.mjs room --manifest forma.room.json --out "$RUNNER_TEMP/acceptance/room.html"
+          node test/fixtures/control-room-stress/make.mjs --html lib/viewer/control-room.html "$RUNNER_TEMP/acceptance/stress-room.html"
+      - name: Gate desktop, mobile, accessibility and print in a real browser
+        env:
+          BROWSER_GATE_MODULES: ${{ runner.temp }}/browser-tools/node_modules
+          BROWSER_GATE_REPORT: ${{ runner.temp }}/acceptance/browser-report.json
+        run: node scripts/browser-gate.mjs "$RUNNER_TEMP/acceptance/room.html" "$RUNNER_TEMP/acceptance/stress-room.html"
+      - name: Retain browser acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: control-room-browser-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/acceptance
+          if-no-files-found: error
+          retention-days: 30
   ci-required:
     # fail-closed aggregate: one required status check that gates the whole matrix, so branch
     # protection lists a single context instead of one per matrix node version.
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [test]
+    needs: [test, browser]
     if: always()
     steps:
-      - env: { TEST: "${{ needs.test.result }}" }
+      - env: { TEST: "${{ needs.test.result }}", BROWSER: "${{ needs.browser.result }}" }
         run: |
           echo "test result: $TEST"
+          echo "browser result: $BROWSER"
           [ "$TEST" = success ] || { echo "::error::ci test job did not succeed"; exit 1; }
+          [ "$BROWSER" = success ] || { echo "::error::ci browser job did not succeed"; exit 1; }

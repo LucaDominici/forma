@@ -1,6 +1,6 @@
 ---
 title: 'Security Policy'
-doc_version: '1.0.0'
+doc_version: '1.0.1'
 status: active
 last_review: '2026-08-10'
 owner: 'Luca Dominici'
@@ -12,7 +12,7 @@ related: ['PRIVACY.md']
 
 ## Supported versions
 
-Forma is pre-1.0; only the latest `0.x` release is supported.
+Only the latest `1.x` release is supported. Security fixes are not backported to older minors.
 
 ## Reporting a vulnerability
 

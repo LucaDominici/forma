@@ -38,7 +38,7 @@ const manifest = (() => { try { return JSON.parse(readFileSync(MANIFEST, 'utf-8'
 const repoFor = new Map((manifest.programs || []).map((p) => [p.id, manifestPath(p.repo)]))
 
 const programs = ROOM.programs || []
-const orphanPills = [], badEvidence = [], badFindings = [], fakedCompletion = [], orphanOpen = [], staleSnapshots = []
+const orphanPills = [], badEvidence = [], badFindings = [], fakedCompletion = [], orphanOpen = [], staleSnapshots = [], falseClaims = []
 let verdictCount = 0, findingCount = 0, openCount = 0
 
 // Publication-level UI contracts. Browser tests own measured layout and DOM counts; these checks
@@ -50,7 +50,7 @@ const officialIa = JSON.stringify(officialViews) === JSON.stringify(['exec', 'te
 const pageSize = Number((/var ISSUE_PAGE_SIZE=(\d+)/.exec(html) || [])[1])
 const boundedDom = pageSize > 0 && pageSize <= 50 && /function pagedList\(/.test(html) && /function ensureView\(/.test(html) && !/function buildAll\(/.test(html)
 const mobileNav = /id="mobile-program"/.test(html) && /id="mobile-view"/.test(html) && /@media\(max-width:600px\)/.test(html)
-const boundedPrint = /\.screen-list,\.workflow\{display:none!important\}/.test(html) && !/details:not\(\[open\]\)/.test(html)
+const boundedPrint = /\.screen-list,[^{]*\.workflow[^{]*\{display:none!important\}/.test(html) && !/details:not\(\[open\]\)/.test(html)
 
 for (const program of programs) {
   const snapshot = program.issuesSnapshot || {}
@@ -59,6 +59,11 @@ for (const program of programs) {
   const known = new Set((snapshot.issues || []).map((it) => it.n))
   const open = (snapshot.issues || []).filter((it) => it.state === 'OPEN').map((it) => it.n)
   openCount += open.length
+
+  const summary = ((ROOM.portfolio || {}).programs || []).find((row) => row.id === program.id) || {}
+  if (summary.blockedRule && !summary.blockedRule.declared && summary.blocked !== null) falseClaims.push(`${program.id}: unknown blocking rule rendered as ${summary.blocked}`)
+  const coverage = derived.rtm && derived.rtm.coverage
+  if (coverage && coverage.unknown > 0 && coverage.pct !== null) falseClaims.push(`${program.id}: ${coverage.unknown} unmapped RTM row(s) rendered as ${coverage.pct}%`)
 
   // 1+7) every issue number the room DISPLAYS for this programme, and every OPEN issue that ought
   // to be displayed. Both directions matter: a pill pointing at nothing, and work the briefing
@@ -97,7 +102,7 @@ for (const program of programs) {
   // 5) this programme's gh snapshot is not stale past the manifest's own threshold.
   const ageDays = daysBetween(snapshot.fetchedAt, manifest.today)
   const staleAfterDays = manifest.staleAfterDays || 14
-  if (ageDays === null || ageDays > staleAfterDays) staleSnapshots.push(`${program.id} ${snapshot.fetchedAt} (${ageDays === null ? 'unknown' : ageDays}d)`)
+  if (ageDays === null || ageDays < 0 || ageDays > staleAfterDays) staleSnapshots.push(`${program.id} ${snapshot.fetchedAt} (${ageDays === null ? 'unknown' : ageDays}d)`)
 }
 
 // 6) determinism: re-run `forma room` with the SAME manifest and byte-compare. Nothing in room.mjs
@@ -117,12 +122,15 @@ try {
 }
 
 const staleAfterDays = manifest.staleAfterDays || 14
+const portfolioTotals = (ROOM.portfolio || {}).totals || {}
+const honestUnknown = falseClaims.length === 0 && (!portfolioTotals.unknownRule || portfolioTotals.blocked === null)
 const predicates = [
   ['every issue reference on screen resolves in its snapshot (no orphan pill)', orphanPills.length === 0, orphanPills.length ? `orphans: ${orphanPills.slice(0, 8).join(', ')}` : `${programs.length} programme(s), none`],
   ['every health verdict carries resolvable evidence', badEvidence.length === 0, badEvidence.length ? badEvidence.slice(0, 5).join('; ') : `${verdictCount} verdict(s), 0 unresolvable`],
   ['every finding row carries resolvable evidence', badFindings.length === 0, badFindings.length ? badFindings.join(', ') : `${findingCount} finding(s), 0 unresolvable`],
   ['no aggregate is presented as `completion`', fakedCompletion.length === 0, fakedCompletion.length ? fakedCompletion.join(', ') : 'closureRate only'],
   ['no gh snapshot is stale', staleSnapshots.length === 0, staleSnapshots.length ? staleSnapshots.join('; ') : `today ${manifest.today}, limit ${staleAfterDays}d`],
+  ['unknown evidence never becomes a numeric headline', honestUnknown, falseClaims.length ? falseClaims.join('; ') : 'unknown blocker and RTM claims remain non-numeric'],
   ['re-generating from the same manifest is byte-deterministic', deterministic, determinismNote],
   ['every open issue is covered (Kanban or queue), none orphaned', orphanOpen.length === 0, orphanOpen.length ? `orphaned: ${orphanOpen.join(', ')}` : `${openCount} open, 0 orphaned`],
   ['the programme IA is exactly five evidence views', officialIa, officialViews.length ? officialViews.join(', ') : 'TABS contract missing'],

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-08-17T10:45:23.367Z",
+  "generatedAt": "2026-08-17T20:26:49.558Z",
   "source": {
     "repo": "forma",
-    "commit": "e4ece0d3d2b4734931c1ef8a38b1cb1e27cb3963",
-    "branch": "control-room-rework",
+    "commit": "8275057eadd2415bc1d6e5132ad0c8542a60c53e",
+    "branch": "agent/forma-production-closure-followup",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -273,7 +273,7 @@
         {
           "type": "glob",
           "ref": "scripts",
-          "count": 6
+          "count": 7
         }
       ],
       "category": "container",
@@ -792,6 +792,25 @@
       "descSource": "docstring"
     },
     {
+      "id": "scripts__browser_gate_mjs",
+      "level": "leaf",
+      "parent": "scripts",
+      "kind": "leaf",
+      "name": "browser-gate",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "scripts/browser-gate.mjs"
+        }
+      ],
+      "category": "scripts",
+      "status2": "unknown",
+      "target": "",
+      "func": "Runtime publication gate. Browser tooling is installed only by CI and deliberately stays out of Forma's package/runtime graph. Locally: BROWSERGATEMODULES=/path/to/nodemodules node ...",
+      "descSource": "docstring"
+    },
+    {
       "id": "scripts__check_clean_mjs",
       "level": "leaf",
       "parent": "scripts",
@@ -807,7 +826,7 @@
       "category": "scripts",
       "status2": "unknown",
       "target": "",
-      "func": "prepack guard: refuse to publish if a stray/editor artifact lurks in shipped dirs.",
+      "func": "prepack guard: refuse to publish if the reviewed runtime allowlist changes or carries residue.",
       "descSource": "docstring"
     },
     {

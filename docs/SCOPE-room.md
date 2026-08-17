@@ -112,8 +112,8 @@ not render.
 - **Disclosure.** A published Control Room exposes issue titles, labels, and milestones from the
   target repo — richer than the package-name disclosure `docs/SCOPE.md §6.1` already approved for
   `haben`. Not decided; blocks publishing, not building.
-- **Shipped-file count.** `AGENTS.md`/`scripts/check-clean.mjs` name a number that grows once
-  `room.mjs` and friends are committed for real. Needs a deliberate bump, not a silent one.
+- **Shipped-file count (resolved 2026-08-17).** `scripts/check-clean.mjs` now enforces the reviewed
+  38-file runtime allowlist; any future addition or removal requires a deliberate bump.
 
 ## 7. After the boundary
 
