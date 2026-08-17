@@ -70,7 +70,7 @@ for (const file of rooms) {
         if (currentRoute === '/') {
           const t = room.portfolio.totals
           expectedState = t.open === 0 ? 'declared-zero' : t.unknownRule ? 'unknown' : Number(t.blocked) === 0 ? 'declared-zero' : 'measured'
-          if (expectedState === 'unknown') expectedText = fmt(strings.thesisUnknown, { open: t.open, unknown: t.unknownRule, programs: t.programs })
+          if (expectedState === 'unknown') expectedText = fmt(t.programs === 1 ? strings.thesisUnknownOne : strings.thesisUnknown, { program: room.portfolio.programs.map((p) => p.id).join(', '), open: t.open, unknown: t.unknownRule, programs: t.programs })
         } else {
           const match = /^\/([^/]+)\/(exec|tech|wbs)$/.exec(currentRoute)
           if (match) {

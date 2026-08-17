@@ -848,7 +848,7 @@ function renderMarkdown(src){
 function viewPortfolio(view){
  var t=ROOM.portfolio.totals;
  var blockedClaim=claimOf(t,"blocked",t.blocked,t.unknownRule===0);
- var answer=el("div","answer"),lead=el("section","panel answer-lead");
+ var answer=el("div","answer"),lead=el("section","panel answer-lead"),programs=ROOM.portfolio.programs.map(function(p){return p.id;}).join(", ");
  /* Nothing open is a RESULT, not a template with zeros in it. "0 things need you out of 0 open
     across 1 programmes." is the sentence a reader met first on the published demo, and cold, in the
     ten seconds this artifact gets, it reads as a dead project or a broken tool. Everything on this
@@ -857,9 +857,9 @@ function viewPortfolio(view){
  lead.appendChild(headline(quiet
   ?fmt(plural(t.programs,STR.thesisQuietOne,STR.thesisQuiet),{programs:t.programs,closed:t.closed})
   :(blockedClaim.known?fmt(plural(t.programs,STR.thesisOne,STR.thesis),{blocked:blockedClaim.value,open:t.open,programs:t.programs})
-    :fmt(STR.thesisUnknown,{open:t.open,unknown:t.unknownRule,programs:t.programs})),quiet?"declared-zero":claimState(blockedClaim)));
+    :fmt(plural(t.programs,STR.thesisUnknownOne,STR.thesisUnknown),{program:programs,open:t.open,unknown:t.unknownRule,programs:t.programs})),quiet?"declared-zero":claimState(blockedClaim)));
  if(quiet)lead.appendChild(el("p","lede",fmt(STR.thesisQuietLede,{closed:t.closed})));
- lead.appendChild(el("p","lede",fmt(STR.generated,{source:ROOM.meta.generatedFrom,date:ROOM.meta.today})));
+ lead.appendChild(el("p","lede",fmt(STR.generated,{programs:programs,source:ROOM.meta.generatedFrom,date:ROOM.meta.today})));
  if(!blockedClaim.known){var missingRules=ROOM.portfolio.programs.filter(function(p){return !p.blockedRule.declared;}).map(function(p){return p.id;}).join(", ");lead.appendChild(el("p","lede",fmt(STR.ruleUnknownNext,{programs:missingRules})));}
  answer.appendChild(lead);
  answer.appendChild(chartClosedOpen(t));
