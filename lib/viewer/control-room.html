@@ -160,6 +160,12 @@ details[open]>summary:after{content:"\2212"}
 .kanban-board{display:grid;grid-template-columns:repeat(6,minmax(180px,1fr));gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin}
 .kanban-issue{padding:6px 0;border-bottom:1px solid var(--line)}
 .kanban-issue a{display:block;line-height:1.35}
+.queue-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin;align-content:start}
+.queue-item{min-width:0;padding:7px 0;border-bottom:1px solid var(--line)}
+.queue-item .issue-pill{display:flex;font-weight:600;margin-bottom:4px}
+.queue-command{display:flex;align-items:center;gap:6px;min-width:0}
+.queue-command code{min-width:0;overflow:auto;white-space:nowrap;flex:1 1 auto}
+@media(max-width:1199px){.queue-board{grid-template-columns:minmax(0,1fr)}}
 .kv{padding:5px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(110px,180px) 1fr;gap:12px;font-size:12.5px}
 .kv>span:first-child{color:var(--muted)}
 
@@ -264,7 +270,7 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  .view[hidden]{display:block!important}
  .view+.view{break-before:page}
  .answer,.evidence{display:block;overflow:visible}
- .kanban-board{grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
+ .kanban-board,.queue-board{grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
  .panel{break-inside:avoid;border-top:1px solid #999;margin-bottom:10pt}
  .panel-body,.tablewrap{overflow:visible;max-height:none}
  .chart-viz{height:200pt}
@@ -863,6 +869,35 @@ function viewKanban(view,program){
  view.appendChild(board);
 }
 
+function queueCommand(p,n){return "gh issue view "+n+" --repo "+p.ghRepo;}
+function commandLine(command){
+ var row=el("div","queue-command"),code=el("code","data",command),button=el("button","toggle",STR.copyCommand);
+ button.type="button";button.setAttribute("aria-label",STR.copyCommand);
+ button.addEventListener("click",function(){
+  function done(){button.textContent=STR.copied;button.setAttribute("aria-label",STR.copied);setTimeout(function(){button.textContent=STR.copyCommand;button.setAttribute("aria-label",STR.copyCommand);},1200);}
+  function fallback(){var t=el("textarea","",command);t.style.position="fixed";t.style.opacity="0";document.body.appendChild(t);t.select();if(document.execCommand("copy"))done();document.body.removeChild(t);}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(command).then(done,fallback);else fallback();
+ });
+ row.appendChild(code);row.appendChild(button);return row;
+}
+function viewQueue(view,program){
+ view.setAttribute("data-single","");
+ var queue=program.derived.queue,issues={},board=el("div","queue-board"),i,j,n,lane,item,name;
+ for(i=0;i<program.issuesSnapshot.issues.length;i++)issues[program.issuesSnapshot.issues[i].n]=program.issuesSnapshot.issues[i];
+ for(i=0;i<queue.clusters.length;i++){
+  name=queue.clusters[i].key==="altro"||queue.clusters[i].key==="tutte"?STR.queueRest:queue.clusters[i].key;
+  lane=panel(name,fmt(STR.queueCount,{n:queue.clusters[i].issues.length}));
+  for(j=0;j<queue.clusters[i].issues.length;j++){
+   n=queue.clusters[i].issues[j];item=el("div","queue-item");
+   item.appendChild(issueLink(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,64):"")));
+   item.appendChild(commandLine(queueCommand(program,n)));lane.body.appendChild(item);
+  }
+  board.appendChild(lane);
+ }
+ if(!queue.clusters.length){lane=panel(STR.routeQueue,STR.queueComplete);lane.body.appendChild(el("p","muted",STR.noMoving));board.appendChild(lane);}
+ view.appendChild(board);
+}
+
 /* The architecture skin that matches the briefing's theme. `blueprint` IS the briefing's light
    palette mapped onto the explorer's token names (DESIGN.md §D6); `blueprint-dark` is the same
    mapping onto the dark one. Before this, the map was light in both and the theme control silently
@@ -923,7 +958,7 @@ function viewMap(view,program){
  view.appendChild(ev);
 }
 
-function viewWbs(view,program,summary){
+function viewWbs(view,program){
  var rtm=program.derived.rtm,i,j;
  var answer=el("div","answer"),lead=el("section","panel");
  lead.appendChild(el("p","thesis",rtm?fmt(STR.wbsHeadline,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements}):STR.wbsMissing));
@@ -991,18 +1026,6 @@ function viewWbs(view,program,summary){
  }else mp.body.appendChild(el("p","muted",STR.wbsMissing));
  ev.appendChild(mp);
 
- var q=program.derived.queue,family=summary.taxonomy&&summary.taxonomy.clusterFamily;
- var qp=panel(STR.wbsQueue,family?fmt(STR.wbsQueueNote,{family:family}):STR.wbsQueueFlat);
- var open={},n;
- for(i=0;i<program.issuesSnapshot.issues.length;i++)if(program.issuesSnapshot.issues[i].state==="OPEN")open[program.issuesSnapshot.issues[i].n]=program.issuesSnapshot.issues[i];
- for(i=0;i<q.clusters.length;i++){
-  var g=el("div","group"),lk=el("span","links");
-  g.appendChild(el("span","group-name",q.clusters[i].key));
-  for(j=0;j<q.clusters[i].issues.length;j++){n=q.clusters[i].issues[j];if(!open[n])continue;lk.appendChild(issueLink(program,n,"#"+n+" "+short(open[n].title,52)));}
-  g.appendChild(lk);qp.body.appendChild(g);
- }
- if(!q.clusters.length)qp.body.appendChild(el("p","muted",STR.noMoving));
- ev.appendChild(qp);
  view.appendChild(ev);
 }
 
@@ -1140,10 +1163,11 @@ function toggle(id,enabled){
 /* --------------------------------- routing -------------------------------- */
 var VIEWS={},ORDER=[],PRINT_FILL=[];
 var TABS=[["exec",function(){return STR.routeExec;}],["tech",function(){return STR.routeTech;}],
+          ["auto",function(){return STR.routeQueue;}],
           ["kanban",function(){return STR.routeKanban;}],
           ["map",function(){return STR.routeMap;}],["wbs",function(){return STR.routeWbs;}],
           ["docs",function(){return STR.routeDocs;}]];
-var BUILD={exec:viewExec,tech:viewTech,kanban:viewKanban,map:viewMap,wbs:viewWbs,docs:viewDocs};
+var BUILD={exec:viewExec,tech:viewTech,auto:viewQueue,kanban:viewKanban,map:viewMap,wbs:viewWbs,docs:viewDocs};
 function key(p,t){return p?"/"+p+"/"+t:"/"+t;}
 function mount(k){
  var v=el("section","view");v.id="view-"+k.replace(/[^a-z0-9]+/gi,"-");v.hidden=true;

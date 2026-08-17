@@ -1904,6 +1904,28 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok room-kanban — all checked verdict buckets are visible as a programme view')
 }
 
+// Coda /auto is the complete open queue, not a hand-picked shortlist. Its fallback group must be
+// named, every row must carry a command built from the manifest repo, and the route must be real (#62).
+{
+  const template = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
+  const view = (template.match(/function viewQueue\([^]*?\n}\n/) || [])[0]
+  if (!view) die('room-queue: viewQueue is missing')
+  if (!/program\.derived\.queue/.test(view)) die('room-queue: the view does not consume the checked queue derivation')
+  if (!/STR\.queueRest/.test(view)) die('room-queue: the fallback cluster is not named as the rest of the queue')
+  if (!/queueCommand\(program,n\)/.test(view)) die('room-queue: issue rows do not carry a copy-ready command')
+  if (!/return "gh issue view "\+n\+" --repo "\+p\.ghRepo/.test(template)) die('room-queue: the command is not derived from issue number and manifest repository')
+  if (!/\.queue-command code\{[^}]*min-width:0/.test(template)) die('room-queue: long commands push the copy control out of a narrow viewport')
+  if (!/@media\(max-width:1199px\)\{\.queue-board\{grid-template-columns:minmax\(0,1fr\)/.test(template)) die('room-queue: the narrow grid preserves command intrinsic width and overflows')
+  if (!/\.queue-item\{[^}]*min-width:0/.test(template)) die('room-queue: a queue row cannot shrink to its grid track')
+  if (!/\.queue-item \.issue-pill\{display:flex/.test(template)) die('room-queue: queue rows override the shared pill flex layout')
+  if (!/button\.setAttribute\("aria-label",STR\.copied\)/.test(template)) die('room-queue: copy success is hidden from the button accessible name')
+  const en = readJson(join(HERE, '..', 'lib/viewer/strings/en.json'))
+  if (!/^Open issues: \{n\}/.test(en.queueCount)) die('room-queue: English provenance has an unconditional plural')
+  if (!/\["auto",function\(\)\{return STR\.routeQueue;\}\]/.test(template)) die('room-queue: Coda /auto is not a programme route')
+  if (!/auto:viewQueue/.test(template)) die('room-queue: the Coda /auto route is not wired to its view')
+  console.log('  ok room-queue — the complete derived queue has a fallback group and factual copy-ready commands')
+}
+
 // The dogfood. A traceability convention that cannot read the document THIS repository writes is a
 // convention for other people's repositories. docs/PRD.md §6 is a real table, edited by hand for
 // prose reasons, and the parser has to find it without being told anything but the id pattern.
