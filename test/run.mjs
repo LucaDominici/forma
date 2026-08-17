@@ -2008,15 +2008,28 @@ const diffPaths = (a, b, at = '') => {
 {
   const repo = join(tmp, 'audit-repo'), plan = join(tmp, 'audit-plan.json'), plan2 = join(tmp, 'audit-plan-2.json')
   const issues = join(repo, 'issues.json'), health = join(repo, 'health.json'), findings = join(repo, 'findings.json')
+  const topology = join(repo, 'topology.json'), model = join(repo, 'model.json')
   cpSync(FIX('room/alpha'), repo, { recursive: true })
-  let r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--plan', plan])
+  let r = run(['init', '--repo', repo, '--out', topology, '--force']); if (r.status !== 0) die('audit: init exit ' + r.status, r)
+  r = run(['gen', '--repo', repo, '--topology', topology, '--out', model]); if (r.status !== 0) die('audit: gen exit ' + r.status, r)
+  const auditModel = readJson(model)
+  const doneNode = auditModel.nodes.find((node) => node.evidence && node.evidence.some((e) => e.type === 'path'))
+  doneNode.status2 = 'done'
+  writeFileSync(model, JSON.stringify(auditModel, null, 2) + '\n')
+  const planArgs = ['audit', '--repo', repo, '--issues', issues, '--model', model, '--topology', topology, '--health', health, '--findings', findings, '--plan']
+  r = run([...planArgs, plan])
   if (r.status !== 0) die('audit: plan exit ' + r.status, r)
-  r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--plan', plan2])
+  r = run([...planArgs, plan2])
   if (r.status !== 0) die('audit: second plan exit ' + r.status, r)
   if (readFileSync(plan, 'utf-8') !== readFileSync(plan2, 'utf-8')) die('audit: unchanged inputs produced different plans')
   const work = readJson(plan)
   if (JSON.stringify(work.issues.map((x) => x.n)) !== '[3]') die('audit: plan did not exclude already-audited issues: ' + JSON.stringify(work.issues))
   if (!work.issues[0].prompt.includes('issue #3') || !Array.isArray(work.output.verdicts) || !Array.isArray(work.output.findings)) die('audit: plan does not carry the agent fill contract')
+  const claimKinds = new Set(work.claims.map((claim) => claim.kind))
+  for (const kind of ['done-node', 'health-verdict', 'milestone-rate', 'waiting-human']) if (!claimKinds.has(kind)) die('audit: counter-verification plan has no ' + kind + ' claim')
+  if (work.claims.some((claim) => !claim.id || !claim.claim || !claim.where.length)) die('audit: a counter-verification claim lacks its name or inspection targets: ' + JSON.stringify(work.claims))
+  const milestoneClaim = work.claims.find((claim) => claim.kind === 'milestone-rate')
+  if (!/33% \(1 closed of 3\)/.test(milestoneClaim.claim) || !milestoneClaim.where.some((at) => at.type === 'gh')) die('audit: milestone claim does not name its derivation and gh source: ' + JSON.stringify(milestoneClaim))
 
   const fill = join(tmp, 'audit-fill.json')
   writeFileSync(fill, JSON.stringify({
