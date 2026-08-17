@@ -62,13 +62,23 @@ So bootstrap once, then hand off to the workflow:
 2. **Attach the Trusted Publisher:** on npmjs.com → package → Settings → Trusted Publisher,
    point it at this repo's `release.yml` workflow. Requires npm CLI ≥ 11.5.1 (the workflow
    upgrades it).
-3. **From then on**, releases are automatic and token-free with provenance:
+3. **Bootstrap this automation once:** after the reviewed 1.0 branch is merged, push its exact
+   `v1.0.0` tag. Release Please intentionally waits for a `v1.*` tag so it cannot reinterpret the
+   pre-1.0 history as a 0.x release.
+4. **From then on**, releases are automatic and token-free with provenance. Conventional commits
+   merged to `main` make Release Please open a versioned release PR; review and merge that PR.
+   The `release` workflow then checks out the tag it created, asserts it matches `package.json`,
+   runs lint + test + `npm pack --dry-run`, then calls `npm publish`. Provenance (Sigstore) is
+   generated automatically because the repo is public and the job has `id-token: write`.
+5. **One-time repository settings:** permit GitHub Actions to create pull requests if the default
+   setting blocks the release PR; protect release tags; and protect `main` with the CI gate. These
+   are account settings, deliberately not changes the workflow can make to itself.
+6. **Recovery only:** an already-reviewed exact tag can still publish directly:
    ```sh
-   git tag v0.1.1 && git push origin v0.1.1
+   git tag v1.0.1 && git push origin v1.0.1
    ```
-   The `release` workflow asserts the tag matches `package.json`, runs lint + test, then
-   `npm publish` — provenance (Sigstore) is generated automatically because the repo is
-   public and the job has `id-token: write`.
+   The same tag/package assertion and OIDC gate applies. Apart from the 1.0 bootstrap, do not use
+   this route for normal releases: it bypasses the reviewable Release Please PR.
 
 ## Notes
 - The engine has **no runtime dependencies** and makes **no network calls** in

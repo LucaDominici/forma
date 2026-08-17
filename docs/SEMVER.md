@@ -54,10 +54,13 @@ makes the user read the changelog to recover, which is the manual this product t
 
 ## Release mechanics
 
-Tag `v<version>`; CI asserts the tag matches `package.json`, runs the full gate, and publishes with
-npm OIDC trusted publishing and provenance — no long-lived token
-([ADR-0003](adr/0003-npm-oidc-trusted-publishing.md)). The checklist is in
-[`PUBLISH.md`](../PUBLISH.md).
+Conventional commits merged into `main` make Release Please open a reviewable release PR with the
+next version and changelog. Merging that PR creates the matching tag; the same trusted OIDC workflow
+asserts it against `package.json`, runs the full gate, packs it and publishes — no long-lived token.
+The 1.0 baseline is bootstrapped once with its exact tag; after a `v1.*` tag exists, Release Please
+owns normal bumps. An exact `v<version>` tag remains a recovery path for an already-reviewed release.
+The checklist is in [`PUBLISH.md`](../PUBLISH.md) and the security boundary in
+[ADR-0003](adr/0003-npm-oidc-trusted-publishing.md).
 
 ## Support
 

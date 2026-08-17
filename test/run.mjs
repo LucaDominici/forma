@@ -2009,6 +2009,20 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok claude-skill — init→update runs on a fresh target and the adapter links the artifact')
 }
 
+// Publishing must follow the same chain for every future release: conventional commits become a
+// reviewable Release Please PR, and only a matching immutable tag reaches npm through the existing
+// OIDC publisher. This is intentionally static: it protects the CI contract without publishing.
+{
+  const release = readFileSync(join(HERE, '..', '.github/workflows/release.yml'), 'utf-8')
+  if (!/branches:\s*\[main\]/.test(release) || !/tags:\s*\["v\*"\]/.test(release) || !/workflow_dispatch:/.test(release)) die('release: main, tag and recovery triggers must remain explicit')
+  if (!/googleapis\/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7/.test(release) || !/release-type:\s*node/.test(release)) die('release: conventional versioning is not pinned to Release Please')
+  if (!/git tag --list 'v1\.\*'/.test(release)) die('release: automated bumps must wait for the deliberate 1.0 bootstrap tag')
+  if (!/release_created/.test(release) || !/id-token:\s*write/.test(release)) die('release: automatic publication is not gated by a created release and npm OIDC')
+  if (/npm@latest/.test(release) || !/npm@11\.16\.0/.test(release)) die('release: the npm publishing CLI must be an explicit supported version, never latest')
+  if (!/package-manager-cache:\s*false/.test(release)) die('release: release builds must not reuse a package-manager cache')
+  console.log('  ok release — conventional commits create reviewable version bumps and OIDC publishes only matching releases')
+}
+
 // One issue primitive keeps every view honest: colour only from validated health, the same anchored
 // why on hover, a word plus glyph, and closed work visibly closed. No plain issueLink may bypass it (#63).
 {
