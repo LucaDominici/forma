@@ -1942,4 +1942,16 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok audit-quarantine — the uncalled audit seam points at its producer issue')
 }
 
+// Frontmatter is the one document lifecycle source. Superseded UI names and duplicate inline
+// statuses are archaeology, not current contracts (#58).
+{
+  const findings = readFileSync(join(HERE, '..', 'lib/schema/c4-findings.schema.json'), 'utf-8')
+  const adr = readFileSync(join(HERE, '..', 'docs/adr/0004-control-room-as-a-forma-rendering.md'), 'utf-8')
+  const scope = readFileSync(join(HERE, '..', 'docs/SCOPE-room.md'), 'utf-8')
+  if (/\bseg\b|superseded/i.test(findings)) die('doc-prune: findings schema still carries a rejected UI shape')
+  if (/^[- ]*\*\*Status:\*\*/m.test(adr)) die('doc-prune: ADR-0004 duplicates its frontmatter status in the body')
+  if (/^Status:\s*\*\*open\*\*/m.test(scope)) die('doc-prune: SCOPE-room duplicates a stale open status in the body')
+  console.log('  ok doc-prune — schemas and governance docs carry only the current shape')
+}
+
 console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood all green.')

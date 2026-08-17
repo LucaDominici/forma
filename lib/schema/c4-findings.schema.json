@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/LucaDominici/forma/blob/main/lib/schema/c4-findings.schema.json",
   "title": "c4-findings — audit registry, superset of c4-health (problems not yet an issue)",
-  "description": "The source of the briefing's 'does not add up' section, named `seg` back when the room filed its content into tabs (ADR-0004, superseded by ADR-0005). Empties only when a problem is fixed, never when it is hidden. Every row carries exactly one evidence ref — the column the briefing renders as mandatory.",
+  "description": "The source of the briefing's 'does not add up' section. Empties only when a problem is fixed, never when it is hidden. Every row carries exactly one evidence ref — the column the briefing renders as mandatory.",
   "type": "object",
   "required": ["findings"],
   "additionalProperties": false,

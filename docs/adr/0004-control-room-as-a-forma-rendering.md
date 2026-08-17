@@ -1,16 +1,14 @@
 ---
 title: 'ADR-0004: Control Room as a Forma rendering, not a second product'
-doc_version: '1.0.0'
+doc_version: '1.0.1'
 status: active
-last_review: '2026-08-10'
+last_review: '2026-08-17'
 owner: 'Luca Dominici'
 canonical_id: '0004'
 tags: ['audience/dev', 'kind/adr']
 related: ['docs/adr/README.md']
 ---
 # ADR-0004: Control Room as a Forma rendering, not a second product
-
-- **Status:** Accepted (2026-08-09)
 
 ## Context
 A Control Room (multi-tab programme dashboard: architecture, WBS, Kanban, Executive, findings)

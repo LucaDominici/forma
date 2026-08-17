@@ -1,8 +1,8 @@
 ---
 title: 'Scope — what "finished" means for the Control Room'
-doc_version: '1.0.0'
+doc_version: '1.0.1'
 status: active
-last_review: '2026-08-10'
+last_review: '2026-08-17'
 owner: 'Luca Dominici'
 canonical_id: 'scope-room'
 tags: ['audience/dev', 'kind/governance']
@@ -10,8 +10,8 @@ related: ['docs/SCOPE.md']
 ---
 # Scope — what "finished" means for the Control Room
 
-Status: **open**, reopens the boundary closed by [`docs/SCOPE.md`](SCOPE.md) (v0.10.0,
-*maintained*), which named "no new command" outside its own confine. This document exists
+This document reopened the boundary closed by [`docs/SCOPE.md`](SCOPE.md) (v0.10.0,
+*maintained*), which named "no new command" outside its own confine. It exists
 because that one's §7 requires it before any such work proceeds. See
 [ADR-0004](adr/0004-control-room-as-a-forma-rendering.md) for the shape of the decision.
 
