@@ -2208,6 +2208,8 @@ const diffPaths = (a, b, at = '') => {
   if (/\bseg\b|superseded/i.test(findings)) die('doc-prune: findings schema still carries a rejected UI shape')
   if (/^[- ]*\*\*Status:\*\*/m.test(adr)) die('doc-prune: ADR-0004 duplicates its frontmatter status in the body')
   if (/^Status:\s*\*\*open\*\*/m.test(scope)) die('doc-prune: SCOPE-room duplicates a stale open status in the body')
+  if (!/### Success metric[\s\S]*room update[\s\S]*1:1[\s\S]*room-presentable[\s\S]*forma check/.test(scope)) die('success-metric: SCOPE-room has no checkable reconciliation condition')
+  if (/Parametricity across repos is not proven|A second target repo proving/.test(scope)) die('success-metric: SCOPE-room still calls the completed portfolio proof future work')
   console.log('  ok doc-prune — schemas and governance docs carry only the current shape')
 }
 

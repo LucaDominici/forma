@@ -1,6 +1,6 @@
 ---
 title: 'Scope — what "finished" means for the Control Room'
-doc_version: '1.0.1'
+doc_version: '1.1.0'
 status: active
 last_review: '2026-08-17'
 owner: 'Luca Dominici'
@@ -35,6 +35,15 @@ Both gates are exercised by `npm test` against `test/fixtures/room`, in both dir
 on an untouched briefing and fail on one whose aggregates were altered by hand. That second half is
 the part that was missing — each gate had been written against a shape the composer no longer
 produced, so neither could run at all, and nothing in the suite would have said so.
+
+### Success metric
+
+A real work wave is reconciled successfully when fresh `verify` snapshots feed `room update
+--skip-verify --counter` with no hand-edit to a snapshot or the generated HTML, the external result
+covers the regenerated claims 1:1, `room-presentable` and `forma check` both exit 0, and no
+contradicted claim remains unresolved. `unsupported` is not failure and never becomes green: it
+must remain visible as an anchored warning. The 2026-08-17 five-programme dogfood met this metric
+with 233/233 results, 40 held, 193 unsupported, and zero contradicted claims.
 
 ## 2. What "mirrors reality" means, operationally
 
@@ -78,8 +87,6 @@ not render.
 
 ## 4. Outside the boundary (this round)
 
-- A second target repo proving the manifest is parametric (arbiter/viafera have no Forma model
-  yet — curating one is real work, not a code change).
 - `c4-blocks.json` as a curated file — the `auto` tab derives its queue from
   issues×milestone×label until something is demonstrably uncoverable that way.
 - Publishing the generated Control Room anywhere (Pages, `docs/demo/`, haben) — this round's
@@ -96,8 +103,8 @@ not render.
 | 4 | Issue↔code link | git only (`#N` in commit subject → files → node) — no label-based or hand-curated second mapping |
 | 5 | `holo` vs `c4` | AS-IS vs TO-BE via the existing `?checkpoint=` mechanism — not drill-depth (would touch the shipped viewer) |
 | 6 | Async audit | evidence-gated agent fills (`auditPlan`/`applyVerdicts`), reusing the `enrich.mjs` pattern — no bare LLM prose |
-| 7 | This round's target | `haben` only — its Forma model already exists in `docs/demo/`; a second repo is a follow-up |
-| 8 | This round's output | scratch space only — no commit to `forma` or `haben` |
+| 7 | Dogfood target | personal GitHub checkouts under the declared scan root; local-only and nested work checkouts stay outside because they cannot produce the required personal `gh` fact base |
+| 8 | Dogfood output | scratch space only — snapshots and the composed briefing are not committed to target repositories |
 
 ## 6. Open (not this document's to close)
 
@@ -124,13 +131,9 @@ one confine while `docs/SCOPE.md` still governs the rest of the product.
   disagrees with `main` at the moment this document was written (`d9a0694…` vs `d5be89f`) because
   `gen` only runs on demand. The `tec` tab must say how many commits behind the architecture layer
   is; it is not required to be zero.
-- **The haben health audit in this round is a worked example, not a completeness claim.** 4 of
-  haben's 5 open issues are `needs-human` — a verdict there is a judgment about a pending human
-  decision, not a measurement of code. What is proven is the mechanism (a verdict without a
-  resolvable evidence ref is rejected), not that every verdict is correct.
+- **Counter-verification validates coverage and anchors, not judgment.** The portfolio run covered
+  every emitted claim and refused unresolvable evidence, but an agent result can still be wrong.
+  This is why `unsupported` remains a visible warning instead of being coerced into green.
 - **The taxonomy detector is pattern matching, not understanding.** It finds `name<sep>value`
   label families and a population threshold; it does not know that `priority:p2` and
   `priority:P2` mean the same thing unless the manifest says so.
-- **Parametricity across repos is not proven this round.** One repo (haben) exercises the
-  pipeline end to end; the manifest mechanism exists, but "change only the manifest, get a
-  coherent room on a second repo" is unverified until it is actually run on one.
