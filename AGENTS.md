@@ -17,7 +17,7 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
 
 ## Layout
 
-- `bin/forma.mjs` — CLI entry; dispatches `init | gen | check | doc | serve | verify | scan | room`.
+- `bin/forma.mjs` — CLI entry; dispatches `init | gen | check | doc | serve | verify | audit | scan | room`.
 - `lib/` — the engine: `init.mjs`, `gen.mjs`, `check.mjs`, `doc.mjs`, `serve.mjs`, `verify.mjs`,
   `room.mjs`, plus the shared pieces `cluster.mjs` (component synthesis), `describe.mjs` (§1a
   description resolution), `docmap.mjs` (capability tables → box text + derived progress),

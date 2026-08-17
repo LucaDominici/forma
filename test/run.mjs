@@ -2003,12 +2003,40 @@ const diffPaths = (a, b, at = '') => {
   console.log('  ok dogfood — Pages publishes the explorer only; the Control Room stays local')
 }
 
-// audit.mjs has no command-level producer yet. Keep the reusable mechanism, but do not let dead
-// code read as a shipped channel while #65 is open (#57).
+// The audit channel is the producer for both evidence overlays: plan offline, let an agent fill
+// the JSON contract, then validate everything before either file is replaced (#65).
 {
-  const audit = readFileSync(join(HERE, '..', 'lib/audit.mjs'), 'utf-8')
-  if (!/EXPERIMENTAL[^\n]*#65/.test(audit)) die('audit-quarantine: lib/audit.mjs is uncalled but not marked experimental with its producer issue')
-  console.log('  ok audit-quarantine — the uncalled audit seam points at its producer issue')
+  const repo = join(tmp, 'audit-repo'), plan = join(tmp, 'audit-plan.json'), plan2 = join(tmp, 'audit-plan-2.json')
+  const issues = join(repo, 'issues.json'), health = join(repo, 'health.json'), findings = join(repo, 'findings.json')
+  cpSync(FIX('room/alpha'), repo, { recursive: true })
+  let r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--plan', plan])
+  if (r.status !== 0) die('audit: plan exit ' + r.status, r)
+  r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--plan', plan2])
+  if (r.status !== 0) die('audit: second plan exit ' + r.status, r)
+  if (readFileSync(plan, 'utf-8') !== readFileSync(plan2, 'utf-8')) die('audit: unchanged inputs produced different plans')
+  const work = readJson(plan)
+  if (JSON.stringify(work.issues.map((x) => x.n)) !== '[3]') die('audit: plan did not exclude already-audited issues: ' + JSON.stringify(work.issues))
+  if (!work.issues[0].prompt.includes('issue #3') || !Array.isArray(work.output.verdicts) || !Array.isArray(work.output.findings)) die('audit: plan does not carry the agent fill contract')
+
+  const fill = join(tmp, 'audit-fill.json')
+  writeFileSync(fill, JSON.stringify({
+    verdicts: [{ n: 3, verdict: 'ok', why: 'The committed helper is present.', evidence: [{ type: 'path', ref: 'src/util/log.js' }] }],
+    findings: [{ id: 'F-2', severity: 'bad', text: 'Parser behavior contradicts the issue.', evidence: { type: 'issue', ref: '2' } }],
+  }))
+  r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--apply', fill])
+  if (r.status !== 0) die('audit: apply exit ' + r.status, r)
+  if (!readJson(health).verdicts.some((v) => v.n === 3 && v.verdict === 'ok')) die('audit: verdict was not written')
+  if (!readJson(findings).findings.some((f) => f.id === 'F-2' && f.severity === 'bad')) die('audit: finding was not written')
+
+  const beforeHealth = readFileSync(health, 'utf-8'), beforeFindings = readFileSync(findings, 'utf-8')
+  writeFileSync(fill, JSON.stringify({
+    verdicts: [{ n: 3, verdict: 'bad', why: 'Unsupported.', evidence: [{ type: 'path', ref: 'missing.js' }] }],
+    findings: [{ id: 'F-3', severity: 'warn', text: 'Would be a partial write.', evidence: { type: 'path', ref: 'src/core/engine.js' } }],
+  }))
+  r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--apply', fill])
+  if (r.status === 0) die('audit: unresolved evidence was accepted')
+  if (readFileSync(health, 'utf-8') !== beforeHealth || readFileSync(findings, 'utf-8') !== beforeFindings) die('audit: rejected fill partially replaced an overlay')
+  console.log('  ok audit — deterministic offline plan, validated health/findings apply, no partial writes')
 }
 
 // Frontmatter is the one document lifecycle source. Superseded UI names and duplicate inline

@@ -53,9 +53,9 @@ Ranked by value-over-cost, anchored to what the branch measured about itself:
    the Coda/auto queue, and the per-issue pill — reusing `deriveKanban`/`deriveQueue`, which are
    *already computed and gated with no surface reading them*. Near-free richness the reader actually
    asked for.
-3. **Audit channel + agentic counter-verification (R3).** `lib/audit.mjs` exists but nothing calls
-   it, so the anti-false-green health/findings channel — Forma's real differentiator — is half-built.
-   Wiring it *and* driving it with an independent agent (Codex) is the highest-leverage feature: it
+3. **Audit channel + agentic counter-verification (R3).** `forma audit` now wires the offline
+   plan/apply producer; driving its claims with an independent agent (Codex) remains the
+   highest-leverage feature because it
    is the only thing that checks the dashboard against reality, not just against its own inputs.
 4. **`room init` / `room update` + dogfood parametricity (R4).** The two verbs that make the dashboard
    repeatable and cross-repo (delivered as thin orchestrators; harden them and onboard the portfolio).
