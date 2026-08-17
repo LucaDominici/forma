@@ -53,6 +53,7 @@ for (const file of rooms) {
           issueLinks: visible.querySelectorAll('.issue-pill').length,
           smallTargets: targets.filter((t) => t.w < 44 || t.h < 44),
           pointerHits: [...document.querySelectorAll('.hit')].filter((el) => getComputedStyle(el).pointerEvents !== 'none').length,
+          clippedProvenance: [...visible.querySelectorAll('.prov')].filter((el) => el.scrollWidth > el.clientWidth + 1).map((el) => ({ text: el.textContent.trim().slice(0, 80), width: el.clientWidth, scrollWidth: el.scrollWidth })),
         }
       })
       if (metrics.bodyWidth > metrics.viewportWidth) fail(where, `body overflows horizontally (${metrics.bodyWidth} > ${metrics.viewportWidth})`)
@@ -60,6 +61,7 @@ for (const file of rooms) {
       if (metrics.issueLinks > 80) fail(where, `${metrics.issueLinks} issue links mounted; budget is 80`)
       if (metrics.smallTargets.length) fail(where, `targets below 44px: ${JSON.stringify(metrics.smallTargets.slice(0, 5))}`)
       if (metrics.pointerHits) fail(where, `${metrics.pointerHits} overlapping chart hit target(s) remain pointer-active; use the table control`)
+      if (metrics.clippedProvenance.length) fail(where, `provenance clipped: ${JSON.stringify(metrics.clippedProvenance)}`)
       const claim = await page.evaluate((currentRoute) => {
         const actual = document.querySelector('section.view:not([hidden]) .thesis')
         const fmt = (s, values) => String(s || '').replace(/\{([^}]+)\}/g, (_, key) => values[key] == null ? '' : String(values[key]))
@@ -85,7 +87,7 @@ for (const file of rooms) {
         return { expectedState, expectedText, actualState: actual && actual.getAttribute('data-claim-state'), actualText: actual && actual.textContent, blockedKpi }
       }, route)
       if (claim.expectedState && (claim.actualState !== claim.expectedState || (claim.expectedText && claim.actualText !== claim.expectedText) || ((route.endsWith('/exec') || route.endsWith('/tech')) && claim.blockedKpi !== claim.expectedState))) fail(where, `claim-state mismatch: ${JSON.stringify(claim)}`)
-      report.routes.push({ room: basename(file), viewport: size.name, route, body: [metrics.bodyWidth, metrics.bodyHeight], issueLinks: metrics.issueLinks, smallTargets: metrics.smallTargets.length, claim })
+      report.routes.push({ room: basename(file), viewport: size.name, route, body: [metrics.bodyWidth, metrics.bodyHeight], issueLinks: metrics.issueLinks, smallTargets: metrics.smallTargets.length, clippedProvenance: metrics.clippedProvenance.length, claim })
       if (size.name === 'mobile' && route === '/') {
         const skip = page.locator('#skip')
         await skip.focus(); await skip.press('Enter')

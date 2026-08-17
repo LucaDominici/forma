@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-08-17T20:26:49.558Z",
+  "generatedAt": "2026-08-17T20:35:28.264Z",
   "source": {
     "repo": "forma",
-    "commit": "8275057eadd2415bc1d6e5132ad0c8542a60c53e",
+    "commit": "353f920f3732cd02339ca691a5adf371a4f2e8d6",
     "branch": "agent/forma-production-closure-followup",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",

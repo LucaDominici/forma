@@ -78,7 +78,7 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
 /* THE SIGNATURE. No panel without its provenance: one line saying what was counted and what
    re-checks it. Every other dashboard asks to be believed; this one says how to check it. */
 .prov{margin:1px 0 6px;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace;
- overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 0 auto}
+ overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere;flex:0 0 auto}
 .panel-body{min-height:0;overflow:auto;flex:1 1 auto;scrollbar-width:thin}
 .panel-body>p{max-width:72ch}
 .answer-lead{grid-column:1/-1;padding:14px 0 12px}
