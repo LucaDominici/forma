@@ -1915,4 +1915,13 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok rtm-dogfood — forma's own PRD parses as ${rows.length} traceable requirements, every one carrying its verification and its line`)
 }
 
+// A public repository's required CI must be runnable by a fork with its default token. Depending
+// on a private sibling is a permanent red, not a documentation verdict (#55 / D-7).
+{
+  const ci = readFileSync(join(HERE, '..', '.github/workflows/ci.yml'), 'utf-8')
+  if (/LucaDominici\/arbiter|ARBITER_TOKEN|\.arbiter-gates/.test(ci)) die('ci-public: required CI still depends on private arbiter access')
+  if (!/needs:\s*\[test\]/.test(ci)) die('ci-public: ci-required is not reduced to the self-contained test job')
+  console.log('  ok ci-public — required CI has no private repository or credential dependency')
+}
+
 console.log('OK — mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood all green.')
