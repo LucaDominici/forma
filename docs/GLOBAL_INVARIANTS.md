@@ -41,8 +41,8 @@ exception and requires an explicit flag plus a key.
 
 ## I3. `gen` is the only writer of the model
 
-`verify` writes exactly one model field (`meta.verifiedAt`) plus node state. `room` and `check`
-never write the model at all.
+When a model exists, `verify` writes exactly one model field (`meta.verifiedAt`) plus node state; a
+map-less run writes only the issue snapshot. `room` and `check` never write the model at all.
 
 - **Enforced by:** `lib/verify.mjs` (the comment at the `meta.verifiedAt` assignment states it);
   `lib/room.mjs` opens the model read-only.

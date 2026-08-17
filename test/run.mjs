@@ -707,6 +707,23 @@ const diffPaths = (a, b, at = '') => {
   r = run(['verify', '--repo', repo, '--model', model, '--gh-repo', 'acme/thing', '--gh-cmd', 'forma-no-such-gh-binary'])
   if (r.status === 0) die('WP-A5: a missing gh must fail loud')
   if (readFileSync(model, 'utf-8') !== before) die('WP-A5: model was modified despite the gh failure')
+
+  // R4-1: the issue fact base is useful without a C4 map. Auto-detect absence instead of making a
+  // caller know a second flag, and prove the update orchestrator no longer skips that programme.
+  const mapless = join(tmp, 'verify-mapless'), maplessIssues = join(mapless, 'issues.json')
+  mkdirSync(mapless, { recursive: true })
+  r = run(['verify', '--repo', mapless, '--issues', maplessIssues, '--gh-repo', 'acme/thing', '--gh-cmd', GH])
+  if (r.status !== 0) die('WP-A5: model-less verify exit ' + r.status, r)
+  if (readJson(maplessIssues).issues.map((it) => it.n).join() !== '7,8') die('WP-A5: model-less verify did not write the complete stub snapshot')
+  if (existsSync(join(mapless, 'docs/architecture/c4-model.json'))) die('WP-A5: model-less verify invented a model')
+
+  const maplessManifest = join(mapless, 'forma.room.json'), maplessRoom = join(mapless, 'room.html')
+  writeFileSync(maplessManifest, JSON.stringify({ today: '2026-08-17', programs: [{ id: 'mapless', ghRepo: 'acme/thing', repo: '.', issues: 'issues.json' }] }, null, 2))
+  rmSync(maplessIssues)
+  r = run(['room', 'update', '--manifest', maplessManifest, '--out', maplessRoom, '--gh-cmd', GH])
+  if (r.status !== 0) die('WP-A5: room update skipped or failed its map-less programme', r)
+  if (!existsSync(maplessIssues) || !existsSync(maplessRoom)) die('WP-A5: room update did not refresh then compose the map-less programme')
+  if (/left as-is|snapshot refresh needs/.test((r.stdout || '') + (r.stderr || ''))) die('WP-A5: room update still reports the map-less programme as skipped')
   console.log('  ok verify — WP-A5 closed→done with dated evidence, open untouched, idempotent, gh failure leaves the model intact')
 }
 
