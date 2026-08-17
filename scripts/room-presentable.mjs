@@ -16,6 +16,7 @@ import { readFileSync, unlinkSync, existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { join, dirname, isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { daysBetween } from '../lib/roomderive.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const arg = (f, d) => { const i = process.argv.indexOf(f); return i > -1 ? process.argv[i + 1] : d }
@@ -39,6 +40,17 @@ const repoFor = new Map((manifest.programs || []).map((p) => [p.id, manifestPath
 const programs = ROOM.programs || []
 const orphanPills = [], badEvidence = [], badFindings = [], fakedCompletion = [], orphanOpen = [], staleSnapshots = []
 let verdictCount = 0, findingCount = 0, openCount = 0
+
+// Publication-level UI contracts. Browser tests own measured layout and DOM counts; these checks
+// make it impossible to publish a composed artifact that silently restores the discarded routes,
+// eager rendering, an unbounded issue page, or the inaccessible mobile navigation.
+const tabsSource = (/var TABS=([\s\S]*?);\s*var BUILD=/.exec(html) || [])[1] || ''
+const officialViews = [...tabsSource.matchAll(/\["([^"]+)",function/g)].map((m) => m[1])
+const officialIa = JSON.stringify(officialViews) === JSON.stringify(['exec', 'tech', 'map', 'wbs', 'docs'])
+const pageSize = Number((/var ISSUE_PAGE_SIZE=(\d+)/.exec(html) || [])[1])
+const boundedDom = pageSize > 0 && pageSize <= 50 && /function pagedList\(/.test(html) && /function ensureView\(/.test(html) && !/function buildAll\(/.test(html)
+const mobileNav = /id="mobile-program"/.test(html) && /id="mobile-view"/.test(html) && /@media\(max-width:600px\)/.test(html)
+const boundedPrint = /\.screen-list,\.workflow\{display:none!important\}/.test(html) && !/details:not\(\[open\]\)/.test(html)
 
 for (const program of programs) {
   const snapshot = program.issuesSnapshot || {}
@@ -83,9 +95,9 @@ for (const program of programs) {
   for (const m of derived.milestones || []) if ('completion' in m) fakedCompletion.push(`${program.id} ${m.title}`)
 
   // 5) this programme's gh snapshot is not stale past the manifest's own threshold.
-  const ageDays = Math.round((new Date(manifest.today) - new Date(snapshot.fetchedAt)) / 86400000)
+  const ageDays = daysBetween(snapshot.fetchedAt, manifest.today)
   const staleAfterDays = manifest.staleAfterDays || 14
-  if (!Number.isFinite(ageDays) || ageDays > staleAfterDays) staleSnapshots.push(`${program.id} ${snapshot.fetchedAt} (${ageDays}d)`)
+  if (ageDays === null || ageDays > staleAfterDays) staleSnapshots.push(`${program.id} ${snapshot.fetchedAt} (${ageDays === null ? 'unknown' : ageDays}d)`)
 }
 
 // 6) determinism: re-run `forma room` with the SAME manifest and byte-compare. Nothing in room.mjs
@@ -113,6 +125,10 @@ const predicates = [
   ['no gh snapshot is stale', staleSnapshots.length === 0, staleSnapshots.length ? staleSnapshots.join('; ') : `today ${manifest.today}, limit ${staleAfterDays}d`],
   ['re-generating from the same manifest is byte-deterministic', deterministic, determinismNote],
   ['every open issue is covered (Kanban or queue), none orphaned', orphanOpen.length === 0, orphanOpen.length ? `orphaned: ${orphanOpen.join(', ')}` : `${openCount} open, 0 orphaned`],
+  ['the programme IA is exactly five evidence views', officialIa, officialViews.length ? officialViews.join(', ') : 'TABS contract missing'],
+  ['issue DOM is lazy and page-bounded', boundedDom, Number.isFinite(pageSize) ? `${pageSize} issue rows per page` : 'pagination contract missing'],
+  ['mobile navigation has native programme and view controls', mobileNav, mobileNav ? 'two labelled selects at the 600px breakpoint' : 'mobile controls missing'],
+  ['print does not expand interactive issue archives', boundedPrint, boundedPrint ? 'interactive lists summarized on paper' : 'unbounded print path detected'],
 ]
 
 let ok = true

@@ -103,8 +103,8 @@ exist on disk, a `commit` must resolve in git, and an `issue` must exist in the 
 Every cap, exclusion and truncation is counted and named where a reader can see it.
 
 - **Enforced by:** `lib/link.mjs` records `excludedSweeps` with sha and file count;
-  `lib/verify.mjs` sets a required `truncated` flag and warns; `lib/room.mjs` refuses to build on
-  a truncated snapshot.
+  `lib/verify.mjs` retries full result pages and writes only after a short page proves completeness;
+  `lib/room.mjs` still refuses any legacy snapshot marked truncated.
 - **Red when:** a number quietly describes a subset.
 - **Why:** measured, a fetch returned 1200 of 2246 issues and said nothing. Every proportion built
   on it would have been false.
@@ -115,12 +115,14 @@ Every cap, exclusion and truncation is counted and named where a reader can see 
 takes a committed number at face value.
 
 - **Enforced by:** `lib/check.mjs` imports the same `lib/roomderive.mjs` the composer uses and
-  compares against a machine-readable block, not against markup.
+  compares against a machine-readable block, not against markup. Source coverage is a mandatory
+  topology contract: every recognised source is modelled or excluded with a reason.
 - **Red when:** a check reads the artifact it is supposed to be checking.
 
 ## I11. New gating is opt-in by presence
 
-A repository that never adopted a feature sees no new failure mode from it.
+A repository that never adopted an optional feature sees no new failure mode from it. Core source
+coverage is not optional: without it `check` cannot prove that a topology did not omit a stack.
 
 - **Enforced by:** the pattern of `topo.countChecks || []` and `existsSync(statusPath)`, followed
   by every Control Room assertion in `lib/check.mjs`.
@@ -168,8 +170,9 @@ checked for keys nothing reads — dead weight a translator still has to carry.
 ## I16. Traceability is measured, never inferred
 
 A requirement traces to a decision, a verification or an issue because a cell in a document says
-so. Forma measures how much of that is covered and names what is not, at both ends: a requirement
-that lands on nothing, and open work no requirement claims.
+so. Forma measures how much of that is covered. When `requireIssuesFrom` explicitly declares the
+matrix to be the complete WBS, it names holes at both ends: a requirement that lands on nothing,
+and open work no requirement claims. An auto-discovered matrix remains informational.
 
 - **Enforced by:** `lib/rtm.mjs` reads only declared references; `lib/check.mjs` fails on a
   duplicate id, a reference that resolves to nothing, an uncovered requirement, an orphan open

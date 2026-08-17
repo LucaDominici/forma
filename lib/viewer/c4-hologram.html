@@ -17,7 +17,7 @@ body{font-family:"SF Mono",Menlo,Consolas,ui-monospace,monospace;background:var(
  radial-gradient(ellipse at 50% -10%,var(--halo),transparent 55%),
  repeating-linear-gradient(0deg,transparent,transparent 39px,var(--grid) 40px),
  repeating-linear-gradient(90deg,transparent,transparent 39px,var(--grid) 40px)}
-h1{font-size:16px;letter-spacing:.16em;color:var(--cyan);text-shadow:0 0 14px rgba(62,231,255,.7);text-transform:uppercase}
+h1{font-size:16px;letter-spacing:.16em;color:var(--cyan);text-transform:uppercase}
 .sub{font-size:10.5px;color:var(--sec);margin-top:3px}
 .top{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:8px}
 .ctrls{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -25,7 +25,7 @@ h1{font-size:16px;letter-spacing:.16em;color:var(--cyan);text-shadow:0 0 14px rg
 button,select{font:inherit;font-size:10.5px;letter-spacing:.09em;cursor:pointer;border-radius:6px;padding:6px 12px;
  background:transparent;border:1px solid var(--border);color:var(--sec)}
 button:hover,select:hover{background:rgba(62,231,255,.10);color:var(--cyan)}
-button.on{background:rgba(62,231,255,.18);color:var(--cyan);border-color:var(--cyan);text-shadow:0 0 8px rgba(62,231,255,.8)}
+button.on{background:rgba(62,231,255,.18);color:var(--cyan);border-color:var(--cyan)}
 #back{border-color:var(--cyan);color:var(--cyan)}
 #back[disabled]{opacity:.28;cursor:default;border-color:var(--border);color:var(--ter)}
 select#skin option{background:#08202e;color:var(--nm)}
@@ -38,7 +38,7 @@ select#skin option{background:#08202e;color:var(--nm)}
 .cpstep .cpbadge{display:block;margin-top:2px;color:var(--ter2);font-size:8px;letter-spacing:.02em;white-space:normal}
 .cpstep.real .dot{border-color:var(--done);background:var(--done)}
 .cpstep.active{color:var(--cyan)}
-.cpstep.active .dot{border-color:var(--cyan);background:var(--bg);box-shadow:0 0 10px rgba(62,231,255,.8)}
+.cpstep.active .dot{border-color:var(--cyan);background:var(--bg)}
 #checkpoint-summary{text-align:right;color:var(--ter2);font-size:8.5px;letter-spacing:.08em;margin-top:5px;min-height:11px}
 #checkpoint-summary b{color:var(--cyan);font-weight:600}
 #crumb{font-size:11px;color:var(--sec);margin:8px 0}
@@ -60,40 +60,40 @@ svg{width:100%;height:100%;display:block}
 .nd .dd{font-size:9px;fill:var(--ddtxt)}
 .nd .pp{font-size:9px;font-weight:700}
 .nd:hover rect{filter:brightness(1.32)}
+.nd:focus{outline:none}.nd:focus rect{stroke:var(--cyan);stroke-width:3;filter:brightness(1.22)}
 .nd.drill .plus{font-size:9px;fill:var(--cyan);letter-spacing:.1em}
 .nd .drillhit{fill:transparent;stroke:none;pointer-events:auto;cursor:zoom-in}
 .nd .drillhit:hover{fill:rgba(62,231,255,.12)}
-.s-done rect{stroke:var(--done);filter:drop-shadow(0 0 7px rgba(47,224,138,.55))}
+.s-done rect{stroke:var(--done)}
 .s-done .tt,.s-done .pp{fill:var(--done)}
 /* The hollow green the legend has promised since #38: a done a repo document DECLARES is not a
-   done a closed issue PROVES, and until now the canvas drew them identically. Hollow = the glow
-   comes off, which is exactly what the legend swatch says (filled pill vs outline).
+   done a closed issue PROVES, and until now the canvas drew them identically.
    ponytail: the blueprint skin zeroes every filter, so there the two greens still read alike —
    upgrade path is a second, skin-independent mark if anyone actually presents in blueprint. */
 .s-done.decl rect{filter:none}
-.s-prog rect{stroke:var(--prog);filter:drop-shadow(0 0 7px rgba(255,199,77,.5))}
+.s-prog rect{stroke:var(--prog)}
 .s-prog .tt,.s-prog .pp{fill:var(--prog)}
-.s-next rect{stroke:var(--next);stroke-width:2.2;filter:drop-shadow(0 0 11px rgba(62,231,255,.75))}
+.s-next rect{stroke:var(--next);stroke-width:2.2}
 .s-next .tt,.s-next .pp{fill:var(--next)}
 .s-plan rect{stroke:var(--plan);stroke-dasharray:5 4}
 .s-plan .tt,.s-plan .pp{fill:var(--planTxt)}
-.s-prob rect{stroke:var(--prob);filter:drop-shadow(0 0 8px rgba(255,93,93,.6))}
+.s-prob rect{stroke:var(--prob)}
 .s-prob .tt,.s-prob .pp{fill:var(--prob)}
 /* NO dash. legHint teaches the reader that a dashed box is `da costruire`, and wearing that dash
    made "nobody has ruled on this" read as "this does not exist" — on a repo where the module was
    right there. Not-ruled is now a plain grey outline: no dash (planned), no glow (done). */
 .s-unk rect{stroke:var(--unk)}
 .s-unk .tt,.s-unk .pp{fill:var(--unk)}
-.nd.delta rect{stroke:var(--cyan)!important;stroke-width:2.3!important;filter:drop-shadow(0 0 12px rgba(62,231,255,.72))!important}
+.nd.delta rect{stroke:var(--cyan)!important;stroke-width:2.3!important}
 .nd.delta .tt{fill:var(--cyan)!important}
-.mode-t .nd rect{stroke:var(--next)!important;stroke-dasharray:none!important;filter:drop-shadow(0 0 8px rgba(62,231,255,.5))!important}
+.mode-t .nd rect{stroke:var(--next)!important;stroke-dasharray:none!important}
 .mode-t .nd .tt,.mode-t .nd .pp{fill:var(--next)!important}
 .edge{stroke:var(--edge);stroke-width:1.3;fill:none;marker-end:url(#ar);cursor:help}
 .edge.flow{stroke-dasharray:5 7;animation:dash 1.1s linear infinite}
 .edge.inferred{stroke-dasharray:1 3;opacity:.5}
 .edge.plan{stroke:var(--edgeplan);stroke-dasharray:3 6;opacity:.6;marker-end:url(#arp)}
 .edge.hot{stroke:var(--cyan);stroke-width:2.6;opacity:1}
-.edge.delta{stroke:var(--cyan);stroke-width:2.5;opacity:1;filter:drop-shadow(0 0 4px rgba(62,231,255,.7))}
+.edge.delta{stroke:var(--cyan);stroke-width:2.5;opacity:1}
 /* A level past the label threshold is a hairball, and no layout saves it: on a real Go repo 172 of
    189 arrows cross a box that is not one of their endpoints, and that stays 85-91% at EVERY grid
    shape tried. Only drawing less helps. They stop competing with the names — structure survives as
@@ -106,7 +106,7 @@ svg.dense .edge.hot{opacity:1;stroke-width:2.6}
  paint-order:stroke;stroke:var(--stagebg);stroke-width:3px;stroke-linejoin:round}
 @keyframes dash{to{stroke-dashoffset:-24}}
 .nd.pulse rect{animation:pul 2.4s ease-in-out infinite}
-@keyframes pul{0%,100%{filter:drop-shadow(0 0 8px rgba(62,231,255,.5))}50%{filter:drop-shadow(0 0 18px rgba(62,231,255,.95))}}
+@keyframes pul{0%,100%{stroke-width:1.5}50%{stroke-width:2.5}}
 @keyframes svgin{from{opacity:0;transform:scale(.975)}to{opacity:1;transform:none}}
 @keyframes ndin{from{opacity:0}to{opacity:1}}
 #stage.anim svg{animation:svgin .34s cubic-bezier(.2,.7,.2,1) both;transform-origin:50% 44%}
@@ -158,8 +158,9 @@ svg.dense .edge.hot{opacity:1;stroke-width:2.6}
 #detail h3 .cat{color:var(--ter);font-size:9px;letter-spacing:.12em}
 .row{margin-bottom:7px;font-size:10.5px;line-height:1.5}
 .lbl{color:var(--ter2);font-size:8.5px;letter-spacing:.15em;text-transform:uppercase;display:block}
-.func{color:#dff4fc}.now{color:var(--now)}.tgt{color:var(--tgt)}.src{color:var(--src);font-size:9.5px}
-.cl{float:right;color:var(--sec);cursor:pointer;font-size:10px}
+.func{color:var(--nm)}.now{color:var(--now)}.tgt{color:var(--tgt)}.src{color:var(--src);font-size:9.5px}
+.cl{float:right;color:var(--sec);cursor:pointer;font:inherit;font-size:10px;background:none;border:0;min-height:44px}
+.detaildrill{min-height:44px;margin-top:10px;padding:7px 12px;border:1px solid var(--cyan);border-radius:7px;background:transparent;color:var(--cyan);cursor:pointer}
 #err{color:var(--prob);font-size:11px;padding:14px}
 /* PRINT / EXPORT menu */
 .menuwrap{position:relative}
@@ -175,8 +176,9 @@ svg.dense .edge.hot{opacity:1;stroke-width:2.6}
 #detail .rostersearch{width:100%;font:inherit;font-size:10.5px;margin:2px 0 10px;padding:6px 9px;border-radius:6px;
  background:transparent;border:1px solid var(--border);color:var(--nm)}
 #detail .roster{max-height:44vh;overflow-y:auto;border-top:1px solid var(--border)}
+#detail .roster:focus{outline:2px solid var(--cyan);outline-offset:2px}
 #detail .ritem{padding:7px 2px 7px 4px;border-bottom:1px solid rgba(30,74,94,.4);display:block}
-#detail .ritem .rn{color:#dff4fc;font-size:11px;font-weight:700}
+#detail .ritem .rn{color:var(--nm);font-size:11px;font-weight:700}
 #detail .ritem .rp{float:right;color:var(--sec);font-size:9px;letter-spacing:.08em}
 #detail .ritem .rd{color:var(--ddtxt);font-size:9.5px;line-height:1.45;display:block;margin-top:2px;clear:both}
 #detail .rempty{color:var(--ter2);font-size:10px;padding:10px 4px}
@@ -217,6 +219,7 @@ html[data-skin^="blueprint"] .s-done rect,html[data-skin^="blueprint"] .s-prog r
 html[data-skin^="blueprint"] .nd.pulse rect{animation:none}
 html[data-skin^="blueprint"] button.on{text-shadow:none}
 html[data-skin^="blueprint"] .nd.delta rect,html[data-skin^="blueprint"] .edge.delta{filter:none}
+@media(max-width:600px){#stage{overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}}
 </style>
 </head>
 <body>
@@ -272,7 +275,7 @@ html[data-skin^="blueprint"] .nd.delta rect,html[data-skin^="blueprint"] .edge.d
 // ---- i18n: every user-facing string. en is DEFAULT. ----
 var STRINGS={
  en:{
-  subhelp:"click = explain (any level) · double-click or [+] = drill in · drag to move · hover an arrow = label · ESC/BACK",
+  subhelp:"click = explain · Enter/Space, double-click or [+] = drill in · drag to move · hover an arrow = label · ESC/BACK",
   back:"← BACK", now:"CURRENT STATE", tgt:"TARGET STATE", reverify:"RE-VERIFY",
   labels:"LABELS", labelsTitle:"arrow labels (auto-off above 14 arrows)",
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"re-arrange",
@@ -286,7 +289,7 @@ var STRINGS={
   deltaAdd:"ADD", deltaUpdate:"UPDATE", deltaRewire:"REWIRE", deltaRemove:"REMOVE",
   crumbRoot:"Context", crumbLevel:"C4", lvlContext:"CONTEXT",
   lvlNames:{context:"Context",container:"Container",component:"Components",leaf:"Leaves"},
-  detClose:"[x] close", detFunc:"What it does", detNow:"Current state (facts)", detCheckpoint:"At this checkpoint", detChange:"Change from previous",
+  detClose:"[x] close", detDrill:"Drill into this node", detFunc:"What it does", detNow:"Current state (facts)", detCheckpoint:"At this checkpoint", detChange:"Change from previous",
   detTgt:"Target state (project)", detSrc:"Verification source", detIssue:"Issue",
   detTarget:"TARGET",
   rosterSearch:"filter…", rosterCount:"members", rosterEmpty:"no match", aggProgress:"progress",
@@ -296,7 +299,7 @@ var STRINGS={
   errUnavail:"Model unavailable.", errTimeline:"Invalid architecture timeline."
  },
  it:{
-  subhelp:"click = spiega (ogni livello) · doppio-click o [+] = entra · trascina per spostare · hover su una freccia = etichetta · ESC/BACK",
+  subhelp:"click = spiega · Invio/Spazio, doppio-click o [+] = entra · trascina per spostare · hover su una freccia = etichetta · ESC/BACK",
   back:"← BACK", now:"STATO ATTUALE", tgt:"STATO FINITO", reverify:"RE-VERIFICA",
   labels:"ETICHETTE", labelsTitle:"etichette sugli archi (spente sopra i 14 archi)",
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"ridisponi",
@@ -310,7 +313,7 @@ var STRINGS={
   deltaAdd:"ADD", deltaUpdate:"UPDATE", deltaRewire:"REWIRE", deltaRemove:"REMOVE",
   crumbRoot:"Contesto", crumbLevel:"C4", lvlContext:"CONTESTO",
   lvlNames:{context:"Contesto",container:"Container",component:"Componenti",leaf:"Foglie"},
-  detClose:"[x] chiudi", detFunc:"Cosa fa", detNow:"Stato attuale (fatti)", detCheckpoint:"A questo checkpoint", detChange:"Modifica dal precedente",
+  detClose:"[x] chiudi", detDrill:"Entra in questo nodo", detFunc:"Cosa fa", detNow:"Stato attuale (fatti)", detCheckpoint:"A questo checkpoint", detChange:"Modifica dal precedente",
   detTgt:"Stato finito (progetto)", detSrc:"Fonte verifica", detIssue:"Issue",
   detTarget:"TARGET",
   rosterSearch:"filtra…", rosterCount:"elementi", rosterEmpty:"nessun risultato", aggProgress:"avanzamento",
@@ -695,7 +698,7 @@ function draw(animate){
   // instead of a flat 70px — a fixed reserve clipped names that had all the room they needed
   var tmax=Math.floor((p.w-34-String(badge).length*5.4)/6.7),tt=n.name;
   if(String(tt).length>tmax)tt=String(tt).slice(0,Math.max(1,tmax-1))+"…";
-  s+='<g class="'+cls+'" data-id="'+esc(n.id)+'">'
+  s+='<g class="'+cls+'" data-id="'+esc(n.id)+'" tabindex="0" focusable="true" role="button" aria-label="'+esc(n.name+' · '+(n.category||n.kind||'')+' · '+(dr?STR.detDrill:STR.detNow))+'">'
    +'<rect x="'+p.x+'" y="'+p.y+'" width="'+p.w+'" height="'+p.h+'" rx="10"/>'
    +'<text class="kk" x="'+(p.x+13)+'" y="'+(p.y+16)+'">'+esc((n.category||n.kind||"")+(change?" · "+change.type:""))+'</text>'
    +'<text class="tt" x="'+(p.x+13)+'" y="'+(p.y+33)+'">'+esc(tt)+'</text>'
@@ -715,13 +718,16 @@ function draw(animate){
  var st2=$("stage");
  var etip=$("etip"),err=$("err"); // preserve the live overlays across redraw/re-verify
  st2.innerHTML=s;if(etip)st2.appendChild(etip);if(err)st2.appendChild(err);
+ var liveSvg=st2.querySelector("svg");
+ if(liveSvg&&window.matchMedia&&window.matchMedia("(max-width:600px)").matches){liveSvg.style.width=Math.ceil(vw)+"px";liveSvg.style.height=Math.ceil(vh)+"px";}
  st2.classList.toggle("anim",animate!==false);
  // breadcrumb
  var chain=[],c=pid;while(c){var nn=node(c);chain.unshift(nn);c=nn?nn.parent:null;}
- var lvlKey=pid?(kids[0]&&kids[0].level):"context";
+ var lvlKey=pid?(kids[0]&&kids[0].level):"context",levels=M.levels||[],li=levels.indexOf(lvlKey),ki;
+ for(ki=1;pid&&ki<kids.length;ki++)if(levels.indexOf(kids[ki].level)>-1&&(li<0||levels.indexOf(kids[ki].level)<li)){lvlKey=kids[ki].level;li=levels.indexOf(lvlKey);}
  var lvl=pid?levelName(lvlKey):STR.lvlContext;
  // C4 notation: number the level by its position in the model's own `levels` list (L1 = context).
- var lvlIdx=((M.levels||[]).indexOf(lvlKey));
+ var lvlIdx=levels.indexOf(lvlKey);
  var cb=(lvlIdx>-1?STR.crumbLevel+"-L"+(lvlIdx+1):STR.crumbLevel)+" · "+lvl.toUpperCase()+"  &nbsp;&nbsp; <a data-d='-1'>"+esc(STR.crumbRoot)+"</a>";
  for(var w=0;w<chain.length;w++)cb+=" &rsaquo; "+(w===chain.length-1?"<b>"+esc(chain[w].name)+"</b>":"<a data-d='"+w+"'>"+esc(chain[w].name)+"</a>");
  // Per-level programme tally — the status-board essence in one glance. Counts use the real
@@ -830,7 +836,7 @@ function showDetail(n){
  if(n&&n.__catalog)return showRoster(n);
  var timeline=!!(BASE&&BASE.timeline),src=srcOf(n),cur=detailState(n,timeline),showSrc=src&&String(cur).indexOf(src)<0;
  var change=timeline?nodeChange(n.id):null;
- $("detail").innerHTML='<span class="cl" id="dc">'+esc(STR.detClose)+'</span><h3>'+esc(n.name)+' <span class="cat">· '+esc(n.category||n.kind||"")+(n.tech?" · "+esc(n.tech):"")+'</span></h3>'
+ $("detail").innerHTML='<button type="button" class="cl" id="dc">'+esc(STR.detClose)+'</button><h3>'+esc(n.name)+' <span class="cat">· '+esc(n.category||n.kind||"")+(n.tech?" · "+esc(n.tech):"")+'</span></h3>'
   +(n.func?'<div class="row"><span class="lbl">'+esc(STR.detFunc)+'</span><span class="func">'+esc(n.func)+'</span></div>':'')
   +(cur&&(timeline||cur!==n.func)?'<div class="row"><span class="lbl">'+esc(timeline?STR.detCheckpoint:STR.detNow)+'</span><span class="now">'+esc(cur)+'</span></div>':'')
   +(!timeline&&(n.target&&n.target!=="—")?'<div class="row"><span class="lbl">'+esc(STR.detTgt)+'</span><span class="tgt">'+esc(n.target)+'</span></div>':'')
@@ -843,24 +849,26 @@ function showDetail(n){
   // A badge the viewer rolled up must say so, or it reads as a verdict somebody wrote about the box.
   +((function(){var r=rollStatus(n,childrenOf);return r?'<div class="row"><span class="lbl">'+esc(STR.detRoll)+'</span><span class="now">'+esc(STR.rollPart.replace("{n}",r.ruled).replace("{t}",r.total))+'</span></div>':'';})())
   +(coverText(n)?'<div class="row"><span class="lbl">'+esc(STR.detCover)+'</span><span class="now">'+esc(coverText(n))+'</span></div>':'')
-  +((n.issues&&n.issues.length)?'<div class="row"><span class="lbl">'+esc(STR.detIssue)+'</span><span class="now">'+esc(n.issues.join(", "))+'</span></div>':'');
+  +((n.issues&&n.issues.length)?'<div class="row"><span class="lbl">'+esc(STR.detIssue)+'</span><span class="now">'+esc(n.issues.join(", "))+'</span></div>':'')
+  +(hasKids(n.id)?'<button type="button" class="detaildrill" id="ddrill">'+esc(STR.detDrill)+'</button>':'');
  $("detail").style.display="block";
  var dc=$("dc");if(dc)dc.addEventListener("click",function(){$("detail").style.display="none";});
+ var dd=$("ddrill");if(dd)dd.addEventListener("click",function(){drillTo(n.id,true);});
 }
 // FEATURE #4: LIST detail variant — searchable roster of a collapsed catalogue's members.
 // Each row keeps the per-leaf name + func/current description (the payoff must survive).
 function showRoster(cat){
  var members=cat.members||[];
- var head='<span class="cl" id="dc">'+esc(STR.detClose)+'</span>'
+ var head='<button type="button" class="cl" id="dc">'+esc(STR.detClose)+'</button>'
   +'<h3>'+esc(cat.name)+' <span class="cat">· '+esc(cat.count+" "+STR.rosterCount)+'</span></h3>'
   +'<input class="rostersearch" id="rsq" type="text" placeholder="'+esc(STR.rosterSearch)+'" autocomplete="off">'
-  +'<div class="roster" id="rlist"></div>';
+  +'<div class="roster" id="rlist" tabindex="0" role="list" aria-label="'+esc(cat.name+' · '+cat.count+' '+STR.rosterCount)+'"></div>';
  $("detail").innerHTML=head;$("detail").style.display="block";
  var dc=$("dc");if(dc)dc.addEventListener("click",function(){$("detail").style.display="none";});
  function rowHtml(m){
   var d=m.current||m.func||"";
   var pct=m.completion!=null?(m.completion+"%"):(m.statusWord||"");
-  return '<span class="ritem">'+(pct?'<span class="rp">'+esc(pct)+'</span>':'')
+  return '<span class="ritem" role="listitem">'+(pct?'<span class="rp">'+esc(pct)+'</span>':'')
    +'<span class="rn">'+esc(m.name)+'</span>'
    +(d?'<span class="rd">'+esc(d)+'</span>':'')+'</span>';
  }
@@ -880,6 +888,8 @@ function svgPt(evt){var svg=$("stage").querySelector("svg");if(!svg||!svg.getScr
  var p=svg.createSVGPoint();p.x=evt.clientX;p.y=evt.clientY;try{return p.matrixTransform(svg.getScreenCTM().inverse());}catch(e){return null;}}
 function curPos(){return POS[keyOf()]?POS[keyOf()].pos:null;}
 function clamp(v,lo,hi){return v<lo?lo:v>hi?hi:v;}
+function drillTo(id,focusFirst){if(!hasKids(id))return;$("detail").style.display="none";stack.push(id);draw(true);
+ if(focusFirst)setTimeout(function(){var first=$("stage").querySelector(".nd[tabindex]");if(first)first.focus();},0);}
 
 function wire(){
  var stage=$("stage");
@@ -924,7 +934,7 @@ function wire(){
   var n=node(id);if(!n)return;
   // click inspects at EVERY level (parents carry func/current/description too);
   // drilling is the explicit [+] control or a double-click — it no longer steals the click.
-  if(wantDrill&&hasKids(id)){stack.push(id);draw(true);return;}
+  if(wantDrill&&hasKids(id)){drillTo(id,false);return;}
   showDetail(n);
  });
  stage.addEventListener("dblclick",function(ev){
@@ -932,7 +942,13 @@ function wire(){
   if(!g||g===stage)return;
   var id=g.getAttribute("data-id");
   if(CATNODES[id])return; // catalogues open their roster on click; nothing to drill into
-  if(hasKids(id)){$("detail").style.display="none";stack.push(id);draw(true);}
+  if(hasKids(id))drillTo(id,false);
+ });
+ stage.addEventListener("keydown",function(ev){
+  if(ev.key!=="Enter"&&ev.key!==" ")return;
+  var g=ev.target;while(g&&g!==stage&&!(g.getAttribute&&g.getAttribute("data-id")))g=g.parentNode;
+  if(!g||g===stage)return;ev.preventDefault();var id=g.getAttribute("data-id");
+  if(CATNODES[id])showDetail(CATNODES[id]);else if(hasKids(id))drillTo(id,true);else{var n=node(id);if(n)showDetail(n);}
  });
  $("crumb").addEventListener("click",function(ev){if(ev.target.tagName==="A"){var d=+ev.target.getAttribute("data-d");
   stack=stack.slice(0,d+2);if(!stack.length)stack=[null];draw(true);}});

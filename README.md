@@ -66,8 +66,8 @@ npx forma-arch <command>        # or: npm i -D forma-arch
 
 | Command | What it does |
 |---|---|
-| `forma init` | Seed `docs/architecture/c4-topology.json` from your source dirs (best-effort; then curate) |
-| `forma gen` | Walk `src/` leaves + derive container edges from cross-references; fill box text from docstrings/READMEs; group flat containers into components → `c4-model.json` |
+| `forma init` | Seed every detected production stack/root into `c4-topology.json`; record reasoned exclusions and adopt only live document sources |
+| `forma gen` | Walk source leaves + derive container edges; fill box text from docs; group package/feature paths into components → `c4-model.json` |
 | `forma check` | Deterministic drift check — **fails if the model no longer matches the code** |
 | `forma doc` | Project the arc42 scaffold (`ARCHITECTURE.scaffold.md`), or `--attach <file>` to inject a governed block into an existing doc |
 | `forma serve` | Open the live explorer at `http://localhost:4173` |
@@ -76,9 +76,9 @@ npx forma-arch <command>        # or: npm i -D forma-arch
 | `forma scan` | Find the programmes under a directory and write them into `forma.room.json` |
 | `forma room` | Compose the Control Room — one briefing over N programmes, in one self-contained HTML |
 
-**Box text comes from your docs.** `gen` fills each box with the module's docstring (Python `"""…"""`, JS/TS leading block), else the directory `README.md`, else a mapped arc42 section — so the explorer shows meaning, not a list of symbols. On a flat directory of many `foo_*` files it also synthesizes a **component** layer, described from its children's docs (`--no-cluster` to disable; `--cluster-min <n>` = leaves before a container is clustered, default 8; `--group-min <n>` = files sharing a prefix before they become a component, default 3).
+**Box text comes from your docs.** `gen` fills each box with the module's docstring (Python `"""…"""`, JS/TS leading block), else the directory `README.md`, else a mapped arc42 section — so the explorer shows meaning, not a list of symbols. It synthesizes a **component** layer from package/feature directories, falling back to `foo_*` filename prefixes for flat modules (`--no-cluster` to disable; `--cluster-min <n>` = leaves before a container is clustered, default 8; `--group-min <n>` = files in a group before it becomes a component, default 3).
 
-**Above the leaf, your feature matrix outranks the code.** A docstring is the right answer for one file and the wrong one for a whole container: a stakeholder does not ask which docstring the first file inside it has, they ask what that part of the product does for the user — and in a governed repo that sentence is already written in a capability table. `forma init` finds those tables and lists them under `docSources`; `gen` joins each row to the nodes its code references name, and quotes the row **verbatim** (`descSource: "docmap"`). Nothing is composed or paraphrased. A node named by more than three rows is not *described* by the matrix but merely *touched* by it, so it yields nothing and the code chain runs instead.
+**Above the leaf, your feature matrix outranks the code.** A docstring is the right answer for one file and the wrong one for a whole container: a stakeholder does not ask which docstring the first file inside it has, they ask what that part of the product does for the user — and in a governed repo that sentence is already written in a capability table. `forma init` finds those tables, resolves their code references against the detected source roots and lists a table under `docSources` only when every reference is live. `gen` therefore cannot fail because of a source that `init` selected. It joins each row to the nodes its code references name, and quotes the row **verbatim** (`descSource: "docmap"`). Nothing is composed or paraphrased. A node named by more than three rows is not *described* by the matrix but merely *touched* by it, so it yields nothing and the code chain runs instead.
 
 ```json
 "docSources": ["docs/FEATURE_MATRIX.md",
@@ -147,7 +147,7 @@ working on the cumulative graph. A future checkpoint with no local patch says �
 changes”; its display-only badge is not interpreted. Without a timeline, the legacy controls and
 model are unchanged.
 
-**Curated state, verified against reality.** `forma verify` asks your `gh` CLI for every issue in the repository and writes the timestamped fact base. When a model exists, it also marks nodes whose cited issues are closed as done and prefixes their `current` with dated evidence; without a model it still refreshes the snapshot for the Control Room. It touches state, never structure, and re-running it never stacks the evidence. It is opt-in and separate on purpose: `gen` and `check` never open a socket. In the served viewer, **RE-VERIFY** re-reads the model without losing your level, layout or mode.
+**Curated state, verified against reality.** `forma verify` asks your `gh` CLI for every issue in the repository. A full result page is retried at a larger limit until a short page proves completeness; any retry or parse failure occurs before either output is written. When a model exists, verify also marks nodes whose cited issues are closed as done and prefixes their `current` with dated evidence; without a model it still refreshes the snapshot for the Control Room. It touches state, never structure, and re-running it never stacks the evidence. It is opt-in and separate on purpose: `gen` and `check` never open a socket. In the served viewer, **RE-VERIFY** re-reads the model without losing your level, layout or mode.
 
 **One source of truth.** `forma doc --attach docs/architecture/arc42.md` injects the generated diagrams/tables between `<!-- forma:begin -->` / `<!-- forma:end -->` markers in your existing doc; your prose lives outside them, and `forma check` fails if that block drifts. Attached files are recorded in `source.attachedDocs`, so the gate governs **every** doc you attach — not just the model's `docPath`; deleting the markers (or the file) from a registered doc fails the check rather than quietly un-governing it. That registry lives in `c4-model.json`, so **commit the model** — a lost model takes the registry with it. Where a repo lacks docs, `forma gen --enrich` can fill the remaining box holes with an LLM — opt-in, cached, never on the deterministic gate:
 
@@ -186,7 +186,8 @@ forma room update --manifest forma.room.json
 forma room update --manifest forma.room.json --skip-verify --counter
 ```
 
-The first command refreshes GitHub facts. The external adapter writes one result per claim. The
+The first command refreshes every GitHub fact base and fails without recomposing if any fetch is
+incomplete. The external adapter writes one result per claim. The
 last command regenerates every plan, rejects missing/stale/unresolvable results, applies the
 overlays, and only then recomposes. Forma never launches the agent itself (D-08 / I2).
 
@@ -197,18 +198,22 @@ view saying what is included and why:
 |---|---|
 | `#/` | The verdict, what waits on you, what moves, what does not add up |
 | `#/<prog>/exec` | Where it stands: coverage of the plan, where we were, milestones, landings |
-| `#/<prog>/tech` | What needs a human: blocked work, audit verdicts, findings, and what is *not* known |
+| `#/<prog>/tech` | What needs a human: blocked work, audit verdicts, findings, and bounded lazy Queue/Kanban evidence |
 | `#/<prog>/map` | The architecture, plus checkpoints carrying **measured** completion |
 | `#/<prog>/wbs` | Requirement → design → verification → issues, with the holes named |
 | `#/<prog>/docs` | The canon in full; everything else listed with a link |
 | `#/options` | What is in this briefing. With `--serve`, checkboxes that write the manifest |
 
-Printing gives you the whole thing, every view, which is the point: it has to replace the deck.
+Printing gives you every official view, but summarizes interactive issue archives instead of
+expanding thousands of historical rows. Screen and print cost therefore scale with views and
+programmes, not lifetime issue count.
 
 **The issues become the WBS, checkably.** Declare an `rtm` block and Forma reads the id columns out
 of the documents you already write, joins them to the snapshot, and `forma check` **fails** on a
 requirement that lands on no work and on open work no requirement claims. Both directions, or the
 claim is unfalsifiable ([ADR-0006](docs/adr/0006-traceability-as-a-derivation-not-an-overlay.md)).
+`forma room init` safely seeds the tracked Markdown corpus and a requirements matrix whose filename,
+columns and existing RTM parser all agree; blocker, audit and findings state are never inferred.
 
 ```jsonc
 {
@@ -228,6 +233,10 @@ claim is unfalsifiable ([ADR-0006](docs/adr/0006-traceability-as-a-derivation-no
   }]
 }
 ```
+
+`requireIssuesFrom` is the explicit completeness claim: with it, uncited open issues fail
+`forma check`; without it, an RTM discovered by `room init` is evidence, not a claim that the
+document already accounts for the whole backlog.
 
 Everything on screen is re-derivable: `forma check` recomputes every aggregate from the raw inputs
 and fails when the artifact disagrees, and `scripts/room-presentable.mjs` re-renders it and compares

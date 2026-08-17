@@ -27,6 +27,15 @@ gh repo create forma --private --source=. --remote=origin --push
       `git log -p | grep -iE "token|secret|password|@gmail"` → empty.
 - [ ] Confirm the tarball is clean: `npm pack --dry-run` → exactly the runtime files, no
       `.fuse_hidden*` or editor artifacts (the `prepack` guard also enforces this).
+- [ ] Install that tarball into an empty temporary prefix and run the no-edit acceptance chain on
+      a clean representative multi-stack repository: `init`, `gen`, `check`, `verify`, `room init`,
+      `room update`, then `room-presentable`. Retain the topology, model, complete issue snapshot,
+      room HTML and command log from the same commit.
+- [ ] Run the generated Room at 1920 px and 390 px plus print with at least 2,500 issues. The
+      selected screen must mount at most one 40-row issue page, body width must not overflow, Axe
+      serious findings must be zero and print length must not scale with closed issue count. In the
+      embedded map, traverse L1→L3 with Enter/Space and confirm the mobile SVG pans at readable
+      scale instead of shrinking the whole graph into the viewport.
 - [ ] Enable GitHub secret scanning + push protection (Settings → Code security).
 - [ ] Decide the final npm package name (`forma` is taken; `forma-arch` is free and is the
       default here).

@@ -71,7 +71,8 @@ not render.
   they were built, measured across three programmes and rejected by
   [ADR-0005](adr/0005-portfolio-briefing-over-per-repo-dashboard.md), and
   [ADR-0007](adr/0007-views-nested-under-the-briefing.md) records why views came back one level
-  down rather than in place of the briefing.
+  down rather than in place of the briefing. Queue and Kanban remain complete derivations but are
+  lazy, bounded evidence inside `tech`; legacy `/auto` and `/kanban` hashes redirect there.
 - `forma scan` writes the programme list from a directory of checkouts, merging rather than
   replacing: `enabled: false` and every hand-curated field survive a re-run, and `today` is never
   invented.
