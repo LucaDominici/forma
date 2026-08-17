@@ -36,6 +36,7 @@ This file records realization status for the Control Room branch. A feature is l
 | Room onboarding and refresh preserve operator decisions across repeated runs. | `forma room init` once, curate the manifest, then run it again or use `--scan`; refresh with `room update` | The suite covers seed, merge, `--today`, invalid dates, scan, verify→compose, `--skip-verify`, counter apply, and a map-less programme. A transient missing `origin` cannot erase an existing `ghRepo`, and `enabled:false`/taxonomy survive rediscovery. |
 | The Claude adapter drives onboarding through to a usable artifact. | Follow its `room init`, then `room update --out` recipe | The offline suite runs both commands against a fresh git target and requires the skill to return a Markdown link to the generated Control Room. |
 | The personal GitHub portfolio composes as one checked briefing. | `room init --scan --root /home/luca/work/repos --depth 1`, refresh snapshots, then `room update --skip-verify` | The 2026-08-17 run included `arbiter`, `forma`, `haben`, `ripme-main`, and `viafera`: 4,269 issues, 97 open, 1,362,899 output bytes. `room-presentable` passed all seven predicates and `forma check` passed against the same manifest. Repositories without a GitHub origin cannot produce the required fact base and were not silently invented. |
+| Independent counter-verification runs across every portfolio programme. | Generate five plans, run the external Codex adapter, then `room update --skip-verify --counter` | The missing-result run first failed naming all five programmes. The completed 2026-08-17 run covered all 233 claims: 40 GitHub milestone/label claims held after an independent live read, 193 node-completion claims were `unsupported`, and none was contradicted. The 193 doubts rendered as anchored warnings; `room-presentable` and `forma check` both passed. |
 | Requirements trace to work, and the gate fails at both ends. | `npm test` (the `rtm` block) | The test edits the fixture's design document four ways — a duplicate id, a reference to nothing, a decision landing on no work, and open work no requirement claims — and requires `forma check` to exit 1 each time, naming the document and the line ([`lib/rtm.mjs`](../lib/rtm.mjs), [`lib/check.mjs`](../lib/check.mjs)). |
 | The convention survives a document written by hand for prose reasons. | `npm test` (the `rtm-dogfood` block) | Forma's own `docs/PRD.md` §6 parses as nine traceable requirements, each carrying its verification and its source line, and parsing it twice gives an identical answer. |
 | "Where we were" needs no stored history. | `npm test` (the `views` block) | The whole series is a count over `createdAt`/`closedAt` in one snapshot; a snapshot predating those fields derives `null` rather than a flat line ([`lib/roomderive.mjs`](../lib/roomderive.mjs)). |
@@ -62,6 +63,13 @@ Directories ending in `.worktrees` are now excluded by a regression test; the de
 kept the nested work checkout outside the personal portfolio. The three direct local-only checkouts
 have no `ghRepo`, so including them would violate the manifest schema and make `verify` impossible.
 
+Counter-verification then ran once per programme from freshly regenerated plans. It refused the
+first attempt because all five result files were absent. The external run independently re-read
+GitHub milestones and `needs-human` labels; it did not treat a source path as proof of completion.
+That left 40 claims holding and 193 explicitly unsupported (seven in Forma, 186 in `ripme-main`),
+with zero contradictions. The resulting 193 warning findings all resolved to repository evidence,
+and the recomposed 1,421,466-byte briefing passed both publication and drift gates (#75).
+
 - Automatic taxonomy detection was measured across three repositories. It remains syntactic pattern matching, so each new repository still needs review of aliases, exclusions, minimum population, and severity order.
 - The evidence-gated health audit proves rejection mechanics. It does not prove that every human or agent verdict is substantively correct; the mechanism validates anchors, not judgment.
 - Control Room publication is not proven. The generated artifact remains a review artifact, and no Pages or other deployment consumes it.
@@ -86,6 +94,7 @@ Every row names its measurement date or its durable source. No value is extrapol
 | Real repositories in the portfolio measurement | 5 | `arbiter`, `forma`, `haben`, `ripme-main`, and `viafera`, live run on 2026-08-17. |
 | Issues in that portfolio corpus | 4,269 | Whole-programme issue snapshots from the same run. |
 | Open issues in that corpus | 97 | Re-derived from those snapshots. |
+| Counter-verification claims | 233 | Five regenerated plans on 2026-08-17: 40 held, 193 unsupported, 0 contradicted. |
 | Issues waiting on a human | 11 | Historical 2026-08-09 measurement using a declared rule per programme, never a global inferred label. |
 | `haben` issue-to-code coverage | 69% | Issues with at least one linked modeled node, measured 2026-08-09. |
 | `arbiter` issue-to-code coverage | 54% | Same definition and date. |
