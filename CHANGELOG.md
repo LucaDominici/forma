@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-17
+
+The Control Room contract is now exercised across five real GitHub programmes and frozen for 1.0.
+The portfolio dogfood covered 4,269 issues and 97 open items; independent counter-verification
+covered all 233 emitted claims without turning 193 unsupported completion claims green.
+
+### Added
+- `forma room init` / `room update` provide the repeatable portfolio workflow, including map-less
+  repositories and externally produced counter-verification results.
+- First-class Kanban, execution queue, issue health pills, and embedded C4 drill-down complete the
+  dense per-programme Control Room surface.
+- `forma audit` emits deterministic offline plans and validates evidence-anchored health/findings;
+  the Codex adapter remains outside Forma, so no agent or network path enters the deterministic engine.
+
+### Changed
+- The model contract is frozen on schema major 1. Existing 1.x models remain compatible; an
+  unsupported future major is rejected explicitly.
+- `forma scan` now discovers GitHub-backed map-less repositories and ignores `*.worktrees`
+  directories, while preserving curated manifest decisions on repeated runs.
+
+### Fixed
+- Public CI no longer depends on the private `arbiter` repository, and governance now matches the
+  solo project tier.
+- Room aggregates, health overlays, findings, and issue coverage are all re-derived by gates that
+  have been observed failing on drift and passing on valid portfolio inputs.
+
 ## [0.13.0] - 2026-08-10
 
 Minor, not major: every schema addition is optional, every new gate assertion is opt-in by

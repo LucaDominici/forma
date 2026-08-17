@@ -1,8 +1,8 @@
 ---
 title: 'Versioning and compatibility'
-doc_version: '1.0.0'
+doc_version: '1.1.0'
 status: active
-last_review: '2026-08-10'
+last_review: '2026-08-17'
 owner: 'Luca Dominici'
 canonical_id: 'semver'
 tags: ['audience/dev', 'kind/governance']
@@ -39,7 +39,8 @@ the briefing, prose wording, chart layout, the internal shape of `lib/` modules 
 `c4-model.json` carries its own `schemaVersion` (currently `1.6.0`), and it does not track the
 product version. It answers "can this tool read this file", which is a different question from
 "what changed in the release". A model written by an older forma must keep loading; that is what
-the field exists to make checkable.
+the field exists to make checkable. Forma 1.0 freezes support on schema major 1: every 1.x model
+remains readable, while a future major 2 is rejected until a product release explicitly supports it.
 
 The same separation applies to `doc_version` in each document's frontmatter — content versioning,
 per document, on its own clock. Three registers, three questions, deliberately not merged.

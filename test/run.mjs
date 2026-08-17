@@ -1004,6 +1004,7 @@ const diffPaths = (a, b, at = '') => {
   let r = run(['init', '--repo', REPO, '--out', topo, '--force']); if (r.status !== 0) die('schema init exit ' + r.status, r)
   r = run(['gen', '--repo', REPO, '--topology', topo, '--out', model]); if (r.status !== 0) die('schema gen exit ' + r.status, r)
   r = run(['check', '--repo', REPO, '--model', model, '--topology', topo]); if (r.status !== 0) die('schema check exit ' + r.status, r)
+  const conforming = readJson(model)
   // a required field removed by hand: check must fail AND name the field, or the report is useless
   const missingKind = readJson(model)
   delete missingKind.nodes[0].kind
@@ -1022,7 +1023,12 @@ const diffPaths = (a, b, at = '') => {
   // the dogfood: forma's own committed model is the one every reader of the Pages demo sees
   const committed = validateModel(readJson(join(HERE, '..', 'docs/architecture/c4-model.json')))
   if (committed.length) die('schema: this repo\'s committed c4-model.json does not validate:\n - ' + committed.join('\n - '))
-  console.log('  ok schema — a conforming model passes; a missing required field and an out-of-enum kind are both rejected by name')
+  const oldMinor = validateModel({ ...conforming, schemaVersion: '1.0.0' })
+  const nextMajor = validateModel({ ...conforming, schemaVersion: '2.0.0' })
+  if (oldMinor.length || !nextMajor.some((e) => /schemaVersion/.test(e))) die('schema freeze: compatible 1.x must load and unsupported major 2 must fail')
+  r = run(['--version'])
+  if (r.status !== 0 || r.stdout.trim() !== '1.0.0') die('release: CLI version is not frozen at 1.0.0', r)
+  console.log('  ok schema — 1.x contract frozen; incompatible major rejected; package 1.0.0')
 }
 
 // 12) Optional architecture timeline: AS-IS stays generated from code; checkpoints are compact,
