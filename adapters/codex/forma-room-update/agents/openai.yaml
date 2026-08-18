@@ -1,0 +1,4 @@
+interface:
+  display_name: "Forma Room Update"
+  short_description: "Refresh a Forma Control Room: measure live, fill the judgement layer under gate, hand it to the verifier"
+  default_prompt: "Use $forma-room-update to run the 'aggiorna control room' ritual on this repository."

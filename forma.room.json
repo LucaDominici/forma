@@ -1,6 +1,6 @@
 {
-  "today": "2026-08-10",
-  "title": "Forma \u00b7 portfolio briefing",
+  "today": "2026-08-18",
+  "title": "Forma · portfolio briefing",
   "theme": "dark",
   "staleAfterDays": 14,
   "linkMaxFiles": 50,
@@ -15,6 +15,13 @@
       "issues": "docs/architecture/c4-issues.json",
       "model": "docs/architecture/c4-model.json",
       "topology": "docs/architecture/c4-topology.json",
+      "workflows": [
+        {
+          "id": "ci",
+          "path": ".github/workflows/ci.yml"
+        }
+      ],
+      "release": true,
       "blockedBy": {
         "labels": []
       },
@@ -42,7 +49,94 @@
           "docs/GOVERNANCE.md",
           "docs/GLOSSARY.md",
           "docs/technical-debt.md"
-        ]
+        ],
+        "gate": {
+          "invariants": [
+            {
+              "path": "docs/GLOBAL_INVARIANTS.md",
+              "idPattern": "^(I\\d+)\\."
+            }
+          ],
+          "registry": [
+            "package.json",
+            ".github/workflows/ci.yml",
+            "lib/check.mjs",
+            "test/run.mjs"
+          ],
+          "wiring": [
+            {
+              "invariant": "I12",
+              "registry": "test/run.mjs",
+              "pattern": "gen x2 should differ on generatedAt only"
+            },
+            {
+              "invariant": "I12",
+              "registry": "test/run.mjs",
+              "pattern": "two renders of the same manifest are not byte-identical"
+            },
+            {
+              "invariant": "I15",
+              "registry": "test/run.mjs",
+              "pattern": "keys present in en and missing from it"
+            },
+            {
+              "invariant": "I15",
+              "registry": "test/run.mjs",
+              "pattern": "declared but never read by the template"
+            },
+            {
+              "invariant": "I15",
+              "registry": "test/run.mjs",
+              "pattern": "never reaches fmt"
+            }
+          ],
+          "claims": [
+            {
+              "id": "doc-style-grader",
+              "path": "DECISION_REGISTRY.md",
+              "pattern": "^Enforcement: `lib/render\\.mjs`[^;]*;[^`]*`([^`]+)`",
+              "type": "path"
+            },
+            {
+              "id": "lint-file-count",
+              "path": "docs/DELIVERY.md",
+              "pattern": "checks (\\d+) files through",
+              "type": "tracked-count",
+              "include": [
+                "bin/forma.mjs",
+                "lib/*.mjs",
+                "scripts/lint.mjs",
+                "test/run.mjs"
+              ]
+            },
+            {
+              "id": "release-version",
+              "path": "docs/DELIVERY.md",
+              "pattern": "The ([0-9]+\\.[0-9]+\\.[0-9]+) release candidate",
+              "type": "json",
+              "target": "package.json",
+              "pointer": "/version"
+            }
+          ],
+          "freshness": [
+            {
+              "id": "governance",
+              "include": [
+                "docs/*.md"
+              ],
+              "staleAfterDays": 120
+            }
+          ]
+        }
+      },
+      "health": "docs/architecture/c4-health.json",
+      "findings": "docs/architecture/c4-findings.json",
+      "auditPlan": "docs/architecture/audit-plan.json",
+      "auditFill": "docs/architecture/audit-fill.json",
+      "counterResults": "docs/architecture/audit-counter.json",
+      "brief": {
+        "path": "docs/architecture/c4-brief.json",
+        "previous": "3ebe4a6"
       }
     }
   ]

@@ -1,6 +1,7 @@
 # Gold Doc-Set manifest (arbiter) — the canonical documentation every arbiter project carries.
 #
-# A deterministic presence audit (scripts/check-doc-set.mjs) grades a repo against this list.
+# The optional external arbiter audit grades a repo against this list; Forma's public CI does not
+# depend on that private engine (AGENTS.md, D-04).
 # The verdict is computed by code, never by an AI. Tiers:
 #   mandatory    — required; a gap is a (strict) gate failure
 #   recommended  — advisory; a gap is a warning

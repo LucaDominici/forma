@@ -1,29 +1,80 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/LucaDominici/forma/blob/main/lib/schema/c4-issues.schema.json",
-  "title": "c4-issues — gh issue/milestone snapshot for the Control Room",
-  "description": "Written only by `forma verify`, atomically after a live gh fetch parses cleanly. A timestamped, offline-replayable fact base — never hand-edited, never touched by `gen` or `check`.",
+  "title": "c4-issues — gh issue, dependency and repo-signal snapshot for the Control Room",
+  "description": "Written only by `forma verify`, after the paginated issue fetch parses cleanly. A timestamped, offline-replayable fact base — never hand-edited, never touched by `gen` or `check`.",
   "type": "object",
-  "required": ["fetchedAt", "ghRepo", "truncated", "issues", "milestones"],
+  "required": ["fetchedAt", "ghRepo", "truncated", "collection", "dependencies", "signals", "issues", "milestones"],
   "additionalProperties": false,
   "properties": {
     "fetchedAt": { "type": "string", "format": "date-time" },
     "ghRepo": { "type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$" },
     "truncated": { "type": "boolean", "description": "Required because absence would read as fine on snapshots written before the truncation guard existed." },
+    "collection": {
+      "type": "object",
+      "required": ["pagination", "nativeEdges", "truncatedRelations", "prose", "signalsUnknown", "staleVerdicts", "milestonesComplete", "milestonesReason", "payloadBytes"],
+      "additionalProperties": false,
+      "properties": {
+        "pagination": { "type": "string", "enum": ["gh api graphql --paginate --slurp"] },
+        "nativeEdges": { "type": "integer", "minimum": 0 },
+        "truncatedRelations": { "type": "integer", "minimum": 0 },
+        "signalsUnknown": { "type": "integer", "minimum": 0 },
+        "staleVerdicts": { "type": "integer", "minimum": 0 },
+        "milestonesComplete": { "type": "boolean" },
+        "milestonesReason": { "type": "string" },
+        "payloadBytes": { "type": "integer", "minimum": 1 },
+        "prose": {
+          "type": "object",
+          "required": ["accepted", "discarded", "ambiguous", "bodyBytes", "maxBytesPerIssue"],
+          "additionalProperties": false,
+          "properties": {
+            "accepted": { "type": "integer", "minimum": 0 },
+            "discarded": { "type": "integer", "minimum": 0 },
+            "ambiguous": { "type": "integer", "minimum": 0 },
+            "bodyBytes": { "type": "integer", "minimum": 0 },
+            "maxBytesPerIssue": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "required": ["supported", "complete", "edges"],
+      "additionalProperties": false,
+      "properties": {
+        "supported": { "type": "boolean" },
+        "complete": { "type": "boolean" },
+        "reason": { "type": "string" },
+        "edges": { "type": "array", "items": { "$ref": "#/definitions/dependencyEdge" } }
+      }
+    },
+    "signals": {
+      "type": "object",
+      "required": ["workflows", "release"],
+      "additionalProperties": false,
+      "properties": {
+        "workflows": { "type": "object", "additionalProperties": { "$ref": "#/definitions/workflowSignal" } },
+        "release": { "$ref": "#/definitions/releaseSignal" }
+      }
+    },
     "issues": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["n", "title", "state"],
+        "required": ["n", "title", "state", "url", "updatedAt", "dependenciesComplete", "proseScanComplete"],
         "additionalProperties": false,
         "properties": {
           "n": { "type": "integer", "minimum": 1 },
           "title": { "type": "string" },
           "state": { "type": "string", "enum": ["OPEN", "CLOSED"] },
+          "url": { "type": "string", "format": "uri" },
           "ms": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
           "labels": { "type": "array", "items": { "type": "string" } },
-          "createdAt": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Day the issue was opened. Optional because snapshots written before this field existed are still valid fact bases; the briefing reports history as unavailable rather than inventing it." },
-          "closedAt": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Day the issue was closed. Absent on an OPEN issue. With createdAt, these two make the open count at any past date a derivation over one snapshot — no persistent register (I4), no second fetch." }
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "dependenciesComplete": { "type": "boolean" },
+          "proseScanComplete": { "type": "boolean" },
+          "createdAt": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+          "closedAt": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
         }
       }
     },
@@ -40,6 +91,110 @@
           "closed": { "type": "integer", "minimum": 0 }
         }
       }
+    }
+  },
+  "definitions": {
+    "endpoint": {
+      "type": "object",
+      "required": ["repo", "number", "url", "state"],
+      "additionalProperties": false,
+      "properties": {
+        "repo": { "type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$" },
+        "number": { "type": "integer", "minimum": 1 },
+        "url": { "type": "string", "format": "uri" },
+        "state": { "type": "string", "enum": ["OPEN", "CLOSED"] }
+      }
+    },
+    "dependencyEdge": {
+      "type": "object",
+      "required": ["from", "to", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "$ref": "#/definitions/endpoint" },
+        "to": { "$ref": "#/definitions/endpoint" },
+        "source": { "type": "string", "enum": ["native", "prose"] },
+        "quote": { "type": "string" },
+        "bodyHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "line": { "type": "integer", "minimum": 1 },
+        "fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      },
+      "anyOf": [
+        {
+          "type": "object",
+          "required": ["from", "to", "source"],
+          "properties": { "source": { "type": "string", "enum": ["native"] } }
+        },
+        {
+          "type": "object",
+          "required": ["from", "to", "source", "quote", "bodyHash", "line", "fingerprint"],
+          "properties": { "source": { "type": "string", "enum": ["prose"] } }
+        }
+      ]
+    },
+    "workflowSignal": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": ["state", "name", "path", "headBranch", "headSha", "event", "status", "conclusion", "createdAt", "url"],
+          "additionalProperties": false,
+          "properties": {
+            "state": { "type": "string", "enum": ["present"] },
+            "name": { "type": "string" },
+            "path": { "type": "string" },
+            "headBranch": { "type": "string" },
+            "headSha": { "type": "string" },
+            "event": { "type": "string" },
+            "status": { "type": "string" },
+            "conclusion": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+            "createdAt": { "type": "string", "format": "date-time" },
+            "url": { "type": "string", "format": "uri" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["state", "reason"],
+          "additionalProperties": false,
+          "properties": {
+            "state": { "type": "string", "enum": ["unknown"] },
+            "reason": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "releaseSignal": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": ["listState", "tag", "publishedAt", "url", "resolvableTag"],
+          "additionalProperties": false,
+          "properties": {
+            "listState": { "type": "string", "enum": ["present"] },
+            "tag": { "type": "string" },
+            "publishedAt": { "type": "string", "format": "date-time" },
+            "url": { "type": "string", "format": "uri" },
+            "resolvableTag": {
+              "type": "object",
+              "required": ["name", "sha", "committedAt", "url"],
+              "additionalProperties": false,
+              "properties": {
+                "name": { "type": "string" },
+                "sha": { "type": "string" },
+                "committedAt": { "type": "string", "format": "date-time" },
+                "url": { "type": "string", "format": "uri" }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["listState", "reason"],
+          "additionalProperties": false,
+          "properties": {
+            "listState": { "type": "string", "enum": ["unknown"] },
+            "reason": { "type": "string" }
+          }
+        }
+      ]
     }
   }
 }

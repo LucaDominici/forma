@@ -36,8 +36,77 @@
           "topology": { "type": "string", "description": "Path to this program's topology overlay when one exists." },
           "health": { "type": "string", "description": "Path to this program's health overlay when one exists." },
           "findings": { "type": "string", "description": "Path to this program's findings overlay when one exists." },
-          "auditPlan": { "type": "string", "description": "Offline counter-verification plan written by `room update --counter`." },
+          "auditPlan": { "type": "string", "description": "Offline audit plan written by `room update --counter` / `--fill` (prompts for the agent, claims for the counter-verifier)." },
           "counterResults": { "type": "string", "description": "Agent-written counter-verification results consumed by `room update --counter`." },
+          "auditFill": { "type": "string", "description": "Agent-written audit fill (verdicts, findings, brief claims) consumed by `room update --fill`. Applied item by item; refusals are named in the health overlay's lastApply." },
+          "brief": {
+            "type": "object",
+            "description": "The judgement layer of this programme, opt-in by presence: thesis, risks, decisions, invariants, notes — typed claims that expire and are coloured only under a fresh hostile verdict. See c4-brief.schema.json.",
+            "required": ["path"],
+            "additionalProperties": false,
+            "properties": {
+              "path": { "type": "string", "description": "Path to this program's c4-brief.json overlay." },
+              "previous": { "type": "string", "pattern": "^[0-9a-f]{7,40}$", "description": "Commit that holds the previous brief; the \"what changed\" panel diffs `git show <previous>:<path>` against the current file. A declared input, so the delta is derived, never a stored register." }
+            }
+          },
+          "workflows": {
+            "type": "array",
+            "description": "Repository workflow lanes collected by `forma verify`; names and paths are programme data, never engine constants.",
+            "items": {
+              "type": "object",
+              "required": ["id", "path"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+                "path": { "type": "string", "pattern": "\\S" }
+              }
+            }
+          },
+          "release": { "type": "boolean", "description": "Opt in to collecting the latest GitHub release and the commit its tag resolves to." },
+          "capabilities": {
+            "type": "object",
+            "required": ["docs", "statusMap"],
+            "additionalProperties": false,
+            "description": "Capability ledger derived on every room/check run. Rich source statuses are mapped explicitly and their original text is preserved.",
+            "properties": {
+              "docs": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["path"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "path": { "type": "string", "pattern": "\\S" },
+                    "id": { "type": "string" },
+                    "describe": { "type": "string" },
+                    "status": { "type": "string" },
+                    "ref": { "type": "string" },
+                    "issues": { "type": "string" },
+                    "release": { "type": "string" },
+                    "parents": { "type": "string" },
+                    "roots": { "type": "array", "items": { "type": "string" } }
+                  }
+                }
+              },
+              "statusMap": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "string", "pattern": "\\S" } },
+              "verification": {
+                "type": "object",
+                "required": ["path"],
+                "additionalProperties": false,
+                "description": "Optional RTM execution table joined to ledger rows by feature or use-case id.",
+                "properties": {
+                  "path": { "type": "string", "pattern": "\\S" },
+                  "feature": { "type": "string" },
+                  "useCase": { "type": "string" },
+                  "verdict": { "type": "string" },
+                  "execution": { "type": "string" },
+                  "test": { "type": "string" },
+                  "requirement": { "type": "string" }
+                }
+              }
+            }
+          },
           "blockedBy": {
             "type": "object",
             "additionalProperties": false,
@@ -51,7 +120,86 @@
             "additionalProperties": false,
             "properties": {
               "include": { "type": "array", "items": { "type": "string" }, "description": "Globs selecting only git-tracked files, so generated or local files cannot silently enter the room." },
-              "canon": { "type": "array", "items": { "type": "string" }, "description": "Paths carried in full, in this order, so a reading order somebody chose survives into the page. Everything else `include` selects is listed with a link but not embedded. A canon document that would exceed docs.maxBytes is listed with that as its reason, never truncated." }
+              "canon": { "type": "array", "items": { "type": "string" }, "description": "Paths carried in full, in this order, so a reading order somebody chose survives into the page. Everything else `include` selects is listed with a link but not embedded. A canon document that would exceed docs.maxBytes is listed with that as its reason, never truncated." },
+              "gate": {
+                "type": "object",
+                "required": ["invariants"],
+                "additionalProperties": false,
+                "description": "Opt-in extraction contract for the deterministic document gate. This declares sources only; severity and enforcement truth are derived later.",
+                "properties": {
+                  "invariants": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": ["path", "idPattern"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "path": { "type": "string", "pattern": "\\S" },
+                        "idPattern": { "type": "string", "pattern": "\\S", "description": "Regex applied to each Markdown heading without its # prefix. A named `id` group, then the first capture, then the full match supplies the invariant id." }
+                      }
+                    }
+                  },
+                  "registry": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": { "type": "string", "pattern": "\\S" },
+                    "description": "Repo-relative files that contain the real gate registry. Their lines are extracted verbatim; merely naming a token never proves enforcement."
+                  },
+                  "wiring": {
+                    "type": "array",
+                    "description": "Invariant-specific proof: a declared regex must match a declared registry. Generic token occurrence is never treated as wiring.",
+                    "items": {
+                      "type": "object",
+                      "required": ["invariant", "registry", "pattern"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "invariant": { "type": "string", "pattern": "\\S" },
+                        "registry": { "type": "string", "pattern": "\\S" },
+                        "pattern": { "type": "string", "pattern": "\\S" }
+                      }
+                    }
+                  },
+                  "claims": {
+                    "type": "array",
+                    "description": "Explicit document claims whose captured value must resolve to a tracked path, tracked-file count, or JSON pointer.",
+                    "items": {
+                      "type": "object",
+                      "required": ["id", "path", "pattern", "type"],
+                      "anyOf": [
+                        { "required": ["type"], "properties": { "type": { "enum": ["path"] } } },
+                        { "required": ["type", "include"], "properties": { "type": { "enum": ["tracked-count"] } } },
+                        { "required": ["type", "target", "pointer"], "properties": { "type": { "enum": ["json"] } } }
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+                        "path": { "type": "string", "pattern": "\\S" },
+                        "pattern": { "type": "string", "pattern": "\\S" },
+                        "capture": { "type": "integer", "minimum": 0 },
+                        "type": { "type": "string", "enum": ["path", "tracked-count", "json"] },
+                        "target": { "type": "string", "pattern": "\\S" },
+                        "pointer": { "type": "string", "pattern": "^/" },
+                        "include": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "\\S" } }
+                      }
+                    }
+                  },
+                  "freshness": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": ["id", "include", "staleAfterDays"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+                        "include": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "\\S" } },
+                        "staleAfterDays": { "type": "integer", "minimum": 1 }
+                      }
+                    }
+                  }
+                }
+              }
             }
           },
           "rtm": {
