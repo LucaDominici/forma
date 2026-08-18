@@ -2759,6 +2759,18 @@ const diffPaths = (a, b, at = '') => {
   r = run(['check', '--repo', repo, '--model', model, '--topology', topology, '--issues', issues, '--health', health, '--findings', findings, '--room', briefRoom, '--manifest', briefManifest])
   if (r.status === 0 || !/brief claim inv-1/.test(r.stderr || '')) die('brief: check accepted a claim whose evidence does not resolve', r)
   writeFileSync(brief, goodBrief)
+  // The publication gate: a decision without a fresh hostile hold does not go out; a held one does.
+  const briefPresentable = (file) => spawnSync(process.execPath, [join(HERE, '..', 'scripts', 'room-presentable.mjs'), '--room', file, '--manifest', briefManifest], { encoding: 'utf-8' })
+  r = run(['room', '--manifest', briefManifest, '--out', briefRoom]); if (r.status !== 0) die('brief: room for presentable exit ' + r.status, r)
+  let bp = briefPresentable(briefRoom)
+  if (bp.status !== 0 || !/no decision goes out without a fresh hostile hold/.test(bp.stdout)) die('brief: presentable refused a room whose only decision is held: ' + bp.stdout + bp.stderr)
+  const unheld = readJson(brief); delete unheld.claims.find((c) => c.id === 'decide-1').verified
+  writeFileSync(brief, JSON.stringify(unheld, null, 2) + '\n')
+  r = run(['room', '--manifest', briefManifest, '--out', briefRoom]); if (r.status !== 0) die('brief: room with unheld decision exit ' + r.status, r)
+  bp = briefPresentable(briefRoom)
+  if (bp.status === 0 || !/FAIL no decision goes out without a fresh hostile hold.*decide-1 \(unverified\)/.test(bp.stdout)) die('brief: presentable published a decision nobody verified: ' + bp.stdout)
+  if (!/decide-1/.test(readFileSync(briefRoom, 'utf-8')) || !/briefUnverified|not verified/.test(readFileSync(briefRoom, 'utf-8'))) die('brief: the composed room does not carry the claim or the not-verified word')
+  writeFileSync(brief, goodBrief)
 
   // `room update --counter` owns the deterministic half of unattended operation. The external
   // adapter writes the result; update regenerates the plan, refuses stale/missing output, applies

@@ -161,6 +161,16 @@ details[open]>summary:after{content:"\2212"}
 .glyph{width:12px;text-align:center;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13px}
 .status-ok{color:var(--ok)}.status-warn{color:var(--warn)}.status-bad{color:var(--bad)}.status-none{color:var(--muted)}
 .state-chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace}
+.state-chip.on{color:var(--ok);border-color:var(--ok)}
+/* The brief: a claim's verdict chip is the reader's only source of trust in the sentence — it always
+   says a word (held / not verified / stale / contradicted / unsupported), and only `holds` is green. */
+.verdict-chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace;white-space:nowrap}
+.verdict-holds{color:var(--ok);border-color:var(--ok)}.verdict-contradicted{color:var(--bad);border-color:var(--bad)}
+.thesis.unheld{color:var(--muted)}
+.brief-strip{margin:8px 0 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:11.5px;color:var(--muted)}
+.claim-row>summary{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+.claim-row .row-title{flex:1 1 30ch}
+.decide-list{margin:0;padding-left:1.4em}.decide-list li{margin:0 0 6px}
 .issue-pill{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:1px 7px 1px 4px;border:1px solid var(--line);border-radius:999px;text-decoration:none}
 .issue-pill .issue-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .issue-pill.closed .issue-text{text-decoration:line-through}
@@ -960,15 +970,93 @@ function kpi(list,k,v,note){
  if(note)dd.appendChild(el("small","",note));
  d.appendChild(dt);d.appendChild(dd);list.appendChild(d);
 }
+/* ---- The brief: the judgement layer, rendered under one rule. A claim shows its severity colour
+   ONLY when its state is `holds` — a second agent with a mandate to disprove it could not, on a
+   date the reader sees. Stale, unverified, contradicted, unsupported: grey, with the word. Never a
+   colour because someone wrote a sentence. Refusals of the last apply are a number on screen. */
+function evidenceNode(program,e){
+ if(!e)return el("span","muted",STR.none);
+ if(e.type==="issue")return pill(program,Number(String(e.ref).replace(/^#/,"")));
+ if(e.type==="path"){var m=/^(.*):(\d+)$/.exec(e.ref);return docLink(program,m?m[1]:e.ref,m?Number(m[2]):null);}
+ if(e.type==="commit"){var a=el("a","data",String(e.ref).slice(0,12));a.href="https://github.com/"+program.ghRepo+"/commit/"+e.ref;a.target="_blank";a.rel="noopener";return a;}
+ return el("span","chip",e.type+":"+e.ref);
+}
+function evidenceList(program,list){var w=el("span","chips"),i;for(i=0;i<(list||[]).length;i++)w.appendChild(evidenceNode(program,list[i]));if(!(list||[]).length)w.appendChild(el("span","muted",STR.none));return w;}
+function staleReasonText(reason){var map={"issue-changed":STR.briefStaleIssue,"evidence-changed":STR.briefStaleEvidence,expired:STR.briefStaleExpired,future:STR.briefStaleFuture,"issue-missing":STR.briefStaleMissing};return map[reason]||reason;}
+function briefVerdictChip(claim){
+ var chip=el("span","verdict-chip verdict-"+claim.state),text,tip=null;
+ if(claim.state==="holds"){text=fmt(STR.briefHeld,{date:claim.verified.at});tip=claim.verified.reason;}
+ else if(claim.state==="stale"){text=fmt(STR.briefStale,{reason:staleReasonText(claim.staleReason)});}
+ else if(claim.state==="contradicted"){text=STR.briefContradicted;tip=claim.verified.reason;}
+ else if(claim.state==="unsupported"){text=STR.briefUnsupported;tip=claim.verified.reason;}
+ else text=STR.briefUnverified;
+ chip.textContent=text;if(tip)chip.setAttribute("data-tip",tip);chip.setAttribute("aria-label",text+(tip?" — "+tip:""));return chip;
+}
+// The mark: severity colour only under a fresh hold; the glyph still says what the agent wrote.
+function briefMark(claim){var sev=claim.severity||(claim.kind==="decide"?"warn":"ok");return statusMark(claim.coloured?sev:(claim.state==="stale"?"stale":"unknown"));}
+function briefClaimRow(program,claim,extra){
+ var d=el("details","claim-row"),s=el("summary","row-head"),dl=el("dl","detail");
+ s.appendChild(briefMark(claim));s.appendChild(el("span","row-title",claim.text));s.appendChild(briefVerdictChip(claim));
+ d.appendChild(s);
+ pair(dl,STR.briefAbout,evidenceNode(program,briefAboutEvidence(claim.about)));
+ pair(dl,STR.evidence,evidenceList(program,claim.evidence));
+ pair(dl,STR.briefWritten,claim.writtenAt);
+ if(claim.verified){pair(dl,STR.briefVerdict,claim.verified.verdict+" · "+claim.verified.at+" — "+claim.verified.reason);pair(dl,STR.briefVerdictEvidence,evidenceNode(program,claim.verified.evidence));}
+ if(extra)extra(dl);
+ d.appendChild(dl);return d;
+}
+function briefAboutEvidence(about){if(!about)return null;if(about.issue!=null)return{type:"issue",ref:String(about.issue)};if(about.path)return{type:"path",ref:about.path};if(about.signal)return{type:"signal",ref:about.signal};if(about.milestone)return{type:"milestone",ref:about.milestone};return null;}
+function briefStatusStrip(program){
+ var b=program.derived.brief,f=program.derived.findings,strip=el("p","brief-strip"),parts=[];
+ if(!b)return null;
+ parts.push(fmt(STR.briefCounts,{n:b.counts.total,holds:b.counts.holds,contradicted:b.counts.contradicted,unsupported:b.counts.unsupported,unverified:b.counts.unverified,stale:b.counts.stale}));
+ if(f&&f.lastApply)parts.push(fmt(STR.briefLastApply,{date:f.lastApply.at,accepted:f.lastApply.accepted,rejected:f.lastApply.rejected.length}));
+ strip.appendChild(el("span","",parts.join(" · ")));
+ strip.appendChild(el("span","state-chip"+(b.ready?" on":""),b.ready?STR.briefReady:STR.briefNotReady));
+ return strip;
+}
+function briefPanels(program){
+ var b=program.derived.brief,out=[],i;
+ if(!b){var np=panel(STR.briefRisks,STR.provBrief,"full");markState(np,"empty",STR.briefNotDeclared);out.push(np);return out;}
+ if(!b.claims.length){var ep=panel(STR.briefRisks,STR.provBrief,"full");markState(ep,"empty",STR.briefEmpty);out.push(ep);return out;}
+ var rp=panel(STR.briefRisks,STR.provBrief,"span2");
+ markState(rp,b.risks.length?(b.risks.some(function(c){return c.stale;})?"stale":"present"):"empty",null);
+ if(b.risks.length)for(i=0;i<b.risks.length;i++)rp.body.appendChild(briefClaimRow(program,b.risks[i]));else rp.body.appendChild(el("p","muted",STR.briefNoRisks));
+ out.push(rp);
+ var dp=panel(STR.briefDecide,STR.provBrief,"span2");
+ markState(dp,b.decisions.length?(b.decisions.every(function(c){return c.state==="holds";})?"present":"unknown"):"empty",b.decisions.length&&!b.decisions.every(function(c){return c.state==="holds";})?STR.briefDecideUnheld:null);
+ if(b.decisions.length){var ol=el("ol","decide-list");for(i=0;i<b.decisions.length;i++){var li=el("li");li.appendChild(briefClaimRow(program,b.decisions[i]));ol.appendChild(li);}dp.body.appendChild(ol);}
+ else dp.body.appendChild(el("p","muted",STR.briefNoDecisions));
+ out.push(dp);
+ if(b.invariants.length){
+  var ip=panel(STR.briefInvariants,STR.provBrief,"span2"),counts={MECCANIZZATO:0,DOCUMENTATO:0,SCOPERTO:0};
+  for(i=0;i<b.invariants.length;i++)counts[b.invariants[i].class]++;
+  markState(ip,b.invariants.some(function(c){return c.stale;})?"stale":"present",fmt(STR.briefInvariantCounts,counts));
+  for(i=0;i<b.invariants.length;i++)(function(claim){ip.body.appendChild(briefClaimRow(program,claim,function(dl){pair(dl,STR.briefClass,claim.class);pair(dl,STR.briefIfBroken,claim.ifBroken);}));})(b.invariants[i]);
+  out.push(ip);
+ }
+ if(b.notes.length){var npn=panel(STR.briefNotes,STR.provBrief,"span2");for(i=0;i<b.notes.length;i++)npn.body.appendChild(briefClaimRow(program,b.notes[i]));out.push(npn);}
+ return out;
+}
+
 function viewExec(view,program,summary){
  var k=program.derived.kpis,rtm=program.derived.rtm,history=program.derived.history;
  markView(view,program.derived.health&&program.derived.health.staleCount?"stale":"present");
  var blockedClaim=claimOf(summary,"blocked",summary.blocked,summary.blockedRule.declared);
- var answer=el("div","answer"),lead=el("section","panel answer-lead");
- lead.appendChild(el("p","thesis",blockedClaim.known?fmt(STR.execHeadline,{open:summary.open,blocked:blockedClaim.value}):fmt(STR.execHeadlineUnknown,{open:summary.open})));
- lead.appendChild(el("p","lede",snapshotProv(program)));
+ var answer=el("div","answer"),lead=el("section","panel answer-lead"),brief=program.derived.brief,thesis=brief&&brief.thesis;
+ var derivedLine=blockedClaim.known?fmt(STR.execHeadline,{open:summary.open,blocked:blockedClaim.value}):fmt(STR.execHeadlineUnknown,{open:summary.open});
+ if(thesis){
+  // The thesis is the agent's sentence, coloured only under a fresh hostile hold; the derived
+  // count stays underneath as the fact the sentence must not contradict.
+  var t=el("p","thesis"+(thesis.coloured?" held":" unheld"),thesis.text);lead.appendChild(t);
+  var tl=el("p","lede");tl.appendChild(briefVerdictChip(thesis));tl.appendChild(document.createTextNode(" · "+derivedLine+" · "+snapshotProv(program)));lead.appendChild(tl);
+ }else{
+  lead.appendChild(el("p","thesis",derivedLine));
+  lead.appendChild(el("p","lede",snapshotProv(program)+(brief?" · "+STR.briefNoThesis:"")));
+ }
+ var strip=briefStatusStrip(program);if(strip)lead.appendChild(strip);
  answer.appendChild(lead);
-
+ var bp=briefPanels(program),bi;for(bi=0;bi<bp.length;bi++)answer.appendChild(bp[bi]);
  answer.appendChild(capabilityPanel([program]));
  answer.appendChild(changedPanel([program]));
  view.appendChild(answer);
@@ -1051,12 +1139,18 @@ var i,j;
  ev.appendChild(rowsPanel(panel(STR.techBlocked,blockedClaim.known?fmt(plural(mine.length,STR.provBlockedOne,STR.provBlocked),{n:mine.length}):STR.provBlockedUnknown,"span2"),mine,blockedRow,blockedClaim.known?STR.noBlockedHere:STR.ruleUnknown));
  ev.appendChild(signalsPanel(program));
 
- var findings=(program.findings&&program.findings.findings)||[];
- ev.appendChild(rowsPanel(panel(STR.techFindings,STR.provAudit),findings,function(f){
+ var findings=(program.derived.findings&&program.derived.findings.findings)||(program.findings&&program.findings.findings)||[];
+ var fp=panel(STR.techFindings,STR.provAudit);
+ if(program.derived.findings&&program.derived.findings.staleCount)markState(fp,"stale",fmt(STR.findingsStale,{n:program.derived.findings.staleCount}));
+ ev.appendChild(rowsPanel(fp,findings,function(f){
   var d=el("details"),s=el("summary","row-head"),dl=el("dl","detail");
-  s.appendChild(statusMark(f.severity));s.appendChild(el("span","ref",f.id));s.appendChild(el("span","row-title",f.text));
+  // A stale finding keeps its text and loses its colour: the reader sees what was found and that
+  // its evidence has moved since — never a red that nobody re-checked.
+  s.appendChild(statusMark(f.stale?"stale":f.severity));s.appendChild(el("span","ref",f.id));s.appendChild(el("span","row-title",f.text));
+  if(f.stale)s.appendChild(el("span","state-chip",fmt(STR.briefStale,{reason:staleReasonText(f.staleReason)})));
   d.appendChild(s);
-  pair(dl,STR.evidence,chips(f.evidence?[f.evidence.type+":"+f.evidence.ref]:[]));
+  pair(dl,STR.evidence,evidenceNode(program,f.evidence));
+  if(f.auditedAt)pair(dl,STR.briefWritten,f.auditedAt);
   if(f.trace)pair(dl,STR.techAudit,f.trace);
   d.appendChild(dl);return d;
  },STR.techNoFindings));
