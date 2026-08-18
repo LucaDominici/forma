@@ -2390,7 +2390,18 @@ const diffPaths = (a, b, at = '') => {
   const initAt = skill.indexOf('room init'), updateAt = skill.indexOf('room update')
   if (initAt < 0 || updateAt < initAt) die('claude skill: init→update order is not documented')
   if (!/room update[^\n]*--out/.test(skill) || !/Markdown link/i.test(skill)) die('claude skill: the adapter does not link the generated output')
-  console.log('  ok claude-skill — init→update runs on a fresh target and the adapter links the artifact')
+  // The ritual skill is the same text for both agents and names every gate the engine enforces, in
+  // the order the engine needs them; the counter-verifier skill knows the brief claims and may
+  // leave a claim unanswered rather than invent an anchor.
+  const ritual = readFileSync(join(HERE, '..', 'adapters/claude/forma-room-update/SKILL.md'), 'utf-8')
+  if (ritual !== readFileSync(join(HERE, '..', 'adapters/codex/forma-room-update/SKILL.md'), 'utf-8')) die('ritual skill: Claude and Codex copies differ')
+  const order = ['room update', 'audit --repo . --today', '--plan', 'audit-fill.json', '--apply', 'forma-counterverify', '--fill --counter', 'room-presentable']
+  let last = -1
+  for (const step of order) { const at = ritual.indexOf(step, last + 1); if (at < 0) die('ritual skill: step missing or out of order: ' + step); last = at }
+  for (const rule of [/anchor that never expires/, /Caps/, /Never stamp provenance/, /Declare the gap/, /never from memory/i, /lastApply\.rejected/, /`about`/]) if (!rule.test(ritual)) die('ritual skill: rule missing: ' + rule)
+  const counterSkill = readFileSync(join(HERE, '..', 'adapters/codex/forma-counterverify/SKILL.md'), 'utf-8')
+  if (!/brief-claim/.test(counterSkill) || !/I do not know/.test(counterSkill) || !/:signal:/.test(counterSkill)) die('counter skill: brief claims, the right to say "I do not know", or signal anchors are not documented')
+  console.log('  ok claude-skill — init→update runs on a fresh target and the adapter links the artifact; the ritual and the verifier skills carry the gates in order')
 }
 
 // Publishing must follow the same chain for every future release: conventional commits become a
