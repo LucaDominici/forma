@@ -2505,6 +2505,8 @@ const diffPaths = (a, b, at = '') => {
   const issues = join(repo, 'issues.json'), health = join(repo, 'health.json'), findings = join(repo, 'findings.json')
   const topology = join(repo, 'topology.json'), model = join(repo, 'model.json')
   cpSync(FIX('room/alpha'), repo, { recursive: true })
+  // A fourth, OPEN, unaudited issue: closed issues are never planned for audit (closure is their state).
+  { const snap = readJson(issues); snap.issues.push({ n: 4, title: 'An open issue nobody has judged', state: 'OPEN', url: 'https://github.com/acme/alpha/issues/4', ms: null, labels: [], updatedAt: '2026-08-02T10:00:00Z', dependenciesComplete: true, proseScanComplete: true, createdAt: '2026-08-02' }); writeFileSync(issues, JSON.stringify(snap, null, 2) + '\n') }
   let r = run(['init', '--repo', repo, '--out', topology, '--force']); if (r.status !== 0) die('audit: init exit ' + r.status, r)
   r = run(['gen', '--repo', repo, '--topology', topology, '--out', model]); if (r.status !== 0) die('audit: gen exit ' + r.status, r)
   const auditModel = readJson(model)
@@ -2520,8 +2522,8 @@ const diffPaths = (a, b, at = '') => {
   if (r.status !== 0) die('audit: second plan exit ' + r.status, r)
   if (readFileSync(plan, 'utf-8') !== readFileSync(plan2, 'utf-8')) die('audit: unchanged inputs produced different plans')
   const work = readJson(plan)
-  if (JSON.stringify(work.issues.map((x) => x.n)) !== '[3]') die('audit: plan did not exclude already-audited issues: ' + JSON.stringify(work.issues))
-  if (!work.issues[0].prompt.includes('issue #3') || work.output.planHash !== work.planHash || !Array.isArray(work.output.verdicts) || !Array.isArray(work.output.findings)) die('audit: plan does not carry the agent fill contract')
+  if (JSON.stringify(work.issues.map((x) => x.n)) !== '[4]') die('audit: plan did not exclude already-audited and closed issues: ' + JSON.stringify(work.issues))
+  if (!work.issues[0].prompt.includes('issue #4') || work.output.planHash !== work.planHash || !Array.isArray(work.output.verdicts) || !Array.isArray(work.output.findings)) die('audit: plan does not carry the agent fill contract')
   const claimKinds = new Set(work.claims.map((claim) => claim.kind))
   for (const kind of ['done-node', 'health-verdict', 'milestone-rate', 'waiting-human']) if (!claimKinds.has(kind)) die('audit: counter-verification plan has no ' + kind + ' claim')
   if (work.claims.some((claim) => !claim.id || !claim.claim || !claim.where.length)) die('audit: a counter-verification claim lacks its name or inspection targets: ' + JSON.stringify(work.claims))
@@ -2557,7 +2559,7 @@ const diffPaths = (a, b, at = '') => {
   const unrelated = JSON.parse(JSON.stringify(issueSnapshot)); unrelated.issues.find((it) => it.n === 2).title = 'Unrelated snapshot change'
   if (hashEvidence(repo, evidence, unrelated) !== evidenceHash) die('audit stale: unrelated snapshot data leaked into a path evidence hash')
   const expiredPrompts = auditPlan(issueSnapshot, { byIssue: new Map() }, readJson(health).verdicts, { repo, today: '2026-08-25', staleAfterDays: 14 })
-  if (expiredPrompts.map((entry) => entry.n).join() !== '1,2,3') die('audit stale: expired verdicts were not queued for re-audit: ' + JSON.stringify(expiredPrompts))
+  if (expiredPrompts.map((entry) => entry.n).join() !== '1,2,4') die('audit stale: expired verdicts were not queued for re-audit (and the closed one must stay out): ' + JSON.stringify(expiredPrompts))
   const { stubAuditAgent } = await import(join(HERE, 'stub-audit-agent.mjs'))
   const result = validateCounterResults(work, stubAuditAgent(work))
   const heldResult = { planHash: work.planHash, results: JSON.parse(JSON.stringify(result.results)) }
@@ -2590,7 +2592,7 @@ const diffPaths = (a, b, at = '') => {
   const counter = join(tmp, 'audit-counter.json')
   writeFileSync(counter, JSON.stringify(result))
   const beforeToctouHealth = readFileSync(health, 'utf-8'), beforeToctouFindings = readFileSync(findings, 'utf-8'), beforeToctouIssues = readFileSync(issues, 'utf-8')
-  const changedDuringAudit = readJson(issues); changedDuringAudit.issues.find((issue) => issue.n === 3).title = 'Changed after the plan'
+  const changedDuringAudit = readJson(issues); changedDuringAudit.issues.find((issue) => issue.n === 4).title = 'Changed after the plan'
   writeFileSync(issues, JSON.stringify(changedDuringAudit, null, 2) + '\n')
   r = run([...applyArgs, '--apply', counter, '--counter-plan', plan])
   writeFileSync(issues, beforeToctouIssues)
@@ -2641,12 +2643,12 @@ const diffPaths = (a, b, at = '') => {
   const fill = join(tmp, 'audit-fill.json')
   writeFileSync(fill, JSON.stringify({
     planHash: readJson(plan).planHash,
-    verdicts: [{ n: 3, verdict: 'ok', why: 'The committed helper is present.', evidence: [{ type: 'path', ref: 'src/util/log.js' }] }],
+    verdicts: [{ n: 4, verdict: 'ok', why: 'The committed helper is present.', evidence: [{ type: 'path', ref: 'src/util/log.js' }] }],
     findings: [{ id: 'F-2', severity: 'bad', text: 'Parser behavior contradicts the issue.', evidence: { type: 'issue', ref: '2' } }],
   }))
   r = run([...applyArgs, '--apply', fill, '--audit-plan', plan])
   if (r.status !== 0) die('audit: apply exit ' + r.status, r)
-  const appliedVerdict = readJson(health).verdicts.find((v) => v.n === 3 && v.verdict === 'ok')
+  const appliedVerdict = readJson(health).verdicts.find((v) => v.n === 4 && v.verdict === 'ok')
   if (!appliedVerdict) die('audit: verdict was not written')
   if (appliedVerdict.auditedAt !== '2026-08-10' || !/^[0-9a-f]{64}$/.test(appliedVerdict.evidenceHash)) die('audit: Forma did not stamp deterministic verdict provenance')
   const appliedFinding = readJson(findings).findings.find((f) => f.id === 'F-2' && f.severity === 'bad')
@@ -2675,13 +2677,13 @@ const diffPaths = (a, b, at = '') => {
   r = run([...planArgs, plan]); if (r.status !== 0) die('audit: fresh plan before rejected fill exit ' + r.status, r)
   writeFileSync(fill, JSON.stringify({
     planHash: readJson(plan).planHash,
-    verdicts: [{ n: 3, verdict: 'bad', why: 'Unsupported.', evidence: [{ type: 'path', ref: 'src/util/log.js' }] }],
+    verdicts: [{ n: 4, verdict: 'bad', why: 'Unsupported.', evidence: [{ type: 'path', ref: 'src/util/log.js' }] }],
     findings: [{ id: 'F-3', severity: 'warn', text: 'Would be a partial write.', evidence: { type: 'path', ref: 'src/core/engine.js' } }],
   }))
   r = run([...applyArgs, '--apply', fill, '--audit-plan', plan])
-  if (r.status !== 0 || !/rejected verdict #3: verdict #3 was not in the plan/.test(r.stderr || '')) die('audit: an unplanned verdict was not refused by name', r)
-  if (readJson(health).verdicts.find((v) => v.n === 3).verdict !== 'ok' || !readJson(findings).findings.some((f) => f.id === 'F-3')) die('audit: the refused verdict leaked, or the valid finding beside it was dropped')
-  if (!readJson(health).lastApply.rejected.some((x) => x.kind === 'verdict' && x.ref === '#3')) die('audit: lastApply does not name the refused verdict')
+  if (r.status !== 0 || !/rejected verdict #4: verdict #4 was not in the plan/.test(r.stderr || '')) die('audit: an unplanned verdict was not refused by name', r)
+  if (readJson(health).verdicts.find((v) => v.n === 4).verdict !== 'ok' || !readJson(findings).findings.some((f) => f.id === 'F-3')) die('audit: the refused verdict leaked, or the valid finding beside it was dropped')
+  if (!readJson(health).lastApply.rejected.some((x) => x.kind === 'verdict' && x.ref === '#4')) die('audit: lastApply does not name the refused verdict')
   void beforeHealth; void beforeFindings
 
   // ---- The brief: the judgement layer as typed claims that expire and earn colour only under a
