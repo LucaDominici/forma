@@ -36,8 +36,19 @@
           "topology": { "type": "string", "description": "Path to this program's topology overlay when one exists." },
           "health": { "type": "string", "description": "Path to this program's health overlay when one exists." },
           "findings": { "type": "string", "description": "Path to this program's findings overlay when one exists." },
-          "auditPlan": { "type": "string", "description": "Offline counter-verification plan written by `room update --counter`." },
+          "auditPlan": { "type": "string", "description": "Offline audit plan written by `room update --counter` / `--fill` (prompts for the agent, claims for the counter-verifier)." },
           "counterResults": { "type": "string", "description": "Agent-written counter-verification results consumed by `room update --counter`." },
+          "auditFill": { "type": "string", "description": "Agent-written audit fill (verdicts, findings, brief claims) consumed by `room update --fill`. Applied item by item; refusals are named in the health overlay's lastApply." },
+          "brief": {
+            "type": "object",
+            "description": "The judgement layer of this programme, opt-in by presence: thesis, risks, decisions, invariants, notes — typed claims that expire and are coloured only under a fresh hostile verdict. See c4-brief.schema.json.",
+            "required": ["path"],
+            "additionalProperties": false,
+            "properties": {
+              "path": { "type": "string", "description": "Path to this program's c4-brief.json overlay." },
+              "previous": { "type": "string", "pattern": "^[0-9a-f]{7,40}$", "description": "Commit that holds the previous brief; the \"what changed\" panel diffs `git show <previous>:<path>` against the current file. A declared input, so the delta is derived, never a stored register." }
+            }
+          },
           "workflows": {
             "type": "array",
             "description": "Repository workflow lanes collected by `forma verify`; names and paths are programme data, never engine constants.",

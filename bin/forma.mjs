@@ -31,7 +31,9 @@ Usage: forma <command> [--repo <path>]
   doc     project the arc42 scaffold (ARCHITECTURE.scaffold.md) from the model
   serve   open the live explorer at http://localhost:4173
   verify  refresh status from live GitHub issues via your gh CLI (the only networked command)
-  audit   emit an offline evidence plan, or validate + apply agent-written health/findings
+  audit   emit an offline evidence plan (--plan), or validate + apply agent-written
+          health/findings/brief (--apply <fill> --audit-plan <plan>) or counter results
+          (--apply <results> --counter-plan <plan>); item by item, refusals named in lastApply
   scan    find the programmes under a directory and write them into forma.room.json
           (never overwrites an entry you turned off, and never invents \`today\`)
   room    compose the Control Room — one briefing over N programmes, self-contained HTML
@@ -39,7 +41,8 @@ Usage: forma <command> [--repo <path>]
           --serve opens it locally so the Options view can write the manifest back
     room init    scaffold/seed forma.room.json for a repo (--repo, --today, or --scan --root)
     room update  refresh live gh snapshots then recompose the HTML ("aggiorna dashboard")
-                 --counter applies external agent results before composition
+                 --fill applies the agent's audit fill (verdicts, findings, brief);
+                 --counter applies the hostile counter-verification before composition
 
 The file contract is lib/schema/c4-model.schema.json. Enrichment (curate the topology, write the
 arc42 prose) is model-agnostic — any agent edits the same JSON/Markdown.`)

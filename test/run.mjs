@@ -2673,6 +2673,93 @@ const diffPaths = (a, b, at = '') => {
   if (!readJson(health).lastApply.rejected.some((x) => x.kind === 'verdict' && x.ref === '#3')) die('audit: lastApply does not name the refused verdict')
   void beforeHealth; void beforeFindings
 
+  // ---- The brief: the judgement layer as typed claims that expire and earn colour only under a
+  // hostile verdict. Applied through the same plan/fill/apply boundary as verdicts and findings.
+  const brief = join(repo, 'brief.json')
+  const briefArgs = [...applyArgs, '--brief', brief]
+  r = run([...briefArgs, '--plan', plan]); if (r.status !== 0) die('brief: plan exit ' + r.status, r)
+  const briefPlanned = readJson(plan)
+  if (!briefPlanned.brief || !briefPlanned.brief.prompts.some((x) => x.kind === 'thesis') || briefPlanned.brief.caps.decide !== 5 || !briefPlanned.output.brief) die('brief: plan carries no brief prompts/caps/output contract: ' + JSON.stringify(briefPlanned.brief))
+  const claimsFill = (claims) => { writeFileSync(fill, JSON.stringify({ planHash: readJson(plan).planHash, verdicts: [], findings: [], brief: { claims } })) }
+  claimsFill([
+    { id: 'thesis', kind: 'thesis', text: 'Two of three issues are open and the engine still trims spaces only.', about: { milestone: 'v1' }, evidence: [{ type: 'milestone', ref: 'v1' }, { type: 'path', ref: 'src/core/engine.js' }] },
+    { id: 'risk-1', kind: 'risk', severity: 'bad', text: 'Trailing whitespace still breaks the engine.', about: { issue: 1 }, evidence: [{ type: 'issue', ref: '1' }] },
+    { id: 'risk-immortal', kind: 'risk', severity: 'warn', text: 'Anchored to a closed issue only.', about: { issue: 3 }, evidence: [{ type: 'issue', ref: '3' }] },
+    { id: 'risk-readme', kind: 'risk', severity: 'warn', text: 'Anchored to a path only.', about: { path: 'src/util/log.js' }, evidence: [{ type: 'path', ref: 'src/util/log.js' }] },
+    { id: 'decide-1', kind: 'decide', text: 'Decide whether #2 blocks v1.', about: { issue: 2 }, evidence: [{ type: 'issue', ref: '2' }, { type: 'milestone', ref: 'v1' }] },
+    { id: 'inv-1', kind: 'invariant', severity: 'warn', class: 'DOCUMENTATO', ifBroken: 'A silent parse error ships.', text: 'The parser never throws on empty input.', about: { path: 'docs/DESIGN.md' }, evidence: [{ type: 'path', ref: 'docs/DESIGN.md' }] },
+    { id: 'inv-bad', kind: 'invariant', text: 'An invariant with no class.', about: { path: 'docs/DESIGN.md' }, evidence: [{ type: 'path', ref: 'docs/DESIGN.md' }] },
+    { id: 'stamped', kind: 'note', text: 'Tries to stamp itself.', about: { issue: 1 }, evidence: [{ type: 'issue', ref: '1' }], writtenAt: '2020-01-01' },
+    { id: 'nowhere', kind: 'note', text: 'Subject not in snapshot.', about: { issue: 99 }, evidence: [{ type: 'issue', ref: '1' }] },
+  ])
+  r = run([...briefArgs, '--apply', fill, '--audit-plan', plan])
+  if (r.status !== 0) die('brief: apply exit ' + r.status, r)
+  const written = readJson(brief), writtenIds = written.claims.map((c) => c.id).sort().join()
+  if (writtenIds !== 'decide-1,inv-1,risk-1,thesis') die('brief: accepted set is wrong: ' + writtenIds)
+  const briefApply = readJson(health).lastApply
+  const refusedIds = briefApply.rejected.filter((x) => x.kind === 'brief').map((x) => x.ref).sort().join()
+  if (refusedIds !== 'inv-bad,nowhere,risk-immortal,risk-readme,stamped') die('brief: refusals are not named in lastApply: ' + JSON.stringify(briefApply))
+  if (!briefApply.rejected.some((x) => x.ref === 'risk-immortal' && /anchor that can move/.test(x.reason)) || !briefApply.rejected.some((x) => x.ref === 'stamped' && /provenance is controlled by forma/.test(x.reason))) die('brief: refusal reasons are not the ones that matter: ' + JSON.stringify(briefApply.rejected))
+  const thesis = written.claims.find((c) => c.id === 'thesis')
+  if (thesis.writtenAt !== '2026-08-10' || !/^[0-9a-f]{64}$/.test(thesis.evidenceHash) || thesis.verified) die('brief: Forma did not stamp claim provenance, or invented a verification')
+  // Caps: a second thesis by a new id is refused; the same id is an update.
+  r = run([...briefArgs, '--plan', plan]); if (r.status !== 0) die('brief: re-plan exit ' + r.status, r)
+  claimsFill([
+    { id: 'thesis-2', kind: 'thesis', text: 'A second thesis.', about: { milestone: 'v1' }, evidence: [{ type: 'milestone', ref: 'v1' }] },
+    { id: 'thesis', kind: 'thesis', text: 'Rewritten thesis.', about: { milestone: 'v1' }, evidence: [{ type: 'milestone', ref: 'v1' }] },
+  ])
+  r = run([...briefArgs, '--apply', fill, '--audit-plan', plan]); if (r.status !== 0) die('brief: cap apply exit ' + r.status, r)
+  if (readJson(brief).claims.filter((c) => c.kind === 'thesis').length !== 1 || readJson(brief).claims.find((c) => c.id === 'thesis').text !== 'Rewritten thesis.' || !readJson(health).lastApply.rejected.some((x) => x.ref === 'thesis-2' && /already holds 1 thesis/.test(x.reason))) die('brief: the thesis cap did not hold, or the update by id was refused')
+  // The counter-plan carries one claim per brief claim; a hostile `holds` grants colour on the
+  // claim with its own date, `contradicted` lands as a red finding, an unanswered claim stays grey.
+  r = run([...briefArgs, '--plan', plan]); if (r.status !== 0) die('brief: counter plan exit ' + r.status, r)
+  const briefClaims = readJson(plan).claims.filter((c) => c.kind === 'brief-claim')
+  if (briefClaims.map((c) => c.id).sort().join() !== 'brief:decide-1,brief:inv-1,brief:risk-1,brief:thesis' || !briefClaims.find((c) => c.id === 'brief:thesis').where.some((w) => w.type === 'gh' && /:milestone:v1$/.test(w.ref))) die('brief: counter-plan does not carry the brief claims with gh anchors: ' + JSON.stringify(briefClaims))
+  const briefCounter = { planHash: readJson(plan).planHash, results: [
+    { claimId: 'brief:thesis', verdict: 'holds', reason: 'The milestone counts match the sentence.', evidence: { type: 'gh', ref: 'acme/alpha:milestone:v1' } },
+    { claimId: 'brief:decide-1', verdict: 'holds', reason: 'Issue #2 is open and in v1.', evidence: { type: 'gh', ref: 'acme/alpha#2' } },
+    { claimId: 'brief:risk-1', verdict: 'contradicted', reason: 'The engine trims tabs too since the last commit.', evidence: { type: 'file', ref: 'src/core/engine.js' } },
+    ...readJson(plan).claims.filter((c) => c.kind !== 'brief-claim' && c.id !== 'health:1').map((c) => ({ claimId: c.id, verdict: 'unsupported', reason: 'not checked in this test', evidence: { type: 'file', ref: 'src/util/log.js' } })),
+  ] }
+  writeFileSync(counter, JSON.stringify(briefCounter))
+  r = run([...briefArgs, '--apply', counter, '--counter-plan', plan]); if (r.status !== 0) die('brief: counter apply exit ' + r.status, r)
+  const verifiedBrief = readJson(brief)
+  const vThesis = verifiedBrief.claims.find((c) => c.id === 'thesis'), vRisk = verifiedBrief.claims.find((c) => c.id === 'risk-1'), vInv = verifiedBrief.claims.find((c) => c.id === 'inv-1')
+  if (!vThesis.verified || vThesis.verified.verdict !== 'holds' || vThesis.verified.at !== '2026-08-10' || vThesis.verified.evidence.type !== 'milestone') die('brief: a hostile hold did not land on the claim with its date and evidence: ' + JSON.stringify(vThesis.verified))
+  if (!vRisk.verified || vRisk.verified.verdict !== 'contradicted' || !readJson(findings).findings.some((f) => f.id === 'counter:brief:risk-1' && f.severity === 'bad')) die('brief: a contradicted claim did not become a red finding')
+  if (vInv.verified || !readJson(health).lastApply.unanswered.includes('brief:inv-1') || !readJson(health).lastApply.unanswered.includes('health:1')) die('brief: unanswered claims were not named: ' + JSON.stringify(readJson(health).lastApply))
+  // Derived: colour only on a fresh hold; contradicted / unverified are grey with the word; a
+  // rewritten claim loses its verification; the subject issue moving marks the claim stale.
+  const { deriveBrief } = await import(join(HERE, '..', 'lib/roomderive.mjs'))
+  const derivedBrief = deriveBrief(repo, readJson(issues), verifiedBrief, { today: '2026-08-10', staleAfterDays: 14 })
+  const stateOf = (id) => derivedBrief.claims.find((c) => c.id === id).state
+  if (stateOf('thesis') !== 'holds' || !derivedBrief.claims.find((c) => c.id === 'thesis').coloured || stateOf('risk-1') !== 'contradicted' || stateOf('inv-1') !== 'unverified' || derivedBrief.claims.find((c) => c.id === 'inv-1').coloured) die('brief: derived states are wrong: ' + JSON.stringify(derivedBrief.claims.map((c) => [c.id, c.state])))
+  if (derivedBrief.ready !== true || derivedBrief.counts.holds !== 2 || derivedBrief.counts.contradicted !== 1) die('brief: readiness or counts wrong: ' + JSON.stringify({ ready: derivedBrief.ready, counts: derivedBrief.counts }))
+  const movedIssues = readJson(issues); movedIssues.issues.find((it) => it.n === 2).updatedAt = '2026-08-11T00:00:00Z'
+  const movedBrief = deriveBrief(repo, movedIssues, verifiedBrief, { today: '2026-08-12', staleAfterDays: 14 })
+  if (movedBrief.claims.find((c) => c.id === 'decide-1').state !== 'stale' || movedBrief.claims.find((c) => c.id === 'decide-1').staleReason !== 'issue-changed' || movedBrief.ready !== false) die('brief: a moved subject did not stale the decision or un-ready the brief')
+  const oldVerdict = deriveBrief(repo, readJson(issues), verifiedBrief, { today: '2026-08-30', staleAfterDays: 14 })
+  if (oldVerdict.claims.find((c) => c.id === 'thesis').state !== 'stale') die('brief: an aged claim stayed coloured')
+  r = run([...briefArgs, '--plan', plan]); if (r.status !== 0) die('brief: rewrite plan exit ' + r.status, r)
+  claimsFill([{ id: 'thesis', kind: 'thesis', text: 'Rewritten again, so the old hold is void.', about: { milestone: 'v1' }, evidence: [{ type: 'milestone', ref: 'v1' }] }])
+  r = run([...briefArgs, '--apply', fill, '--audit-plan', plan]); if (r.status !== 0) die('brief: rewrite apply exit ' + r.status, r)
+  if (readJson(brief).claims.find((c) => c.id === 'thesis').verified) die('brief: a rewritten claim kept a verification the verifier never gave it')
+  // A claim whose evidence no longer resolves is a fatal read error for `check` (never a silent
+  // grey), while an aged one is only reported. Composition and the gate agree on the brief.
+  const briefManifest = join(repo, 'forma.brief.room.json'), briefRoom = join(repo, 'brief-room.html')
+  writeFileSync(briefManifest, JSON.stringify({ today: '2026-08-10', programs: [{ id: 'audit', ghRepo: 'acme/alpha', repo: '.', issues: 'issues.json', model: 'model.json', topology: 'topology.json', health: 'health.json', findings: 'findings.json', brief: { path: 'brief.json' }, blockedBy: { labels: ['needs-human'] } }] }, null, 2))
+  r = run(['room', '--manifest', briefManifest, '--out', briefRoom]); if (r.status !== 0) die('brief: room exit ' + r.status, r)
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topology, '--issues', issues, '--health', health, '--findings', findings, '--room', briefRoom, '--manifest', briefManifest])
+  if (r.status !== 0) die('brief: check disagrees with the composed brief', r)
+  const briefSeam = JSON.parse(/window\.__ROOM__ = ([\s\S]*?);\s*<\/script>/.exec(readFileSync(briefRoom, 'utf-8'))[1]).programs[0]
+  if (!briefSeam.derived.brief || briefSeam.derived.brief.claims.length !== 4 || briefSeam.derived.brief.thesis.state !== 'unverified') die('brief: composed room does not carry the derived brief')
+  const goodBrief = readFileSync(brief, 'utf-8'), brokenBrief = readJson(brief)
+  brokenBrief.claims.find((c) => c.id === 'inv-1').evidence = [{ type: 'path', ref: 'docs/NOPE.md' }]
+  writeFileSync(brief, JSON.stringify(brokenBrief, null, 2) + '\n')
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topology, '--issues', issues, '--health', health, '--findings', findings, '--room', briefRoom, '--manifest', briefManifest])
+  if (r.status === 0 || !/brief claim inv-1/.test(r.stderr || '')) die('brief: check accepted a claim whose evidence does not resolve', r)
+  writeFileSync(brief, goodBrief)
+
   // `room update --counter` owns the deterministic half of unattended operation. The external
   // adapter writes the result; update regenerates the plan, refuses stale/missing output, applies
   // it per active programme, then composes the briefing (#69).
@@ -2699,6 +2786,7 @@ const diffPaths = (a, b, at = '') => {
   if (r.status === 0 || !/counter result missing/.test(r.stderr || '')) die('audit update: missing counter result did not fail loud', r)
   if (readFileSync(health, 'utf-8') !== beforeMissingResult) die('audit update: missing result changed health')
   console.log('  ok audit — deterministic offline plan; item-by-item apply that names every refusal in lastApply; findings and keyed signal/milestone evidence expire')
+  console.log('  ok brief — claims need a subject and an anchor that can move; caps hold; colour only under a fresh hostile hold; a rewritten claim loses it; check refuses an unresolvable claim')
 }
 
 // Frontmatter is the one document lifecycle source. Superseded UI names and duplicate inline
