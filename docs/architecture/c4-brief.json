@@ -1,0 +1,299 @@
+{
+  "claims": [
+    {
+      "id": "thesis",
+      "kind": "thesis",
+      "text": "The only CI signal today is a green pull-request run on feat/control-room-rework — main has not run this rework yet — and forma still has no reader outside its author (#51).",
+      "about": {
+        "signal": "workflows/ci"
+      },
+      "evidence": [
+        {
+          "type": "signal",
+          "ref": "workflows/ci"
+        },
+        {
+          "type": "issue",
+          "ref": "51"
+        }
+      ],
+      "writtenAt": "2026-08-18",
+      "evidenceHash": "73e0392bea716cce9a700f710f9c2e2fcce5b01ffe811bdb6d270f79208bd8d9",
+      "verified": {
+        "verdict": "holds",
+        "reason": "The five newest ci.yml runs are all pull_request events with none on main, the newest being a success on feat/control-room-rework (cc642f4a, 2026-08-18T20:33Z) whose PR #86 is still OPEN, and #51 \"Nobody has ever used this but its author\" is still OPEN with its five-outside-readers condition unmet.",
+        "evidence": {
+          "type": "signal",
+          "ref": "workflows/ci"
+        },
+        "at": "2026-08-18"
+      }
+    },
+    {
+      "id": "risk-no-user",
+      "kind": "risk",
+      "text": "Nobody outside the author has used forma: every claim of usefulness — including this brief — is a hypothesis until one external reader says otherwise.",
+      "severity": "bad",
+      "about": {
+        "issue": 51
+      },
+      "evidence": [
+        {
+          "type": "issue",
+          "ref": "51"
+        }
+      ],
+      "writtenAt": "2026-08-18",
+      "evidenceHash": "fe221c54a80ee7e9164c0964357affcae69ddabc91d30dbdda708517dba1a399",
+      "verified": {
+        "verdict": "holds",
+        "reason": "#51 \"Nobody has ever used this but its author\" is still OPEN and its closing condition (five outside readers) is unmet, and docs/POSTMORTEM-control-room.md:88 records the same gap as finding 7.",
+        "evidence": {
+          "type": "issue",
+          "ref": "51"
+        },
+        "at": "2026-08-18"
+      }
+    },
+    {
+      "id": "risk-ci-branch",
+      "kind": "risk",
+      "text": "The green CI in the snapshot is a pull-request run on feat/control-room-rework, not a run on main: the rework this brief describes is not on the default branch yet.",
+      "severity": "warn",
+      "about": {
+        "signal": "workflows/ci"
+      },
+      "evidence": [
+        {
+          "type": "signal",
+          "ref": "workflows/ci"
+        }
+      ],
+      "writtenAt": "2026-08-18",
+      "evidenceHash": "c57342773468a14228b99000f3753a1ebff01a5aa754b29817ae3f2c98a9415a",
+      "verified": {
+        "verdict": "holds",
+        "reason": "The newest ci.yml run is a pull_request run on feat/control-room-rework (success, 2026-08-18T20:33Z) while PR #86 is still open and unmerged, so the rework has never run on main.",
+        "evidence": {
+          "type": "signal",
+          "ref": "workflows/ci"
+        },
+        "at": "2026-08-18"
+      }
+    },
+    {
+      "id": "risk-a11y-map",
+      "kind": "risk",
+      "text": "The map's nodes are keyboard-reachable since 8275057 (tabindex, role, aria-label), but its SVG root is unnamed and there is no table twin (#50): the map is announced as nothing at all.",
+      "severity": "warn",
+      "about": {
+        "issue": 50
+      },
+      "evidence": [
+        {
+          "type": "issue",
+          "ref": "50"
+        },
+        {
+          "type": "path",
+          "ref": "lib/viewer/c4-hologram.html:701"
+        }
+      ],
+      "writtenAt": "2026-08-18",
+      "evidenceHash": "8277f16a754735a42ddd935ca50ba4719f7ac2ca157e087d678d27aa9a3d6958",
+      "verified": {
+        "verdict": "contradicted",
+        "reason": "lib/viewer/c4-hologram.html:701 emits every node as role=\"button\" with tabindex=\"0\" and an aria-label, and the root <svg> at line 667 carries no aria-hidden or role=\"presentation\" to prune them, so the map is announced as a set of named buttons inside a titled frame, not \"as nothing at all\" — the unnamed root and the missing table twin are real, but the sentence's conclusion is disproved by the same commit (8275057) its first clause cites, and #50 has not been updated since 2026-08-10, before that commit.",
+        "evidence": {
+          "type": "path",
+          "ref": "lib/viewer/c4-hologram.html:701"
+        },
+        "at": "2026-08-18"
+      }
+    },
+    {
+      "id": "risk-demo-rtm",
+      "kind": "risk",
+      "text": "The showcase RTM shows 9 of 9 requirements accounted for — all by verification, 0 by issues (#54): the plan never lands on work, on the page a first reader sees.",
+      "severity": "warn",
+      "about": {
+        "issue": 54
+      },
+      "evidence": [
+        {
+          "type": "issue",
+          "ref": "54"
+        },
+        {
+          "type": "path",
+          "ref": "docs/PRD.md"
+        }
+      ],
+      "writtenAt": "2026-08-18",
+      "evidenceHash": "c20eed1cea57f6034cdbb4b88b96ff7507bf021ff3043f7beb91d7f26f0860b0",
+      "verified": {
+        "verdict": "holds",
+        "reason": "docs/PRD.md lists nine R-n rows each accounted for by naming a verification and containing no issue reference at all, deriveRtm over that document returns requirements 9 / accounted 9 / withIssues 0 / verifiedOnly 9, #54 is OPEN and states the same 0 of 9, and the split is printed on the exec route (control-room.html:1069) that a reader lands on first.",
+        "evidence": {
+          "type": "path",
+          "ref": "docs/PRD.md:99"
+        },
+        "at": "2026-08-18"
+      }
+    },
+    {
+      "id": "decide-merge-rework",
+      "kind": "decide",
+      "text": "Merge PR #86 — its head cc642f4a is green in CI — so main carries what this room describes, or hold it and say why.",
+      "about": {
+        "signal": "workflows/ci"
+      },
+      "evidence": [
+        {
+          "type": "signal",
+          "ref": "workflows/ci"
+        },
+        {
+          "type": "commit",
+          "ref": "cc642f4a"
+        }
+      ],
+      "writtenAt": "2026-08-18",
+      "evidenceHash": "2f201208dfa3f0800880d0e90b975079a774a7c1508d99d285f0c943a45f83cc",
+      "verified": {
+        "verdict": "holds",
+        "reason": "PR #86 is OPEN and MERGEABLE with head cc642f4a3177966490abb1389692302231d6d9c5, and the newest ci.yml run for exactly that sha (feat/control-room-rework, 2026-08-18T20:33Z) concluded success, so the merge the claim proposes is available and green.",
+        "evidence": {
+          "type": "commit",
+          "ref": "cc642f4a3177966490abb1389692302231d6d9c5"
+        },
+        "at": "2026-08-18"
+      }
+    },
+    {
+      "id": "decide-layout-floor",
+      "kind": "decide",
+      "text": "Decide whether the layout floor (#53) stays a measured number (debt D-8) or gets the browser step in the docs job that #53 names as the only thing that would close it.",
+      "about": {
+        "issue": 53
+      },
+      "evidence": [
+        {
+          "type": "issue",
+          "ref": "53"
+        },
+        {
+          "type": "path",
+          "ref": "docs/technical-debt.md:30"
+        }
+      ],
+      "writtenAt": "2026-08-18",
+      "evidenceHash": "26fde9574214340247c14f5f387231d41acb0bcbbb290d0ccfe3f301448d6d04",
+      "verified": {
+        "verdict": "holds",
+        "reason": "#53 is OPEN and docs/technical-debt.md:30 records D-8 \"The layout floor is measured, not gated\" with a browser CI step as its payback while #53 names that step as the only closer and explicitly rejects the CSS regex, so the choice is live and stated correctly — but .github/workflows/ holds only ci.yml (jobs test, ci-required), pages.yml and release.yml, none of which is a `docs` job or checks out a second repository, so the host #53 assumes for that step does not exist today.",
+        "evidence": {
+          "type": "path",
+          "ref": "docs/technical-debt.md:30"
+        },
+        "at": "2026-08-18"
+      }
+    },
+    {
+      "id": "inv-I2",
+      "kind": "invariant",
+      "text": "I2 — only verify touches the network: the test suite refuses an audit engine that grows a runner (unknown option --run).",
+      "severity": "ok",
+      "about": {
+        "path": "docs/GLOBAL_INVARIANTS.md"
+      },
+      "class": "MECCANIZZATO",
+      "ifBroken": "A gate that can fail because of DNS is not a gate; check would behave differently with the network down.",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "docs/GLOBAL_INVARIANTS.md:31"
+        },
+        {
+          "type": "path",
+          "ref": "test/run.mjs:2580"
+        }
+      ],
+      "writtenAt": "2026-08-18",
+      "evidenceHash": "8d0100cca9c4d9618eb227d5c828cd35b98ebbfb98f09e5c2802b9de31c8cf24",
+      "verified": {
+        "verdict": "holds",
+        "reason": "test/run.mjs:2579 runs `audit --repo <r> --run <plan>` and dies unless it exits non-zero with \"unknown option: --run\", and the next lines refuse `codex exec`/`--agent-cmd` inside lib/audit.mjs, so the suite does gate the runner.",
+        "evidence": {
+          "type": "path",
+          "ref": "test/run.mjs:2579"
+        },
+        "at": "2026-08-18"
+      }
+    },
+    {
+      "id": "inv-I12",
+      "kind": "invariant",
+      "text": "I12 — the only clock is the manifest: two renders of the same manifest must be byte-identical (test) and room-presentable re-renders and compares.",
+      "severity": "ok",
+      "about": {
+        "path": "docs/GLOBAL_INVARIANTS.md"
+      },
+      "class": "MECCANIZZATO",
+      "ifBroken": "Two runs on unchanged inputs would differ, and no re-derivation could prove the artefact honest.",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "docs/GLOBAL_INVARIANTS.md:131"
+        },
+        {
+          "type": "path",
+          "ref": "test/run.mjs:1631"
+        }
+      ],
+      "writtenAt": "2026-08-18",
+      "evidenceHash": "f68756afd51526610a687de0904fcbcea7ac815caa4bac0ee0befcb1dc3aec11",
+      "verified": {
+        "verdict": "holds",
+        "reason": "test/run.mjs:1631 renders the same manifest twice and dies unless the two files are byte-identical, and scripts/room-presentable.mjs:133-138 re-renders and compares independently, reporting it as predicate \"re-generating from the same manifest is byte-deterministic\" (line 157).",
+        "evidence": {
+          "type": "path",
+          "ref": "test/run.mjs:1631"
+        },
+        "at": "2026-08-18"
+      }
+    },
+    {
+      "id": "inv-I6",
+      "kind": "invariant",
+      "text": "I6 — unknown renders as a blank, never as a zero: written down and honoured by roomderive, but debt D-5 records coverageOf reporting 0% for an empty population, and no test asserts the null on that path.",
+      "severity": "warn",
+      "about": {
+        "path": "docs/GLOBAL_INVARIANTS.md"
+      },
+      "class": "DOCUMENTATO",
+      "ifBroken": "A zero appears where nothing was measured and reads as 'measured and none'.",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "docs/GLOBAL_INVARIANTS.md:71"
+        },
+        {
+          "type": "path",
+          "ref": "docs/technical-debt.md:28"
+        }
+      ],
+      "writtenAt": "2026-08-18",
+      "evidenceHash": "c0daef91bb7b1a57cba60b4234125e7dd4ddac5c55161011ab6c3d9bfaf7e3e6",
+      "verified": {
+        "verdict": "holds",
+        "reason": "I6 at docs/GLOBAL_INVARIANTS.md:71 names lib/roomderive.mjs as enforcer and it returns null (lines 93, 102, 409, 543), while lib/link.mjs:86 returns pct 0 for an empty population exactly as D-5 records at docs/technical-debt.md:28, and the only coverage-null assertion in test/run.mjs (line 1816) covers the no-map path, not the empty-population one.",
+        "evidence": {
+          "type": "path",
+          "ref": "docs/technical-debt.md:28"
+        },
+        "at": "2026-08-18"
+      }
+    }
+  ]
+}

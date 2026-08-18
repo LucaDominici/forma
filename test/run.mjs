@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.
-import { spawnSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, statSync, existsSync, renameSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
@@ -2390,7 +2390,18 @@ const diffPaths = (a, b, at = '') => {
   const initAt = skill.indexOf('room init'), updateAt = skill.indexOf('room update')
   if (initAt < 0 || updateAt < initAt) die('claude skill: init→update order is not documented')
   if (!/room update[^\n]*--out/.test(skill) || !/Markdown link/i.test(skill)) die('claude skill: the adapter does not link the generated output')
-  console.log('  ok claude-skill — init→update runs on a fresh target and the adapter links the artifact')
+  // The ritual skill is the same text for both agents and names every gate the engine enforces, in
+  // the order the engine needs them; the counter-verifier skill knows the brief claims and may
+  // leave a claim unanswered rather than invent an anchor.
+  const ritual = readFileSync(join(HERE, '..', 'adapters/claude/forma-room-update/SKILL.md'), 'utf-8')
+  if (ritual !== readFileSync(join(HERE, '..', 'adapters/codex/forma-room-update/SKILL.md'), 'utf-8')) die('ritual skill: Claude and Codex copies differ')
+  const order = ['room update', 'audit --repo . --today', '--plan', 'audit-fill.json', '--apply', 'forma-counterverify', '--fill --counter', 'room-presentable']
+  let last = -1
+  for (const step of order) { const at = ritual.indexOf(step, last + 1); if (at < 0) die('ritual skill: step missing or out of order: ' + step); last = at }
+  for (const rule of [/anchor that never expires/, /Caps/, /Never stamp provenance/, /Declare the gap/, /never from memory/i, /lastApply\.rejected/, /`about`/]) if (!rule.test(ritual)) die('ritual skill: rule missing: ' + rule)
+  const counterSkill = readFileSync(join(HERE, '..', 'adapters/codex/forma-counterverify/SKILL.md'), 'utf-8')
+  if (!/brief-claim/.test(counterSkill) || !/I do not know/.test(counterSkill) || !/:signal:/.test(counterSkill)) die('counter skill: brief claims, the right to say "I do not know", or signal anchors are not documented')
+  console.log('  ok claude-skill — init→update runs on a fresh target and the adapter links the artifact; the ritual and the verifier skills carry the gates in order')
 }
 
 // Publishing must follow the same chain for every future release: conventional commits become a
@@ -2494,6 +2505,8 @@ const diffPaths = (a, b, at = '') => {
   const issues = join(repo, 'issues.json'), health = join(repo, 'health.json'), findings = join(repo, 'findings.json')
   const topology = join(repo, 'topology.json'), model = join(repo, 'model.json')
   cpSync(FIX('room/alpha'), repo, { recursive: true })
+  // A fourth, OPEN, unaudited issue: closed issues are never planned for audit (closure is their state).
+  { const snap = readJson(issues); snap.issues.push({ n: 4, title: 'An open issue nobody has judged', state: 'OPEN', url: 'https://github.com/acme/alpha/issues/4', ms: null, labels: [], updatedAt: '2026-08-02T10:00:00Z', dependenciesComplete: true, proseScanComplete: true, createdAt: '2026-08-02' }); writeFileSync(issues, JSON.stringify(snap, null, 2) + '\n') }
   let r = run(['init', '--repo', repo, '--out', topology, '--force']); if (r.status !== 0) die('audit: init exit ' + r.status, r)
   r = run(['gen', '--repo', repo, '--topology', topology, '--out', model]); if (r.status !== 0) die('audit: gen exit ' + r.status, r)
   const auditModel = readJson(model)
@@ -2509,8 +2522,8 @@ const diffPaths = (a, b, at = '') => {
   if (r.status !== 0) die('audit: second plan exit ' + r.status, r)
   if (readFileSync(plan, 'utf-8') !== readFileSync(plan2, 'utf-8')) die('audit: unchanged inputs produced different plans')
   const work = readJson(plan)
-  if (JSON.stringify(work.issues.map((x) => x.n)) !== '[3]') die('audit: plan did not exclude already-audited issues: ' + JSON.stringify(work.issues))
-  if (!work.issues[0].prompt.includes('issue #3') || work.output.planHash !== work.planHash || !Array.isArray(work.output.verdicts) || !Array.isArray(work.output.findings)) die('audit: plan does not carry the agent fill contract')
+  if (JSON.stringify(work.issues.map((x) => x.n)) !== '[4]') die('audit: plan did not exclude already-audited and closed issues: ' + JSON.stringify(work.issues))
+  if (!work.issues[0].prompt.includes('issue #4') || work.output.planHash !== work.planHash || !Array.isArray(work.output.verdicts) || !Array.isArray(work.output.findings)) die('audit: plan does not carry the agent fill contract')
   const claimKinds = new Set(work.claims.map((claim) => claim.kind))
   for (const kind of ['done-node', 'health-verdict', 'milestone-rate', 'waiting-human']) if (!claimKinds.has(kind)) die('audit: counter-verification plan has no ' + kind + ' claim')
   if (work.claims.some((claim) => !claim.id || !claim.claim || !claim.where.length)) die('audit: a counter-verification claim lacks its name or inspection targets: ' + JSON.stringify(work.claims))
@@ -2546,7 +2559,7 @@ const diffPaths = (a, b, at = '') => {
   const unrelated = JSON.parse(JSON.stringify(issueSnapshot)); unrelated.issues.find((it) => it.n === 2).title = 'Unrelated snapshot change'
   if (hashEvidence(repo, evidence, unrelated) !== evidenceHash) die('audit stale: unrelated snapshot data leaked into a path evidence hash')
   const expiredPrompts = auditPlan(issueSnapshot, { byIssue: new Map() }, readJson(health).verdicts, { repo, today: '2026-08-25', staleAfterDays: 14 })
-  if (expiredPrompts.map((entry) => entry.n).join() !== '1,2,3') die('audit stale: expired verdicts were not queued for re-audit: ' + JSON.stringify(expiredPrompts))
+  if (expiredPrompts.map((entry) => entry.n).join() !== '1,2,4') die('audit stale: expired verdicts were not queued for re-audit (and the closed one must stay out): ' + JSON.stringify(expiredPrompts))
   const { stubAuditAgent } = await import(join(HERE, 'stub-audit-agent.mjs'))
   const result = validateCounterResults(work, stubAuditAgent(work))
   const heldResult = { planHash: work.planHash, results: JSON.parse(JSON.stringify(result.results)) }
@@ -2556,7 +2569,15 @@ const diffPaths = (a, b, at = '') => {
   if (result.results.length !== work.claims.length || result.results.some((entry, i) => entry.claimId !== work.claims[i].id)) die('audit: runner result does not cover the plan one-for-one')
   if (!['holds', 'contradicted', 'unsupported'].every((verdict) => result.results.some((entry) => entry.verdict === verdict))) die('audit: offline agent did not exercise every counter-verdict')
   if (result.results.some((entry) => !entry.reason || !entry.evidence || !entry.evidence.type || !entry.evidence.ref)) die('audit: runner accepted an unanchored reason')
-  try { validateCounterResults(work, stubAuditAgent(work, true)); die('audit: counter contract accepted a result that omitted claims') } catch (e) { if (!/missing:/.test(e.message)) throw e }
+  // A partial result is not a rejected result: the claims the verifier did not answer are named as
+  // `unanswered` and simply get no fresh verdict — nobody looked, and the room says so.
+  const partial = validateCounterResults(work, stubAuditAgent(work, true))
+  if (!partial.unanswered.length || partial.results.length + partial.unanswered.length !== work.claims.length) die('audit: a partial counter result was not split into results + unanswered')
+  try { validateCounterResults(work, { planHash: work.planHash, results: [{ claimId: 'not:in:plan', verdict: 'holds', reason: 'x', evidence: { type: 'file', ref: 'src/util/log.js' } }] }); die('audit: counter contract accepted a claim the plan does not contain') } catch (e) { if (!/does not contain/.test(e.message)) throw e }
+  // `today` is carried in the plan but stays out of its identity: a new day must not invalidate a
+  // fill the agent already wrote (and with it every counter-verdict).
+  r = run([...planArgs.map((a) => (a === '2026-08-10' ? '2026-08-12' : a)), plan2]); if (r.status !== 0) die('audit: plan on another day exit ' + r.status, r)
+  if (readJson(plan2).planHash !== work.planHash || readJson(plan2).today !== '2026-08-12') die('audit: the calendar day leaked into the plan identity')
   r = run(['audit', '--repo', repo, '--run', plan])
   if (r.status === 0 || !/unknown option: --run/.test(r.stderr || '')) die('audit: the offline engine grew an agent/network runner', r)
   const auditSource = readFileSync(join(HERE, '..', 'lib/audit.mjs'), 'utf-8')
@@ -2571,7 +2592,7 @@ const diffPaths = (a, b, at = '') => {
   const counter = join(tmp, 'audit-counter.json')
   writeFileSync(counter, JSON.stringify(result))
   const beforeToctouHealth = readFileSync(health, 'utf-8'), beforeToctouFindings = readFileSync(findings, 'utf-8'), beforeToctouIssues = readFileSync(issues, 'utf-8')
-  const changedDuringAudit = readJson(issues); changedDuringAudit.issues.find((issue) => issue.n === 3).title = 'Changed after the plan'
+  const changedDuringAudit = readJson(issues); changedDuringAudit.issues.find((issue) => issue.n === 4).title = 'Changed after the plan'
   writeFileSync(issues, JSON.stringify(changedDuringAudit, null, 2) + '\n')
   r = run([...applyArgs, '--apply', counter, '--counter-plan', plan])
   writeFileSync(issues, beforeToctouIssues)
@@ -2611,32 +2632,177 @@ const diffPaths = (a, b, at = '') => {
   badCounter.results.find((entry) => entry.claimId === 'health:1').evidence = { type: 'file', ref: 'missing-agent-proof.js' }
   writeFileSync(counter, JSON.stringify(badCounter))
   r = run([...applyArgs, '--apply', counter, '--counter-plan', plan])
-  if (r.status === 0) die('audit: counter apply accepted unresolved agent evidence')
-  if (readFileSync(health, 'utf-8') !== beforeCounterHealth || readFileSync(findings, 'utf-8') !== beforeCounterFindings) die('audit: rejected counter result partially replaced an overlay')
+  // Item-by-item: the entry with the unresolved anchor is refused and NAMED in lastApply.rejected;
+  // the other entries land. An abort that leaves no trace is what the reference dashboard had.
+  if (r.status !== 0 || !/rejected counter health:1/.test(r.stderr || '')) die('audit: a bad counter entry aborted the whole apply instead of being refused by name', r)
+  const afterBadCounter = readJson(health)
+  if (!afterBadCounter.lastApply || afterBadCounter.lastApply.at !== '2026-08-10' || !afterBadCounter.lastApply.rejected.some((x) => x.kind === 'counter' && x.ref === 'health:1' && /does not exist in repo/.test(x.reason)) || afterBadCounter.lastApply.accepted < 1) die('audit: lastApply does not record the refused counter entry: ' + JSON.stringify(afterBadCounter.lastApply))
+  if (afterBadCounter.verdicts.find((v) => v.n === 1).why === 'missing-agent-proof.js' || readFileSync(findings, 'utf-8') === beforeCounterFindings) die('audit: refused entry leaked, or accepted entries were dropped with it')
+  void beforeCounterHealth
 
   const fill = join(tmp, 'audit-fill.json')
   writeFileSync(fill, JSON.stringify({
     planHash: readJson(plan).planHash,
-    verdicts: [{ n: 3, verdict: 'ok', why: 'The committed helper is present.', evidence: [{ type: 'path', ref: 'src/util/log.js' }] }],
+    verdicts: [{ n: 4, verdict: 'ok', why: 'The committed helper is present.', evidence: [{ type: 'path', ref: 'src/util/log.js' }] }],
     findings: [{ id: 'F-2', severity: 'bad', text: 'Parser behavior contradicts the issue.', evidence: { type: 'issue', ref: '2' } }],
   }))
   r = run([...applyArgs, '--apply', fill, '--audit-plan', plan])
   if (r.status !== 0) die('audit: apply exit ' + r.status, r)
-  const appliedVerdict = readJson(health).verdicts.find((v) => v.n === 3 && v.verdict === 'ok')
+  const appliedVerdict = readJson(health).verdicts.find((v) => v.n === 4 && v.verdict === 'ok')
   if (!appliedVerdict) die('audit: verdict was not written')
   if (appliedVerdict.auditedAt !== '2026-08-10' || !/^[0-9a-f]{64}$/.test(appliedVerdict.evidenceHash)) die('audit: Forma did not stamp deterministic verdict provenance')
-  if (!readJson(findings).findings.some((f) => f.id === 'F-2' && f.severity === 'bad')) die('audit: finding was not written')
+  const appliedFinding = readJson(findings).findings.find((f) => f.id === 'F-2' && f.severity === 'bad')
+  if (!appliedFinding) die('audit: finding was not written')
+  if (appliedFinding.auditedAt !== '2026-08-10' || !/^[0-9a-f]{64}$/.test(appliedFinding.evidenceHash)) die('audit: Forma did not stamp finding provenance — a finding that cannot expire is the reference dashboard\'s failure')
+  if (readJson(health).lastApply.rejected.length !== 0 || readJson(health).lastApply.accepted !== 2) die('audit: lastApply miscounted a clean fill: ' + JSON.stringify(readJson(health).lastApply))
+  // signal and milestone evidence resolve by KEY against the snapshot and hash the WHOLE record, so a
+  // new workflow run or a moved milestone marks the evidence changed — never an index, never a file.
+  const withSignals = readJson(issues)
+  withSignals.signals.workflows.ci = { state: 'present', name: 'ci', path: '.github/workflows/ci.yml', headBranch: 'main', headSha: '0'.repeat(40), event: 'push', status: 'completed', conclusion: 'success', createdAt: '2026-08-01T00:00:00Z', url: 'https://github.com/acme/alpha/actions/runs/1' }
+  const signalHash = hashEvidence(repo, [{ type: 'signal', ref: 'workflows/ci' }], withSignals)
+  const movedRun = JSON.parse(JSON.stringify(withSignals)); movedRun.signals.workflows.ci.headSha = 'f'.repeat(40)
+  if (signalHash !== hashEvidence(repo, [{ type: 'signal', ref: 'workflows/ci' }], withSignals) || signalHash === hashEvidence(repo, [{ type: 'signal', ref: 'workflows/ci' }], movedRun)) die('audit evidence: signal hash is not deterministic or ignores a new run')
+  const refetched = JSON.parse(JSON.stringify(withSignals)); refetched.fetchedAt = '2030-01-01T00:00:00Z'
+  if (signalHash !== hashEvidence(repo, [{ type: 'signal', ref: 'workflows/ci' }], refetched)) die('audit evidence: fetchedAt leaked into a signal hash')
+  const msHash = hashEvidence(repo, [{ type: 'milestone', ref: withSignals.milestones[0].title }], withSignals)
+  const movedMs = JSON.parse(JSON.stringify(withSignals)); movedMs.milestones[0].closed += 1
+  if (msHash === hashEvidence(repo, [{ type: 'milestone', ref: withSignals.milestones[0].title }], movedMs)) die('audit evidence: milestone hash ignores a closed issue')
+  for (const bad of [{ type: 'signal', ref: 'workflows/nope' }, { type: 'milestone', ref: 'no such milestone' }, { type: 'signal', ref: 'workflows/ci' }]) {
+    let rejected = null
+    try { validateEvidence(repo, bad, 'keyed', bad.ref === 'workflows/ci' ? new Set([1]) : withSignals) } catch (error) { rejected = error }
+    if (!rejected) die('audit evidence: keyed evidence resolved where it must not: ' + JSON.stringify(bad))
+  }
 
   const beforeHealth = readFileSync(health, 'utf-8'), beforeFindings = readFileSync(findings, 'utf-8')
   r = run([...planArgs, plan]); if (r.status !== 0) die('audit: fresh plan before rejected fill exit ' + r.status, r)
   writeFileSync(fill, JSON.stringify({
     planHash: readJson(plan).planHash,
-    verdicts: [{ n: 3, verdict: 'bad', why: 'Unsupported.', evidence: [{ type: 'path', ref: 'src/util/log.js' }] }],
+    verdicts: [{ n: 4, verdict: 'bad', why: 'Unsupported.', evidence: [{ type: 'path', ref: 'src/util/log.js' }] }],
     findings: [{ id: 'F-3', severity: 'warn', text: 'Would be a partial write.', evidence: { type: 'path', ref: 'src/core/engine.js' } }],
   }))
   r = run([...applyArgs, '--apply', fill, '--audit-plan', plan])
-  if (r.status === 0 || !/unplanned verdicts/.test(r.stderr || '')) die('audit: a fill overwrote a verdict the current plan did not request')
-  if (readFileSync(health, 'utf-8') !== beforeHealth || readFileSync(findings, 'utf-8') !== beforeFindings) die('audit: rejected fill partially replaced an overlay')
+  if (r.status !== 0 || !/rejected verdict #4: verdict #4 was not in the plan/.test(r.stderr || '')) die('audit: an unplanned verdict was not refused by name', r)
+  if (readJson(health).verdicts.find((v) => v.n === 4).verdict !== 'ok' || !readJson(findings).findings.some((f) => f.id === 'F-3')) die('audit: the refused verdict leaked, or the valid finding beside it was dropped')
+  if (!readJson(health).lastApply.rejected.some((x) => x.kind === 'verdict' && x.ref === '#4')) die('audit: lastApply does not name the refused verdict')
+  void beforeHealth; void beforeFindings
+
+  // ---- The brief: the judgement layer as typed claims that expire and earn colour only under a
+  // hostile verdict. Applied through the same plan/fill/apply boundary as verdicts and findings.
+  const brief = join(repo, 'brief.json')
+  const briefArgs = [...applyArgs, '--brief', brief]
+  r = run([...briefArgs, '--plan', plan]); if (r.status !== 0) die('brief: plan exit ' + r.status, r)
+  const briefPlanned = readJson(plan)
+  if (!briefPlanned.brief || !briefPlanned.brief.prompts.some((x) => x.kind === 'thesis') || briefPlanned.brief.caps.decide !== 5 || !briefPlanned.output.brief) die('brief: plan carries no brief prompts/caps/output contract: ' + JSON.stringify(briefPlanned.brief))
+  const claimsFill = (claims) => { writeFileSync(fill, JSON.stringify({ planHash: readJson(plan).planHash, verdicts: [], findings: [], brief: { claims } })) }
+  claimsFill([
+    { id: 'thesis', kind: 'thesis', text: 'Two of three issues are open and the engine still trims spaces only.', about: { milestone: 'v1' }, evidence: [{ type: 'milestone', ref: 'v1' }, { type: 'path', ref: 'src/core/engine.js' }] },
+    { id: 'risk-1', kind: 'risk', severity: 'bad', text: 'Trailing whitespace still breaks the engine.', about: { issue: 1 }, evidence: [{ type: 'issue', ref: '1' }] },
+    { id: 'risk-immortal', kind: 'risk', severity: 'warn', text: 'Anchored to a closed issue only.', about: { issue: 3 }, evidence: [{ type: 'issue', ref: '3' }] },
+    { id: 'risk-readme', kind: 'risk', severity: 'warn', text: 'Anchored to a path only.', about: { path: 'src/util/log.js' }, evidence: [{ type: 'path', ref: 'src/util/log.js' }] },
+    { id: 'decide-1', kind: 'decide', text: 'Decide whether #2 blocks v1.', about: { issue: 2 }, evidence: [{ type: 'issue', ref: '2' }, { type: 'milestone', ref: 'v1' }] },
+    { id: 'inv-1', kind: 'invariant', severity: 'warn', class: 'DOCUMENTATO', ifBroken: 'A silent parse error ships.', text: 'The parser never throws on empty input.', about: { path: 'docs/DESIGN.md' }, evidence: [{ type: 'path', ref: 'docs/DESIGN.md' }] },
+    { id: 'inv-bad', kind: 'invariant', text: 'An invariant with no class.', about: { path: 'docs/DESIGN.md' }, evidence: [{ type: 'path', ref: 'docs/DESIGN.md' }] },
+    { id: 'stamped', kind: 'note', text: 'Tries to stamp itself.', about: { issue: 1 }, evidence: [{ type: 'issue', ref: '1' }], writtenAt: '2020-01-01' },
+    { id: 'nowhere', kind: 'note', text: 'Subject not in snapshot.', about: { issue: 99 }, evidence: [{ type: 'issue', ref: '1' }] },
+  ])
+  r = run([...briefArgs, '--apply', fill, '--audit-plan', plan])
+  if (r.status !== 0) die('brief: apply exit ' + r.status, r)
+  const written = readJson(brief), writtenIds = written.claims.map((c) => c.id).sort().join()
+  if (writtenIds !== 'decide-1,inv-1,risk-1,thesis') die('brief: accepted set is wrong: ' + writtenIds)
+  const briefApply = readJson(health).lastApply
+  const refusedIds = briefApply.rejected.filter((x) => x.kind === 'brief').map((x) => x.ref).sort().join()
+  if (refusedIds !== 'inv-bad,nowhere,risk-immortal,risk-readme,stamped') die('brief: refusals are not named in lastApply: ' + JSON.stringify(briefApply))
+  if (!briefApply.rejected.some((x) => x.ref === 'risk-immortal' && /anchor that can move/.test(x.reason)) || !briefApply.rejected.some((x) => x.ref === 'stamped' && /provenance is controlled by forma/.test(x.reason))) die('brief: refusal reasons are not the ones that matter: ' + JSON.stringify(briefApply.rejected))
+  const thesis = written.claims.find((c) => c.id === 'thesis')
+  if (thesis.writtenAt !== '2026-08-10' || !/^[0-9a-f]{64}$/.test(thesis.evidenceHash) || thesis.verified) die('brief: Forma did not stamp claim provenance, or invented a verification')
+  // Caps: a second thesis by a new id is refused; the same id is an update.
+  r = run([...briefArgs, '--plan', plan]); if (r.status !== 0) die('brief: re-plan exit ' + r.status, r)
+  claimsFill([
+    { id: 'thesis-2', kind: 'thesis', text: 'A second thesis.', about: { milestone: 'v1' }, evidence: [{ type: 'milestone', ref: 'v1' }] },
+    { id: 'thesis', kind: 'thesis', text: 'Rewritten thesis.', about: { milestone: 'v1' }, evidence: [{ type: 'milestone', ref: 'v1' }] },
+  ])
+  r = run([...briefArgs, '--apply', fill, '--audit-plan', plan]); if (r.status !== 0) die('brief: cap apply exit ' + r.status, r)
+  if (readJson(brief).claims.filter((c) => c.kind === 'thesis').length !== 1 || readJson(brief).claims.find((c) => c.id === 'thesis').text !== 'Rewritten thesis.' || !readJson(health).lastApply.rejected.some((x) => x.ref === 'thesis-2' && /already holds 1 thesis/.test(x.reason))) die('brief: the thesis cap did not hold, or the update by id was refused')
+  // The counter-plan carries one claim per brief claim; a hostile `holds` grants colour on the
+  // claim with its own date, `contradicted` lands as a red finding, an unanswered claim stays grey.
+  r = run([...briefArgs, '--plan', plan]); if (r.status !== 0) die('brief: counter plan exit ' + r.status, r)
+  const briefClaims = readJson(plan).claims.filter((c) => c.kind === 'brief-claim')
+  if (briefClaims.map((c) => c.id).sort().join() !== 'brief:decide-1,brief:inv-1,brief:risk-1,brief:thesis' || !briefClaims.find((c) => c.id === 'brief:thesis').where.some((w) => w.type === 'gh' && /:milestone:v1$/.test(w.ref))) die('brief: counter-plan does not carry the brief claims with gh anchors: ' + JSON.stringify(briefClaims))
+  const briefCounter = { planHash: readJson(plan).planHash, results: [
+    { claimId: 'brief:thesis', verdict: 'holds', reason: 'The milestone counts match the sentence.', evidence: { type: 'gh', ref: 'acme/alpha:milestone:v1' } },
+    { claimId: 'brief:decide-1', verdict: 'holds', reason: 'Issue #2 is open and in v1.', evidence: { type: 'gh', ref: 'acme/alpha#2' } },
+    { claimId: 'brief:risk-1', verdict: 'contradicted', reason: 'The engine trims tabs too since the last commit.', evidence: { type: 'file', ref: 'src/core/engine.js' } },
+    ...readJson(plan).claims.filter((c) => c.kind !== 'brief-claim' && c.id !== 'health:1').map((c) => ({ claimId: c.id, verdict: 'unsupported', reason: 'not checked in this test', evidence: { type: 'file', ref: 'src/util/log.js' } })),
+  ] }
+  writeFileSync(counter, JSON.stringify(briefCounter))
+  r = run([...briefArgs, '--apply', counter, '--counter-plan', plan]); if (r.status !== 0) die('brief: counter apply exit ' + r.status, r)
+  const verifiedBrief = readJson(brief)
+  const vThesis = verifiedBrief.claims.find((c) => c.id === 'thesis'), vRisk = verifiedBrief.claims.find((c) => c.id === 'risk-1'), vInv = verifiedBrief.claims.find((c) => c.id === 'inv-1')
+  if (!vThesis.verified || vThesis.verified.verdict !== 'holds' || vThesis.verified.at !== '2026-08-10' || vThesis.verified.evidence.type !== 'milestone') die('brief: a hostile hold did not land on the claim with its date and evidence: ' + JSON.stringify(vThesis.verified))
+  if (!vRisk.verified || vRisk.verified.verdict !== 'contradicted' || !readJson(findings).findings.some((f) => f.id === 'counter:brief:risk-1' && f.severity === 'bad')) die('brief: a contradicted claim did not become a red finding')
+  if (vInv.verified || !readJson(health).lastApply.unanswered.includes('brief:inv-1') || !readJson(health).lastApply.unanswered.includes('health:1')) die('brief: unanswered claims were not named: ' + JSON.stringify(readJson(health).lastApply))
+  // Derived: colour only on a fresh hold; contradicted / unverified are grey with the word; a
+  // rewritten claim loses its verification; the subject issue moving marks the claim stale.
+  const { deriveBrief } = await import(join(HERE, '..', 'lib/roomderive.mjs'))
+  const derivedBrief = deriveBrief(repo, readJson(issues), verifiedBrief, { today: '2026-08-10', staleAfterDays: 14 })
+  const stateOf = (id) => derivedBrief.claims.find((c) => c.id === id).state
+  if (stateOf('thesis') !== 'holds' || !derivedBrief.claims.find((c) => c.id === 'thesis').coloured || stateOf('risk-1') !== 'contradicted' || stateOf('inv-1') !== 'unverified' || derivedBrief.claims.find((c) => c.id === 'inv-1').coloured) die('brief: derived states are wrong: ' + JSON.stringify(derivedBrief.claims.map((c) => [c.id, c.state])))
+  if (derivedBrief.ready !== true || derivedBrief.counts.holds !== 2 || derivedBrief.counts.contradicted !== 1) die('brief: readiness or counts wrong: ' + JSON.stringify({ ready: derivedBrief.ready, counts: derivedBrief.counts }))
+  const movedIssues = readJson(issues); movedIssues.issues.find((it) => it.n === 2).updatedAt = '2026-08-11T00:00:00Z'
+  const movedBrief = deriveBrief(repo, movedIssues, verifiedBrief, { today: '2026-08-12', staleAfterDays: 14 })
+  if (movedBrief.claims.find((c) => c.id === 'decide-1').state !== 'stale' || movedBrief.claims.find((c) => c.id === 'decide-1').staleReason !== 'issue-changed' || movedBrief.ready !== false) die('brief: a moved subject did not stale the decision or un-ready the brief')
+  const oldVerdict = deriveBrief(repo, readJson(issues), verifiedBrief, { today: '2026-08-30', staleAfterDays: 14 })
+  if (oldVerdict.claims.find((c) => c.id === 'thesis').state !== 'stale') die('brief: an aged claim stayed coloured')
+  r = run([...briefArgs, '--plan', plan]); if (r.status !== 0) die('brief: rewrite plan exit ' + r.status, r)
+  claimsFill([{ id: 'thesis', kind: 'thesis', text: 'Rewritten again, so the old hold is void.', about: { milestone: 'v1' }, evidence: [{ type: 'milestone', ref: 'v1' }] }])
+  r = run([...briefArgs, '--apply', fill, '--audit-plan', plan]); if (r.status !== 0) die('brief: rewrite apply exit ' + r.status, r)
+  if (readJson(brief).claims.find((c) => c.id === 'thesis').verified) die('brief: a rewritten claim kept a verification the verifier never gave it')
+  // A claim whose evidence no longer resolves is a fatal read error for `check` (never a silent
+  // grey), while an aged one is only reported. Composition and the gate agree on the brief.
+  const briefManifest = join(repo, 'forma.brief.room.json'), briefRoom = join(repo, 'brief-room.html')
+  writeFileSync(briefManifest, JSON.stringify({ today: '2026-08-10', programs: [{ id: 'audit', ghRepo: 'acme/alpha', repo: '.', issues: 'issues.json', model: 'model.json', topology: 'topology.json', health: 'health.json', findings: 'findings.json', brief: { path: 'brief.json' }, blockedBy: { labels: ['needs-human'] } }] }, null, 2))
+  r = run(['room', '--manifest', briefManifest, '--out', briefRoom]); if (r.status !== 0) die('brief: room exit ' + r.status, r)
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topology, '--issues', issues, '--health', health, '--findings', findings, '--room', briefRoom, '--manifest', briefManifest])
+  if (r.status !== 0) die('brief: check disagrees with the composed brief', r)
+  const briefSeam = JSON.parse(/window\.__ROOM__ = ([\s\S]*?);\s*<\/script>/.exec(readFileSync(briefRoom, 'utf-8'))[1]).programs[0]
+  if (!briefSeam.derived.brief || briefSeam.derived.brief.claims.length !== 4 || briefSeam.derived.brief.thesis.state !== 'unverified') die('brief: composed room does not carry the derived brief')
+  const goodBrief = readFileSync(brief, 'utf-8'), brokenBrief = readJson(brief)
+  brokenBrief.claims.find((c) => c.id === 'inv-1').evidence = [{ type: 'path', ref: 'docs/NOPE.md' }]
+  writeFileSync(brief, JSON.stringify(brokenBrief, null, 2) + '\n')
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topology, '--issues', issues, '--health', health, '--findings', findings, '--room', briefRoom, '--manifest', briefManifest])
+  if (r.status === 0 || !/brief claim inv-1/.test(r.stderr || '')) die('brief: check accepted a claim whose evidence does not resolve', r)
+  writeFileSync(brief, goodBrief)
+  // "What changed in the brief": the previous brief is a DECLARED git ref of the file, diffed at
+  // render — added / removed / rewritten / re-verdicted; outside git, or with a bad ref, it says why.
+  const { deriveBriefDelta } = await import(join(HERE, '..', 'lib/roomderive.mjs'))
+  const outsideGit = deriveBriefDelta(brief, 'abcdef0', readJson(brief))
+  if (!outsideGit || outsideGit.resolvable !== false || !/git repository/.test(outsideGit.reason)) die('brief delta: a brief outside git did not say so: ' + JSON.stringify(outsideGit))
+  const gitDir = join(tmp, 'brief-git'); mkdirSync(gitDir, { recursive: true })
+  const gitEnv = { ...process.env, GIT_AUTHOR_NAME: 'forma', GIT_AUTHOR_EMAIL: 'forma@example.invalid', GIT_COMMITTER_NAME: 'forma', GIT_COMMITTER_EMAIL: 'forma@example.invalid' }
+  const g = (args) => execFileSync('git', ['-C', gitDir, ...args], { encoding: 'utf-8', env: gitEnv }).trim()
+  g(['init', '-q']); const gitBrief = join(gitDir, 'c4-brief.json')
+  const v1 = { claims: readJson(brief).claims.filter((c) => c.id !== 'inv-1') }
+  writeFileSync(gitBrief, JSON.stringify(v1, null, 2) + '\n'); g(['add', '.']); g(['commit', '-q', '-m', 'brief v1']); const previousSha = g(['rev-parse', 'HEAD'])
+  const v2 = JSON.parse(JSON.stringify(readJson(brief)))
+  v2.claims.find((c) => c.id === 'risk-1').text = 'Rewritten risk.'
+  v2.claims = v2.claims.filter((c) => c.id !== 'decide-1')
+  writeFileSync(gitBrief, JSON.stringify(v2, null, 2) + '\n')
+  const delta = deriveBriefDelta(gitBrief, previousSha, v2)
+  if (!delta.resolvable || delta.added.map((c) => c.id).join() !== 'inv-1' || delta.removed.map((c) => c.id).join() !== 'decide-1' || delta.changed.map((c) => c.id).join() !== 'risk-1' || delta.unchanged !== 1) die('brief delta: wrong diff: ' + JSON.stringify(delta))
+  const badRef = deriveBriefDelta(gitBrief, '0'.repeat(40), v2)
+  if (badRef.resolvable !== false || !/cannot be read/.test(badRef.reason)) die('brief delta: an unreadable ref did not say so')
+  // The publication gate: a decision without a fresh hostile hold does not go out; a held one does.
+  const briefPresentable = (file) => spawnSync(process.execPath, [join(HERE, '..', 'scripts', 'room-presentable.mjs'), '--room', file, '--manifest', briefManifest], { encoding: 'utf-8' })
+  r = run(['room', '--manifest', briefManifest, '--out', briefRoom]); if (r.status !== 0) die('brief: room for presentable exit ' + r.status, r)
+  let bp = briefPresentable(briefRoom)
+  if (bp.status !== 0 || !/no decision goes out without a fresh hostile hold/.test(bp.stdout)) die('brief: presentable refused a room whose only decision is held: ' + bp.stdout + bp.stderr)
+  const unheld = readJson(brief); delete unheld.claims.find((c) => c.id === 'decide-1').verified
+  writeFileSync(brief, JSON.stringify(unheld, null, 2) + '\n')
+  r = run(['room', '--manifest', briefManifest, '--out', briefRoom]); if (r.status !== 0) die('brief: room with unheld decision exit ' + r.status, r)
+  bp = briefPresentable(briefRoom)
+  if (bp.status === 0 || !/FAIL no decision goes out without a fresh hostile hold.*decide-1 \(unverified\)/.test(bp.stdout)) die('brief: presentable published a decision nobody verified: ' + bp.stdout)
+  if (!/decide-1/.test(readFileSync(briefRoom, 'utf-8')) || !/briefUnverified|not verified/.test(readFileSync(briefRoom, 'utf-8'))) die('brief: the composed room does not carry the claim or the not-verified word')
+  writeFileSync(brief, goodBrief)
 
   // `room update --counter` owns the deterministic half of unattended operation. The external
   // adapter writes the result; update regenerates the plan, refuses stale/missing output, applies
@@ -2663,7 +2829,8 @@ const diffPaths = (a, b, at = '') => {
   renameSync(counter + '.away', counter)
   if (r.status === 0 || !/counter result missing/.test(r.stderr || '')) die('audit update: missing counter result did not fail loud', r)
   if (readFileSync(health, 'utf-8') !== beforeMissingResult) die('audit update: missing result changed health')
-  console.log('  ok audit — deterministic offline plan, validated health/findings apply, no partial writes')
+  console.log('  ok audit — deterministic offline plan; item-by-item apply that names every refusal in lastApply; findings and keyed signal/milestone evidence expire')
+  console.log('  ok brief — claims need a subject and an anchor that can move; caps hold; colour only under a fresh hostile hold; a rewritten claim loses it; check refuses an unresolvable claim')
 }
 
 // Frontmatter is the one document lifecycle source. Superseded UI names and duplicate inline

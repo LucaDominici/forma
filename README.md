@@ -176,20 +176,36 @@ forma scan   --root .. --manifest forma.room.json
 forma room   --manifest forma.room.json --out control-room.html
 ```
 
-For scheduled counter-verification, give each active programme `health`, `findings`, `auditPlan`
-and `counterResults` paths in the manifest. The unattended sequence is deliberately split at the
-network boundary:
+**Counts are not a briefing.** The judgement — where the programme stands in one sentence, the risks
+with first-hand evidence, what only a human can decide now, how each invariant is guarded — is
+written by an agent into the **brief** (`c4-brief.json`) as typed claims: each names its subject
+(`about`), cites evidence that must resolve, and is stamped by Forma (`writtenAt`, `evidenceHash`).
+Forma refuses what does not anchor and names every refusal (`lastApply.rejected`); a risk or a
+decision must rest on something that can move (an open issue, a workflow/release signal, a milestone,
+a recent commit — never a closed issue or a README path alone); a claim goes stale when its subject
+or evidence moves; and it is coloured **only** while an independent counter-verifier — by default a
+different engine — holds it, on a date the reader sees. Everything else is grey and says why.
+The Executive opens with it. Contract: [`lib/schema/c4-brief.schema.json`](lib/schema/c4-brief.schema.json).
+
+The whole loop is one ritual, run by any agent from the `forma-room-update` skill
+([`adapters/claude/forma-room-update/SKILL.md`](adapters/claude/forma-room-update/SKILL.md), same text
+for Codex), split at the network boundary. Give each active programme `health`, `findings`,
+`auditPlan`, `auditFill`, `counterResults` and `brief.path` in the manifest:
 
 ```text
-forma room update --manifest forma.room.json
-<scheduled Codex task runs $forma-counterverify for each active programme>
-forma room update --manifest forma.room.json --skip-verify --counter
+forma room update --manifest forma.room.json                       # live facts (the only network)
+forma audit --plan …                                               # what is missing or stale
+<the writing agent fills verdicts, findings, brief → audit-fill.json>
+forma audit --apply audit-fill.json --audit-plan …                 # item by item; refusals named
+<the hostile verifier runs $forma-counterverify over the re-generated plan>
+forma room update --manifest forma.room.json --skip-verify --fill --counter
+forma check --room control-room.html && node scripts/room-presentable.mjs …
 ```
 
 The first command refreshes every GitHub fact base and fails without recomposing if any fetch is
-incomplete. The external adapter writes one result per claim. The
-last command regenerates every plan, rejects missing/stale/unresolvable results, applies the
-overlays, and only then recomposes. Forma never launches the agent itself (D-08 / I2).
+incomplete. The last update regenerates every plan, applies fill and counter results one entry at a
+time, and only then recomposes; `room-presentable` refuses to publish a decision nobody held. Forma
+never launches an agent itself (D-08 / I2), and `today` never moves on its own (I12).
 
 One file. A briefing in reading order at `#/`, five views per programme under it, and an options
 view saying what is included and why:
@@ -197,7 +213,7 @@ view saying what is included and why:
 | Route | What it answers |
 |---|---|
 | `#/` | The verdict, what waits on you, what moves, what does not add up |
-| `#/<prog>/exec` | Where it stands: coverage of the plan, where we were, milestones, landings |
+| `#/<prog>/exec` | Where it stands: the brief (thesis, risks, decide now, invariants — coloured only under a hostile hold), coverage of the plan, where we were, milestones |
 | `#/<prog>/tech` | What needs a human: blocked work, audit verdicts, findings, and bounded lazy Queue/Kanban evidence |
 | `#/<prog>/map` | The architecture, plus checkpoints carrying **measured** completion |
 | `#/<prog>/wbs` | Requirement → design → verification → issues, with the holes named |

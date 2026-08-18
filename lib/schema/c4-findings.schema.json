@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/LucaDominici/forma/blob/main/lib/schema/c4-findings.schema.json",
   "title": "c4-findings — audit registry, superset of c4-health (problems not yet an issue)",
-  "description": "The source of the briefing's 'does not add up' section. Empties only when a problem is fixed, never when it is hidden. Every row carries exactly one evidence ref — the column the briefing renders as mandatory.",
+  "description": "The source of the briefing's 'does not add up' section. Empties only when a problem is fixed, never when it is hidden. Every row carries exactly one evidence ref — the column the briefing renders as mandatory. Agent-written rows carry auditedAt + evidenceHash stamped by Forma and expire like verdicts; gate-derived rows carry neither.",
   "type": "object",
   "required": ["findings"],
   "additionalProperties": false,
@@ -22,14 +22,16 @@
             "required": ["type", "ref"],
             "additionalProperties": false,
             "properties": {
-              "type": { "type": "string", "enum": ["path", "commit", "issue"] },
+              "type": { "type": "string", "enum": ["path", "commit", "issue", "signal", "milestone"] },
               "ref": { "type": "string", "pattern": "\\S" }
             }
           },
           "trace": {
             "type": "string",
             "description": "Optional: 'issue' if this finding already has one, 'azione' if it is only an action item."
-          }
+          },
+          "auditedAt": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Manifest day on which Forma accepted the finding; stamped by the audit channel, never by the fill. Absent on findings the document gate re-derives every run — those are fresh by construction." },
+          "evidenceHash": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Hash of the cited evidence at acceptance; a finding whose evidence moved is stale, not silently current." }
         }
       }
     }

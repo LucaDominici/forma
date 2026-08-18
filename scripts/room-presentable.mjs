@@ -40,6 +40,8 @@ const repoFor = new Map((manifest.programs || []).map((p) => [p.id, manifestPath
 
 const programs = ROOM.programs || []
 const orphanPills = [], badEvidence = [], badFindings = [], badDocumentEvidence = [], fakedCompletion = [], orphanOpen = [], staleSnapshots = []
+const badBriefEvidence = [], colouredUnheld = [], unheldDecisions = []
+let briefClaimCount = 0
 let verdictCount = 0, findingCount = 0, documentFindingCount = 0, openCount = 0
 
 // Publication-level UI contracts. Browser tests own measured layout and DOM counts; these checks
@@ -80,7 +82,7 @@ for (const program of programs) {
   for (const v of (program.health && program.health.verdicts) || []) {
     verdictCount++
     for (const e of v.evidence || []) {
-      try { validateEvidence(repo, e, `#${v.n}`, known) }
+      try { validateEvidence(repo, e, `#${v.n}`, snapshot) }
       catch (error) { badEvidence.push(`${program.id} #${v.n} ${String((error && error.message) || error).replace(/^audit apply:\s*/, '')}`) }
     }
   }
@@ -90,17 +92,33 @@ for (const program of programs) {
     findingCount++
     const e = f.evidence
     if (!e || !e.ref) { badFindings.push(`${program.id} ${f.id}`); continue }
-    try { validateEvidence(repo, e, `finding ${f.id}`, known) }
+    try { validateEvidence(repo, e, `finding ${f.id}`, snapshot) }
     catch (error) { badFindings.push(`${program.id} ${f.id}: ${String((error && error.message) || error).replace(/^audit apply:\s*/, '')}`) }
   }
   for (const f of [...((derived.documentGate && derived.documentGate.findings) || []), ...((derived.documentGate && derived.documentGate.claims) || [])]) {
     documentFindingCount++
-    try { validateEvidence(repo, f.evidence, `document gate ${f.id}`, known) }
+    try { validateEvidence(repo, f.evidence, `document gate ${f.id}`, snapshot) }
     catch (error) { badDocumentEvidence.push(`${program.id} ${f.id}: ${String((error && error.message) || error).replace(/^audit apply:\s*/, '')}`) }
   }
 
   // 4) no room aggregate is ever presented as `completion` — closureRate only (D9).
   for (const m of derived.milestones || []) if ('completion' in m) fakedCompletion.push(`${program.id} ${m.title}`)
+
+  // 4b) the brief: a claim is coloured only under a fresh hostile hold (by derivation), every
+  // claim's evidence still resolves, and no decision goes out unheld — a DECIDI TU nobody
+  // looked at is the "falso tutto fatto" this artefact exists to refuse.
+  const brief = derived.brief
+  if (brief) {
+    for (const c of brief.claims || []) {
+      briefClaimCount++
+      if (c.coloured && c.state !== 'holds') colouredUnheld.push(`${program.id} ${c.id}`)
+      for (const e of c.evidence || []) {
+        try { validateEvidence(repo, e, `claim ${c.id}`, snapshot) }
+        catch (error) { badBriefEvidence.push(`${program.id} ${c.id}: ${String((error && error.message) || error).replace(/^audit apply:\s*/, '')}`) }
+      }
+    }
+    for (const c of brief.decisions || []) if (c.state !== 'holds') unheldDecisions.push(`${program.id} ${c.id} (${c.state})`)
+  }
 
   // 5) this programme's gh snapshot is not stale past the manifest's own threshold.
   const ageDays = daysBetween(snapshot.fetchedAt, manifest.today)
@@ -132,6 +150,9 @@ const predicates = [
   ['every document-gate row carries resolvable evidence', badDocumentEvidence.length === 0, badDocumentEvidence.length ? badDocumentEvidence.join(', ') : `${documentFindingCount} row(s), 0 unresolvable`],
   ['document-gate evidence is rendered in the Docs view', documentGateVisible, documentGateVisible ? 'shared documentGatePanel mounted' : 'panel missing from Docs'],
   ['no aggregate is presented as `completion`', fakedCompletion.length === 0, fakedCompletion.length ? fakedCompletion.join(', ') : 'closureRate only'],
+  ['every brief claim carries resolvable evidence', badBriefEvidence.length === 0, badBriefEvidence.length ? badBriefEvidence.slice(0, 5).join('; ') : `${briefClaimCount} claim(s), 0 unresolvable`],
+  ['no brief claim is coloured without a fresh hostile hold', colouredUnheld.length === 0, colouredUnheld.length ? colouredUnheld.join(', ') : `${briefClaimCount} claim(s), colour only on holds`],
+  ['no decision goes out without a fresh hostile hold', unheldDecisions.length === 0, unheldDecisions.length ? unheldDecisions.join(', ') : 'every decision held (or none claimed)'],
   ['no gh snapshot is stale', staleSnapshots.length === 0, staleSnapshots.length ? staleSnapshots.join('; ') : `today ${manifest.today}, limit ${staleAfterDays}d`],
   ['re-generating from the same manifest is byte-deterministic', deterministic, determinismNote],
   ['every open issue is covered (Kanban or queue), none orphaned', orphanOpen.length === 0, orphanOpen.length ? `orphaned: ${orphanOpen.join(', ')}` : `${openCount} open, 0 orphaned`],

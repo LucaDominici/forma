@@ -12,7 +12,7 @@
       "required": ["type", "ref"],
       "additionalProperties": false,
       "properties": {
-        "type": { "type": "string", "enum": ["path", "commit", "issue"] },
+        "type": { "type": "string", "enum": ["path", "commit", "issue", "signal", "milestone"], "description": "path (file[:line] in the repo), commit (resolvable sha), issue (#N in the snapshot), signal (workflows/<id> or release: the whole run/release record is hashed), milestone (title: the whole record is hashed)." },
         "ref": { "type": "string", "pattern": "\\S" }
       }
     }
@@ -36,6 +36,30 @@
             "items": { "$ref": "#/definitions/evidence" }
           }
         }
+      }
+    },
+    "lastApply": {
+      "type": "object",
+      "description": "Outcome of the last `forma audit --apply` on this overlay: one record, overwritten each time (its history is git, never a register here). What Forma refused is named, so a refusal is visible instead of an abort nobody sees.",
+      "required": ["at", "accepted", "rejected"],
+      "additionalProperties": false,
+      "properties": {
+        "at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "accepted": { "type": "integer", "minimum": 0 },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["kind", "ref", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "type": "string", "enum": ["verdict", "dependency", "finding", "counter", "brief"] },
+              "ref": { "type": "string" },
+              "reason": { "type": "string", "pattern": "\\S" }
+            }
+          }
+        },
+        "unanswered": { "type": "array", "items": { "type": "string" }, "description": "Counter-plan claim ids the verifier returned no result for; they simply get no fresh verdict." }
       }
     },
     "dependencyConfirmations": {

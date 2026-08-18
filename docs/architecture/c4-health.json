@@ -1,0 +1,86 @@
+{
+  "verdicts": [
+    {
+      "n": 50,
+      "verdict": "bad",
+      "why": "The stated reason is false on the cited file: nodes carry tabindex=\"0\", role=\"button\" and aria-label (line 701), Enter/Space is handled (line 947) and the help line names the keyboard (line 278) — the branch did not touch it because main already carries this since 8275057; only the unnamed <svg> root and the missing table twin still justify keeping #50 open.",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/viewer/c4-hologram.html:947"
+        }
+      ],
+      "auditedAt": "2026-08-18",
+      "evidenceHash": "bcb715063be1d71684338466eb1b617f28deec8c75e34b610b73a1956ec69422"
+    },
+    {
+      "n": 51,
+      "verdict": "bad",
+      "why": "Still true today: no user outside the author; every usefulness claim is a hypothesis (docs/POSTMORTEM-control-room.md names it as finding 7).",
+      "evidence": [
+        {
+          "type": "issue",
+          "ref": "51"
+        }
+      ],
+      "auditedAt": "2026-08-18",
+      "evidenceHash": "fe221c54a80ee7e9164c0964357affcae69ddabc91d30dbdda708517dba1a399"
+    },
+    {
+      "n": 53,
+      "verdict": "warn",
+      "why": "Debt D-8 in docs/technical-debt.md: the layout floor is measured, not gated; no test in test/run.mjs asserts a viewport floor.",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "docs/technical-debt.md:30"
+        }
+      ],
+      "auditedAt": "2026-08-18",
+      "evidenceHash": "493c7392bd7a4f7f9d33aeafab8b5e914be6db6b7628351ff108f0d970a42cf8"
+    },
+    {
+      "n": 54,
+      "verdict": "bad",
+      "why": "The first clause is right — 0 of 9 PRD rows land on an issue — but the RTM view does not read \"0 of 9 accounted for\": deriveRtm returns accounted 9 of 9 (pct 100) because every row names a verification, which is what #54 itself says.",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/rtm.mjs:234"
+        }
+      ],
+      "auditedAt": "2026-08-18",
+      "evidenceHash": "888766d21c69f6df3a88cabfb7ea8ee62cb6b55741b3c08fd2dfb7cf537755b1"
+    }
+  ],
+  "dependencyConfirmations": [],
+  "lastApply": {
+    "at": "2026-08-18",
+    "accepted": 5,
+    "rejected": [],
+    "unanswered": [
+      "brief:inv-I12",
+      "brief:inv-I2",
+      "brief:inv-I6",
+      "brief:risk-ci-branch",
+      "brief:risk-no-user",
+      "node:done:cli",
+      "node:done:dev",
+      "node:done:ghci",
+      "node:done:lib",
+      "node:done:npmjs",
+      "node:done:scripts",
+      "node:done:test",
+      "health:50",
+      "health:51",
+      "health:53",
+      "health:54",
+      "milestone:R1 — Unstall / green baseline",
+      "milestone:R2 — Per-project parity with CEREBRO",
+      "milestone:R3 — Audit + agentic counter-verification",
+      "milestone:R4 — init/update GA + parametricity",
+      "milestone:R5 — Dogfood and 1.0 freeze",
+      "milestone:confine — sostituire PowerPoint"
+    ]
+  }
+}

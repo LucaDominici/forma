@@ -29,3 +29,8 @@ Forma also composes a **Control Room** — one self-contained HTML dashboard ove
 2. `npx forma-arch room update --manifest forma.room.json --out docs/architecture/control-room.html` — the **"aggiorna dashboard"** verb: re-pulls each programme's live GitHub snapshot via `verify` (the only networked step), then recomposes the HTML. `--skip-verify` recomposes from the snapshots already on disk (offline); `--gh-cmd` passes through to `verify`. After it succeeds, return a Markdown link to `docs/architecture/control-room.html`.
 
 `check` re-derives every Control Room aggregate (KPIs, milestone rates, kanban buckets, RTM holes) from the raw inputs and **fails on drift** — a hand-edited number in the dashboard is a red gate, not a silent lie. Audit overlays follow the same rule: a health verdict with no anchored evidence is an error, never a colour without a reason. Manifest contract: `lib/schema/forma.room.schema.json`; overlays: `c4-health.schema.json`, `c4-findings.schema.json`, `c4-issues.schema.json`.
+
+## The judgement layer (the brief)
+
+Counts are not a briefing. The **brief** (`docs/architecture/c4-brief.json`, declared as `programs[].brief.path`) is where an agent writes the thesis, the risks, what needs a decision and how each invariant is guarded — as typed claims with a subject and evidence that must resolve; Forma stamps provenance, refuses what does not anchor (`lastApply.rejected`), marks a claim stale when its subject or evidence moves, and colours it **only** after an independent counter-verifier holds it. Run the whole ritual with the `forma-room-update` skill (`adapters/claude/forma-room-update/SKILL.md`, same text for Codex) and the `forma-counterverify` skill as the hostile verifier. Contract: `lib/schema/c4-brief.schema.json`.
+

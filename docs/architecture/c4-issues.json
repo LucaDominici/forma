@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-08-18T14:44:15.205Z",
+  "fetchedAt": "2026-08-18T20:47:21.675Z",
   "ghRepo": "LucaDominici/forma",
   "truncated": false,
   "collection": {
@@ -17,7 +17,7 @@
     "staleVerdicts": 0,
     "milestonesComplete": false,
     "milestonesReason": "Milestones are derived from issue payloads; milestones with zero issues are not observable.",
-    "payloadBytes": 22001
+    "payloadBytes": 21986
   },
   "dependencies": {
     "supported": true,
@@ -30,13 +30,13 @@
         "state": "present",
         "name": "ci",
         "path": ".github/workflows/ci.yml",
-        "headBranch": "agent/forma-production-closure-followup",
-        "headSha": "80e8d366eef5ccd73ea9fe09d4cfaf9cd713b9f4",
+        "headBranch": "feat/control-room-rework",
+        "headSha": "cc642f4a3177966490abb1389692302231d6d9c5",
         "event": "pull_request",
         "status": "completed",
         "conclusion": "success",
-        "createdAt": "2026-08-17T21:02:34Z",
-        "url": "https://github.com/LucaDominici/forma/actions/runs/32069014898"
+        "createdAt": "2026-08-18T20:33:39Z",
+        "url": "https://github.com/LucaDominici/forma/actions/runs/32182925068"
       }
     },
     "release": {

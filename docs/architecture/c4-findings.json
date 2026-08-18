@@ -1,0 +1,112 @@
+{
+  "findings": [
+    {
+      "id": "ci-branch-not-main",
+      "severity": "warn",
+      "text": "The only CI signal in the snapshot is a pull_request run on feat/control-room-rework; main has not run this rework yet.",
+      "evidence": {
+        "type": "signal",
+        "ref": "workflows/ci"
+      },
+      "trace": "azione",
+      "auditedAt": "2026-08-18",
+      "evidenceHash": "c57342773468a14228b99000f3753a1ebff01a5aa754b29817ae3f2c98a9415a"
+    },
+    {
+      "id": "counter:node:done:cli",
+      "severity": "warn",
+      "text": "The only evidence is a glob count over bin/, which proves the directory exists and not that the container is complete — the repository's own I5 says code proves existence, never completion.",
+      "evidence": {
+        "type": "path",
+        "ref": "docs/architecture/c4-model.json"
+      },
+      "trace": "azione",
+      "auditedAt": "2026-08-18",
+      "evidenceHash": "0916bd7e73d07919395910cf5f2e5893839285ef727a1568761953af5fd6536b"
+    },
+    {
+      "id": "counter:node:done:dev",
+      "severity": "warn",
+      "text": "The cited selector is the model's own status2 field for a person node, so the claim's only source is the assertion it is meant to prove.",
+      "evidence": {
+        "type": "path",
+        "ref": "docs/architecture/c4-model.json"
+      },
+      "trace": "azione",
+      "auditedAt": "2026-08-18",
+      "evidenceHash": "0916bd7e73d07919395910cf5f2e5893839285ef727a1568761953af5fd6536b"
+    },
+    {
+      "id": "counter:node:done:lib",
+      "severity": "warn",
+      "text": "The only evidence is a glob count of 24 files under lib/, which proves the directory exists and not that the engine is complete.",
+      "evidence": {
+        "type": "path",
+        "ref": "docs/architecture/c4-model.json"
+      },
+      "trace": "azione",
+      "auditedAt": "2026-08-18",
+      "evidenceHash": "0916bd7e73d07919395910cf5f2e5893839285ef727a1568761953af5fd6536b"
+    },
+    {
+      "id": "counter:node:done:scripts",
+      "severity": "warn",
+      "text": "The only evidence is a glob count of 6 files under scripts/, which proves the directory exists and not that the gates are complete.",
+      "evidence": {
+        "type": "path",
+        "ref": "docs/architecture/c4-model.json"
+      },
+      "trace": "azione",
+      "auditedAt": "2026-08-18",
+      "evidenceHash": "0916bd7e73d07919395910cf5f2e5893839285ef727a1568761953af5fd6536b"
+    },
+    {
+      "id": "counter:node:done:test",
+      "severity": "warn",
+      "text": "The only evidence is a glob count of 3 files under test/, which proves the directory exists and not that the suite is complete; no run of the suite is cited.",
+      "evidence": {
+        "type": "path",
+        "ref": "docs/architecture/c4-model.json"
+      },
+      "trace": "azione",
+      "auditedAt": "2026-08-18",
+      "evidenceHash": "0916bd7e73d07919395910cf5f2e5893839285ef727a1568761953af5fd6536b"
+    },
+    {
+      "id": "counter:health:50",
+      "severity": "bad",
+      "text": "The stated reason is false on the cited file: nodes carry tabindex=\"0\", role=\"button\" and aria-label (line 701), Enter/Space is handled (line 947) and the help line names the keyboard (line 278) — the branch did not touch it because main already carries this since 8275057; only the unnamed <svg> root and the missing table twin still justify keeping #50 open.",
+      "evidence": {
+        "type": "path",
+        "ref": "lib/viewer/c4-hologram.html:947"
+      },
+      "trace": "issue",
+      "auditedAt": "2026-08-18",
+      "evidenceHash": "bcb715063be1d71684338466eb1b617f28deec8c75e34b610b73a1956ec69422"
+    },
+    {
+      "id": "counter:health:54",
+      "severity": "bad",
+      "text": "The first clause is right — 0 of 9 PRD rows land on an issue — but the RTM view does not read \"0 of 9 accounted for\": deriveRtm returns accounted 9 of 9 (pct 100) because every row names a verification, which is what #54 itself says.",
+      "evidence": {
+        "type": "path",
+        "ref": "lib/rtm.mjs:234"
+      },
+      "trace": "issue",
+      "auditedAt": "2026-08-18",
+      "evidenceHash": "888766d21c69f6df3a88cabfb7ea8ee62cb6b55741b3c08fd2dfb7cf537755b1"
+    },
+    {
+      "id": "counter:brief:risk-a11y-map",
+      "severity": "bad",
+      "text": "lib/viewer/c4-hologram.html:701 emits every node as role=\"button\" with tabindex=\"0\" and an aria-label, and the root <svg> at line 667 carries no aria-hidden or role=\"presentation\" to prune them, so the map is announced as a set of named buttons inside a titled frame, not \"as nothing at all\" — the unnamed root and the missing table twin are real, but the sentence's conclusion is disproved by the same commit (8275057) its first clause cites, and #50 has not been updated since 2026-08-10, before that commit.",
+      "evidence": {
+        "type": "path",
+        "ref": "lib/viewer/c4-hologram.html:701"
+      },
+      "trace": "azione",
+      "auditedAt": "2026-08-18",
+      "evidenceHash": "db8df58a6fe4f5cddd87b902afa05b1db01dfb79045f9d0af944f56f1edf99d7"
+    }
+  ]
+}
