@@ -321,5 +321,12 @@
   "briefLastApply": "last apply {date}: {accepted} accepted, {rejected} refused",
   "briefReady": "ready",
   "briefNotReady": "not ready",
-  "findingsStale": "{n} finding(s) whose evidence moved or aged out"
+  "findingsStale": "{n} finding(s) whose evidence moved or aged out",
+  "briefDelta": "What changed in the brief",
+  "briefDeltaProv": "Against the declared previous brief ({ref}) read from git · never a stored register",
+  "briefDeltaCounts": "{added} added · {removed} removed · {changed} rewritten · {reverdicted} re-verdicted · {unchanged} unchanged",
+  "briefDeltaAdded": "Added",
+  "briefDeltaRemoved": "Removed",
+  "briefDeltaChanged": "Rewritten",
+  "briefDeltaReverdicted": "Verdict changed"
 }

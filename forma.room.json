@@ -135,7 +135,8 @@
       "auditFill": "docs/architecture/audit-fill.json",
       "counterResults": "docs/architecture/audit-counter.json",
       "brief": {
-        "path": "docs/architecture/c4-brief.json"
+        "path": "docs/architecture/c4-brief.json",
+        "previous": "3ebe4a6"
       }
     }
   ]

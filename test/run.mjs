@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.
-import { spawnSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, cpSync, rmSync, statSync, existsSync, renameSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
@@ -2772,6 +2772,25 @@ const diffPaths = (a, b, at = '') => {
   r = run(['check', '--repo', repo, '--model', model, '--topology', topology, '--issues', issues, '--health', health, '--findings', findings, '--room', briefRoom, '--manifest', briefManifest])
   if (r.status === 0 || !/brief claim inv-1/.test(r.stderr || '')) die('brief: check accepted a claim whose evidence does not resolve', r)
   writeFileSync(brief, goodBrief)
+  // "What changed in the brief": the previous brief is a DECLARED git ref of the file, diffed at
+  // render — added / removed / rewritten / re-verdicted; outside git, or with a bad ref, it says why.
+  const { deriveBriefDelta } = await import(join(HERE, '..', 'lib/roomderive.mjs'))
+  const outsideGit = deriveBriefDelta(brief, 'abcdef0', readJson(brief))
+  if (!outsideGit || outsideGit.resolvable !== false || !/git repository/.test(outsideGit.reason)) die('brief delta: a brief outside git did not say so: ' + JSON.stringify(outsideGit))
+  const gitDir = join(tmp, 'brief-git'); mkdirSync(gitDir, { recursive: true })
+  const gitEnv = { ...process.env, GIT_AUTHOR_NAME: 'forma', GIT_AUTHOR_EMAIL: 'forma@example.invalid', GIT_COMMITTER_NAME: 'forma', GIT_COMMITTER_EMAIL: 'forma@example.invalid' }
+  const g = (args) => execFileSync('git', ['-C', gitDir, ...args], { encoding: 'utf-8', env: gitEnv }).trim()
+  g(['init', '-q']); const gitBrief = join(gitDir, 'c4-brief.json')
+  const v1 = { claims: readJson(brief).claims.filter((c) => c.id !== 'inv-1') }
+  writeFileSync(gitBrief, JSON.stringify(v1, null, 2) + '\n'); g(['add', '.']); g(['commit', '-q', '-m', 'brief v1']); const previousSha = g(['rev-parse', 'HEAD'])
+  const v2 = JSON.parse(JSON.stringify(readJson(brief)))
+  v2.claims.find((c) => c.id === 'risk-1').text = 'Rewritten risk.'
+  v2.claims = v2.claims.filter((c) => c.id !== 'decide-1')
+  writeFileSync(gitBrief, JSON.stringify(v2, null, 2) + '\n')
+  const delta = deriveBriefDelta(gitBrief, previousSha, v2)
+  if (!delta.resolvable || delta.added.map((c) => c.id).join() !== 'inv-1' || delta.removed.map((c) => c.id).join() !== 'decide-1' || delta.changed.map((c) => c.id).join() !== 'risk-1' || delta.unchanged !== 1) die('brief delta: wrong diff: ' + JSON.stringify(delta))
+  const badRef = deriveBriefDelta(gitBrief, '0'.repeat(40), v2)
+  if (badRef.resolvable !== false || !/cannot be read/.test(badRef.reason)) die('brief delta: an unreadable ref did not say so')
   // The publication gate: a decision without a fresh hostile hold does not go out; a held one does.
   const briefPresentable = (file) => spawnSync(process.execPath, [join(HERE, '..', 'scripts', 'room-presentable.mjs'), '--room', file, '--manifest', briefManifest], { encoding: 'utf-8' })
   r = run(['room', '--manifest', briefManifest, '--out', briefRoom]); if (r.status !== 0) die('brief: room for presentable exit ' + r.status, r)

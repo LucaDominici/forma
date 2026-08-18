@@ -321,5 +321,12 @@
   "briefLastApply": "ultimo apply {date}: {accepted} accettati, {rejected} rifiutati",
   "briefReady": "pronto",
   "briefNotReady": "non pronto",
-  "findingsStale": "{n} segnalazione/i con evidenza cambiata o oltre la finestra"
+  "findingsStale": "{n} segnalazione/i con evidenza cambiata o oltre la finestra",
+  "briefDelta": "Cosa è cambiato nel brief",
+  "briefDeltaProv": "Rispetto al brief precedente dichiarato ({ref}) letto da git · mai un registro",
+  "briefDeltaCounts": "{added} aggiunti · {removed} rimossi · {changed} riscritti · {reverdicted} riverificati · {unchanged} invariati",
+  "briefDeltaAdded": "Aggiunti",
+  "briefDeltaRemoved": "Rimossi",
+  "briefDeltaChanged": "Riscritti",
+  "briefDeltaReverdicted": "Verdetto cambiato"
 }

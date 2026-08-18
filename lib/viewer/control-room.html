@@ -1016,6 +1016,20 @@ function briefStatusStrip(program){
  strip.appendChild(el("span","state-chip"+(b.ready?" on":""),b.ready?STR.briefReady:STR.briefNotReady));
  return strip;
 }
+// What changed in the judgement since the declared previous brief (git ref, an input — never a
+// stored register). Added / removed / rewritten / re-verdicted, by id; unresolvable says why.
+function briefDeltaPanel(program){
+ var d=program.derived.briefDelta;if(!d)return null;
+ var p=panel(STR.briefDelta,fmt(STR.briefDeltaProv,{ref:String(d.previous).slice(0,12)}),"span2"),i;
+ if(!d.resolvable){markState(p,"unknown",d.reason);return p;}
+ markState(p,(d.added.length||d.removed.length||d.changed.length||d.reverdicted.length)?"present":"empty",fmt(STR.briefDeltaCounts,{added:d.added.length,removed:d.removed.length,changed:d.changed.length,reverdicted:d.reverdicted.length,unchanged:d.unchanged}));
+ function group(title,items,render){if(!items.length)return;var g=el("div","group");g.appendChild(el("h3","",title));for(i=0;i<items.length;i++)g.appendChild(render(items[i]));p.body.appendChild(g);}
+ group(STR.briefDeltaAdded,d.added,function(c){var r=el("div","kv");r.appendChild(el("span","ref",c.kind));r.appendChild(el("span","",c.text));return r;});
+ group(STR.briefDeltaRemoved,d.removed,function(c){var r=el("div","kv");r.appendChild(el("span","ref",c.kind));r.appendChild(el("span","muted",c.text));return r;});
+ group(STR.briefDeltaChanged,d.changed,function(c){var r=el("div","kv"),v=el("span");v.appendChild(el("span","muted",c.from));v.appendChild(document.createTextNode(" → "));v.appendChild(el("span","",c.to));r.appendChild(el("span","ref",c.kind+" · "+c.id));r.appendChild(v);return r;});
+ group(STR.briefDeltaReverdicted,d.reverdicted,function(c){var r=el("div","kv");r.appendChild(el("span","ref",c.kind+" · "+c.id));r.appendChild(el("span","",(c.from||STR.briefUnverified)+" → "+(c.to||STR.briefUnverified)));return r;});
+ return p;
+}
 function briefPanels(program){
  var b=program.derived.brief,out=[],i;
  if(!b){var np=panel(STR.briefRisks,STR.provBrief,"full");markState(np,"empty",STR.briefNotDeclared);out.push(np);return out;}
@@ -1037,6 +1051,7 @@ function briefPanels(program){
   out.push(ip);
  }
  if(b.notes.length){var npn=panel(STR.briefNotes,STR.provBrief,"span2");for(i=0;i<b.notes.length;i++)npn.body.appendChild(briefClaimRow(program,b.notes[i]));out.push(npn);}
+ var delta=briefDeltaPanel(program);if(delta)out.push(delta);
  return out;
 }
 
