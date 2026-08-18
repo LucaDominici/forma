@@ -43,7 +43,7 @@ Enforcement: `documentale`. The doc-set presence glob accepts either form, and a
 
 | D-06 | The generated arc42 scaffold is not hand-editable and carries generated frontmatter | `forma doc` rewrites the whole file, so any hand-written frontmatter would die at the next run — the generator must satisfy the standard by construction | Luca Dominici | 2026-08-10 |
 
-Enforcement: `lib/render.mjs` emits the frontmatter block; `scripts/check-doc-style.mjs` grades the result like any other document, so a regression is caught by the same gate.
+Enforcement: `lib/render.mjs` emits the frontmatter block; the scaffold regression in `test/run.mjs` requires all eight fields, so a regression is caught by the public gate.
 
 | D-07 | The embedded hologram is sufficient as the Control Room's C4 L1→L4 drill surface; do not add a second C4 tab | The map iframe already exposes explicit `[+] DRILL`, double-click entry, back navigation and an L1→L4 breadcrumb. A parallel tab would duplicate one explorer and revive the flat eight-tab shape rejected in ADR-0005 | Luca Dominici | 2026-08-17 |
 

@@ -17,6 +17,7 @@ import { execFileSync } from 'node:child_process'
 import { join, dirname, isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { daysBetween } from '../lib/roomderive.mjs'
+import { validateEvidence } from '../lib/audit.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const arg = (f, d) => { const i = process.argv.indexOf(f); return i > -1 ? process.argv[i + 1] : d }
@@ -38,8 +39,8 @@ const manifest = (() => { try { return JSON.parse(readFileSync(MANIFEST, 'utf-8'
 const repoFor = new Map((manifest.programs || []).map((p) => [p.id, manifestPath(p.repo)]))
 
 const programs = ROOM.programs || []
-const orphanPills = [], badEvidence = [], badFindings = [], fakedCompletion = [], orphanOpen = [], staleSnapshots = []
-let verdictCount = 0, findingCount = 0, openCount = 0
+const orphanPills = [], badEvidence = [], badFindings = [], badDocumentEvidence = [], fakedCompletion = [], orphanOpen = [], staleSnapshots = []
+let verdictCount = 0, findingCount = 0, documentFindingCount = 0, openCount = 0
 
 // Publication-level UI contracts. Browser tests own measured layout and DOM counts; these checks
 // make it impossible to publish a composed artifact that silently restores the discarded routes,
@@ -51,6 +52,7 @@ const pageSize = Number((/var ISSUE_PAGE_SIZE=(\d+)/.exec(html) || [])[1])
 const boundedDom = pageSize > 0 && pageSize <= 50 && /function pagedList\(/.test(html) && /function ensureView\(/.test(html) && !/function buildAll\(/.test(html)
 const mobileNav = /id="mobile-program"/.test(html) && /id="mobile-view"/.test(html) && /@media\(max-width:600px\)/.test(html)
 const boundedPrint = /\.screen-list,\.workflow\{display:none!important\}/.test(html) && !/details:not\(\[open\]\)/.test(html)
+const documentGateVisible = /var documentPanel=documentGatePanel\(program\);if\(documentPanel\)ev\.appendChild\(documentPanel\)/.test(html)
 
 for (const program of programs) {
   const snapshot = program.issuesSnapshot || {}
@@ -78,8 +80,8 @@ for (const program of programs) {
   for (const v of (program.health && program.health.verdicts) || []) {
     verdictCount++
     for (const e of v.evidence || []) {
-      if (e.type === 'path' && !existsSync(join(repo, e.ref))) badEvidence.push(`${program.id} #${v.n} path ${e.ref}`)
-      else if (e.type === 'commit') { try { execFileSync('git', ['-C', repo, 'cat-file', '-e', e.ref], { stdio: 'ignore' }) } catch { badEvidence.push(`${program.id} #${v.n} commit ${e.ref}`) } }
+      try { validateEvidence(repo, e, `#${v.n}`, known) }
+      catch (error) { badEvidence.push(`${program.id} #${v.n} ${String((error && error.message) || error).replace(/^audit apply:\s*/, '')}`) }
     }
   }
 
@@ -88,7 +90,13 @@ for (const program of programs) {
     findingCount++
     const e = f.evidence
     if (!e || !e.ref) { badFindings.push(`${program.id} ${f.id}`); continue }
-    if (e.type === 'path' && !existsSync(join(repo, e.ref))) badFindings.push(`${program.id} ${f.id}`)
+    try { validateEvidence(repo, e, `finding ${f.id}`, known) }
+    catch (error) { badFindings.push(`${program.id} ${f.id}: ${String((error && error.message) || error).replace(/^audit apply:\s*/, '')}`) }
+  }
+  for (const f of [...((derived.documentGate && derived.documentGate.findings) || []), ...((derived.documentGate && derived.documentGate.claims) || [])]) {
+    documentFindingCount++
+    try { validateEvidence(repo, f.evidence, `document gate ${f.id}`, known) }
+    catch (error) { badDocumentEvidence.push(`${program.id} ${f.id}: ${String((error && error.message) || error).replace(/^audit apply:\s*/, '')}`) }
   }
 
   // 4) no room aggregate is ever presented as `completion` — closureRate only (D9).
@@ -121,6 +129,8 @@ const predicates = [
   ['every issue reference on screen resolves in its snapshot (no orphan pill)', orphanPills.length === 0, orphanPills.length ? `orphans: ${orphanPills.slice(0, 8).join(', ')}` : `${programs.length} programme(s), none`],
   ['every health verdict carries resolvable evidence', badEvidence.length === 0, badEvidence.length ? badEvidence.slice(0, 5).join('; ') : `${verdictCount} verdict(s), 0 unresolvable`],
   ['every finding row carries resolvable evidence', badFindings.length === 0, badFindings.length ? badFindings.join(', ') : `${findingCount} finding(s), 0 unresolvable`],
+  ['every document-gate row carries resolvable evidence', badDocumentEvidence.length === 0, badDocumentEvidence.length ? badDocumentEvidence.join(', ') : `${documentFindingCount} row(s), 0 unresolvable`],
+  ['document-gate evidence is rendered in the Docs view', documentGateVisible, documentGateVisible ? 'shared documentGatePanel mounted' : 'panel missing from Docs'],
   ['no aggregate is presented as `completion`', fakedCompletion.length === 0, fakedCompletion.length ? fakedCompletion.join(', ') : 'closureRate only'],
   ['no gh snapshot is stale', staleSnapshots.length === 0, staleSnapshots.length ? staleSnapshots.join('; ') : `today ${manifest.today}, limit ${staleAfterDays}d`],
   ['re-generating from the same manifest is byte-deterministic', deterministic, determinismNote],

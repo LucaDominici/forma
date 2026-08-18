@@ -2,23 +2,47 @@
   "fetchedAt": "2026-08-09T09:00:00Z",
   "ghRepo": "acme/beta",
   "truncated": false,
+  "collection": {
+    "pagination": "gh api graphql --paginate --slurp",
+    "nativeEdges": 0,
+    "truncatedRelations": 0,
+    "prose": { "accepted": 0, "discarded": 0, "ambiguous": 0, "bodyBytes": 0, "maxBytesPerIssue": 65536 },
+    "signalsUnknown": 1,
+    "staleVerdicts": 0,
+    "milestonesComplete": false,
+    "milestonesReason": "Milestones are derived from issue payloads; milestones with zero issues are not observable.",
+    "payloadBytes": 1576
+  },
+  "dependencies": { "supported": false, "complete": false, "reason": "Dependency fields unavailable in fixture.", "edges": [] },
+  "signals": {
+    "workflows": {},
+    "release": { "listState": "unknown", "reason": "Release collection was not declared in the manifest." }
+  },
   "issues": [
     {
       "n": 5,
       "title": "Ship the first cut",
       "state": "OPEN",
+      "url": "https://github.com/acme/beta/issues/5",
       "ms": null,
       "labels": [
         "priority:p1"
       ],
+      "updatedAt": "2026-08-01T10:00:00Z",
+      "dependenciesComplete": false,
+      "proseScanComplete": true,
       "createdAt": "2026-06-20"
     },
     {
       "n": 6,
       "title": "Name the module",
       "state": "CLOSED",
+      "url": "https://github.com/acme/beta/issues/6",
       "ms": null,
       "labels": [],
+      "updatedAt": "2026-05-09T10:00:00Z",
+      "dependenciesComplete": false,
+      "proseScanComplete": false,
       "createdAt": "2026-03-15",
       "closedAt": "2026-05-09"
     }

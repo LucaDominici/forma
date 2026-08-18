@@ -171,7 +171,7 @@ everything you are running, what needs you** — and then, per programme, where 
 
 ```
 forma verify --repo ../haben          # snapshot the issues (the only networked step)
-forma audit  --repo ../haben --plan ../haben/docs/architecture/audit-plan.json
+forma audit  --repo ../haben --today 2026-08-18 --plan ../haben/docs/architecture/audit-plan.json
 forma scan   --root .. --manifest forma.room.json
 forma room   --manifest forma.room.json --out control-room.html
 ```

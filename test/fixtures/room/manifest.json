@@ -19,6 +19,20 @@
           "needs-human"
         ]
       },
+      "capabilities": {
+        "docs": [
+          {
+            "path": "docs/DESIGN.md"
+          }
+        ],
+        "statusMap": {
+          "In delivery": "in-progress",
+          "Released": "done"
+        },
+        "verification": {
+          "path": "docs/PRD.md"
+        }
+      },
       "rtm": {
         "docs": [
           {
@@ -53,7 +67,24 @@
         "canon": [
           "docs/PRD.md",
           "docs/DESIGN.md"
-        ]
+        ],
+        "gate": {
+          "invariants": [
+            {
+              "path": "docs/DESIGN.md",
+              "idPattern": "^(How)\\b"
+            }
+          ],
+          "freshness": [
+            {
+              "id": "product",
+              "include": [
+                "docs/*.md"
+              ],
+              "staleAfterDays": 90
+            }
+          ]
+        }
       }
     },
     {

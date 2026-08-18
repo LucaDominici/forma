@@ -65,8 +65,8 @@ a:hover{color:var(--accent)}
 .mobile-nav select{min-width:0;width:100%;height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 28px 0 10px}
 
 main{min-height:0;padding:var(--pad);overflow:hidden}
-.view{display:grid;grid-template-rows:auto minmax(0,1fr);gap:var(--gap);height:100%;min-height:0}
-.view[data-single]{grid-template-rows:minmax(0,1fr)}
+.view{display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:var(--gap);height:100%;min-height:0}
+.view[data-single]{grid-template-rows:auto minmax(0,1fr)}
 
 /* A panel is a region, not a card: a top rule and a heading on the same ground. Boxing every
    region would add three borders and a shadow to say what one hairline already says, and nesting
@@ -160,6 +160,7 @@ details[open]>summary:after{content:"\2212"}
 .status{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;white-space:nowrap}
 .glyph{width:12px;text-align:center;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13px}
 .status-ok{color:var(--ok)}.status-warn{color:var(--warn)}.status-bad{color:var(--bad)}.status-none{color:var(--muted)}
+.state-chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace}
 .issue-pill{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:1px 7px 1px 4px;border:1px solid var(--line);border-radius:999px;text-decoration:none}
 .issue-pill .issue-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .issue-pill.closed .issue-text{text-decoration:line-through}
@@ -168,6 +169,10 @@ details[open]>summary:after{content:"\2212"}
 .group{padding:6px 0;border-top:1px solid var(--line)}
 .group:first-child{border-top:0}
 .group-name{display:block;margin-bottom:3px;color:var(--muted);font-size:10.5px}
+.list-filter{display:flex;gap:8px;margin:2px 0 8px}
+.list-filter input{width:100%;min-height:44px;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);font:inherit;font-size:16px}
+.view-state{margin:0 0 6px;display:flex;justify-content:flex-end}
+.cap-ledger .panel-body{max-height:260px}
 .links{display:flex;gap:6px;flex-wrap:wrap}
 .kanban-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin}
 .kanban-issue{padding:6px 0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;min-width:0}
@@ -306,7 +311,7 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
      measured tokens belong to the compared selector would have been reading a coin flip. */
   color-scheme:light;background:var(--bg)}
  body{height:auto;overflow:visible;display:block;background:var(--bg);color:var(--ink);font-size:10pt}
- .bar,.toggle,.tip,.skip,.ghost,.mobile-nav{display:none!important}
+ .bar,.toggle,.tip,.skip,.ghost,.mobile-nav,.list-filter{display:none!important}
  main{overflow:visible;height:auto;padding:0}
  .view{height:auto;display:block}
  .view[hidden]{display:block!important}
@@ -390,15 +395,15 @@ function line(svg,x1,y1,x2,y2){svg.appendChild(svgEl("line",{x1:x1,y1:y1,x2:x2,y
 function plural(n,one,other){return n===1?one:other;}
 function label(svg,x,y,t,anchor,cls){svg.appendChild(svgEl("text",{x:x,y:y,"text-anchor":anchor||"start","class":cls||"svg-label"},t));}
 function hit(svg,a,tip){a=a||{};a["class"]="hit";a.fill="transparent";a.tabindex="0";a.role="img";a["aria-label"]=tip;a["data-tip"]=tip;svg.appendChild(svgEl(a.r!=null?"circle":"rect",a));}
-function statusMark(v){var map={ok:["●",STR.statusOk],warn:["◐",STR.statusWarn],bad:["×",STR.statusBad]},p=map[v]||["◇",STR.notAudited];var s=el("span","status status-"+(map[v]?v:"none")),g=el("span","glyph",p[0]);g.setAttribute("aria-hidden","true");s.appendChild(g);s.appendChild(el("span","",p[1]));return s;}
+function statusMark(v){var map={ok:["●",STR.statusOk],warn:["◐",STR.statusWarn],bad:["×",STR.statusBad],closed:["✓",STR.closed],stale:["◇",STR.stateStale],unknown:["◇",STR.stateUnknown],empty:["○",STR.stateEmpty]},p=map[v]||["◇",STR.notAudited];var s=el("span","status status-"+(/^(ok|warn|bad)$/.test(v)?v:"none")),g=el("span","glyph",p[0]);g.setAttribute("aria-hidden","true");s.appendChild(g);s.appendChild(el("span","",p[1]));return s;}
 function chips(v){var w=el("span","chips"),i;if(!v||!v.length){w.appendChild(el("span","muted",STR.none));return w;}for(i=0;i<v.length;i++)w.appendChild(el("span","chip",v[i]));return w;}
-function pill(p,n,t){
- var verdicts=(p.health&&p.health.verdicts)||[],v=null,issue=null,i;
- for(i=0;i<verdicts.length;i++)if(verdicts[i].n===n){v=verdicts[i];break;}
- for(i=0;i<p.issuesSnapshot.issues.length;i++)if(p.issuesSnapshot.issues[i].n===n){issue=p.issuesSnapshot.issues[i];break;}
- var why=v?v.why:STR.notAudited,word=v?v.verdict:null,text=t==null?"#"+n:t;
+function pill(p,n,t,endpoint){
+ var verdicts=(p.derived&&p.derived.health&&p.derived.health.verdicts)||[],v=null,issue=endpoint||null,i,repo=endpoint&&endpoint.repo||p.ghRepo;
+ if(repo===p.ghRepo)for(i=0;i<verdicts.length;i++)if(verdicts[i].n===n){v=verdicts[i];break;}
+ if(!endpoint)for(i=0;i<p.issuesSnapshot.issues.length;i++)if(p.issuesSnapshot.issues[i].n===n){issue=p.issuesSnapshot.issues[i];break;}
+ var closed=issue&&issue.state==="CLOSED",why=closed?STR.closed:(v?v.why:STR.notAudited),word=closed?"closed":(v?(v.stale?"stale":v.verdict):null),text=t==null?"#"+n:t;
  var a=el("a","issue-pill"+(issue&&issue.state==="CLOSED"?" closed":"")),mark=statusMark(word);
- a.href="https://github.com/"+p.ghRepo+"/issues/"+n;a.target="_blank";a.rel="noopener";
+ a.href="https://github.com/"+repo+"/issues/"+n;a.target="_blank";a.rel="noopener";
  a.setAttribute("data-tip",why);a.setAttribute("aria-label",text+" — "+mark.lastChild.textContent+" — "+why);
  a.appendChild(mark);a.appendChild(el("span","issue-text data",text));return a;
 }
@@ -546,16 +551,17 @@ function chartLoad(programs){
 }
 function chartMilestones(s,program){
  var d=s.milestones||[],rows=d.map(function(m){return [m.title,m.due||STR.none,m.open,m.closed,m.closureRate==null?STR.none:m.closureRate+"%"];});
- return chart(STR.milestoneChart,snapshotProv(program),[STR.milestone,STR.due,STR.open,STR.closed,STR.closure],rows,function(svg,w,h){
+ var p=chart(STR.milestoneChart,snapshotProv(program),[STR.milestone,STR.due,STR.open,STR.closed,STR.closure],rows,function(svg,w,h){
   barsH(svg,w,h,d.map(function(m){
    return {name:m.title,total:m.open+m.closed,parts:[{v:m.closed,cls:"mark-series2"},{v:m.open,cls:"mark-accent"}],
            tip:fmt(STR.tipMilestone,{name:m.title,open:m.open,closed:m.closed})};
   }),{gutter:200});
  });
+ if(program.issuesSnapshot.collection.milestonesComplete===false)markState(p,"unknown",STR.milestoneIncomplete);return p;
 }
 function chartHistory(history,program){
  var d=(history&&history.points)||[],rows=d.map(function(p){return [p.at,p.open,p.closed,p.created];});
- return chart(STR.historyChart,fmt(STR.provHistory,{n:history?history.counted:0}),[STR.date,STR.open,STR.closed,STR.total],rows,function(svg,w,h){
+ var p=chart(STR.historyChart,fmt(STR.provHistory,{n:history?history.counted:0}),[STR.date,STR.open,STR.closed,STR.total],rows,function(svg,w,h){
   if(d.length<2){empty(svg,w,h);return;}
   var x0=34,y0=6,pw=w-x0-10,ph=h-y0-20,max=1,i,po="",pc="";
   for(i=0;i<d.length;i++)max=Math.max(max,d[i].created);
@@ -572,7 +578,7 @@ function chartHistory(history,program){
   svg.appendChild(svgEl("path",{d:pc,"class":"line-series2"}));
   svg.appendChild(svgEl("path",{d:po,"class":"area-line"}));
   label(svg,x0,h-4,d[0].at,"start");label(svg,x0+pw,h-4,d[d.length-1].at,"end");
- },"span2");
+ },"span2");if(history&&history.unplaceable)p.body.appendChild(el("p","muted",fmt(STR.historyUnplaceable,{n:history.unplaceable})));return p;
 }
 function chartLanding(s,program){
  var found=null,i;for(i=0;i<ROOM.portfolio.landing.length;i++)if(ROOM.portfolio.landing[i].program===s.id)found=ROOM.portfolio.landing[i];
@@ -680,6 +686,74 @@ function rowsPanel(p,items,render,emptyText){
  if(!items.length){p.body.appendChild(el("p","muted",emptyText));return p;}
  pagedList(p.body,items,render);return p;
 }
+function markState(node,state,reason){
+ var labels={unknown:STR.stateUnknown,empty:STR.stateEmpty,present:STR.statePresent,stale:STR.stateStale};
+ node.setAttribute("data-state",state);if(node.head)node.head.appendChild(el("span","state-chip",labels[state]||state));
+ if(reason&&node.body)node.body.appendChild(el("p","muted",reason));return node;
+}
+function markView(view,state){
+ var labels={unknown:STR.stateUnknown,empty:STR.stateEmpty,present:STR.statePresent,stale:STR.stateStale},line=el("p","view-state");
+ view.setAttribute("data-state",state);line.appendChild(el("span","state-chip",labels[state]||state));view.appendChild(line);return view;
+}
+function filteredList(target,items,render){
+ var filter=el("div","list-filter"),input=document.createElement("input"),results=el("div"),print=el("div","print-only"),i;
+ input.type="search";input.maxLength=120;input.placeholder=STR.filterPlaceholder;input.setAttribute("aria-label",STR.filterLabel);
+ function draw(){
+  var q=input.value.toLowerCase().trim(),shown=q?items.filter(function(item){return String(item.search||"").toLowerCase().indexOf(q)!==-1;}):items;
+  results.textContent="";if(shown.length)pagedList(results,shown,render);else results.appendChild(el("p","muted",STR.filterNone));
+ }
+ input.addEventListener("input",draw);filter.appendChild(input);target.appendChild(filter);target.appendChild(results);
+ for(i=0;i<Math.min(items.length,12);i++){var printable=render(items[i]);if(printable.tagName==="DETAILS")printable.open=true;print.appendChild(printable);}if(items.length>12)print.appendChild(el("p","muted",fmt(STR.printOmitted,{n:items.length-12})));target.appendChild(print);draw();
+}
+var EDGE_QUOTE_MAX=320,EDGE_LIST_MAX=8;
+function verdictMark(verdict){var v=String(verdict||"").toUpperCase();return /^(PROVEN|PASS|OK)$/.test(v)?"ok":(/^(STALE|WARN|WARNING)$/.test(v)?"warn":(/^(UNCOVERED|FAIL|BAD)$/.test(v)?"bad":null));}
+function capabilityPanel(programs){
+ var declared=false,items=[],skipped=0,duplicates=0,missing=[],i,j;
+ for(i=0;i<programs.length;i++){
+  var c=programs[i].derived&&programs[i].derived.capabilities;
+  if(!c){missing.push(programs[i].id);continue;}declared=true;skipped+=c.skipped.length;duplicates+=c.duplicates.length;
+  for(j=0;j<c.rows.length;j++)items.push({program:programs[i],row:c.rows[j],search:[programs[i].id,c.rows[j].id,c.rows[j].capability,c.rows[j].originalStatus,c.rows[j].openIssues.join(" ")].join(" ")});
+ }
+ items.sort(function(a,b){var left=String(a.row.id),right=String(b.row.id);return b.row.blockers.length-a.row.blockers.length||b.row.openIssues.length-a.row.openIssues.length||(left<right?-1:left>right?1:0);});
+ var p=panel(STR.capabilities,fmt(STR.capabilityProv,{n:items.length,skipped:skipped,duplicates:duplicates}),"full cap-ledger");
+ if(!declared)return markState(p,"unknown",STR.capabilityUnknown);
+ if(!items.length)return markState(p,"empty",STR.capabilityEmpty);
+ markState(p,missing.length?"unknown":"present",missing.length?fmt(STR.missingPrograms,{programs:missing.join(", ")}):null);
+ filteredList(p.body,items,function(item){
+  var program=item.program,row=item.row,d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),dl=el("dl","detail"),cell,k,edge,proof;
+  meta.appendChild(el("span","chip",row.originalStatus));
+  if(programs.length>1)meta.appendChild(el("span","chip",program.id));
+  s.appendChild(el("span","ref",row.id||"—"));s.appendChild(meta);s.appendChild(el("span","row-title",row.capability));d.appendChild(s);
+  pair(dl,STR.capabilityState,row.originalStatus+(row.status&&row.status!=="unknown"?" → "+row.status:""));
+  cell=el("span","links");for(k=0;k<row.openIssues.length;k++){cell.appendChild(pill(program,row.openIssues[k]));cell.appendChild(document.createTextNode(" "));}if(!row.openIssues.length)cell.appendChild(el("span","muted",STR.none));pair(dl,STR.capabilityOpenIssues,cell);
+  cell=el("span","links");
+  for(k=0;k<Math.min(row.blockers.length,EDGE_LIST_MAX);k++){edge=row.blockers[k];cell.appendChild(pill(program,edge.to.number,edge.to.repo+"#"+edge.to.number,edge.to));cell.appendChild(document.createTextNode(" "));}
+  if(row.blockers.length>EDGE_LIST_MAX)cell.appendChild(el("span","muted",fmt(STR.moreEdges,{n:row.blockers.length-EDGE_LIST_MAX})));
+  if(!cell.childNodes.length)cell.appendChild(el("span","muted",program.derived.dependencies&&!program.derived.dependencies.complete?STR.dependencyUnknown:STR.none));pair(dl,STR.capabilityBlockedBy,cell);
+  cell=el("span");
+  for(k=0;k<Math.min(row.blockers.length,EDGE_LIST_MAX);k++){edge=row.blockers[k];cell.appendChild(el("div","",edge.quote?short(edge.quote,EDGE_QUOTE_MAX):fmt(STR.dependencyFact,{source:edge.source,line:edge.line||"—"})));}
+  if(!cell.childNodes.length)cell.appendChild(el("span","muted",STR.none));pair(dl,STR.why,cell);
+  cell=el("span");
+  for(k=0;k<Math.min(row.verification.length,EDGE_LIST_MAX);k++){proof=row.verification[k];var pr=el("div","row-meta");pr.appendChild(statusMark(verdictMark(proof.verdict)));pr.appendChild(el("span","data",proof.verdict));pr.appendChild(document.createTextNode(" "+(proof.requirement||proof.test||STR.none)));cell.appendChild(pr);}
+  if(row.verification.length>EDGE_LIST_MAX)cell.appendChild(el("span","muted",fmt(STR.moreEvidence,{n:row.verification.length-EDGE_LIST_MAX})));
+  if(!cell.childNodes.length)cell.appendChild(el("span","muted",STR.none));pair(dl,STR.capabilityProof,cell);
+  if(row.release)pair(dl,STR.capabilityRelease,row.release);
+  pair(dl,STR.capabilitySource,docLink(program,row.source.path,row.source.line));d.appendChild(dl);return d;
+ });
+ return p;
+}
+function changedPanel(programs){
+ var items=[],missing=[],unplaceable=0,i;
+ for(i=0;i<programs.length;i++){
+  var history=programs[i].derived&&programs[i].derived.history,points=history&&history.points||[];
+  if(points.length){var first=points[0],last=points[points.length-1];items.push({id:programs[i].id,from:first.at,to:last.at,opened:last.created-first.created,closed:last.closed-first.closed});}else{missing.push(programs[i].id);unplaceable+=history&&history.unplaceable||0;}
+ }
+ var p=panel(STR.changed,STR.changedProv,"full");
+ if(!items.length)return markState(p,"unknown",unplaceable?fmt(STR.historyUnplaceable,{n:unplaceable}):STR.historyMissing);
+ markState(p,missing.length?"unknown":"present",missing.length?fmt(STR.missingPrograms,{programs:missing.join(", ")}):null);var list=el("dl","kpis");
+ for(i=0;i<items.length;i++){var item=items[i];kpi(list,items.length>1?item.id+" · "+STR.changedOpened:STR.changedOpened,item.opened,item.from+" → "+item.to);kpi(list,items.length>1?item.id+" · "+STR.changedClosed:STR.changedClosed,item.closed);}
+ p.body.appendChild(list);return p;
+}
 
 
 /* A restrained markdown renderer. The reader was handing a client the source: literal `#`, `**`
@@ -687,13 +761,17 @@ function rowsPanel(p,items,render,emptyText){
    links, list items, pipe tables, block quotes — and falls back to the literal line for anything
    else rather than guessing. Every node is built with textContent, never innerHTML: repository
    prose is attacker-adjacent input and never becomes markup (I14). */
-function inline(target,text){
- var re=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,last=0,m;
+function inline(target,text,program){
+ var re=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\)|#\d+\b)/g,last=0,m;
  while((m=re.exec(text))!==null){
   if(m.index>last)target.appendChild(document.createTextNode(text.slice(last,m.index)));
   var tok=m[0];
-  if(tok.charAt(0)==="*")target.appendChild(el("strong","",tok.slice(2,-2)));
+  if(tok.charAt(0)==="*")inline(target.appendChild(el("strong")),tok.slice(2,-2),program);
   else if(tok.charAt(0)==="`")target.appendChild(el("code","md-code",tok.slice(1,-1)));
+  else if(tok.charAt(0)==="#"){
+   var issueNumber=Number(tok.slice(1)),known=program&&program.issuesSnapshot.issues.some(function(issue){return issue.n===issueNumber;});
+   target.appendChild(known?pill(program,issueNumber):document.createTextNode(tok));
+  }
   else{
    // A link target read out of repository prose is attacker-adjacent input (I14), and assigning it
    // to .href unchecked makes `[read me](javascript:...)` a live XSS in a document somebody else
@@ -716,7 +794,7 @@ function inline(target,text){
    its own `#` is an h3: emitting <h1> would put a second top-level heading on a page that already
    has one, and a screen reader's heading list would read as two documents. */
 function mdHeading(level){return "h"+Math.min(level+2,6);}
-function renderMarkdown(src){
+function renderMarkdown(src,program){
  /* EVERY line terminator, not just CRLF. In JavaScript `.` and `$` exclude `\r`, U+2028 and
     U+2029, so a lone CR or a Unicode line separator inside a document made the unanchored list
     DETECTOR match a line the `$`-anchored CONSUMER could not, `i` never advanced, and the outer
@@ -727,7 +805,7 @@ function renderMarkdown(src){
  var out=el("div","md"),lines=String(src).replace(/\r\n?|\u2028|\u2029/g,"\n").split("\n"),i=0,para=[];
  function flush(){
   if(!para.length)return;
-  inline(out.appendChild(el("p","")),para.join(" "));
+  inline(out.appendChild(el("p","")),para.join(" "),program);
   para=[];
  }
  /* Consecutive item lines become ONE list element. Emitting a <div> per item looked identical and
@@ -760,7 +838,7 @@ function renderMarkdown(src){
     i++;n++;continue;
    }
    lastLi=el("li","md-li","");
-   inline(lastLi,m[tag==="ol"?2:1]);box.appendChild(lastLi);i++;n++;
+   inline(lastLi,m[tag==="ol"?2:1],program);box.appendChild(lastLi);i++;n++;
   }
   // Belt and braces: the caller decided this line starts a list using a DIFFERENT pattern from the
   // one above. If the two ever disagree again, consume the line as prose rather than spin — a
@@ -771,7 +849,7 @@ function renderMarkdown(src){
  while(i<lines.length){
   var ln=lines[i],h=/^(#{1,6})\s+(.*)$/.exec(ln);
   if(/^\s*$/.test(ln)){flush();i++;continue;}
-  if(h){flush();inline(out.appendChild(el(mdHeading(h[1].length),"md-h md-h"+h[1].length,"")),h[2]);i++;continue;}
+  if(h){flush();inline(out.appendChild(el(mdHeading(h[1].length),"md-h md-h"+h[1].length,"")),h[2],program);i++;continue;}
   if(/^```/.test(ln)){
    flush();var buf=[];i++;
    while(i<lines.length&&!/^```/.test(lines[i]))buf.push(lines[i++]);
@@ -787,9 +865,9 @@ function renderMarkdown(src){
    }
    if(rows.length){
     var t=el("table","md-table"),th=el("thead"),htr=el("tr"),tb=el("tbody"),c;
-    for(c=0;c<rows[0].length;c++){var hc=el("th");hc.setAttribute("scope","col");inline(hc,rows[0][c]);htr.appendChild(hc);}
+    for(c=0;c<rows[0].length;c++){var hc=el("th");hc.setAttribute("scope","col");inline(hc,rows[0][c],program);htr.appendChild(hc);}
     th.appendChild(htr);t.appendChild(th);
-    for(var r=1;r<rows.length;r++){var tr=el("tr");for(c=0;c<rows[r].length;c++)inline(tr.appendChild(el("td")),rows[r][c]);tb.appendChild(tr);}
+    for(var r=1;r<rows.length;r++){var tr=el("tr");for(c=0;c<rows[r].length;c++)inline(tr.appendChild(el("td")),rows[r][c],program);tb.appendChild(tr);}
     t.appendChild(tb);out.appendChild(t);
    }
    continue;
@@ -802,7 +880,7 @@ function renderMarkdown(src){
   var q=/^>\s?(.*)$/.exec(ln);
   if(q){
    flush();var qb=el("blockquote","md-q");
-   while(i<lines.length&&(q=/^>\s?(.*)$/.exec(lines[i]))!==null){inline(qb.appendChild(el("p","")),q[1]);i++;}
+   while(i<lines.length&&(q=/^>\s?(.*)$/.exec(lines[i]))!==null){inline(qb.appendChild(el("p","")),q[1],program);i++;}
    out.appendChild(qb);continue;
   }
   if(/^---+$/.test(ln)){flush();out.appendChild(el("hr","md-hr"));i++;continue;}
@@ -814,6 +892,7 @@ function renderMarkdown(src){
 
 /* --------------------------------- views --------------------------------- */
 function viewPortfolio(view){
+ markView(view,ROOM.programs.length?"present":"empty");
  var t=ROOM.portfolio.totals;
  var blockedClaim=claimOf(t,"blocked",t.blocked,t.unknownRule===0);
  var answer=el("div","answer"),lead=el("section","panel answer-lead");
@@ -829,11 +908,13 @@ function viewPortfolio(view){
  if(quiet)lead.appendChild(el("p","lede",fmt(STR.thesisQuietLede,{closed:t.closed})));
  lead.appendChild(el("p","lede",fmt(STR.generated,{source:ROOM.meta.generatedFrom,date:ROOM.meta.today})));
  answer.appendChild(lead);
- answer.appendChild(chartClosedOpen(t));
- answer.appendChild(chartLoad(ROOM.portfolio.programs));
+ answer.appendChild(capabilityPanel(ROOM.programs));
+ answer.appendChild(changedPanel(ROOM.programs));
  view.appendChild(answer);
 
  var ev=el("div","evidence");
+ ev.appendChild(chartClosedOpen(t));
+ ev.appendChild(chartLoad(ROOM.portfolio.programs));
  ev.appendChild(rowsPanel(panel(STR.now,blockedClaim.known?fmt(plural(t.blocked,STR.provBlockedOne,STR.provBlocked),{n:t.blocked}):STR.provBlockedUnknown,"span2"),ROOM.portfolio.blocked||[],blockedRow,blockedClaim.known?STR.noBlocked:STR.ruleUnknown));
 
  var movingUnknown=ROOM.portfolio.moving.some(function(item){return item.count==null;});
@@ -881,24 +962,23 @@ function kpi(list,k,v,note){
 }
 function viewExec(view,program,summary){
  var k=program.derived.kpis,rtm=program.derived.rtm,history=program.derived.history;
+ markView(view,program.derived.health&&program.derived.health.staleCount?"stale":"present");
  var blockedClaim=claimOf(summary,"blocked",summary.blocked,summary.blockedRule.declared);
  var answer=el("div","answer"),lead=el("section","panel answer-lead");
  lead.appendChild(el("p","thesis",blockedClaim.known?fmt(STR.execHeadline,{open:summary.open,blocked:blockedClaim.value}):fmt(STR.execHeadlineUnknown,{open:summary.open})));
  lead.appendChild(el("p","lede",snapshotProv(program)));
  answer.appendChild(lead);
 
- var kp=panel(STR.kpiHeading,STR.provDerived,"span2"),list=el("dl","kpis");
- kpi(list,STR.kpiOpen,k.openCount);
- kpi(list,STR.kpiBlocked,blockedClaim.known?blockedClaim.value:null,blockedClaim.known?null:STR.ruleUnknown);
- kpi(list,STR.kpiNoMilestone,k.noMilestoneCount);
- kpi(list,STR.kpiLinked,k.linkCoveragePct==null?null:k.linkCoveragePct+"%",k.linkCoveragePct==null?STR.notMeasured:STR.kpiLinkedNote);
- kpi(list,STR.kpiRequirements,rtm&&rtm.coverage.pct!=null?rtm.coverage.pct+"%":null,
-     rtm?fmt(STR.planCoverageNote,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements,withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly}):STR.notMeasured);
- kp.body.appendChild(list);
- answer.appendChild(kp);
+ answer.appendChild(capabilityPanel([program]));
+ answer.appendChild(changedPanel([program]));
  view.appendChild(answer);
 
  var ev=el("div","evidence");
+ var kp=panel(STR.kpiHeading,STR.provDerived,"span2"),list=el("dl","kpis");
+ kpi(list,STR.kpiOpen,k.openCount);kpi(list,STR.kpiBlocked,blockedClaim.known?blockedClaim.value:null,blockedClaim.known?null:STR.ruleUnknown);kpi(list,STR.kpiNoMilestone,k.noMilestoneCount);
+ kpi(list,STR.kpiLinked,k.linkCoveragePct==null?null:k.linkCoveragePct+"%",k.linkCoveragePct==null?STR.notMeasured:STR.kpiLinkedNote);
+ kpi(list,STR.kpiRequirements,rtm&&rtm.coverage.pct!=null?rtm.coverage.pct+"%":null,rtm?fmt(STR.planCoverageNote,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements,withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly}):STR.notMeasured);
+ kp.body.appendChild(list);ev.appendChild(kp);
  if(history)ev.appendChild(chartHistory(history,program));
  else{var hp=panel(STR.historyChart,STR.provDerived,"span2");hp.body.appendChild(el("p","muted",STR.historyMissing));ev.appendChild(hp);}
  ev.appendChild(chartMilestones(summary,program));
@@ -908,7 +988,49 @@ function viewExec(view,program,summary){
  view.appendChild(ev);
 }
 
+function githubLink(url,label){
+ if(/^https:\/\/github\.com\//.test(String(url||""))){var a=el("a","data",label);a.href=url;a.target="_blank";a.rel="noopener noreferrer";return a;}
+ return el("span","data",label);
+}
+function signalsPanel(program){
+ var signals=program.issuesSnapshot.signals||{workflows:{},release:{listState:"unknown",reason:STR.signalNotDeclared}},keys=Object.keys(signals.workflows||{}).sort(),release=signals.release||{},unknown=0,i;
+ var p=panel(STR.repoSignals,STR.signalProv,"span2"),rows=el("div","stack");
+ for(i=0;i<keys.length;i++)if(signals.workflows[keys[i]].state==="unknown")unknown++;
+ if(release.listState==="unknown"&&!/not declared/i.test(release.reason||""))unknown++;
+ if(!keys.length&&release.listState==="unknown"&&/not declared/i.test(release.reason||""))markState(p,"empty",STR.signalNotDeclared);
+ else markState(p,unknown?"unknown":"present",unknown?STR.signalUnknown:null);
+ for(i=0;i<keys.length;i++){
+  var id=keys[i],signal=signals.workflows[id],row=el("div","kv"),left=el("span","row-meta"),right=el("span","row-meta"),mark=signal.state==="unknown"?"unknown":(signal.conclusion==="success"?"ok":(/^(failure|cancelled|timed_out)$/.test(signal.conclusion||"")?"bad":"warn"));
+  left.appendChild(statusMark(mark));left.appendChild(el("span","ref",id));left.appendChild(el("span","state-chip",signal.state==="present"?STR.statePresent:STR.stateUnknown));
+  if(signal.state==="present"){right.appendChild(el("span","chip",signal.headBranch+" · "+signal.event));right.appendChild(githubLink(signal.url,signal.conclusion||signal.status));}
+  else right.appendChild(el("span","muted",short(signal.reason,EDGE_QUOTE_MAX)));
+  row.appendChild(left);row.appendChild(right);rows.appendChild(row);
+ }
+ var rr=el("div","kv"),rl=el("span","row-meta"),rv=el("span","row-meta"),present=release.listState==="present";
+ rl.appendChild(statusMark(present?"ok":(/not declared/i.test(release.reason||"")?"empty":"unknown")));rl.appendChild(el("span","ref",STR.release));rl.appendChild(el("span","state-chip",present?STR.statePresent:(/not declared/i.test(release.reason||"")?STR.stateEmpty:STR.stateUnknown)));
+ if(present)rv.appendChild(githubLink(release.url,release.tag));else rv.appendChild(el("span","muted",short(release.reason,EDGE_QUOTE_MAX)));
+ rr.appendChild(rl);rr.appendChild(rv);rows.appendChild(rr);p.body.appendChild(rows);return p;
+}
+
+function gateReason(reason){var reasons={"no-enforcement-claim":STR.docGateNoClaim,"prose-only":STR.docGateProseOnly,"registry-not-mapped":STR.docGateNoRegistry,"wiring-missing":STR.docGateUnregistered,wired:STR.docGateWired,"input-error":STR.docGateInputError,mismatch:STR.docGateMismatch,"target-unresolved":STR.docGateTargetMissing,"pointer-unresolved":STR.docGatePointerMissing,"target-non-scalar":STR.docGateTargetNonScalar,"capture-unresolved":STR.docGateCaptureMissing,"source-untracked":STR.docGateInputError,"git-unavailable":STR.docGateInputError,"read-error":STR.docGateInputError,"pattern-invalid":STR.docGateInputError,ambiguous:STR.docGateAmbiguous,"not-found":STR.docGateClaimMissing,"target-unreadable":STR.docGateInputError,"type-unsupported":STR.docGateInputError};return reasons[reason]||reason;}
+function freshnessText(signal){if(signal.reason==="date-invalid")return STR.docFreshnessInvalid;if(signal.reason==="date-future")return STR.docFreshnessFuture;if(!signal.at)return STR.docFreshnessUnknown;return fmt(STR.docFreshnessAge,{date:signal.at,days:signal.ageDays,limit:signal.staleAfterDays});}
+function documentGatePanel(program){
+ var gate=program.derived.documentGate;if(!gate)return null;
+ var total=gate.rows.length,p=panel(STR.docGate,fmt(STR.docGateProv,{n:total}),"span2"),items=gate.rows.slice(),claims=gate.claims||[],i;
+ markState(p,gate.errors.length?"unknown":(gate.summary.stale?"stale":((total||claims.length)?"present":"empty")),gate.errors.length?STR.docGateInputError:(gate.summary.stale?fmt(STR.docGateStale,{n:gate.summary.stale}):null));
+ if(items.length)pagedList(p.body,items,function(f){
+  var d=el("details"),s=el("summary","row-head"),dl=el("dl","detail"),match=/^(.*):(\d+)$/.exec(f.evidence.ref),path=match?match[1]:f.evidence.ref,line=match?Number(match[2]):null;
+  s.appendChild(statusMark(f.severity));s.appendChild(el("span","ref",f.invariant||f.id));s.appendChild(el("span","row-title",short(f.heading,EDGE_QUOTE_MAX)));d.appendChild(s);
+  pair(dl,STR.verdictLabel,gateReason(f.reason));pair(dl,STR.evidence,docLink(program,path,line));pair(dl,STR.docGateTokens,chips(f.tokens));pair(dl,STR.docGateMeasured,chips(f.matched));d.appendChild(dl);return d;
+ });else p.body.appendChild(el("p","muted",STR.docGateEmpty));
+ if(claims.length){var claimList=el("div","stack");claimList.appendChild(el("h3","",STR.docGateClaims));for(i=0;i<claims.length;i++){var claim=claims[i],claimRow=el("div","kv"),claimLeft=el("span","row-meta"),claimRight=el("span","row-meta"),claimMatch=/^(.*):(\d+)$/.exec(claim.evidence.ref);claimLeft.appendChild(statusMark(claim.verdict));claimLeft.appendChild(el("span","ref",claim.id));claimLeft.appendChild(docLink(program,claimMatch?claimMatch[1]:claim.evidence.ref,claimMatch?Number(claimMatch[2]):null));claimRight.appendChild(el("span","muted",STR.docGateWritten+": "+String(claim.value)));claimRight.appendChild(el("span","muted",STR.docGateMeasured+": "+String(claim.measured)));if(claim.reason)claimRight.appendChild(el("span","muted",gateReason(claim.reason)));claimRow.appendChild(claimLeft);claimRow.appendChild(claimRight);claimList.appendChild(claimRow);}p.body.appendChild(claimList);}
+ for(i=0;i<gate.errors.length;i++)p.body.appendChild(el("p","muted",STR.docGateInputError+" — "+(gate.errors[i].path||"git")+": "+gate.errors[i].reason));
+ if(gate.freshness.length){var freshness=el("div","stack");freshness.appendChild(el("h3","",STR.docFreshness));for(i=0;i<gate.freshness.length;i++){var signal=gate.freshness[i],row=el("div","kv"),left=el("span","row-meta");left.appendChild(statusMark(signal.verdict));left.appendChild(docLink(program,signal.path));row.appendChild(left);row.appendChild(el("span","muted",freshnessText(signal)));freshness.appendChild(row);}p.body.appendChild(freshness);}
+ return p;
+}
+
 function viewTech(view,program,summary){
+ markView(view,program.derived.health&&program.derived.health.staleCount?"stale":"present");
  var mine=(ROOM.portfolio.blocked||[]).filter(function(b){return b.program===program.id;});
  var blockedClaim=claimOf(summary,"blocked",summary.blocked,summary.blockedRule.declared);
  var answer=el("div","answer"),lead=el("section","panel answer-lead");
@@ -921,12 +1043,13 @@ var i,j;
  for(i=1;i<names.length;i++)openTotal+=(buckets[names[i][0]]||[]).length;
 
  var bp=panel(STR.techBuckets,fmt(STR.provBuckets,{closed:(buckets.chiuse||[]).length,open:openTotal}),"span2"),bl=el("dl","kpis");
- for(i=0;i<names.length;i++)kpi(bl,names[i][1],i===4&&!blockedClaim.known?null:(buckets[names[i][0]]||[]).length,i===0?STR.bucketClosedNote:(i===4&&!blockedClaim.known?STR.ruleUnknown:null));
+ for(i=0;i<names.length;i++){var known=names[i][0]!=="aspettano-umano"||program.derived.kanbanHumanDeclared;kpi(bl,names[i][1],known?(buckets[names[i][0]]||[]).length:null,i===0?STR.bucketClosedNote:(known?null:STR.ruleUnknown));}
  bp.body.appendChild(bl);answer.appendChild(bp);
  view.appendChild(answer);
 
  var ev=el("div","evidence");
  ev.appendChild(rowsPanel(panel(STR.techBlocked,blockedClaim.known?fmt(plural(mine.length,STR.provBlockedOne,STR.provBlocked),{n:mine.length}):STR.provBlockedUnknown,"span2"),mine,blockedRow,blockedClaim.known?STR.noBlockedHere:STR.ruleUnknown));
+ ev.appendChild(signalsPanel(program));
 
  var findings=(program.findings&&program.findings.findings)||[];
  ev.appendChild(rowsPanel(panel(STR.techFindings,STR.provAudit),findings,function(f){
@@ -965,25 +1088,24 @@ function workflow(program,title,fill){
  return d;
 }
 function renderKanban(target,program){
- var buckets=program.derived.kanban,names=[["chiuse",STR.bucketChiuse],["sane",STR.bucketSane],["a-meta",STR.bucketAMeta],["premessa-falsa",STR.bucketPremessaFalsa],["aspettano-umano",STR.bucketAspettanoUmano],["non-auditate",STR.bucketNonAuditate]];
- var issues={},board=el("div","kanban-board"),i,j,n,lane,rows,items=[],closed=(buckets.chiuse||[]).length;
+ var buckets=program.derived.kanban,names=[["premessa-falsa",STR.bucketPremessaFalsa],["aspettano-umano",STR.bucketAspettanoUmano],["a-meta",STR.bucketAMeta],["sane",STR.bucketSane],["non-auditate",STR.bucketNonAuditate]];
+ var issues={},board=el("div","kanban-board"),i;
  for(i=0;i<program.issuesSnapshot.issues.length;i++)issues[program.issuesSnapshot.issues[i].n]=program.issuesSnapshot.issues[i];
- if(closed)target.appendChild(el("p","muted",fmt(STR.closedArchived,{n:closed})));
- for(i=1;i<names.length;i++){
-  rows=buckets[names[i][0]]||[];
-  for(j=0;j<rows.length;j++)items.push({n:rows[j],state:names[i][1]});
+ var total=program.issuesSnapshot.issues.length,lane=panel(STR.routeKanban,fmt(STR.kanbanCount,{n:total}));markState(lane,total?"present":"empty");
+ var filter=el("div","list-filter"),input=document.createElement("input"),lanes=el("div","stack");input.type="search";input.maxLength=120;input.placeholder=STR.filterPlaceholder;input.setAttribute("aria-label",STR.filterLabel);filter.appendChild(input);lane.body.appendChild(filter);lane.body.appendChild(lanes);
+ function draw(){
+  var q=input.value.toLowerCase().trim(),all=names.concat([["chiuse",STR.bucketChiuse]]),j;
+  lanes.textContent="";
+  for(j=0;j<all.length;j++){
+   var key=all[j][0],labelText=all[j][1],source=buckets[key]||[],rows=source.filter(function(n){return !q||("#"+n+" "+(issues[n]&&issues[n].title||"")+" "+labelText).toLowerCase().indexOf(q)!==-1;}),d=el("details","kanban-lane"),s=el("summary","row-head"),body=el("div");
+   var known=key!=="aspettano-umano"||program.derived.kanbanHumanDeclared;if(key!=="chiuse")d.open=true;s.appendChild(el("span","ref",labelText));s.appendChild(el("span","state-chip",known?(source.length?STR.statePresent:STR.stateEmpty):STR.stateUnknown));s.appendChild(el("span","tally",known?rows.length:"—"));d.appendChild(s);
+   if(rows.length)pagedList(body,rows,function(n){var item=el("div","kanban-issue");item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,58):"")));return item;});else body.appendChild(el("p","muted",q?STR.filterNone:(known?(key==="aspettano-umano"?STR.bucketHumanEmpty:STR.bucketEmpty):STR.ruleUnknown)));
+   d.appendChild(body);lanes.appendChild(d);
+  }
  }
- if(items.length){
-  lane=panel(STR.routeKanban,fmt(STR.kanbanCount,{n:items.length}));
-  pagedList(lane.body,items,function(entry){
-   var item=el("div","kanban-issue"),meta=el("span","chip",entry.state);n=entry.n;
-   item.appendChild(meta);item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,58):"")));return item;
-  });
-  board.appendChild(lane);
- }else board.appendChild(el("p","muted",STR.queueComplete));
+ input.addEventListener("input",draw);draw();board.appendChild(lane);
  target.appendChild(board);
 }
-function queueCommand(p,n){return "gh issue view "+n+" --repo "+p.ghRepo;}
 function commandLine(command){
  var row=el("div","queue-command"),code=el("code","data",command),button=el("button","toggle",STR.copyCommand);
  button.type="button";button.setAttribute("aria-label",STR.copyCommand);
@@ -995,21 +1117,22 @@ function commandLine(command){
  row.appendChild(code);row.appendChild(button);return row;
 }
 function renderQueue(target,program){
- var queue=program.derived.queue,issues={},board=el("div","queue-board"),i,j,n,lane,item,name,items=[];
- for(i=0;i<program.issuesSnapshot.issues.length;i++)issues[program.issuesSnapshot.issues[i].n]=program.issuesSnapshot.issues[i];
- for(i=0;i<queue.clusters.length;i++){
-  name=queue.clusters[i].key==="altro"||queue.clusters[i].key==="tutte"?STR.queueRest:queue.clusters[i].key;
-  for(j=0;j<queue.clusters[i].issues.length;j++)items.push({n:queue.clusters[i].issues[j],cluster:name});
- }
+ var blocks=program.derived.blocks||[],board=el("div","queue-board"),i,items=[];
+ for(i=0;i<blocks.length;i++){var block=blocks[i];items.push({block:block,search:[block.t,block.ms,JSON.stringify(block.note),JSON.stringify(block.why)].concat(block.iss.map(function(issue){return "#"+issue[0]+" "+issue[1];})).join(" ")});}
  if(items.length){
-  lane=panel(STR.routeQueue,fmt(STR.queueCount,{n:items.length}));
-  pagedList(lane.body,items,function(entry){
-   n=entry.n;item=el("div","queue-item");item.appendChild(el("span","chip",entry.cluster));
-   item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,64):"")));
-   item.appendChild(commandLine(queueCommand(program,n)));return item;
+  var lane=panel(STR.routeQueue,fmt(STR.blockCount,{n:items.length}));markState(lane,"present");
+  filteredList(lane.body,items,function(entry){
+   var block=entry.block,item=el("div","queue-item"),head=el("div","row-meta"),links=el("div","links"),j;
+   head.appendChild(el("span","chip",block.t));if(block.ms)head.appendChild(el("span","chip",block.ms));head.appendChild(el("span","ref",fmt(STR.blockIssues,{n:block.iss.length})));item.appendChild(head);
+   for(j=0;j<block.iss.length;j++){links.appendChild(pill(program,block.iss[j][0],"#"+block.iss[j][0]+" "+short(block.iss[j][1],64)));links.appendChild(document.createTextNode(" "));}item.appendChild(links);
+   if(block.note&&block.note.labelled.length)item.appendChild(el("div","muted",fmt(STR.blockDeclaredLabels,{issues:block.note.labelled.map(function(n){return "#"+n;}).join(", ")})));
+   if(block.note&&block.note.external.length)item.appendChild(el("div","muted",fmt(STR.blockExternal,{issues:block.note.external.map(function(n){return "#"+n;}).join(", ")})));
+   for(j=0;j<Math.min(block.why.length,EDGE_LIST_MAX);j++)item.appendChild(el("div","muted",fmt(STR.blockDependency,{from:block.why[j].from.repo+"#"+block.why[j].from.number,to:block.why[j].to.repo+"#"+block.why[j].to.number})));
+   if(block.why.length>EDGE_LIST_MAX)item.appendChild(el("div","muted",fmt(STR.moreEdges,{n:block.why.length-EDGE_LIST_MAX})));
+   item.appendChild(block.auto&&block.cmd?commandLine(block.cmd):el("span","state-chip",STR.human));return item;
   });
   board.appendChild(lane);
- }else{lane=panel(STR.routeQueue,STR.queueComplete);lane.body.appendChild(el("p","muted",STR.noMoving));board.appendChild(lane);}
+ }else{var emptyLane=panel(STR.routeQueue,STR.queueComplete);markState(emptyLane,"empty",STR.noMoving);board.appendChild(emptyLane);}
  target.appendChild(board);
 }
 /* The architecture skin that matches the briefing's theme. `blueprint` IS the briefing's light
@@ -1029,6 +1152,7 @@ function frameDoc(program){
 }
 function viewMap(view,program){
  view.setAttribute("data-single","");
+ var drift=program.derived.commitDrift;markView(view,!program.model||!drift||!drift.resolvable?"unknown":(drift.commitsBehind?"stale":"present"));
  var ev=el("div","evidence"),date=String(program.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
  /* The staleness belongs HERE, not only 500px away on another view. This is the page most likely
     to be photographed into a deck, and it presented a snapshot ten commits behind HEAD as
@@ -1073,12 +1197,30 @@ function viewMap(view,program){
  view.appendChild(ev);
 }
 
+function milestoneRow(program,issues,m){
+ var d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),body=el("div"),numbers=[],i;
+ meta.appendChild(el("span","chip",fmt(STR.milestoneSummary,{open:m.open,closed:m.closed})));
+ if(m.due)meta.appendChild(el("span","muted",m.due));
+ s.appendChild(el("span","ref",m.closureRate==null?"—":m.closureRate+"%"));s.appendChild(meta);s.appendChild(el("span","row-title",m.title));d.appendChild(s);d.appendChild(body);
+ for(i=0;i<issues.length;i++)if(issues[i].ms===m.title)numbers.push(issues[i].n);
+ d.addEventListener("toggle",function(){if(d.open&&!d.getAttribute("data-filled")){d.setAttribute("data-filled","true");if(numbers.length)pagedList(body,numbers,function(n){var row=el("div","links");row.appendChild(pill(program,n));return row;});else body.appendChild(el("p","muted",STR.milestoneNoIssues));}});return d;
+}
+function milestonePanel(program){
+ var items=program.derived.milestones||[],collection=program.issuesSnapshot.collection||{},complete=collection.milestonesComplete!==false;
+ var p=panel(STR.milestones,fmt(STR.milestoneProv,{n:items.length}),"full"),issues=program.issuesSnapshot.issues||[];
+ if(!complete)markState(p,"unknown",STR.milestoneIncomplete);
+ else markState(p,items.length?"present":"empty",items.length?null:STR.milestoneEmpty);
+ if(items.length)pagedList(p.body,items,function(m){return milestoneRow(program,issues,m);});
+ return p;
+}
+
 function viewWbs(view,program){
  var rtm=program.derived.rtm,i,j;
+ markView(view,rtm?"present":"unknown");
  if(!rtm){
   view.setAttribute("data-single","");
   var missing=el("div","evidence"),missingPanel=panel(STR.routeWbs,STR.provRtm,"full");
-  emptyState(missingPanel,STR.wbsMissing,STR.wbsNext);missing.appendChild(missingPanel);view.appendChild(missing);return;
+  missing.appendChild(milestonePanel(program));emptyState(missingPanel,STR.wbsMissing,STR.wbsNext);missing.appendChild(missingPanel);view.appendChild(missing);return;
  }
  var answer=el("div","answer"),lead=el("section","panel answer-lead");
  lead.appendChild(el("p","thesis",rtm?fmt(STR.wbsHeadline,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements}):STR.wbsMissing));
@@ -1107,6 +1249,7 @@ function viewWbs(view,program){
  view.appendChild(answer);
 
  var ev=el("div","evidence");
+ ev.appendChild(milestonePanel(program));
  var mp=panel(STR.wbsMatrix,STR.provRtm,"span2");
  if(rtm){
   var wrap=el("div","tablewrap"),tb=el("table","matrix"),th=el("thead"),htr=el("tr"),tbody=el("tbody");
@@ -1163,8 +1306,11 @@ function viewDocs(view,program){
  view.setAttribute("data-single","");
  var docs=program.docs,ev=el("div","evidence");
  if(!docs||(!docs.embedded.length&&!docs.listed.length)){
+  markView(view,"unknown");
   var np=panel(STR.routeDocs,STR.provDocsNone,"full");emptyState(np,STR.docsNone,STR.docsNext);ev.appendChild(np);view.appendChild(ev);return;
  }
+ var documentGate=program.derived.documentGate;
+ markView(view,documentGate&&documentGate.errors.length?"unknown":(documentGate&&documentGate.summary.stale?"stale":"present"));
  var lp=panel(STR.docsCanon,fmt(STR.docsBudget,{n:docs.embedded.length}));
  var rp=panel("",STR.provDocsReader,"span2"),listWrap=el("div","doclist"),i;
  rp.head.className+=" doc-reader-head";
@@ -1186,7 +1332,7 @@ function viewDocs(view,program){
    // renderMarkdown lands its `#` at h3 in both places.
    all.appendChild(el("h2","md-h md-h1",docs.embedded[a].title||docs.embedded[a].path));
    all.appendChild(el("div","prov",docs.embedded[a].path));
-   all.appendChild(renderMarkdown(docBody(docs.embedded[a])));
+   all.appendChild(renderMarkdown(docBody(docs.embedded[a]),program));
   }
  };
  PRINT_FILL.push(all);
@@ -1195,7 +1341,7 @@ function viewDocs(view,program){
   var d=docs.embedded[idx],b;
   title.textContent=d.title||d.path;
   link.textContent="";link.appendChild(docLink(program,d.path,null,STR.docsOpen));
-  body.textContent="";body.appendChild(renderMarkdown(docBody(d)));
+  body.textContent="";body.appendChild(renderMarkdown(docBody(d),program));
   rp.body.scrollTop=0;
   announce(d.title||d.path);
   var btns=listWrap.querySelectorAll("button");
@@ -1222,13 +1368,14 @@ function viewDocs(view,program){
   }
   lp.body.appendChild(others);
  }
- ev.appendChild(lp);ev.appendChild(rp);
+ var documentPanel=documentGatePanel(program);if(documentPanel)ev.appendChild(documentPanel);ev.appendChild(lp);ev.appendChild(rp);
  view.appendChild(ev);
  if(docs.embedded.length)open(0);
 }
 
 function viewOptions(view){
  view.setAttribute("data-single","");
+ markView(view,"present");
  var ev=el("div","evidence"),i,j;
  var ip=panel(STR.optIncluded,fmt(STR.provOptions,{file:ROOM.meta.generatedFrom}),"span2");
  for(i=0;i<ROOM.programs.length;i++){

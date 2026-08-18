@@ -7,7 +7,8 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { materializeTimeline, validateModel } from '../lib/validate.mjs'
 import { indexByNode, statusFor, loadDocRows } from '../lib/docmap.mjs'
-import { daysBetween } from '../lib/roomderive.mjs'
+import { daysBetween, documentGate, deriveBlocks, deriveCapabilities, deriveDependencies, deriveHistory, deriveKanban, deriveKpis, deriveQueue } from '../lib/roomderive.mjs'
+import { loadDocs } from '../lib/roomdocs.mjs'
 import { deriveRtm } from '../lib/rtm.mjs'
 import { componentsFor } from '../lib/cluster.mjs'
 
@@ -587,6 +588,9 @@ const diffPaths = (a, b, at = '') => {
   const r = run(['doc', '--repo', REPO, '--model', model, '--out', out]); if (r.status !== 0) die('scaffold doc exit ' + r.status, r)
   const s = readFileSync(out, 'utf-8')
   if (!(s.includes('C4Context') && s.includes('| Container | Tech | Leaves') && s.includes('TODO(forma)'))) die('scaffold-regression: missing expected sections')
+  for (const key of ['title', 'doc_version', 'status', 'last_review', 'owner', 'canonical_id', 'tags', 'related']) {
+    if (!new RegExp('^' + key + ':', 'm').test(s)) die('scaffold-regression: generated frontmatter is missing ' + key)
+  }
   console.log('  ok scaffold — default forma doc unchanged')
 }
 
@@ -724,12 +728,35 @@ const diffPaths = (a, b, at = '') => {
     nodes: { [c1.id]: { issues: ['#7'], current: 'Was in progress.', statusWord: 'NEXT' }, [c2.id]: { issues: ['#8'], current: 'Still open.', statusWord: 'NEXT' } },
   }, null, 2))
   r = run(['gen', '--repo', repo, '--topology', topo, '--out', model]); if (r.status !== 0) die('verify gen exit ' + r.status, r)
-  const GH = process.execPath + ' ' + join(HERE, 'stub-gh.mjs')
+  const GH = process.execPath + ' ' + join(HERE, 'stub-gh.mjs') + ' multi'
+  const SIGNALS = ['--workflow', 'ci=.github/workflows/ci.yml', '--release']
   const openBefore = JSON.stringify(readJson(model).nodes.find((n) => n.id === c2.id))
-  r = run(['verify', '--repo', repo, '--model', model, '--gh-repo', 'acme/thing', '--gh-cmd', GH])
+  r = run(['verify', '--repo', repo, '--model', model, '--gh-repo', 'acme/thing', '--gh-cmd', GH, ...SIGNALS])
   if (r.status !== 0) die('WP-A5: verify exit ' + r.status, r)
   let v = readJson(model)
+  const snapshot = readJson(join(repo, 'docs/architecture/c4-issues.json'))
   const done = v.nodes.find((n) => n.id === c1.id), open = v.nodes.find((n) => n.id === c2.id)
+  if (snapshot.issues.map((it) => it.n).join() !== '7,8,9' || snapshot.collection.pagination !== 'gh api graphql --paginate --slurp') die('verify: GraphQL pagination did not publish both pages')
+  if (!Array.isArray(snapshot.milestones) || snapshot.milestones.map((milestone) => milestone.title).join() !== 'v1' || snapshot.collection.milestonesComplete !== false || !/zero issues/.test(snapshot.collection.milestonesReason)) die('verify: issue-derived milestones were changed or presented as complete')
+  const issueSchema = new URL('../lib/schema/c4-issues.schema.json', import.meta.url)
+  for (const field of ['milestonesComplete', 'milestonesReason']) {
+    const incomplete = JSON.parse(JSON.stringify(snapshot)); delete incomplete.collection[field]
+    if (!validateModel(incomplete, issueSchema).some((error) => error.includes(field))) die('verify schema: missing collection.' + field + ' was accepted')
+  }
+  const native = snapshot.dependencies.edges.find((edge) => edge.source === 'native' && edge.from.number === 8 && edge.to.number === 7)
+  const prose = snapshot.dependencies.edges.find((edge) => edge.source === 'prose' && edge.from.number === 9 && edge.to.number === 8)
+  if (!snapshot.dependencies.complete || !native || native.from.repo !== 'acme/thing' || !native.from.url || native.to.state !== 'CLOSED' || !prose || !prose.fingerprint || !/Depends on #8/.test(prose.quote)) die('verify: native dependency or prose candidate missing: ' + JSON.stringify(snapshot.dependencies))
+  if (snapshot.dependencies.edges.some((edge) => edge.from.number === 7 && edge.to.number === 8)) die('verify: naked "Related #8" became a dependency')
+  const { applyDependencyConfirmations } = await import(join(HERE, '..', 'lib/audit.mjs'))
+  const confirmed = applyDependencyConfirmations(repo, [], [{ fingerprint: prose.fingerprint, evidence: [{ type: 'issue', ref: '9' }] }], snapshot, { today: '2026-08-10' }).dependencyConfirmations
+  const confirmedDependencies = deriveDependencies(repo, snapshot, { dependencyConfirmations: confirmed })
+  if (!confirmedDependencies.edges.some((edge) => edge.source === 'prose' && edge.from.number === 9) || !confirmedDependencies.activeBlocked.includes(9)) die('verify: an evidence-gated prose confirmation did not activate its candidate')
+  const changedCandidate = JSON.parse(JSON.stringify(snapshot)); changedCandidate.dependencies.edges.find((edge) => edge.source === 'prose').fingerprint = '0'.repeat(64)
+  const staleDependencies = deriveDependencies(repo, changedCandidate, { dependencyConfirmations: confirmed })
+  if (staleDependencies.edges.some((edge) => edge.source === 'prose') || !staleDependencies.staleConfirmations.includes(prose.fingerprint)) die('verify: changed prose candidate kept an old confirmation active')
+  const ci = snapshot.signals.workflows.ci
+  if (!ci || ci.state !== 'present' || ci.headBranch !== 'main' || ci.event !== 'push') die('verify: workflow branch/event signal was not retained')
+  if (snapshot.signals.release.listState !== 'present' || !snapshot.signals.release.resolvableTag.sha) die('verify: resolvable release signal missing')
   // #43: this used to assert completion === 100, which encoded the defect rather than preventing
   // it — a closed issue justifies a VERDICT, never a percentage, and the number it wrote carried
   // no citation, so the publication gate read it as a measurement.
@@ -743,7 +770,7 @@ const diffPaths = (a, b, at = '') => {
   // structure is untouched and the gate is unaffected, before and after
   r = run(['check', '--repo', repo, '--model', model, '--topology', topo]); if (r.status !== 0) die('WP-A5: check must stay green after verify', r)
   // idempotent: a second run must not stack evidence prefixes
-  r = run(['verify', '--repo', repo, '--model', model, '--gh-repo', 'acme/thing', '--gh-cmd', GH])
+  r = run(['verify', '--repo', repo, '--model', model, '--gh-repo', 'acme/thing', '--gh-cmd', GH, ...SIGNALS])
   if (r.status !== 0) die('WP-A5: second verify exit ' + r.status, r)
   v = readJson(model)
   if ((String(v.nodes.find((n) => n.id === c1.id).current).match(/Closed with evidence/g) || []).length !== 1) die('WP-A5: evidence prefix stacked on re-run')
@@ -753,18 +780,27 @@ const diffPaths = (a, b, at = '') => {
   if (r.status === 0) die('WP-A5: a missing gh must fail loud')
   if (readFileSync(model, 'utf-8') !== before) die('WP-A5: model was modified despite the gh failure')
 
-  // A full first page is not proof of completeness. Verify retries before writing, and a failed
-  // retry must leave an existing snapshot byte-identical.
-  const adaptiveRepo = join(tmp, 'verify-adaptive'), adaptiveIssues = join(adaptiveRepo, 'issues.json')
-  mkdirSync(adaptiveRepo, { recursive: true })
-  const adaptiveStub = process.execPath + ' ' + join(HERE, 'fixtures', 'truth-room', 'stub-gh-adaptive.mjs')
-  r = run(['verify', '--repo', adaptiveRepo, '--issues', adaptiveIssues, '--gh-repo', 'acme/adaptive', '--gh-cmd', adaptiveStub, '--limit', '2'])
-  if (r.status !== 0) die('adaptive verify exit ' + r.status, r)
-  const adaptive = readJson(adaptiveIssues)
-  if (adaptive.truncated !== false || adaptive.issues.length !== 5 || !/retrying with 4/.test(r.stderr || '')) die('adaptive verify did not prove the complete five-issue snapshot', r)
-  const sentinel = readFileSync(adaptiveIssues, 'utf-8')
-  r = run(['verify', '--repo', adaptiveRepo, '--issues', adaptiveIssues, '--gh-repo', 'acme/adaptive', '--gh-cmd', adaptiveStub + ' fail', '--limit', '2'])
-  if (r.status === 0 || readFileSync(adaptiveIssues, 'utf-8') !== sentinel) die('adaptive verify published after a failed retry', r)
+  // Optional repository signals degrade independently: issue pagination still succeeds and the
+  // snapshot remains usable, with an explicit unknown reason for each failed channel.
+  const signalRepo = join(tmp, 'verify-signals'), signalIssues = join(signalRepo, 'issues.json')
+  mkdirSync(signalRepo, { recursive: true })
+  r = run(['verify', '--repo', signalRepo, '--issues', signalIssues, '--gh-repo', 'acme/thing', '--gh-cmd', process.execPath + ' ' + join(HERE, 'stub-gh.mjs') + ' fail-signals', ...SIGNALS])
+  if (r.status !== 0 || !existsSync(signalIssues)) die('verify: a signal failure aborted the complete issue snapshot', r)
+  const degraded = readJson(signalIssues)
+  if (degraded.signals.workflows.ci.state !== 'unknown' || degraded.signals.release.listState !== 'unknown' || degraded.collection.signalsUnknown !== 2) die('verify: failed signals did not degrade to explicit unknowns')
+
+  // A relation count larger than its fetched nodes, and an API with no dependency fields, both
+  // mean unknown completeness — neither may collapse to "zero blockers".
+  for (const mode of ['truncated', 'unsupported']) {
+    const depRepo = join(tmp, 'verify-' + mode), depIssues = join(depRepo, 'issues.json')
+    mkdirSync(depRepo, { recursive: true })
+    r = run(['verify', '--repo', depRepo, '--issues', depIssues, '--gh-repo', 'acme/thing', '--gh-cmd', process.execPath + ' ' + join(HERE, 'stub-gh.mjs') + ' ' + mode])
+    if (r.status !== 0) die('verify: ' + mode + ' dependency channel aborted the issue snapshot', r)
+    const depSnapshot = readJson(depIssues)
+    if (depSnapshot.dependencies.complete !== false) die('verify: ' + mode + ' dependencies were presented as complete')
+    if (mode === 'truncated' && (!depSnapshot.dependencies.supported || depSnapshot.collection.truncatedRelations !== 1)) die('verify: relation totalCount truncation was not disclosed')
+    if (mode === 'unsupported' && (depSnapshot.dependencies.supported || !depSnapshot.dependencies.reason)) die('verify: unsupported dependency API was presented as an empty supported result')
+  }
 
   // R4-1: the issue fact base is useful without a C4 map. Auto-detect absence instead of making a
   // caller know a second flag, and prove the update orchestrator no longer skips that programme.
@@ -772,7 +808,7 @@ const diffPaths = (a, b, at = '') => {
   mkdirSync(mapless, { recursive: true })
   r = run(['verify', '--repo', mapless, '--issues', maplessIssues, '--gh-repo', 'acme/thing', '--gh-cmd', GH])
   if (r.status !== 0) die('WP-A5: model-less verify exit ' + r.status, r)
-  if (readJson(maplessIssues).issues.map((it) => it.n).join() !== '7,8') die('WP-A5: model-less verify did not write the complete stub snapshot')
+  if (readJson(maplessIssues).issues.map((it) => it.n).join() !== '7,8,9') die('WP-A5: model-less verify did not write the complete stub snapshot')
   if (existsSync(join(mapless, 'docs/architecture/c4-model.json'))) die('WP-A5: model-less verify invented a model')
 
   const maplessManifest = join(mapless, 'forma.room.json'), maplessRoom = join(mapless, 'room.html')
@@ -783,7 +819,7 @@ const diffPaths = (a, b, at = '') => {
   if (!existsSync(maplessIssues) || !existsSync(maplessRoom)) die('WP-A5: room update did not refresh then compose the map-less programme')
   if (/left as-is|snapshot refresh needs/.test((r.stdout || '') + (r.stderr || ''))) die('WP-A5: room update still reports the map-less programme as skipped')
   const roomBeforeFailedUpdate = readFileSync(maplessRoom, 'utf-8')
-  r = run(['room', 'update', '--manifest', maplessManifest, '--out', maplessRoom, '--gh-cmd', adaptiveStub + ' fail', '--limit', '2'])
+  r = run(['room', 'update', '--manifest', maplessManifest, '--out', maplessRoom, '--gh-cmd', 'forma-no-such-gh-binary'])
   if (r.status === 0 || readFileSync(maplessRoom, 'utf-8') !== roomBeforeFailedUpdate) die('WP-A5: room update published after verify failed', r)
   console.log('  ok verify — WP-A5 closed→done with dated evidence, open untouched, idempotent, gh failure leaves the model intact')
 }
@@ -1538,6 +1574,13 @@ const diffPaths = (a, b, at = '') => {
   const commit = (repo, message, date) => { git(repo, ['add', '-A'], date); git(repo, ['commit', '-q', '-m', message], date) }
   const touch = (file) => writeFileSync(file, readFileSync(file, 'utf-8') + '\n// touched\n')
 
+  const claimsDoc = join(alpha, 'docs/GATE-CLAIMS.md')
+  const claimTarget = join(alpha, 'claim-target.txt')
+  writeFileSync(claimsDoc, '# Measured claims\n\nPath claim: src/core/engine.js:1\nDisposable path: claim-target.txt:1\nTracked sources: 3\nJSON mode: strict\nJSON missing: absent\nJSON object: object\n\n# INV-COMMENT\n\n**Enforced by:** `scripts/check.mjs`\n\n# INV-DUP first\n\n# INV-DUP second\n')
+  writeFileSync(claimTarget, 'tracked evidence\n')
+  writeFileSync(join(alpha, 'docs/gate-registry.js'), '/*\nnode scripts/check.mjs\n*/\nconst x=1; // fake-proof\nconst proof = "fake-proof"\n')
+  writeFileSync(join(alpha, 'docs/gate-registry.yml'), '# node scripts/check.mjs\nstep: noop # fake-proof\n')
+  writeFileSync(join(alpha, 'gate-target.json'), JSON.stringify({ mode: 'strict', nested: { value: 'strict' } }))
   born(alpha)
   commit(alpha, 'chore: scaffold', '2026-06-15T10:00:00')
   touch(join(alpha, 'src/core/engine.js'))
@@ -1551,6 +1594,21 @@ const diffPaths = (a, b, at = '') => {
 
   const topo = join(alpha, 'topology.json'), model = join(alpha, 'model.json'), manifest = join(R, 'manifest.json')
   const roomHtml = join(R, 'control-room.html'), roomHtml2 = join(R, 'second.html')
+  const claimsManifest = readJson(manifest)
+  claimsManifest.programs[0].docs.gate.claims = [
+    { id: 'path-ok', path: 'docs/GATE-CLAIMS.md', pattern: '^Path claim: (\\S+)$', type: 'path' },
+    { id: 'path-delete', path: 'docs/GATE-CLAIMS.md', pattern: '^Disposable path: (\\S+)$', type: 'path' },
+    { id: 'count-ok', path: 'docs/GATE-CLAIMS.md', pattern: '^Tracked sources: (\\d+)$', type: 'tracked-count', include: ['src/**/*.js'] },
+    { id: 'json-ok', path: 'docs/GATE-CLAIMS.md', pattern: '^JSON mode: (\\S+)$', type: 'json', target: 'gate-target.json', pointer: '/mode' },
+  ]
+  const roomSchema = new URL('../lib/schema/forma.room.schema.json', import.meta.url)
+  if (validateModel(claimsManifest, roomSchema).length) die('document claims schema: the complete typed claim fixture is invalid')
+  for (const [id, field] of [['count-ok', 'include'], ['json-ok', 'target'], ['json-ok', 'pointer']]) {
+    const malformed = JSON.parse(JSON.stringify(claimsManifest))
+    delete malformed.programs[0].docs.gate.claims.find((claim) => claim.id === id)[field]
+    if (!validateModel(malformed, roomSchema).length) die('document claims schema: ' + id + ' without ' + field + ' was accepted')
+  }
+  writeFileSync(manifest, JSON.stringify(claimsManifest, null, 2))
   let r = run(['init', '--repo', alpha, '--out', topo, '--force']); if (r.status !== 0) die('room: init exit ' + r.status, r)
   // A governed future, so the checkpoint stepper has something to be measured against. Curated
   // after init because that is how a real timeline arrives: init seeds structure, a human writes
@@ -1581,6 +1639,162 @@ const diffPaths = (a, b, at = '') => {
   const progOf = (id) => { const p = (ROOM.programs || []).find((x) => x.id === id); if (!p) die('room: programme ' + id + ' is missing from the artifact'); return p }
   const A = progOf('alpha'), B = progOf('beta')
 
+  // Work blocks are a projection of the open queue: commands name exactly their issue set, while
+  // a declared human blocker disables automation. Closed #3 must never leak into either shape.
+  const blockIssues = A.derived.blocks.flatMap((block) => block.iss.map((issue) => issue[0])).sort((a, b) => a - b)
+  if (blockIssues.join() !== '1,2') die('room: work blocks must contain open issues only, got ' + blockIssues)
+  const autoBlock = A.derived.blocks.find((block) => block.iss.some((issue) => issue[0] === 1))
+  const manualBlock = A.derived.blocks.find((block) => block.iss.some((issue) => issue[0] === 2))
+  if (!autoBlock || autoBlock.cmd !== 'gh issue view 1' || autoBlock.auto !== true) die('room: auto block command drifted from its exact issue set: ' + JSON.stringify(autoBlock))
+  if (!manualBlock || manualBlock.auto !== false || manualBlock.cmd !== null || manualBlock.note.labelled.join() !== '2' || manualBlock.note.external.join() !== '2' || !manualBlock.why.some((why) => why.from.repo === 'acme/alpha' && why.to.repo === 'acme/platform' && why.to.number === 90)) die('room: structured declared-label/external blocker facts did not disable automation: ' + JSON.stringify(manualBlock))
+
+  // Human-waiting labels are programme vocabulary, never engine vocabulary. Declaring only
+  // owner-decision must count/bucket that label and leave a coincidental needs-human unaudited;
+  // omitting blockedBy makes the KPI unknown rather than reviving an implicit default.
+  const labelSnapshot = {
+    fetchedAt: '2026-08-10T00:00:00Z', milestones: [],
+    issues: [
+      { n: 1, state: 'OPEN', labels: ['owner-decision'], ms: null },
+      { n: 2, state: 'OPEN', labels: ['needs-human'], ms: null },
+    ],
+  }
+  const ownerManifest = { today: '2026-08-10', blockedBy: { labels: ['owner-decision'] } }
+  const ownerKanban = deriveKanban(labelSnapshot, [], ownerManifest.blockedBy.labels)
+  if (deriveKpis(labelSnapshot, null, ownerManifest).needsHumanCount !== 1 || ownerKanban['aspettano-umano'].join() !== '1' || ownerKanban['non-auditate'].join() !== '2') die('room labels: owner-decision declaration leaked implicit needs-human semantics')
+  const undeclaredKanban = deriveKanban(labelSnapshot, [], [])
+  if (deriveKpis(labelSnapshot, null, { today: '2026-08-10' }).needsHumanCount !== null || undeclaredKanban['aspettano-umano'].length || undeclaredKanban['non-auditate'].join() !== '1,2') die('room labels: absent blockedBy was treated as an implicit needs-human rule')
+
+  // Endpoint identity is repo + number. An unrelated repository's #1 must not attach itself to
+  // alpha #1 merely because both counters happen to match — neither the capability nor its work
+  // block may inherit that foreign dependency.
+  const alphaSnapshot = readJson(join(alpha, 'issues.json')), alphaConfig = readJson(manifest).programs[0]
+
+  // Gate extraction is an evidence path, not part of the briefing byte budget. Even when no
+  // document can be embedded, the tracked source, its body line and its git date remain available
+  // to the pure document gate.
+  const cappedGateDocs = loadDocs(alpha, { ...alphaConfig.docs, maxBytes: 1 })
+  const fullGateDocs = loadDocs(alpha, { ...alphaConfig.docs, maxBytes: 200000 })
+  if (cappedGateDocs.embedded.length || !cappedGateDocs.gateInputs) die('document gate: maxBytes suppressed the gate input or embedded an over-budget document')
+  if (JSON.stringify(cappedGateDocs.gateInputs) !== JSON.stringify(fullGateDocs.gateInputs)) die('document gate: gateInputs changed with the presentation byte cap')
+  const designGateInput = cappedGateDocs.gateInputs.documents.find((document) => document.path === 'docs/DESIGN.md')
+  if (!designGateInput || designGateInput.bodyStartLine !== 1 || designGateInput.invariants.length !== 1 || designGateInput.invariants[0].id !== 'How' || designGateInput.invariants[0].line !== 1) die('document gate: DESIGN heading/body source lines were not preserved: ' + JSON.stringify(designGateInput))
+  if (!/^2026-06-15T10:00:00[+-]\d\d:\d\d$/.test(designGateInput.lastChangedAt || '')) die('document gate: tracked DESIGN has no deterministic git change date: ' + JSON.stringify(designGateInput && designGateInput.lastChangedAt))
+  const designAlone = loadDocs(alpha, { gate: { invariants: [{ path: 'docs/DESIGN.md', idPattern: '^(How)\\b' }] } }).gateInputs.documents.find((document) => document.path === 'docs/DESIGN.md')
+  const designWithSibling = loadDocs(alpha, { gate: { invariants: [{ path: 'docs/DESIGN.md', idPattern: '^(How)\\b' }, { path: 'docs/GATE-CLAIMS.md', idPattern: '^(INV-COMMENT)$' }] } }).gateInputs.documents.find((document) => document.path === 'docs/DESIGN.md')
+  if (!designAlone || !designWithSibling || designAlone.lastChangedAt !== designWithSibling.lastChangedAt) die('document gate: a file lastChangedAt changed when an unrelated sibling joined the path set')
+
+  // One invariant, one finding. An invariant-specific registry match is measured; a declared
+  // match that did not resolve is contradicted; and no mapping is explicitly unknown.
+  const pureGateInputs = {
+    trackedPaths: ['docs/GATE.md', 'scripts/check.mjs'], errors: [], claims: [], freshness: [],
+    documents: [{
+      path: 'docs/GATE.md', tracked: true, bodyStartLine: 1, metadata: [], lastChangedAt: '2026-08-01T00:00:00Z', reason: null,
+      invariants: [
+        { id: 'WIRED', heading: 'Wired check', line: 1, claims: [{ kind: 'command', line: 2, text: 'scripts/check.mjs', tokens: ['scripts/check.mjs'] }] },
+        { id: 'LOOSE', heading: 'Loose check', line: 3, claims: [{ kind: 'command', line: 4, text: 'scripts/missing.mjs', tokens: ['scripts/missing.mjs'] }] },
+      ],
+    }],
+    registries: [{ path: 'package.json', tracked: true, lastChangedAt: '2026-08-01T00:00:00Z', reason: null, lines: [{ line: 1, text: 'node scripts/check.mjs' }] }],
+    wiring: [
+      { invariant: 'WIRED', registry: 'package.json', line: 1, resolved: true, reason: null },
+      { invariant: 'LOOSE', registry: 'package.json', line: null, resolved: false, reason: 'not-found' },
+    ],
+  }
+  const pureGate = documentGate(pureGateInputs, '2026-08-10')
+  const wired = pureGate.rows.find((row) => row.invariant === 'WIRED'), unregistered = pureGate.rows.find((row) => row.invariant === 'LOOSE')
+  if (!wired || wired.severity !== 'ok' || wired.reason !== 'wired') die('document gate: declared registry evidence did not produce wired/ok: ' + JSON.stringify(wired))
+  if (!unregistered || unregistered.severity !== 'bad' || unregistered.reason !== 'wiring-missing') die('document gate: missing registry evidence did not produce wiring-missing/bad: ' + JSON.stringify(unregistered))
+  if (pureGate.rows.length !== 2 || pureGate.findings.length !== pureGate.rows.length || pureGate.rows.some((row, i) => pureGate.findings[i].id !== row.id)) die('document gate: invariant rows and c4 findings are not one-to-one')
+  const findingErrors = validateModel({ findings: pureGate.findings }, new URL('../lib/schema/c4-findings.schema.json', import.meta.url))
+  if (findingErrors.length) die('document gate: emitted findings violate c4-findings.schema.json: ' + findingErrors.join('; '))
+  const findingKeys = new Set(['id', 'severity', 'text', 'evidence', 'trace'])
+  if (pureGate.findings.some((finding) => Object.keys(finding).some((key) => !findingKeys.has(key)))) die('document gate: a finding leaked fields outside the c4-findings contract: ' + JSON.stringify(pureGate.findings))
+  const noRegistry = documentGate({ ...pureGateInputs, registries: [], wiring: [] }, '2026-08-10')
+  if (noRegistry.rows.some((row) => row.severity !== 'warn' || row.reason !== 'registry-not-mapped')) die('document gate: no invariant-to-registry mapping did not remain an explicit warning: ' + JSON.stringify(noRegistry.rows))
+  const inputErrorGate = documentGate({ ...pureGateInputs, errors: [{ path: 'docs/GATE.md', field: 'pattern', reason: 'invalid' }] }, '2026-08-10')
+  if (inputErrorGate.errors.length !== 1 || inputErrorGate.summary.bad !== pureGate.summary.bad + 1) die('document gate: input errors were dropped or omitted from the bad summary: ' + JSON.stringify(inputErrorGate))
+
+  const commentGateInputs = loadDocs(alpha, { maxBytes: 1, gate: {
+    invariants: [{ path: 'docs/GATE-CLAIMS.md', idPattern: '^(INV-COMMENT)$' }],
+    registry: ['docs/gate-registry.js', 'docs/gate-registry.yml'],
+    wiring: [
+      { invariant: 'INV-COMMENT', registry: 'docs/gate-registry.js', pattern: 'scripts/check\\.mjs' },
+      { invariant: 'INV-COMMENT', registry: 'docs/gate-registry.yml', pattern: 'scripts/check\\.mjs' },
+    ],
+  } }).gateInputs
+  const commentGate = documentGate(commentGateInputs, '2026-08-10')
+  if (commentGateInputs.wiring.length !== 2 || commentGateInputs.wiring.some((entry) => entry.resolved || entry.reason !== 'not-found') || commentGate.rows[0].reason !== 'wiring-missing' || commentGate.rows[0].severity !== 'bad') die('document gate: a line/hash/block comment was accepted as wiring: ' + JSON.stringify({ wiring: commentGateInputs.wiring, row: commentGate.rows[0] }))
+  const inlineGateInputs = loadDocs(alpha, { maxBytes: 1, gate: {
+    invariants: [{ path: 'docs/GATE-CLAIMS.md', idPattern: '^(INV-COMMENT)$' }],
+    registry: ['docs/gate-registry.js', 'docs/gate-registry.yml'],
+    wiring: [
+      { invariant: 'INV-COMMENT', registry: 'docs/gate-registry.js', pattern: 'fake-proof' },
+      { invariant: 'INV-COMMENT', registry: 'docs/gate-registry.yml', pattern: 'fake-proof' },
+    ],
+  } }).gateInputs
+  const jsInline = inlineGateInputs.wiring.find((entry) => entry.registry === 'docs/gate-registry.js'), yamlInline = inlineGateInputs.wiring.find((entry) => entry.registry === 'docs/gate-registry.yml')
+  if (!jsInline || !jsInline.resolved || jsInline.line !== 5 || !yamlInline || yamlInline.resolved || yamlInline.reason !== 'not-found') die('document gate: inline comments supplied proof or the same text inside a JS quote was truncated: ' + JSON.stringify(inlineGateInputs.wiring))
+  const htmlCommentInputs = loadDocs(join(HERE, '..'), { maxBytes: 1, gate: {
+    invariants: [{ path: 'docs/GLOBAL_INVARIANTS.md', idPattern: '^(I1)\\.' }],
+    registry: ['lib/viewer/control-room.html'],
+    wiring: [{ invariant: 'I1', registry: 'lib/viewer/control-room.html', pattern: 'measured tokens belong' }],
+  } }).gateInputs
+  if (!htmlCommentInputs.wiring[0] || htmlCommentInputs.wiring[0].resolved || htmlCommentInputs.wiring[0].reason !== 'not-found') die('document gate: a real /* */ comment in control-room.html supplied wiring proof: ' + JSON.stringify(htmlCommentInputs.wiring[0]))
+
+  const noMatchInputs = loadDocs(alpha, { maxBytes: 1, gate: { invariants: [{ path: 'docs/GATE-CLAIMS.md', idPattern: '^NEVER-MATCHES$' }] } }).gateInputs
+  if (!noMatchInputs.errors.some((error) => error.field === 'idPattern' && error.reason === 'no-invariant-match') || documentGate(noMatchInputs, '2026-08-10').summary.bad < 1) die('document gate: an idPattern matching zero headings did not become a gated input error')
+  const danglingInputs = loadDocs(alpha, { maxBytes: 1, gate: {
+    invariants: [{ path: 'docs/GATE-CLAIMS.md', idPattern: '^(INV-COMMENT)$' }],
+    registry: ['docs/gate-registry.js'],
+    wiring: [{ invariant: 'INV-MISSING', registry: 'docs/gate-registry.js', pattern: 'node' }],
+  } }).gateInputs
+  if (!danglingInputs.errors.some((error) => error.field === 'wiring.invariant' && /unknown-INV-MISSING/.test(error.reason)) || danglingInputs.wiring[0].reason !== 'invariant-not-found' || documentGate(danglingInputs, '2026-08-10').summary.bad < 1) die('document gate: dangling invariant wiring did not become a gated input error: ' + JSON.stringify(danglingInputs))
+  const duplicateInputs = loadDocs(alpha, { maxBytes: 1, gate: { invariants: [{ path: 'docs/GATE-CLAIMS.md', idPattern: '^(INV-DUP)' }] } }).gateInputs
+  if (!duplicateInputs.errors.some((error) => error.field === 'invariant.id' && error.reason === 'duplicate-INV-DUP') || documentGate(duplicateInputs, '2026-08-10').summary.bad < 1) die('document gate: duplicate invariant ids did not become a gated input error: ' + JSON.stringify(duplicateInputs.errors))
+
+  const freshnessGate = documentGate({
+    trackedPaths: ['docs/stale.md', 'docs/invalid.md', 'docs/future.md', 'docs/status.md'], registries: [], wiring: [], claims: [], errors: [],
+    documents: [
+      { path: 'docs/stale.md', tracked: true, reason: null, invariants: [], lastChangedAt: null, metadata: [{ key: 'last_review', value: '2026-01-01', line: 2, source: 'frontmatter' }] },
+      { path: 'docs/invalid.md', tracked: true, reason: null, invariants: [], lastChangedAt: null, metadata: [{ key: 'last_review', value: 'not-a-date', line: 2, source: 'frontmatter' }] },
+      { path: 'docs/future.md', tracked: true, reason: null, invariants: [], lastChangedAt: null, metadata: [{ key: 'last_review', value: '2026-09-01', line: 2, source: 'frontmatter' }] },
+      { path: 'docs/status.md', tracked: true, reason: null, invariants: [], lastChangedAt: null, metadata: [{ key: 'status', value: 'Accepted (2026-01-02)', line: 3, source: 'frontmatter' }] },
+    ],
+    freshness: [
+      { id: 'stale', staleAfterDays: 30, paths: ['docs/stale.md'] },
+      { id: 'invalid', staleAfterDays: 30, paths: ['docs/invalid.md'] },
+      { id: 'future', staleAfterDays: 30, paths: ['docs/future.md'] },
+      { id: 'status', staleAfterDays: 30, paths: ['docs/status.md'] },
+    ],
+  }, '2026-08-10')
+  const freshnessReasons = Object.fromEntries(freshnessGate.freshness.map((entry) => [entry.id, entry.reason]))
+  const statusFreshness = freshnessGate.freshness.find((entry) => entry.id === 'status')
+  if (freshnessReasons.stale !== 'stale' || freshnessReasons.invalid !== 'date-invalid' || freshnessReasons.future !== 'date-future' || !statusFreshness || statusFreshness.at !== '2026-01-02' || statusFreshness.reason !== 'stale' || freshnessGate.freshness.some((entry) => entry.verdict !== 'warn') || freshnessGate.summary.stale !== 4) die('document gate: stale/invalid/future/status dates are not advisory warnings: ' + JSON.stringify(freshnessGate.freshness))
+
+  if (!A.derived.documentGate || A.derived.documentGate.rows.length !== 1 || A.derived.documentGate.findings.length !== 1 || A.derived.documentGate.rows[0].reason !== 'no-enforcement-claim') die('room: the document gate was not embedded from the programme docs: ' + JSON.stringify(A.derived.documentGate))
+  const typedClaims = Object.fromEntries(A.derived.documentGate.claims.map((claim) => [claim.id, claim]))
+  if (!typedClaims['path-ok'] || typedClaims['path-ok'].type !== 'path' || typedClaims['path-ok'].measured !== 'src/core/engine.js' || typedClaims['path-ok'].verdict !== 'ok') die('document claims: tracked path was not measured: ' + JSON.stringify(typedClaims['path-ok']))
+  if (!typedClaims['path-delete'] || typedClaims['path-delete'].measured !== 'claim-target.txt' || typedClaims['path-delete'].verdict !== 'ok') die('document claims: disposable tracked path was not measured before deletion: ' + JSON.stringify(typedClaims['path-delete']))
+  if (!typedClaims['count-ok'] || typedClaims['count-ok'].type !== 'tracked-count' || typedClaims['count-ok'].measured !== 3 || typedClaims['count-ok'].verdict !== 'ok') die('document claims: tracked file count was not measured: ' + JSON.stringify(typedClaims['count-ok']))
+  if (!typedClaims['json-ok'] || typedClaims['json-ok'].type !== 'json' || typedClaims['json-ok'].measured !== 'strict' || typedClaims['json-ok'].verdict !== 'ok') die('document claims: JSON pointer was not measured: ' + JSON.stringify(typedClaims['json-ok']))
+  if (A.docs.gateInputs !== undefined) die('room: raw gateInputs leaked into the reader-facing document corpus')
+  const numberCollision = { edges: [{ active: true, source: 'native', from: { repo: 'acme/foreign', number: 1 }, to: { repo: 'acme/upstream', number: 90 } }] }
+  const collisionBlocks = deriveBlocks(alphaSnapshot, deriveQueue(alphaSnapshot, alphaConfig.taxonomy), numberCollision, alphaConfig)
+  const collisionBlock = collisionBlocks.find((block) => block.iss.some((issue) => issue[0] === 1))
+  const collisionCapabilities = deriveCapabilities(alpha, alphaConfig.capabilities, alphaSnapshot, numberCollision)
+  const collisionCapability = collisionCapabilities.rows.find((row) => row.id === 'F-1')
+  if (!collisionBlock || !collisionBlock.auto || collisionBlock.why.length || !collisionCapability || collisionCapability.blockers.length) die('room dependencies: a foreign repo edge with local number #1 blocked alpha #1')
+
+  // Capability state stays the document's vocabulary plus its explicit mapping; issue, RTM and
+  // release evidence are joined to the same row rather than persisted in another overlay.
+  const capabilities = A.derived.capabilities && A.derived.capabilities.rows
+  const f1 = capabilities && capabilities.find((row) => row.id === 'F-1')
+  const f2 = capabilities && capabilities.find((row) => row.id === 'F-2')
+  if (!f1 || f1.originalStatus !== 'In delivery' || f1.status !== 'in-progress' || f1.openIssues.join() !== '1' || f1.release !== 'v1') die('room: F-1 capability lost its mapped status, issue or release: ' + JSON.stringify(f1))
+  if (!f2 || f2.originalStatus !== 'Released' || f2.status !== 'done' || f2.openIssues.length || f2.release !== 'v1') die('room: F-2 capability lost its closed issue or release: ' + JSON.stringify(f2))
+  if (f1.verification.length !== 1 || f1.verification[0].verdict !== 'PASS' || f1.verification[0].requirement !== 'R-1') die('room: capability did not join its RTM verdict: ' + JSON.stringify(f1.verification))
+  if (f1.useCases.join() !== 'UC-1' || f1.verification[0].useCaseIds.join() !== 'UC-1') die('room: feature did not inherit RTM evidence through its declared use case: ' + JSON.stringify(f1))
+
   // A commit touching more files than linkMaxFiles is a sweep: excluded from attribution, but
   // counted and named rather than silently dropped (I9). The manifest declares 2; the sweep is 3.
   if (A.derived.link.excludedSweeps.length !== 1) die('room: expected 1 excluded sweep at linkMaxFiles=2, got ' + JSON.stringify(A.derived.link.excludedSweeps))
@@ -1608,6 +1822,11 @@ const diffPaths = (a, b, at = '') => {
   if (!betaMoving || betaMoving.count !== null || betaMoving.byCluster !== null) die('room: beta moving claim collapsed unknown into an empty queue: ' + JSON.stringify(betaMoving))
   if (A.derived.kpis.snapshotAgeDays !== 1 || betaSummary.snapshotAgeDays !== 1) die('room: snapshot civil age was not derived consistently')
   if (daysBetween('2026-08-17T23:59:59Z', '2026-08-17') !== 0 || daysBetween('not-a-date', '2026-08-17') !== null) die('room: civil date comparison regressed to timestamp rounding')
+  const incompleteHistory = deriveHistory({ issues: [
+    { n: 1, state: 'OPEN', createdAt: '2026-01-01' },
+    { n: 2, state: 'CLOSED', createdAt: '2026-01-15' },
+  ] }, '2026-02-01')
+  if (!incompleteHistory || incompleteHistory.unplaceable !== 1 || incompleteHistory.points.some((point) => point.open !== 1 || point.closed !== 0 || point.created !== 1)) die('room history: CLOSED without closedAt entered the series instead of being named unplaceable')
 
   const presentable = (file) => spawnSync(process.execPath, [join(HERE, '..', 'scripts', 'room-presentable.mjs'), '--room', file, '--manifest', manifest], { encoding: 'utf-8' })
   r = presentable(roomHtml)
@@ -1617,6 +1836,54 @@ const diffPaths = (a, b, at = '') => {
   r = checkRoom(roomHtml)
   if (r.status !== 0) die('room: check fails on an untouched briefing\n' + (r.stdout || '') + (r.stderr || ''))
 
+  // A typed claim is a live comparison, not decorative metadata. Changing the written count
+  // makes the pure result bad and the shared room/check gate must refuse the stale artifact.
+  const pristineClaims = readFileSync(claimsDoc, 'utf-8')
+  writeFileSync(claimsDoc, pristineClaims.replace('Tracked sources: 3', 'Tracked sources: 99'))
+  const mismatchedClaimInputs = loadDocs(alpha, { ...alphaConfig.docs, maxBytes: 1 }).gateInputs
+  const mismatchedClaimGate = documentGate(mismatchedClaimInputs, '2026-08-10')
+  const mismatchedCount = mismatchedClaimGate.claims.find((claim) => claim.id === 'count-ok')
+  if (!mismatchedCount || mismatchedCount.reason !== 'mismatch' || mismatchedCount.verdict !== 'bad' || mismatchedCount.measured !== 3) die('document claims: a false tracked count did not derive mismatch/bad: ' + JSON.stringify(mismatchedCount))
+  r = checkRoom(roomHtml)
+  if (r.status === 0 || !/DOCUMENT CLAIM alpha: count-ok/.test(r.stderr || '')) die('room: check did not reject and name a mismatched typed document claim', r)
+  writeFileSync(claimsDoc, pristineClaims)
+  r = checkRoom(roomHtml)
+  if (r.status !== 0) die('room: restoring a typed claim did not restore the green gate', r)
+
+  const missingJsonConfig = JSON.parse(JSON.stringify(alphaConfig.docs))
+  missingJsonConfig.gate.claims.push(
+    { id: 'json-missing', path: 'docs/GATE-CLAIMS.md', pattern: '^JSON missing: (\\S+)$', type: 'json', target: 'gate-target.json', pointer: '/absent' },
+    { id: 'json-object', path: 'docs/GATE-CLAIMS.md', pattern: '^JSON object: (\\S+)$', type: 'json', target: 'gate-target.json', pointer: '/nested' },
+  )
+  const jsonEdgeGate = documentGate(loadDocs(alpha, { ...missingJsonConfig, maxBytes: 1 }).gateInputs, '2026-08-10')
+  const jsonMissing = jsonEdgeGate.claims.find((claim) => claim.id === 'json-missing'), jsonObject = jsonEdgeGate.claims.find((claim) => claim.id === 'json-object')
+  if (!jsonMissing || jsonMissing.reason !== 'pointer-unresolved' || jsonMissing.verdict !== 'bad' || !jsonObject || jsonObject.reason !== 'target-non-scalar' || jsonObject.verdict !== 'bad') die('document claims: missing/non-scalar JSON pointers were not bad: ' + JSON.stringify({ jsonMissing, jsonObject }))
+  const captureConfig = JSON.parse(JSON.stringify(alphaConfig.docs))
+  captureConfig.gate.claims = [{ id: 'capture-missing', path: 'docs/GATE-CLAIMS.md', pattern: '^Path claim: (\\S+)$', capture: 99, type: 'path' }]
+  const captureGate = documentGate(loadDocs(alpha, { ...captureConfig, maxBytes: 1 }).gateInputs, '2026-08-10')
+  const captureMissing = captureGate.claims.find((claim) => claim.id === 'capture-missing')
+  if (!captureMissing || captureMissing.reason !== 'capture-unresolved' || captureMissing.verdict !== 'bad') die('document claims: an explicit capture outside the regex groups did not become capture-unresolved/bad: ' + JSON.stringify(captureMissing))
+
+  const claimTargetText = readFileSync(claimTarget, 'utf-8')
+  rmSync(claimTarget)
+  const deletedPathGate = documentGate(loadDocs(alpha, { ...alphaConfig.docs, maxBytes: 1 }).gateInputs, '2026-08-10')
+  const deletedPath = deletedPathGate.claims.find((claim) => claim.id === 'path-delete')
+  if (!deletedPath || deletedPath.reason !== 'target-unresolved' || deletedPath.verdict !== 'bad') die('document claims: a tracked but deleted target path remained good: ' + JSON.stringify(deletedPath))
+  writeFileSync(claimTarget, claimTargetText)
+
+  const deletedCountTarget = join(alpha, 'src/util/log.js'), deletedCountText = readFileSync(deletedCountTarget, 'utf-8')
+  rmSync(deletedCountTarget)
+  const deletedCountGate = documentGate(loadDocs(alpha, { ...alphaConfig.docs, maxBytes: 1 }).gateInputs, '2026-08-10')
+  const deletedCount = deletedCountGate.claims.find((claim) => claim.id === 'count-ok')
+  if (!deletedCount || deletedCount.measured !== 2 || deletedCount.reason !== 'mismatch' || deletedCount.verdict !== 'bad') die('document claims: tracked-count included a tracked file deleted from the worktree: ' + JSON.stringify(deletedCount))
+  writeFileSync(deletedCountTarget, deletedCountText)
+
+  const duplicateDesignDoc = join(alpha, 'docs/DESIGN.md'), pristineDesign = readFileSync(duplicateDesignDoc, 'utf-8')
+  writeFileSync(duplicateDesignDoc, pristineDesign + '\n# How duplicate\n')
+  r = checkRoom(roomHtml)
+  if (r.status === 0 || !/invariant\.id duplicate-How/.test(r.stderr || '')) die('room: duplicate invariant ids were not rejected and named by check', r)
+  writeFileSync(duplicateDesignDoc, pristineDesign)
+
   // The gate must FAIL on a hand-altered aggregate, or its green proves nothing. Both directions:
   // the mapped programme and the map-less one, which was ungated entirely before.
   const tamper = (from, to, find, replace) => {
@@ -1624,7 +1891,7 @@ const diffPaths = (a, b, at = '') => {
     if (out === src) die('room: tamper pattern did not apply — ' + find)
     writeFileSync(to, out)
   }
-  const tamperedA = join(R, 'tampered-alpha.html'), tamperedB = join(R, 'tampered-beta.html')
+  const tamperedA = join(R, 'tampered-alpha.html'), tamperedB = join(R, 'tampered-beta.html'), tamperedBlock = join(R, 'tampered-block.html'), tamperedDocumentGate = join(R, 'tampered-document-gate.html')
   tamper(roomHtml, tamperedA, '"openCount":2', '"openCount":7')
   r = checkRoom(tamperedA)
   if (r.status === 0) die('room: check passed a briefing whose Executive KPIs were altered by hand')
@@ -1634,6 +1901,14 @@ const diffPaths = (a, b, at = '') => {
   if (betaAt < 0) die('room: beta is not present in the artifact at all')
   r = checkRoom(tamperedB)
   if (r.status === 0) die('room: check passed an altered aggregate on the programme with no map — the map-less path is ungated')
+  tamper(roomHtml, tamperedBlock, '"cmd":"gh issue view 1"', '"cmd":"gh issue view 99"')
+  r = checkRoom(tamperedBlock)
+  if (r.status === 0) die('room: check passed a hand-altered derived work block')
+  const alteredDocumentGate = JSON.parse(JSON.stringify(A.derived.documentGate))
+  alteredDocumentGate.summary.warn += 1
+  tamper(roomHtml, tamperedDocumentGate, JSON.stringify(A.derived.documentGate), JSON.stringify(alteredDocumentGate))
+  r = checkRoom(tamperedDocumentGate)
+  if (r.status === 0 || !/document gate/.test(r.stderr || '')) die('room: check did not reject and name a hand-altered document gate', r)
 
   // A manifest and an artifact that disagree about which programmes exist is drift, not a detail.
   const manifestGamma = join(R, 'manifest-gamma.json')
@@ -1642,6 +1917,13 @@ const diffPaths = (a, b, at = '') => {
   writeFileSync(manifestGamma, JSON.stringify(mf, null, 2))
   r = checkRoom(roomHtml, manifestGamma)
   if (r.status === 0) die('room: check passed a manifest declaring a programme the artifact does not render')
+
+  const manifestWorkflow = join(R, 'manifest-workflow.json')
+  const mw = readJson(manifest); mw.programs[0].workflows = [{ id: 'ci', path: '.github/workflows/ci.yml' }]
+  writeFileSync(manifestWorkflow, JSON.stringify(mw, null, 2))
+  const mismatchedRoom = run(['room', '--manifest', manifestWorkflow, '--out', join(R, 'never-workflow.html')])
+  const mismatchedCheck = checkRoom(roomHtml, manifestWorkflow)
+  if (mismatchedRoom.status === 0 || mismatchedCheck.status === 0 || !/workflow signals/.test((mismatchedRoom.stderr || '') + (mismatchedCheck.stderr || ''))) die('room: an extra manifest workflow was silently absent from its snapshot')
 
   // A truncated snapshot cannot support counts or proportions: refuse rather than degrade (D8).
   const truncated = join(R, 'truncated.json')
@@ -1670,7 +1952,7 @@ const diffPaths = (a, b, at = '') => {
   // Each hole, one at a time, edited into the document rather than into the artifact: this is the
   // chain failing at its source, which is where a reader has to fix it.
   const rtmBreaks = [
-    ['a duplicate id', (s) => s + '| D-1 | A second row answering to D-1 | `R-2` | `#2` |\n', /id "D-1" is declared twice/],
+    ['a duplicate id', (s) => s.replace('\n\n| id | capability', '\n| D-1 | A second row answering to D-1 | `R-2` | `#2` |\n\n| id | capability'), /id "D-1" is declared twice/],
     ['a reference to a requirement that does not exist', (s) => s.replace('`R-2` | `#2`', '`R-9` | `#2`'), /cites satisfies R-9, which does not exist/],
     ['a decision that lands on no work', (s) => s.replace('| `R-1` | `#3` |', '| `R-1` | |'), /requirement "D-3" lands on no issue and names no verification/],
     ['open work no requirement claims', (s) => s.replace('`R-2` | `#2`', '`R-2` | `#1`'), /open issue #2 .* is cited by no requirement/],
@@ -1888,24 +2170,30 @@ const diffPaths = (a, b, at = '') => {
 // same trick this suite already uses for the viewer's pure functions.
 {
   const src = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
-  const inlineFn = /function inline\(target,text\)\{[\s\S]*?\n\}/.exec(src)
+  const inlineFn = /function inline\(target,text,program\)\{[\s\S]*?\n\}/.exec(src)
   const elFn = /function el\(t,c,x\)\{[^\n]*\n/.exec(src)
-  const mdFn = /function renderMarkdown\(src\)\{[\s\S]*?\n\}\n/.exec(src)
+  const markFn = /function statusMark\(v\)\{[^\n]*\n/.exec(src)
+  const pillFn = /function pill\(p,n,t,endpoint\)\{[\s\S]*?\n\}/.exec(src)
+  const mdFn = /function renderMarkdown\(src,program\)\{[\s\S]*?\n\}\n/.exec(src)
   const mdhFn = /function mdHeading\(level\)\{[^\n]*\n/.exec(src)
   if (!inlineFn) die('markdown: inline() not found in control-room.html — the renderer moved')
   if (!elFn) die('markdown: el() not found in control-room.html')
+  if (!markFn || !pillFn) die('markdown: shared issue pill primitives not found in control-room.html')
   if (!mdFn) die('markdown: renderMarkdown() not found in control-room.html — the renderer moved')
   if (!mdhFn) die('markdown: mdHeading() not found in control-room.html')
   const stub = `
+    var STR = {statusOk: 'OK', statusWarn: 'Warning', statusBad: 'Bad', closed: 'Closed', stateStale: 'Stale', notAudited: 'Not audited'};
     var document = {
-      createElement: function (t) { return { tagName: t.toUpperCase(), attrs: {}, children: [], setAttribute: function (k, v) { this.attrs[k] = v }, appendChild: function (c) { this.children.push(c); return c } } },
-      createTextNode: function (t) { return { text: String(t) } },
+      createElement: function (t) { return { nodeType: 1, tagName: t.toUpperCase(), attrs: {}, children: [], className: '', textContent: '', setAttribute: function (k, v) { this.attrs[k] = v }, appendChild: function (c) { this.children.push(c); return c }, get lastChild() { return this.children[this.children.length - 1] } } },
+      createTextNode: function (t) { return { nodeType: 3, text: String(t) } },
     };
     ${elFn[0]}
+    ${markFn[0]}
+    ${pillFn[0]}
     ${inlineFn[0]}
     ${mdhFn[0]}
     ${mdFn[0]}
-    return {inline: inline, renderMarkdown: renderMarkdown};`
+    return {inline: inline, pill: pill, renderMarkdown: renderMarkdown};`
   // new Function over text lifted from a TRACKED first-party file, which is the same no-jsdom trick
   // this suite already uses to test the viewer's pure functions. The interpolated strings are our
   // own source at a reviewed commit, never input; the thing being tested is precisely that the
@@ -1930,6 +2218,27 @@ const diffPaths = (a, b, at = '') => {
   const rejected = { children: [], appendChild(c) { this.children.push(c) } }
   inline(rejected, '[go](javascript:alert(1))')
   if (!rejected.children.some((c) => c.text && c.text.indexOf('javascript:') > -1)) die('markdown: a refused link was dropped silently instead of being shown as text (I9)')
+
+  // A prose `#n` is an issue reference only when the programme snapshot knows it. Unknown hashes
+  // remain literal repository prose; known references use the same health-aware pill as every
+  // operational projection, including stale and CLOSED precedence.
+  const programme = {
+    ghRepo: 'acme/thing',
+    issuesSnapshot: { issues: [{ n: 7, state: 'OPEN' }, { n: 8, state: 'CLOSED' }] },
+    derived: { health: { verdicts: [{ n: 7, verdict: 'bad', why: 'Anchored failure.', stale: false }, { n: 8, verdict: 'bad', why: 'Superseded by closure.', stale: true }] } },
+  }
+  const issueDoc = lifted.renderMarkdown('Known #7, closed #8, unknown #99.', programme)
+  const issueAnchors = []
+  const textOf = (node) => String(node.text || node.textContent || '') + (node.children || []).map(textOf).join('')
+  ;(function walk(n) { for (const child of n.children || []) { if (child.tagName === 'A') issueAnchors.push(child); walk(child) } })(issueDoc)
+  if (issueAnchors.map((a) => a.href).join() !== 'https://github.com/acme/thing/issues/7,https://github.com/acme/thing/issues/8') die('markdown: known issue references did not become exactly two pills: ' + issueAnchors.map((a) => a.href))
+  if (!textOf(issueDoc).includes('#99')) die('markdown: an unknown issue reference was swallowed instead of staying literal')
+  const badPill = issueAnchors[0], closedPill = issueAnchors[1]
+  if (badPill.attrs['data-tip'] !== 'Anchored failure.' || !/Bad/.test(badPill.attrs['aria-label'])) die('room-pill: a current health verdict lost its anchored reason or word')
+  if (!/\bclosed\b/.test(closedPill.className) || closedPill.attrs['data-tip'] !== 'Closed' || !/Closed/.test(closedPill.attrs['aria-label'])) die('room-pill: CLOSED did not override an older stale health verdict')
+  programme.derived.health.verdicts[0].stale = true
+  const stalePill = lifted.pill(programme, 7)
+  if (stalePill.attrs['data-tip'] !== 'Anchored failure.' || !/Stale/.test(stalePill.attrs['aria-label']) || /\bclosed\b/.test(stalePill.className)) die('room-pill: stale evidence did not become a neutral stale pill with its reason')
 
   // Structure, not the appearance of structure. The renderer emitted `div.md-h` and `div.md-li`,
   // which looked like nine headings and ten list items and exposed NONE of them: the accessibility
@@ -2026,6 +2335,7 @@ const diffPaths = (a, b, at = '') => {
 // They stay complete through lazy, bounded disclosure inside Tech; legacy hashes remain valid.
 {
   const template = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
+  const viewerFn = (name) => (new RegExp('function ' + name + '\\([^]*?\\n}\\n').exec(template) || [])[0] || ''
   const tabsSource = (/var TABS=([\s\S]*?);\s*var BUILD=/.exec(template) || [])[1] || ''
   const tabs = [...tabsSource.matchAll(/\["([^"]+)",function/g)].map((m) => m[1])
   if (tabs.join() !== 'exec,tech,map,wbs,docs') die('room-ia: programme views drifted from the five-view contract: ' + tabs)
@@ -2035,20 +2345,31 @@ const diffPaths = (a, b, at = '') => {
   const pageSize = Number((/var ISSUE_PAGE_SIZE=(\d+)/.exec(template) || [])[1])
   if (!(pageSize > 0 && pageSize <= 40) || !/function pagedList\(/.test(template)) die('room-dom: issue rendering has no bounded pager')
   for (const fn of ['renderQueue', 'renderKanban']) {
-    const body = (new RegExp('function ' + fn + '\\([^]*?\\n}\\n').exec(template) || [])[0] || ''
-    if (!/pagedList\(/.test(body)) die('room-dom: ' + fn + ' bypasses the bounded pager')
+    const body = viewerFn(fn)
+    if (!(fn === 'renderQueue' ? /filteredList\(/ : /pagedList\(/).test(body)) die('room-dom: ' + fn + ' bypasses the bounded pager')
   }
-  if (!/for\(i=1;i<names\.length;i\+\+\)/.test(template) || !/if\(items\.length\)/.test(template) || !/closedArchived/.test(template)) die('room-kanban: empty states or closed archive are still mounted as full lanes')
+  const filter = viewerFn('filteredList'), queue = viewerFn('renderQueue'), kanban = viewerFn('renderKanban')
+  if (!/item\.search/.test(filter) || !/input\.addEventListener\("input",draw\)/.test(filter)) die('room-search: the bounded shared list filter no longer searches on input')
+  if (!/filteredList\(lane\.body,items/.test(queue) || !/block\.auto&&block\.cmd\?commandLine\(block\.cmd\):el\("span","state-chip",STR\.human\)/.test(queue)) die('room-queue: blocks lost search or the exact auto/manual command boundary')
+  if (!/input\.type="search"/.test(kanban) || !/source\.filter/.test(kanban) || !/names\.concat\(\[\["chiuse"/.test(kanban)) die('room-kanban: search or the CLOSED archive lane is missing')
+  const tech = viewerFn('viewTech')
+  if (!/names\[i\]\[0\]!=="aspettano-umano"\|\|program\.derived\.kanbanHumanDeclared/.test(tech) || !/key!=="aspettano-umano"\|\|program\.derived\.kanbanHumanDeclared/.test(kanban)) die('room-kanban: an undeclared human-label rule is rendered as a measured empty bucket')
+  const milestones = viewerFn('milestonePanel'), wbs = viewerFn('viewWbs')
+  if (!/milestonesComplete/.test(milestones) || !/markState\(p,"unknown",STR\.milestoneIncomplete\)/.test(milestones)) die('room-milestones: an issue-derived milestone panel does not disclose incomplete collection')
+  if (!/milestonePanel\(program\)/.test(wbs)) die('room-milestones: milestone evidence is not nested under the existing WBS view')
+  if (!/documentGatePanel\(program\)/.test(viewerFn('viewDocs'))) die('room-docs: the document gate is not nested under the existing Docs view')
+  const documentPanel = viewerFn('documentGatePanel')
+  if (!/chips\(f\.matched\)/.test(documentPanel) || !/gate\.claims\|\|\[\]/.test(documentPanel)) die('room-docs: the document gate panel hides measured wiring or typed claims')
+  if (!/gate\.errors\.length/.test(documentPanel) || !/gate\.errors\[i\]/.test(documentPanel)) die('room-docs: non-empty document gate input errors are not disclosed')
   if (!/id="mobile-program"/.test(template) || !/id="mobile-view"/.test(template)) die('room-mobile: native route controls are absent')
   if (!/\.screen-list,\.workflow\{display:none!important\}/.test(template) || /details:not\(\[open\]\)/.test(template)) die('room-print: interactive archives can expand into print')
   if (!/execHeadlineUnknown/.test(template) || !/techHeadlineUnknown/.test(template) || !/thesisUnknown/.test(template)) die('room-truth: unknown claims have no explicit headline path')
-  if (!/i===4&&!blockedClaim\.known\?null/.test(template)) die('room-truth: Tech maps an unknown blocking rule back to a measured zero')
   if (!/\.pager button\{min-height:44px/.test(template)) die('room-mobile: pager target is below 44px')
   if (!/\.skip\{[^}]*min-height:44px/.test(template)) die('room-mobile: skip target is below 44px')
   if (!/\.prov\{overflow:visible;text-overflow:clip;white-space:normal/.test(template)) die('room-mobile: provenance is truncated without a disclosure')
   const composer = readFileSync(join(HERE, '..', 'lib/room.mjs'), 'utf-8')
   if (!/theme: manifest\.theme \|\| 'light'/.test(composer)) die('room-theme: a fresh client briefing does not default to light')
-  console.log('  ok room-workflow — five-view IA, legacy redirects, bounded lazy evidence, mobile and print contracts')
+  console.log('  ok room-workflow — five-view IA, searchable blocks/Kanban, honest milestones, bounded lazy evidence, mobile and print contracts')
 }
 
 // The shipped Claude adapter is executable guidance, not brochure copy: its init→update sequence
@@ -2092,14 +2413,14 @@ const diffPaths = (a, b, at = '') => {
   const template = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
   const pill = (template.match(/function pill\([^]*?\n}/) || [])[0]
   if (!pill) die('room-pill: the shared pill() primitive is missing')
-  if (!/p\.health\.verdicts/.test(pill)) die('room-pill: colour is not sourced from the validated health overlay')
+  if (!/p\.derived&&p\.derived\.health&&p\.derived\.health\.verdicts/.test(pill)) die('room-pill: colour is not sourced from the derived, staleness-aware health overlay')
   if (!/data-tip/.test(pill)) die('room-pill: the anchored why is not exposed on the issue reference')
   if (!/statusMark/.test(pill)) die('room-pill: the verdict has no shared glyph + word encoding')
   if (!/state==="CLOSED"/.test(pill)) die('room-pill: closed issues are not encoded')
   if (!/\.issue-pill \.issue-text\{[^}]*min-width:0/.test(template)) die('room-pill: long issue titles escape their pill on a narrow board lane')
   if (!/mark\.lastChild\.textContent/.test(pill)) die('room-pill: the accessible name omits the verdict word')
   if (/\bissueLink\(/.test(template)) die('room-pill: a plain issue link bypasses pill()')
-  console.log('  ok room-pill — every issue reference shares verdict, reason, glyph, word and closed state')
+  console.log('  ok room-pill — every issue reference shares current/stale/closed state, anchored reason, glyph and word')
 }
 
 // The map already embeds Forma's full explorer. Keep one drill surface: prove the iframe carries the
@@ -2180,7 +2501,8 @@ const diffPaths = (a, b, at = '') => {
   mkdirSync(join(repo, 'docs/architecture'), { recursive: true })
   writeFileSync(join(repo, 'docs/architecture/c4-status.json'), JSON.stringify({ nodes: { [doneNode.id]: { status2: 'done', current: 'Audited fixture claim.', verify: { source: 'test fixture' } } } }, null, 2))
   r = run(['gen', '--repo', repo, '--topology', topology, '--out', model]); if (r.status !== 0) die('audit: decorated gen exit ' + r.status, r)
-  const planArgs = ['audit', '--repo', repo, '--issues', issues, '--model', model, '--topology', topology, '--health', health, '--findings', findings, '--plan']
+  const planArgs = ['audit', '--repo', repo, '--issues', issues, '--model', model, '--topology', topology, '--health', health, '--findings', findings, '--today', '2026-08-10', '--blocked-labels', '["needs-human"]', '--plan']
+  const applyArgs = ['audit', '--repo', repo, '--issues', issues, '--model', model, '--topology', topology, '--health', health, '--findings', findings, '--today', '2026-08-10', '--blocked-labels', '["needs-human"]']
   r = run([...planArgs, plan])
   if (r.status !== 0) die('audit: plan exit ' + r.status, r)
   r = run([...planArgs, plan2])
@@ -2188,16 +2510,49 @@ const diffPaths = (a, b, at = '') => {
   if (readFileSync(plan, 'utf-8') !== readFileSync(plan2, 'utf-8')) die('audit: unchanged inputs produced different plans')
   const work = readJson(plan)
   if (JSON.stringify(work.issues.map((x) => x.n)) !== '[3]') die('audit: plan did not exclude already-audited issues: ' + JSON.stringify(work.issues))
-  if (!work.issues[0].prompt.includes('issue #3') || !Array.isArray(work.output.verdicts) || !Array.isArray(work.output.findings)) die('audit: plan does not carry the agent fill contract')
+  if (!work.issues[0].prompt.includes('issue #3') || work.output.planHash !== work.planHash || !Array.isArray(work.output.verdicts) || !Array.isArray(work.output.findings)) die('audit: plan does not carry the agent fill contract')
   const claimKinds = new Set(work.claims.map((claim) => claim.kind))
   for (const kind of ['done-node', 'health-verdict', 'milestone-rate', 'waiting-human']) if (!claimKinds.has(kind)) die('audit: counter-verification plan has no ' + kind + ' claim')
   if (work.claims.some((claim) => !claim.id || !claim.claim || !claim.where.length)) die('audit: a counter-verification claim lacks its name or inspection targets: ' + JSON.stringify(work.claims))
   const milestoneClaim = work.claims.find((claim) => claim.kind === 'milestone-rate')
   if (!/33% \(1 closed of 3\)/.test(milestoneClaim.claim) || !milestoneClaim.where.some((at) => at.type === 'gh')) die('audit: milestone claim does not name its derivation and gh source: ' + JSON.stringify(milestoneClaim))
 
-  const { validateCounterResults } = await import(join(HERE, '..', 'lib/audit.mjs'))
+  const { auditPlan, applyCounterResults, counterPlan, validateCounterResults, classifyVerdictStaleness, hashEvidence, resolveEvidencePath, validateEvidence } = await import(join(HERE, '..', 'lib/audit.mjs'))
+  const labelClaims = counterPlan(null, {
+    ghRepo: 'acme/labels', milestones: [],
+    issues: [{ n: 1, state: 'OPEN', labels: ['owner-decision'] }, { n: 2, state: 'OPEN', labels: ['needs-human'] }],
+  }, { verdicts: [] }, 'model.json', ['owner-decision']).filter((claim) => claim.kind === 'waiting-human')
+  if (labelClaims.map((claim) => claim.id).join() !== 'issue:waiting-human:1' || /needs-human/.test(labelClaims[0].claim)) die('audit labels: counter plan inferred needs-human outside the declared owner-decision vocabulary')
+  const evidence = [{ type: 'path', ref: 'src/core/engine.js' }], issueSnapshot = readJson(issues)
+  const evidenceHash = hashEvidence(repo, evidence, issueSnapshot)
+  const anchored = validateEvidence(repo, { type: 'path', ref: 'src/core/engine.js:1' }, 'line anchor')
+  if (anchored.ref !== 'src/core/engine.js:1' || anchored.line !== 1 || resolveEvidencePath(repo, anchored.ref).ref !== anchored.ref) die('audit evidence: a valid path:line anchor did not resolve canonically')
+  for (const [ref, expected] of [['src/core/engine.js:999999', /line does not resolve/], ['../outside:1', /path does not exist in repo/]]) {
+    let rejected = null
+    try { validateEvidence(repo, { type: 'path', ref }, 'line anchor') } catch (error) { rejected = error }
+    if (!rejected || !expected.test(rejected.message)) die('audit evidence: unsafe or invalid anchor was not rejected clearly: ' + ref)
+  }
+  const lineOneHash = hashEvidence(repo, [{ type: 'path', ref: 'src/core/engine.js:1' }], issueSnapshot)
+  const lineTwoHash = hashEvidence(repo, [{ type: 'path', ref: 'src/core/engine.js:2' }], issueSnapshot)
+  if (lineOneHash !== hashEvidence(repo, [{ type: 'path', ref: 'src/core/engine.js:1' }], issueSnapshot) || lineOneHash === lineTwoHash) die('audit evidence: path:line hashes are not deterministic and anchor-sensitive')
+  const staleVerdict = { auditedAt: '2026-08-10', evidenceHash }
+  const unchangedIssue = { updatedAt: '2026-08-10T23:59:59Z', closedAt: null }
+  const classify = (issue, today, currentHash = evidenceHash) => classifyVerdictStaleness(staleVerdict, issue, { today, staleAfterDays: 14, evidenceHash: currentHash })
+  if (classify(unchangedIssue, '2026-08-17') !== 'fresh') die('audit stale: unchanged issue and evidence did not stay fresh')
+  if (classify({ ...unchangedIssue, updatedAt: '2026-08-11T00:00:00Z' }, '2026-08-17') !== 'issue-changed') die('audit stale: issue update after audit was ignored')
+  if (classify(unchangedIssue, '2026-08-17', '0'.repeat(64)) !== 'evidence-changed') die('audit stale: changed evidence hash was ignored')
+  if (classify(unchangedIssue, '2026-08-25') !== 'expired') die('audit stale: verdict age limit was ignored')
+  if (classify(unchangedIssue, '2026-08-09') !== 'future') die('audit stale: a verdict from the future stayed green')
+  const unrelated = JSON.parse(JSON.stringify(issueSnapshot)); unrelated.issues.find((it) => it.n === 2).title = 'Unrelated snapshot change'
+  if (hashEvidence(repo, evidence, unrelated) !== evidenceHash) die('audit stale: unrelated snapshot data leaked into a path evidence hash')
+  const expiredPrompts = auditPlan(issueSnapshot, { byIssue: new Map() }, readJson(health).verdicts, { repo, today: '2026-08-25', staleAfterDays: 14 })
+  if (expiredPrompts.map((entry) => entry.n).join() !== '1,2,3') die('audit stale: expired verdicts were not queued for re-audit: ' + JSON.stringify(expiredPrompts))
   const { stubAuditAgent } = await import(join(HERE, 'stub-audit-agent.mjs'))
   const result = validateCounterResults(work, stubAuditAgent(work))
+  const heldResult = { planHash: work.planHash, results: JSON.parse(JSON.stringify(result.results)) }
+  heldResult.results.find((entry) => entry.claimId === 'health:1').verdict = 'holds'
+  const renewed = applyCounterResults(repo, issueSnapshot, issues, readJson(health), readJson(findings).findings, work, heldResult, { today: '2026-08-11' })
+  if (renewed.health.verdicts.find((v) => v.n === 1).auditedAt !== '2026-08-11') die('audit: a counter hold did not renew auditedAt')
   if (result.results.length !== work.claims.length || result.results.some((entry, i) => entry.claimId !== work.claims[i].id)) die('audit: runner result does not cover the plan one-for-one')
   if (!['holds', 'contradicted', 'unsupported'].every((verdict) => result.results.some((entry) => entry.verdict === verdict))) die('audit: offline agent did not exercise every counter-verdict')
   if (result.results.some((entry) => !entry.reason || !entry.evidence || !entry.evidence.type || !entry.evidence.ref)) die('audit: runner accepted an unanchored reason')
@@ -2208,14 +2563,20 @@ const diffPaths = (a, b, at = '') => {
   if (/codex exec|--agent-cmd/.test(auditSource)) die('audit: the external Codex adapter leaked into the offline engine')
   const codexSkill = readFileSync(join(HERE, '..', 'adapters/codex/forma-counterverify/SKILL.md'), 'utf-8')
   const decisions = readFileSync(join(HERE, '..', 'DECISION_REGISTRY.md'), 'utf-8')
-  if (!/name: forma-counterverify/.test(codexSkill) || !/holds\|contradicted\|unsupported/.test(codexSkill)) die('audit: the default Codex adapter does not declare the counter-verification contract')
+  if (!/name: forma-counterverify/.test(codexSkill) || !/holds\|contradicted\|unsupported/.test(codexSkill) || !/planHash/.test(codexSkill) || !/--today/.test(codexSkill)) die('audit: the default Codex adapter does not declare the current counter-verification contract')
   if (!/\| D-08 \| Codex is the default counter-verification adapter, but runs outside Forma \|/.test(decisions)) die('audit: the delegated Codex CLI decision is not recorded')
 
   // Agent results enter through the same validated apply boundary. A contradicted issue claim is
   // both a durable finding and a bad health verdict, so the shared pill turns red with this reason.
   const counter = join(tmp, 'audit-counter.json')
   writeFileSync(counter, JSON.stringify(result))
-  r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--apply', counter, '--counter-plan', plan])
+  const beforeToctouHealth = readFileSync(health, 'utf-8'), beforeToctouFindings = readFileSync(findings, 'utf-8'), beforeToctouIssues = readFileSync(issues, 'utf-8')
+  const changedDuringAudit = readJson(issues); changedDuringAudit.issues.find((issue) => issue.n === 3).title = 'Changed after the plan'
+  writeFileSync(issues, JSON.stringify(changedDuringAudit, null, 2) + '\n')
+  r = run([...applyArgs, '--apply', counter, '--counter-plan', plan])
+  writeFileSync(issues, beforeToctouIssues)
+  if (r.status === 0 || !/plan is stale/.test(r.stderr || '') || readFileSync(health, 'utf-8') !== beforeToctouHealth || readFileSync(findings, 'utf-8') !== beforeToctouFindings) die('audit: apply accepted a result after its plan inputs changed', r)
+  r = run([...applyArgs, '--apply', counter, '--counter-plan', plan])
   if (r.status !== 0) die('audit: counter apply exit ' + r.status, r)
   const contradicted = result.results.find((entry) => entry.claimId === 'health:1')
   const counterHealth = readJson(health).verdicts.find((v) => v.n === 1)
@@ -2224,7 +2585,7 @@ const diffPaths = (a, b, at = '') => {
   if (!readJson(findings).findings.some((f) => f.id === 'counter:health:2' && f.severity === 'warn')) die('audit: unsupported claim disappeared instead of becoming a warning')
 
   const manifest = join(repo, 'forma.room.json'), roomHtml = join(repo, 'control-room.html')
-  writeFileSync(manifest, JSON.stringify({ today: '2026-08-10', programs: [{ id: 'audit', ghRepo: 'acme/alpha', repo: '.', issues: 'issues.json', model: 'model.json', topology: 'topology.json', health: 'health.json', findings: 'findings.json' }] }, null, 2))
+  writeFileSync(manifest, JSON.stringify({ today: '2026-08-10', programs: [{ id: 'audit', ghRepo: 'acme/alpha', repo: '.', issues: 'issues.json', model: 'model.json', topology: 'topology.json', health: 'health.json', findings: 'findings.json', blockedBy: { labels: ['needs-human'] } }] }, null, 2))
   r = run(['room', '--manifest', manifest, '--out', roomHtml]); if (r.status !== 0) die('audit: room after counter apply exit ' + r.status, r)
   r = run(['check', '--repo', repo, '--model', model, '--topology', topology, '--issues', issues, '--health', health, '--findings', findings, '--room', roomHtml, '--manifest', manifest])
   if (r.status !== 0) die('audit: re-derivation disagrees after counter apply', r)
@@ -2232,45 +2593,60 @@ const diffPaths = (a, b, at = '') => {
   const brokenHealth = readJson(health)
   brokenHealth.verdicts.find((v) => v.n === 1).evidence = [{ type: 'path', ref: 'missing-counter-proof.js' }]
   writeFileSync(health, JSON.stringify(brokenHealth, null, 2) + '\n')
-  r = run(['check', '--repo', repo, '--model', model, '--topology', topology, '--issues', issues, '--health', health, '--findings', findings])
-  if (r.status === 0 || !/evidence path does not exist/.test(r.stderr || '')) die('audit: check accepted an unresolved counter-verdict', r)
+  const staleRoom = join(repo, 'stale-room.html')
+  r = run(['room', '--manifest', manifest, '--out', staleRoom]); if (r.status !== 0) die('audit stale: unresolved old verdict stopped composition', r)
+  const staleSeam = /window\.__ROOM__ = ([\s\S]*?);\s*<\/script>/.exec(readFileSync(staleRoom, 'utf-8'))
+  if (!staleSeam) die('audit stale: generated room has no __ROOM__ seam')
+  const staleProgram = JSON.parse(staleSeam[1]).programs[0], staleHealth = staleProgram.derived.health
+  const stale = staleHealth.verdicts.find((v) => v.n === 1)
+  if (!stale || !stale.stale || stale.staleReason !== 'evidence-changed' || staleHealth.staleCount < 1) die('audit stale: missing evidence was not derived as stale: ' + JSON.stringify(staleHealth))
+  if (!staleProgram.derived.kanban['non-auditate'].includes(1) || staleProgram.derived.kanban['premessa-falsa'].includes(1)) die('audit stale: stale verdict still colored the Kanban')
+  r = run(['check', '--repo', repo, '--model', model, '--topology', topology, '--issues', issues, '--health', health, '--findings', findings, '--room', staleRoom, '--manifest', manifest])
+  if (r.status !== 0) die('audit stale: check rejected a correctly disclosed stale verdict', r)
   writeFileSync(health, goodHealth)
 
   const beforeCounterHealth = readFileSync(health, 'utf-8'), beforeCounterFindings = readFileSync(findings, 'utf-8')
-  const badCounter = JSON.parse(JSON.stringify(result))
+  r = run([...planArgs, plan]); if (r.status !== 0) die('audit: fresh plan before rejected counter exit ' + r.status, r)
+  const badCounter = stubAuditAgent(readJson(plan))
   badCounter.results.find((entry) => entry.claimId === 'health:1').evidence = { type: 'file', ref: 'missing-agent-proof.js' }
   writeFileSync(counter, JSON.stringify(badCounter))
-  r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--apply', counter, '--counter-plan', plan])
+  r = run([...applyArgs, '--apply', counter, '--counter-plan', plan])
   if (r.status === 0) die('audit: counter apply accepted unresolved agent evidence')
   if (readFileSync(health, 'utf-8') !== beforeCounterHealth || readFileSync(findings, 'utf-8') !== beforeCounterFindings) die('audit: rejected counter result partially replaced an overlay')
 
   const fill = join(tmp, 'audit-fill.json')
   writeFileSync(fill, JSON.stringify({
+    planHash: readJson(plan).planHash,
     verdicts: [{ n: 3, verdict: 'ok', why: 'The committed helper is present.', evidence: [{ type: 'path', ref: 'src/util/log.js' }] }],
     findings: [{ id: 'F-2', severity: 'bad', text: 'Parser behavior contradicts the issue.', evidence: { type: 'issue', ref: '2' } }],
   }))
-  r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--apply', fill])
+  r = run([...applyArgs, '--apply', fill, '--audit-plan', plan])
   if (r.status !== 0) die('audit: apply exit ' + r.status, r)
-  if (!readJson(health).verdicts.some((v) => v.n === 3 && v.verdict === 'ok')) die('audit: verdict was not written')
+  const appliedVerdict = readJson(health).verdicts.find((v) => v.n === 3 && v.verdict === 'ok')
+  if (!appliedVerdict) die('audit: verdict was not written')
+  if (appliedVerdict.auditedAt !== '2026-08-10' || !/^[0-9a-f]{64}$/.test(appliedVerdict.evidenceHash)) die('audit: Forma did not stamp deterministic verdict provenance')
   if (!readJson(findings).findings.some((f) => f.id === 'F-2' && f.severity === 'bad')) die('audit: finding was not written')
 
   const beforeHealth = readFileSync(health, 'utf-8'), beforeFindings = readFileSync(findings, 'utf-8')
+  r = run([...planArgs, plan]); if (r.status !== 0) die('audit: fresh plan before rejected fill exit ' + r.status, r)
   writeFileSync(fill, JSON.stringify({
-    verdicts: [{ n: 3, verdict: 'bad', why: 'Unsupported.', evidence: [{ type: 'path', ref: 'missing.js' }] }],
+    planHash: readJson(plan).planHash,
+    verdicts: [{ n: 3, verdict: 'bad', why: 'Unsupported.', evidence: [{ type: 'path', ref: 'src/util/log.js' }] }],
     findings: [{ id: 'F-3', severity: 'warn', text: 'Would be a partial write.', evidence: { type: 'path', ref: 'src/core/engine.js' } }],
   }))
-  r = run(['audit', '--repo', repo, '--issues', issues, '--health', health, '--findings', findings, '--apply', fill])
-  if (r.status === 0) die('audit: unresolved evidence was accepted')
+  r = run([...applyArgs, '--apply', fill, '--audit-plan', plan])
+  if (r.status === 0 || !/unplanned verdicts/.test(r.stderr || '')) die('audit: a fill overwrote a verdict the current plan did not request')
   if (readFileSync(health, 'utf-8') !== beforeHealth || readFileSync(findings, 'utf-8') !== beforeFindings) die('audit: rejected fill partially replaced an overlay')
 
   // `room update --counter` owns the deterministic half of unattended operation. The external
   // adapter writes the result; update regenerates the plan, refuses stale/missing output, applies
   // it per active programme, then composes the briefing (#69).
   const updateManifest = readJson(manifest)
+  updateManifest.staleAfterDays = 7
   updateManifest.programs[0].auditPlan = plan
   updateManifest.programs[0].counterResults = counter
   writeFileSync(manifest, JSON.stringify(updateManifest, null, 2) + '\n')
-  r = run([...planArgs, plan]); if (r.status !== 0) die('audit update: fresh plan exit ' + r.status, r)
+  r = run([...applyArgs, '--stale-after-days', '7', '--plan', plan]); if (r.status !== 0) die('audit update: fresh plan exit ' + r.status, r)
   const updateResult = stubAuditAgent(readJson(plan))
   const updateContradiction = updateResult.results.find((entry) => entry.claimId === 'health:1')
   updateContradiction.verdict = 'contradicted'; updateContradiction.reason = 'Update pipeline found a contradiction.'
@@ -2278,6 +2654,7 @@ const diffPaths = (a, b, at = '') => {
   const updatedRoom = join(repo, 'updated-room.html')
   r = run(['room', 'update', '--manifest', manifest, '--out', updatedRoom, '--skip-verify', '--counter'])
   if (r.status !== 0) die('audit update: counter-verification exit ' + r.status, r)
+  if (readJson(plan).staleAfterDays !== 7) die('audit update: counter plan ignored manifest.staleAfterDays')
   if (readJson(health).verdicts.find((v) => v.n === 1).why !== updateContradiction.reason) die('audit update: counter result did not reach health before composition')
   if (!readFileSync(updatedRoom, 'utf-8').includes(updateContradiction.reason)) die('audit update: recomposed briefing does not surface the contradiction')
   const beforeMissingResult = readFileSync(health, 'utf-8')

@@ -1,40 +1,107 @@
 {
-  "fetchedAt": "2026-08-10T11:02:33.660Z",
+  "fetchedAt": "2026-08-18T14:44:15.205Z",
   "ghRepo": "LucaDominici/forma",
   "truncated": false,
+  "collection": {
+    "pagination": "gh api graphql --paginate --slurp",
+    "nativeEdges": 0,
+    "truncatedRelations": 0,
+    "prose": {
+      "accepted": 0,
+      "discarded": 0,
+      "ambiguous": 0,
+      "bodyBytes": 5438,
+      "maxBytesPerIssue": 65536
+    },
+    "signalsUnknown": 0,
+    "staleVerdicts": 0,
+    "milestonesComplete": false,
+    "milestonesReason": "Milestones are derived from issue payloads; milestones with zero issues are not observable.",
+    "payloadBytes": 22001
+  },
+  "dependencies": {
+    "supported": true,
+    "complete": true,
+    "edges": []
+  },
+  "signals": {
+    "workflows": {
+      "ci": {
+        "state": "present",
+        "name": "ci",
+        "path": ".github/workflows/ci.yml",
+        "headBranch": "agent/forma-production-closure-followup",
+        "headSha": "80e8d366eef5ccd73ea9fe09d4cfaf9cd713b9f4",
+        "event": "pull_request",
+        "status": "completed",
+        "conclusion": "success",
+        "createdAt": "2026-08-17T21:02:34Z",
+        "url": "https://github.com/LucaDominici/forma/actions/runs/32069014898"
+      }
+    },
+    "release": {
+      "listState": "present",
+      "tag": "v1.0.0",
+      "publishedAt": "2026-08-17T13:06:43Z",
+      "url": "https://github.com/LucaDominici/forma/releases/tag/v1.0.0",
+      "resolvableTag": {
+        "name": "v1.0.0",
+        "sha": "a702fd000b28c1c44ef8ff5f4d56813c429df831",
+        "committedAt": "2026-08-17T13:05:22Z",
+        "url": "https://github.com/LucaDominici/forma/commit/a702fd000b28c1c44ef8ff5f4d56813c429df831"
+      }
+    }
+  },
   "issues": [
     {
-      "n": 35,
-      "title": "La demo pubblica è forma che dimostra forma — e fallisce i suoi stessi predicati",
+      "n": 3,
+      "title": "Publish forma-arch to npm + signed auto-releases (deferred follow-up)",
       "state": "CLOSED",
-      "ms": "confine — sostituire PowerPoint",
-      "labels": [
-        "confine"
-      ],
-      "createdAt": "2026-07-26",
+      "url": "https://github.com/LucaDominici/forma/issues/3",
+      "ms": null,
+      "labels": [],
+      "updatedAt": "2026-07-25T22:37:39Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-07-22",
+      "closedAt": "2026-07-25"
+    },
+    {
+      "n": 16,
+      "title": "Su un progetto Go reale il modello è ancora inutile: internal/ è un solo container, le foglie sono file, zero archi",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/16",
+      "ms": null,
+      "labels": [],
+      "updatedAt": "2026-07-25T23:19:00Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-07-25",
+      "closedAt": "2026-07-25"
+    },
+    {
+      "n": 17,
+      "title": "Lo scopo: sostituire PowerPoint davanti a uno stakeholder — testo dai documenti ai livelli alti, avanzamento generato non curato a mano",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/17",
+      "ms": null,
+      "labels": [],
+      "updatedAt": "2026-07-26T16:38:21Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-07-25",
       "closedAt": "2026-07-26"
     },
     {
-      "n": 34,
-      "title": "Un repo a due stack ne mostra uno: init semina solo il linguaggio dominante, in silenzio",
+      "n": 27,
+      "title": "Il canale scrivibile per c4-status.json è orfano: PR #23 mergiata in un branch che ho chiuso",
       "state": "CLOSED",
-      "ms": "confine — sostituire PowerPoint",
-      "labels": [
-        "bug",
-        "confine"
-      ],
-      "createdAt": "2026-07-26",
-      "closedAt": "2026-07-26"
-    },
-    {
-      "n": 33,
-      "title": "La prima schermata è un box vuoto: init non semina nessun attore nel contesto",
-      "state": "CLOSED",
-      "ms": "confine — sostituire PowerPoint",
-      "labels": [
-        "enhancement",
-        "confine"
-      ],
+      "url": "https://github.com/LucaDominici/forma/issues/27",
+      "ms": null,
+      "labels": [],
+      "updatedAt": "2026-07-26T13:29:37Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
       "createdAt": "2026-07-26",
       "closedAt": "2026-07-26"
     },
@@ -42,54 +109,627 @@
       "n": 32,
       "title": "Un box che raggruppa non eredita né gli archi né lo stato dei figli — e il livello che si mostra allo stakeholder resta senza frecce",
       "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/32",
       "ms": "confine — sostituire PowerPoint",
       "labels": [
         "bug",
         "confine"
       ],
+      "updatedAt": "2026-07-26T18:53:27Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
       "createdAt": "2026-07-26",
       "closedAt": "2026-07-26"
     },
     {
-      "n": 27,
-      "title": "Il canale scrivibile per c4-status.json è orfano: PR #23 mergiata in un branch che ho chiuso",
+      "n": 33,
+      "title": "La prima schermata è un box vuoto: init non semina nessun attore nel contesto",
       "state": "CLOSED",
-      "ms": null,
-      "labels": [],
+      "url": "https://github.com/LucaDominici/forma/issues/33",
+      "ms": "confine — sostituire PowerPoint",
+      "labels": [
+        "enhancement",
+        "confine"
+      ],
+      "updatedAt": "2026-07-26T18:53:29Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
       "createdAt": "2026-07-26",
       "closedAt": "2026-07-26"
     },
     {
-      "n": 17,
-      "title": "Lo scopo: sostituire PowerPoint davanti a uno stakeholder — testo dai documenti ai livelli alti, avanzamento generato non curato a mano",
+      "n": 34,
+      "title": "Un repo a due stack ne mostra uno: init semina solo il linguaggio dominante, in silenzio",
       "state": "CLOSED",
-      "ms": null,
-      "labels": [],
-      "createdAt": "2026-07-25",
+      "url": "https://github.com/LucaDominici/forma/issues/34",
+      "ms": "confine — sostituire PowerPoint",
+      "labels": [
+        "bug",
+        "confine"
+      ],
+      "updatedAt": "2026-07-26T18:53:30Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-07-26",
       "closedAt": "2026-07-26"
     },
     {
-      "n": 16,
-      "title": "Su un progetto Go reale il modello è ancora inutile: internal/ è un solo container, le foglie sono file, zero archi",
+      "n": 35,
+      "title": "La demo pubblica è forma che dimostra forma — e fallisce i suoi stessi predicati",
       "state": "CLOSED",
-      "ms": null,
-      "labels": [],
-      "createdAt": "2026-07-25",
-      "closedAt": "2026-07-25"
+      "url": "https://github.com/LucaDominici/forma/issues/35",
+      "ms": "confine — sostituire PowerPoint",
+      "labels": [
+        "confine"
+      ],
+      "updatedAt": "2026-07-26T18:53:32Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-07-26",
+      "closedAt": "2026-07-26"
     },
     {
-      "n": 3,
-      "title": "Publish forma-arch to npm + signed auto-releases (deferred follow-up)",
-      "state": "CLOSED",
+      "n": 50,
+      "title": "The map is mouse-only and invisible to assistive technology",
+      "state": "OPEN",
+      "url": "https://github.com/LucaDominici/forma/issues/50",
       "ms": null,
       "labels": [],
-      "createdAt": "2026-07-22",
-      "closedAt": "2026-07-25"
+      "updatedAt": "2026-08-10T14:38:25Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": true,
+      "createdAt": "2026-08-10"
+    },
+    {
+      "n": 51,
+      "title": "Nobody has ever used this but its author",
+      "state": "OPEN",
+      "url": "https://github.com/LucaDominici/forma/issues/51",
+      "ms": null,
+      "labels": [],
+      "updatedAt": "2026-08-10T14:38:46Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": true,
+      "createdAt": "2026-08-10"
+    },
+    {
+      "n": 52,
+      "title": "R5-3 · A success metric",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/52",
+      "ms": "R5 — Dogfood and 1.0 freeze",
+      "labels": [
+        "release:R5",
+        "area:docs",
+        "kind:chore"
+      ],
+      "updatedAt": "2026-08-17T13:06:52Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-10",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 53,
+      "title": "The layout floor is measured by hand, not gated",
+      "state": "OPEN",
+      "url": "https://github.com/LucaDominici/forma/issues/53",
+      "ms": null,
+      "labels": [],
+      "updatedAt": "2026-08-10T14:39:09Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": true,
+      "createdAt": "2026-08-10"
+    },
+    {
+      "n": 54,
+      "title": "The demo shows 0 of 9 requirements landing on issues",
+      "state": "OPEN",
+      "url": "https://github.com/LucaDominici/forma/issues/54",
+      "ms": null,
+      "labels": [],
+      "updatedAt": "2026-08-10T14:39:10Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": true,
+      "createdAt": "2026-08-10"
+    },
+    {
+      "n": 55,
+      "title": "R1-1 · Decouple the public docs gate from the private arbiter checkout",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/55",
+      "ms": "R1 — Unstall / green baseline",
+      "labels": [
+        "kind:bug",
+        "release:R1",
+        "area:ci",
+        "needs-luca"
+      ],
+      "updatedAt": "2026-08-17T13:06:54Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-10",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 56,
+      "title": "R1-2 · Replace \"public demo\" with a dogfood cockpit over the owner's repos",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/56",
+      "ms": "R1 — Unstall / green baseline",
+      "labels": [
+        "release:R1",
+        "area:room",
+        "kind:feat"
+      ],
+      "updatedAt": "2026-08-17T13:06:56Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 57,
+      "title": "R1-3 · Wire or quarantine lib/audit.mjs",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/57",
+      "ms": "R1 — Unstall / green baseline",
+      "labels": [
+        "release:R1",
+        "kind:debt",
+        "area:audit"
+      ],
+      "updatedAt": "2026-08-17T13:06:58Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 58,
+      "title": "R1-4 · Prune superseded doc/schema archaeology (ponytail)",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/58",
+      "ms": "R1 — Unstall / green baseline",
+      "labels": [
+        "release:R1",
+        "area:docs",
+        "kind:chore"
+      ],
+      "updatedAt": "2026-08-17T13:07:00Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 59,
+      "title": "R1-5 · Surface or delete the gated-but-unrendered derivations",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/59",
+      "ms": "R1 — Unstall / green baseline",
+      "labels": [
+        "release:R1",
+        "kind:debt",
+        "area:room"
+      ],
+      "updatedAt": "2026-08-17T13:07:03Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 60,
+      "title": "R1-6 · Right-size governance to the solo tier",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/60",
+      "ms": "R1 — Unstall / green baseline",
+      "labels": [
+        "release:R1",
+        "area:docs",
+        "kind:chore"
+      ],
+      "updatedAt": "2026-08-17T13:07:04Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 61,
+      "title": "R2-1 · Restore the Kanban board as a first-class view",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/61",
+      "ms": "R2 — Per-project parity with CEREBRO",
+      "labels": [
+        "release:R2",
+        "area:viewer",
+        "kind:feat"
+      ],
+      "updatedAt": "2026-08-17T13:07:06Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 62,
+      "title": "R2-2 · Restore the Coda/auto queue view",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/62",
+      "ms": "R2 — Per-project parity with CEREBRO",
+      "labels": [
+        "release:R2",
+        "area:viewer",
+        "kind:feat"
+      ],
+      "updatedAt": "2026-08-17T13:07:08Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 63,
+      "title": "R2-3 · The per-issue pill, everywhere",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/63",
+      "ms": "R2 — Per-project parity with CEREBRO",
+      "labels": [
+        "release:R2",
+        "area:viewer",
+        "kind:feat"
+      ],
+      "updatedAt": "2026-08-17T13:07:10Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 64,
+      "title": "R2-4 · Reinstate a C4 drill-down surface (not only checkpoints)",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/64",
+      "ms": "R2 — Per-project parity with CEREBRO",
+      "labels": [
+        "release:R2",
+        "area:viewer",
+        "kind:feat"
+      ],
+      "updatedAt": "2026-08-17T13:07:12Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 65,
+      "title": "R3-1 · forma audit — an evidence-gated health/findings producer",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/65",
+      "ms": "R3 — Audit + agentic counter-verification",
+      "labels": [
+        "release:R3",
+        "area:audit",
+        "kind:feat"
+      ],
+      "updatedAt": "2026-08-17T13:07:14Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 66,
+      "title": "R3-2 · Counter-verification plan — the claims a briefing makes, machine-readable",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/66",
+      "ms": "R3 — Audit + agentic counter-verification",
+      "labels": [
+        "release:R3",
+        "area:audit",
+        "kind:feat"
+      ],
+      "updatedAt": "2026-08-17T13:07:16Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 67,
+      "title": "R3-3 · Independent agent runner, default Codex",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/67",
+      "ms": "R3 — Audit + agentic counter-verification",
+      "labels": [
+        "release:R3",
+        "area:audit",
+        "kind:feat"
+      ],
+      "updatedAt": "2026-08-17T13:07:18Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 68,
+      "title": "R3-4 · Ingest verdicts, gate, and colour the pill",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/68",
+      "ms": "R3 — Audit + agentic counter-verification",
+      "labels": [
+        "release:R3",
+        "area:audit",
+        "kind:feat"
+      ],
+      "updatedAt": "2026-08-17T13:07:20Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 69,
+      "title": "R3-5 · Automatic contoverifica on update / unattended",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/69",
+      "ms": "R3 — Audit + agentic counter-verification",
+      "labels": [
+        "release:R3",
+        "area:audit",
+        "kind:feat"
+      ],
+      "updatedAt": "2026-08-17T13:07:21Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 70,
+      "title": "R4-1 · verify refreshes a snapshot without requiring a model",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/70",
+      "ms": "R4 — init/update GA + parametricity",
+      "labels": [
+        "kind:feat",
+        "release:R4",
+        "area:cli"
+      ],
+      "updatedAt": "2026-08-17T13:07:23Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 71,
+      "title": "R4-2 · Harden room init / room update",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/71",
+      "ms": "R4 — init/update GA + parametricity",
+      "labels": [
+        "kind:feat",
+        "release:R4",
+        "area:cli"
+      ],
+      "updatedAt": "2026-08-17T13:07:25Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 72,
+      "title": "R4-3 · Prove parametricity on a second repository",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/72",
+      "ms": "R4 — init/update GA + parametricity",
+      "labels": [
+        "area:room",
+        "kind:feat",
+        "release:R4"
+      ],
+      "updatedAt": "2026-08-17T13:07:27Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 73,
+      "title": "R4-4 · Skill drives init + update",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/73",
+      "ms": "R4 — init/update GA + parametricity",
+      "labels": [
+        "area:docs",
+        "release:R4",
+        "kind:chore"
+      ],
+      "updatedAt": "2026-08-17T13:07:29Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 74,
+      "title": "R5-1 · Onboard the whole home-machine portfolio",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/74",
+      "ms": "R5 — Dogfood and 1.0 freeze",
+      "labels": [
+        "area:room",
+        "release:R5",
+        "kind:feat"
+      ],
+      "updatedAt": "2026-08-17T13:07:30Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 75,
+      "title": "R5-2 · Counter-verification runs green (or honestly red) across the portfolio",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/75",
+      "ms": "R5 — Dogfood and 1.0 freeze",
+      "labels": [
+        "release:R5",
+        "area:audit",
+        "kind:feat"
+      ],
+      "updatedAt": "2026-08-17T13:07:32Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 76,
+      "title": "R5-4 · Freeze schemaVersion and cut 1.0",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/76",
+      "ms": "R5 — Dogfood and 1.0 freeze",
+      "labels": [
+        "release:R5",
+        "kind:chore",
+        "area:cli"
+      ],
+      "updatedAt": "2026-08-17T13:07:34Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 78,
+      "title": "[EPIC] Close the cold-start algebra on real multi-stack repositories",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/78",
+      "ms": null,
+      "labels": [
+        "enhancement",
+        "area:room",
+        "kind:feat",
+        "area:cli"
+      ],
+      "updatedAt": "2026-08-17T18:05:44Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 79,
+      "title": "[EPIC] Preserve epistemic state: unknown must never render as zero",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/79",
+      "ms": null,
+      "labels": [
+        "kind:bug",
+        "area:room",
+        "area:viewer"
+      ],
+      "updatedAt": "2026-08-17T18:05:44Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 80,
+      "title": "[EPIC] Redesign the Control Room as an evidence-first client briefing",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/80",
+      "ms": null,
+      "labels": [
+        "enhancement",
+        "area:room",
+        "area:viewer",
+        "kind:feat"
+      ],
+      "updatedAt": "2026-08-17T18:05:44Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 81,
+      "title": "[EPIC] Bound rendering across DOM, mobile, accessibility, and print",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/81",
+      "ms": null,
+      "labels": [
+        "kind:bug",
+        "area:viewer",
+        "area:ci"
+      ],
+      "updatedAt": "2026-08-17T18:05:45Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
+    },
+    {
+      "n": 82,
+      "title": "[EPIC] Production closure: prove Forma on ViaFera and hand it to a client",
+      "state": "CLOSED",
+      "url": "https://github.com/LucaDominici/forma/issues/82",
+      "ms": null,
+      "labels": [
+        "enhancement",
+        "area:room",
+        "area:ci",
+        "kind:chore"
+      ],
+      "updatedAt": "2026-08-17T18:05:45Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
+      "createdAt": "2026-08-17",
+      "closedAt": "2026-08-17"
     }
   ],
   "milestones": [
     {
       "title": "confine — sostituire PowerPoint",
+      "due": null,
+      "open": 0,
+      "closed": 4
+    },
+    {
+      "title": "R5 — Dogfood and 1.0 freeze",
+      "due": null,
+      "open": 0,
+      "closed": 4
+    },
+    {
+      "title": "R1 — Unstall / green baseline",
+      "due": null,
+      "open": 0,
+      "closed": 6
+    },
+    {
+      "title": "R2 — Per-project parity with CEREBRO",
+      "due": null,
+      "open": 0,
+      "closed": 4
+    },
+    {
+      "title": "R3 — Audit + agentic counter-verification",
+      "due": null,
+      "open": 0,
+      "closed": 5
+    },
+    {
+      "title": "R4 — init/update GA + parametricity",
       "due": null,
       "open": 0,
       "closed": 4

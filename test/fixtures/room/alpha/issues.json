@@ -2,37 +2,75 @@
   "fetchedAt": "2026-08-09T09:00:00Z",
   "ghRepo": "acme/alpha",
   "truncated": false,
+  "collection": {
+    "pagination": "gh api graphql --paginate --slurp",
+    "nativeEdges": 1,
+    "truncatedRelations": 0,
+    "prose": { "accepted": 0, "discarded": 0, "ambiguous": 0, "bodyBytes": 0, "maxBytesPerIssue": 65536 },
+    "signalsUnknown": 1,
+    "staleVerdicts": 0,
+    "milestonesComplete": false,
+    "milestonesReason": "Milestones are derived from issue payloads; milestones with zero issues are not observable.",
+    "payloadBytes": 2407
+  },
+  "dependencies": {
+    "supported": true,
+    "complete": true,
+    "edges": [
+      {
+        "from": { "repo": "acme/alpha", "number": 2, "url": "https://github.com/acme/alpha/issues/2", "state": "OPEN" },
+        "to": { "repo": "acme/platform", "number": 90, "url": "https://github.com/acme/platform/issues/90", "state": "OPEN" },
+        "source": "native"
+      }
+    ]
+  },
+  "signals": {
+    "workflows": {},
+    "release": { "listState": "unknown", "reason": "Release collection was not declared in the manifest." }
+  },
   "issues": [
     {
       "n": 1,
       "title": "The engine mishandles trailing whitespace",
       "state": "OPEN",
+      "url": "https://github.com/acme/alpha/issues/1",
       "ms": "v1",
       "labels": [
         "bug",
         "priority:p1"
       ],
+      "updatedAt": "2026-08-01T10:00:00Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": true,
       "createdAt": "2026-05-02"
     },
     {
       "n": 2,
       "title": "Decide whether parser errors abort the run",
       "state": "OPEN",
+      "url": "https://github.com/acme/alpha/issues/2",
       "ms": "v1",
       "labels": [
         "needs-human",
         "priority:p2"
       ],
+      "updatedAt": "2026-08-01T10:00:00Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": true,
       "createdAt": "2026-06-11"
     },
     {
       "n": 3,
       "title": "Log through a single helper",
       "state": "CLOSED",
+      "url": "https://github.com/acme/alpha/issues/3",
       "ms": "v1",
       "labels": [
         "priority:p3"
       ],
+      "updatedAt": "2026-07-12T10:00:00Z",
+      "dependenciesComplete": true,
+      "proseScanComplete": false,
       "createdAt": "2026-04-01",
       "closedAt": "2026-07-12"
     }

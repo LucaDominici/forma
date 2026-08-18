@@ -4,13 +4,18 @@
       "n": 1,
       "verdict": "warn",
       "why": "Reproduced on trailing tabs; the trim call covers spaces only.",
-      "evidence": [{ "type": "path", "ref": "src/core/engine.js" }]
+      "evidence": [{ "type": "path", "ref": "src/core/engine.js" }],
+      "auditedAt": "2026-08-10",
+      "evidenceHash": "21055a7f53897c1f00dc2999b6d8fdbe37ff1b7006387d1bbf7f9416ee96c9f9"
     },
     {
       "n": 2,
       "verdict": "bad",
       "why": "The question is a product decision, not a defect: nothing in the code can settle it.",
-      "evidence": [{ "type": "path", "ref": "src/core/parser.js" }]
+      "evidence": [{ "type": "path", "ref": "src/core/parser.js" }],
+      "auditedAt": "2026-08-10",
+      "evidenceHash": "9621b7c1ad64a9ad4fb41ec0ae1c94742cf21bacbad3ba878d5cbc8e8bf2144b"
     }
-  ]
+  ],
+  "dependencyConfirmations": []
 }
