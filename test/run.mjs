@@ -2556,7 +2556,15 @@ const diffPaths = (a, b, at = '') => {
   if (result.results.length !== work.claims.length || result.results.some((entry, i) => entry.claimId !== work.claims[i].id)) die('audit: runner result does not cover the plan one-for-one')
   if (!['holds', 'contradicted', 'unsupported'].every((verdict) => result.results.some((entry) => entry.verdict === verdict))) die('audit: offline agent did not exercise every counter-verdict')
   if (result.results.some((entry) => !entry.reason || !entry.evidence || !entry.evidence.type || !entry.evidence.ref)) die('audit: runner accepted an unanchored reason')
-  try { validateCounterResults(work, stubAuditAgent(work, true)); die('audit: counter contract accepted a result that omitted claims') } catch (e) { if (!/missing:/.test(e.message)) throw e }
+  // A partial result is not a rejected result: the claims the verifier did not answer are named as
+  // `unanswered` and simply get no fresh verdict — nobody looked, and the room says so.
+  const partial = validateCounterResults(work, stubAuditAgent(work, true))
+  if (!partial.unanswered.length || partial.results.length + partial.unanswered.length !== work.claims.length) die('audit: a partial counter result was not split into results + unanswered')
+  try { validateCounterResults(work, { planHash: work.planHash, results: [{ claimId: 'not:in:plan', verdict: 'holds', reason: 'x', evidence: { type: 'file', ref: 'src/util/log.js' } }] }); die('audit: counter contract accepted a claim the plan does not contain') } catch (e) { if (!/does not contain/.test(e.message)) throw e }
+  // `today` is carried in the plan but stays out of its identity: a new day must not invalidate a
+  // fill the agent already wrote (and with it every counter-verdict).
+  r = run([...planArgs.map((a) => (a === '2026-08-10' ? '2026-08-12' : a)), plan2]); if (r.status !== 0) die('audit: plan on another day exit ' + r.status, r)
+  if (readJson(plan2).planHash !== work.planHash || readJson(plan2).today !== '2026-08-12') die('audit: the calendar day leaked into the plan identity')
   r = run(['audit', '--repo', repo, '--run', plan])
   if (r.status === 0 || !/unknown option: --run/.test(r.stderr || '')) die('audit: the offline engine grew an agent/network runner', r)
   const auditSource = readFileSync(join(HERE, '..', 'lib/audit.mjs'), 'utf-8')
@@ -2611,8 +2619,13 @@ const diffPaths = (a, b, at = '') => {
   badCounter.results.find((entry) => entry.claimId === 'health:1').evidence = { type: 'file', ref: 'missing-agent-proof.js' }
   writeFileSync(counter, JSON.stringify(badCounter))
   r = run([...applyArgs, '--apply', counter, '--counter-plan', plan])
-  if (r.status === 0) die('audit: counter apply accepted unresolved agent evidence')
-  if (readFileSync(health, 'utf-8') !== beforeCounterHealth || readFileSync(findings, 'utf-8') !== beforeCounterFindings) die('audit: rejected counter result partially replaced an overlay')
+  // Item-by-item: the entry with the unresolved anchor is refused and NAMED in lastApply.rejected;
+  // the other entries land. An abort that leaves no trace is what the reference dashboard had.
+  if (r.status !== 0 || !/rejected counter health:1/.test(r.stderr || '')) die('audit: a bad counter entry aborted the whole apply instead of being refused by name', r)
+  const afterBadCounter = readJson(health)
+  if (!afterBadCounter.lastApply || afterBadCounter.lastApply.at !== '2026-08-10' || !afterBadCounter.lastApply.rejected.some((x) => x.kind === 'counter' && x.ref === 'health:1' && /does not exist in repo/.test(x.reason)) || afterBadCounter.lastApply.accepted < 1) die('audit: lastApply does not record the refused counter entry: ' + JSON.stringify(afterBadCounter.lastApply))
+  if (afterBadCounter.verdicts.find((v) => v.n === 1).why === 'missing-agent-proof.js' || readFileSync(findings, 'utf-8') === beforeCounterFindings) die('audit: refused entry leaked, or accepted entries were dropped with it')
+  void beforeCounterHealth
 
   const fill = join(tmp, 'audit-fill.json')
   writeFileSync(fill, JSON.stringify({
@@ -2625,7 +2638,27 @@ const diffPaths = (a, b, at = '') => {
   const appliedVerdict = readJson(health).verdicts.find((v) => v.n === 3 && v.verdict === 'ok')
   if (!appliedVerdict) die('audit: verdict was not written')
   if (appliedVerdict.auditedAt !== '2026-08-10' || !/^[0-9a-f]{64}$/.test(appliedVerdict.evidenceHash)) die('audit: Forma did not stamp deterministic verdict provenance')
-  if (!readJson(findings).findings.some((f) => f.id === 'F-2' && f.severity === 'bad')) die('audit: finding was not written')
+  const appliedFinding = readJson(findings).findings.find((f) => f.id === 'F-2' && f.severity === 'bad')
+  if (!appliedFinding) die('audit: finding was not written')
+  if (appliedFinding.auditedAt !== '2026-08-10' || !/^[0-9a-f]{64}$/.test(appliedFinding.evidenceHash)) die('audit: Forma did not stamp finding provenance — a finding that cannot expire is the reference dashboard\'s failure')
+  if (readJson(health).lastApply.rejected.length !== 0 || readJson(health).lastApply.accepted !== 2) die('audit: lastApply miscounted a clean fill: ' + JSON.stringify(readJson(health).lastApply))
+  // signal and milestone evidence resolve by KEY against the snapshot and hash the WHOLE record, so a
+  // new workflow run or a moved milestone marks the evidence changed — never an index, never a file.
+  const withSignals = readJson(issues)
+  withSignals.signals.workflows.ci = { state: 'present', name: 'ci', path: '.github/workflows/ci.yml', headBranch: 'main', headSha: '0'.repeat(40), event: 'push', status: 'completed', conclusion: 'success', createdAt: '2026-08-01T00:00:00Z', url: 'https://github.com/acme/alpha/actions/runs/1' }
+  const signalHash = hashEvidence(repo, [{ type: 'signal', ref: 'workflows/ci' }], withSignals)
+  const movedRun = JSON.parse(JSON.stringify(withSignals)); movedRun.signals.workflows.ci.headSha = 'f'.repeat(40)
+  if (signalHash !== hashEvidence(repo, [{ type: 'signal', ref: 'workflows/ci' }], withSignals) || signalHash === hashEvidence(repo, [{ type: 'signal', ref: 'workflows/ci' }], movedRun)) die('audit evidence: signal hash is not deterministic or ignores a new run')
+  const refetched = JSON.parse(JSON.stringify(withSignals)); refetched.fetchedAt = '2030-01-01T00:00:00Z'
+  if (signalHash !== hashEvidence(repo, [{ type: 'signal', ref: 'workflows/ci' }], refetched)) die('audit evidence: fetchedAt leaked into a signal hash')
+  const msHash = hashEvidence(repo, [{ type: 'milestone', ref: withSignals.milestones[0].title }], withSignals)
+  const movedMs = JSON.parse(JSON.stringify(withSignals)); movedMs.milestones[0].closed += 1
+  if (msHash === hashEvidence(repo, [{ type: 'milestone', ref: withSignals.milestones[0].title }], movedMs)) die('audit evidence: milestone hash ignores a closed issue')
+  for (const bad of [{ type: 'signal', ref: 'workflows/nope' }, { type: 'milestone', ref: 'no such milestone' }, { type: 'signal', ref: 'workflows/ci' }]) {
+    let rejected = null
+    try { validateEvidence(repo, bad, 'keyed', bad.ref === 'workflows/ci' ? new Set([1]) : withSignals) } catch (error) { rejected = error }
+    if (!rejected) die('audit evidence: keyed evidence resolved where it must not: ' + JSON.stringify(bad))
+  }
 
   const beforeHealth = readFileSync(health, 'utf-8'), beforeFindings = readFileSync(findings, 'utf-8')
   r = run([...planArgs, plan]); if (r.status !== 0) die('audit: fresh plan before rejected fill exit ' + r.status, r)
@@ -2635,8 +2668,10 @@ const diffPaths = (a, b, at = '') => {
     findings: [{ id: 'F-3', severity: 'warn', text: 'Would be a partial write.', evidence: { type: 'path', ref: 'src/core/engine.js' } }],
   }))
   r = run([...applyArgs, '--apply', fill, '--audit-plan', plan])
-  if (r.status === 0 || !/unplanned verdicts/.test(r.stderr || '')) die('audit: a fill overwrote a verdict the current plan did not request')
-  if (readFileSync(health, 'utf-8') !== beforeHealth || readFileSync(findings, 'utf-8') !== beforeFindings) die('audit: rejected fill partially replaced an overlay')
+  if (r.status !== 0 || !/rejected verdict #3: verdict #3 was not in the plan/.test(r.stderr || '')) die('audit: an unplanned verdict was not refused by name', r)
+  if (readJson(health).verdicts.find((v) => v.n === 3).verdict !== 'ok' || !readJson(findings).findings.some((f) => f.id === 'F-3')) die('audit: the refused verdict leaked, or the valid finding beside it was dropped')
+  if (!readJson(health).lastApply.rejected.some((x) => x.kind === 'verdict' && x.ref === '#3')) die('audit: lastApply does not name the refused verdict')
+  void beforeHealth; void beforeFindings
 
   // `room update --counter` owns the deterministic half of unattended operation. The external
   // adapter writes the result; update regenerates the plan, refuses stale/missing output, applies
@@ -2663,7 +2698,7 @@ const diffPaths = (a, b, at = '') => {
   renameSync(counter + '.away', counter)
   if (r.status === 0 || !/counter result missing/.test(r.stderr || '')) die('audit update: missing counter result did not fail loud', r)
   if (readFileSync(health, 'utf-8') !== beforeMissingResult) die('audit update: missing result changed health')
-  console.log('  ok audit — deterministic offline plan, validated health/findings apply, no partial writes')
+  console.log('  ok audit — deterministic offline plan; item-by-item apply that names every refusal in lastApply; findings and keyed signal/milestone evidence expire')
 }
 
 // Frontmatter is the one document lifecycle source. Superseded UI names and duplicate inline

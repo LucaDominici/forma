@@ -18,7 +18,7 @@ Act as an external verifier. Forma stays deterministic and offline; this skill i
 
 Return exactly one result for every claim and no others. Use `unsupported` when the available sources cannot prove or refute the claim. Every result needs a concrete file, commit, issue, or milestone anchor; an agent's confidence is not evidence.
 
-5. Apply the result with `forma audit --repo . --today YYYY-MM-DD --stale-after-days N --apply docs/architecture/audit-counter.json --counter-plan docs/architecture/audit-plan.json`. Forma rejects a changed plan or unresolved evidence before writing either overlay.
+5. Apply the result with `forma audit --repo . --today YYYY-MM-DD --stale-after-days N --apply docs/architecture/audit-counter.json --counter-plan docs/architecture/audit-plan.json`. Forma rejects a changed plan outright; inside a current plan it applies results one by one, refuses any entry whose evidence does not resolve, and names every refusal in `c4-health.json` → `lastApply.rejected`. Claims you leave unanswered are listed as `unanswered` and simply keep no fresh verdict — say what you could not verify rather than inventing an anchor.
 
 For an unattended portfolio, let the scheduler run `forma room update` first, run this workflow for every active programme, then run `forma room update --skip-verify --counter`. Each programme must declare `health`, `findings`, `auditPlan`, and `counterResults` in the manifest. The final update regenerates the plans and fails if any result is missing or stale.
 

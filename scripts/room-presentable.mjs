@@ -80,7 +80,7 @@ for (const program of programs) {
   for (const v of (program.health && program.health.verdicts) || []) {
     verdictCount++
     for (const e of v.evidence || []) {
-      try { validateEvidence(repo, e, `#${v.n}`, known) }
+      try { validateEvidence(repo, e, `#${v.n}`, snapshot) }
       catch (error) { badEvidence.push(`${program.id} #${v.n} ${String((error && error.message) || error).replace(/^audit apply:\s*/, '')}`) }
     }
   }
@@ -90,12 +90,12 @@ for (const program of programs) {
     findingCount++
     const e = f.evidence
     if (!e || !e.ref) { badFindings.push(`${program.id} ${f.id}`); continue }
-    try { validateEvidence(repo, e, `finding ${f.id}`, known) }
+    try { validateEvidence(repo, e, `finding ${f.id}`, snapshot) }
     catch (error) { badFindings.push(`${program.id} ${f.id}: ${String((error && error.message) || error).replace(/^audit apply:\s*/, '')}`) }
   }
   for (const f of [...((derived.documentGate && derived.documentGate.findings) || []), ...((derived.documentGate && derived.documentGate.claims) || [])]) {
     documentFindingCount++
-    try { validateEvidence(repo, f.evidence, `document gate ${f.id}`, known) }
+    try { validateEvidence(repo, f.evidence, `document gate ${f.id}`, snapshot) }
     catch (error) { badDocumentEvidence.push(`${program.id} ${f.id}: ${String((error && error.message) || error).replace(/^audit apply:\s*/, '')}`) }
   }
 
