@@ -1,6 +1,6 @@
 {
   "today": "2026-08-18",
-  "title": "Forma \u00b7 portfolio briefing",
+  "title": "Forma · portfolio briefing",
   "theme": "dark",
   "staleAfterDays": 14,
   "linkMaxFiles": 50,
@@ -128,6 +128,14 @@
             }
           ]
         }
+      },
+      "health": "docs/architecture/c4-health.json",
+      "findings": "docs/architecture/c4-findings.json",
+      "auditPlan": "docs/architecture/audit-plan.json",
+      "auditFill": "docs/architecture/audit-fill.json",
+      "counterResults": "docs/architecture/audit-counter.json",
+      "brief": {
+        "path": "docs/architecture/c4-brief.json"
       }
     }
   ]

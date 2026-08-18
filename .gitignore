@@ -28,3 +28,8 @@ forma-social-preview.png
 # wall clock in a tracked file, and invisible to CI, which composes its own.
 docs/architecture/control-room.html
 /control-room.html
+
+# audit working files: the plan forma writes and the fills agents write; the overlays they produce are tracked
+docs/architecture/audit-plan.json
+docs/architecture/audit-fill.json
+docs/architecture/audit-counter.json
