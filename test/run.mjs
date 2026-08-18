@@ -1678,7 +1678,7 @@ const diffPaths = (a, b, at = '') => {
   if (JSON.stringify(cappedGateDocs.gateInputs) !== JSON.stringify(fullGateDocs.gateInputs)) die('document gate: gateInputs changed with the presentation byte cap')
   const designGateInput = cappedGateDocs.gateInputs.documents.find((document) => document.path === 'docs/DESIGN.md')
   if (!designGateInput || designGateInput.bodyStartLine !== 1 || designGateInput.invariants.length !== 1 || designGateInput.invariants[0].id !== 'How' || designGateInput.invariants[0].line !== 1) die('document gate: DESIGN heading/body source lines were not preserved: ' + JSON.stringify(designGateInput))
-  if (!/^2026-06-15T10:00:00[+-]\d\d:\d\d$/.test(designGateInput.lastChangedAt || '')) die('document gate: tracked DESIGN has no deterministic git change date: ' + JSON.stringify(designGateInput && designGateInput.lastChangedAt))
+  if (!/^2026-06-15T10:00:00(?:Z|[+-]\d\d:\d\d)$/.test(designGateInput.lastChangedAt || '')) die('document gate: tracked DESIGN has no deterministic git change date: ' + JSON.stringify(designGateInput && designGateInput.lastChangedAt))
   const designAlone = loadDocs(alpha, { gate: { invariants: [{ path: 'docs/DESIGN.md', idPattern: '^(How)\\b' }] } }).gateInputs.documents.find((document) => document.path === 'docs/DESIGN.md')
   const designWithSibling = loadDocs(alpha, { gate: { invariants: [{ path: 'docs/DESIGN.md', idPattern: '^(How)\\b' }, { path: 'docs/GATE-CLAIMS.md', idPattern: '^(INV-COMMENT)$' }] } }).gateInputs.documents.find((document) => document.path === 'docs/DESIGN.md')
   if (!designAlone || !designWithSibling || designAlone.lastChangedAt !== designWithSibling.lastChangedAt) die('document gate: a file lastChangedAt changed when an unrelated sibling joined the path set')
