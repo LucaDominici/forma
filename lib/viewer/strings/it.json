@@ -33,11 +33,12 @@
   "filterNone": "Nessun record corrispondente.",
   "routePortfolio": "Portfolio",
   "routeExec": "A che punto siamo",
+  "routeShip": "Cosa spedire",
   "routeTech": "Cosa richiede un umano",
   "routeQueue": "Coda prioritaria",
   "routeKanban": "Stati del lavoro",
   "routeMap": "La mappa",
-  "routeWbs": "Il lavoro",
+  "routePlan": "Il piano",
   "routeDocs": "Documenti",
   "routeOptions": "Cosa c'è in questo briefing",
   "programme": "Programma",
@@ -337,5 +338,10 @@
   "blockedByLabel": "etichetta {label}",
   "edgeNative": "arco nativo",
   "edgeProse": "prosa, confermata",
-  "queueNext": "Prossimo lotto — la testa della coda prioritizzata"
+  "shipHeadline": "{n} lotti di lavoro pronti: {auto} lanciabili ora, {manual} in attesa di un umano.",
+  "shipLede": "Tagliati dalle {open} issue aperte per milestone e dipendenza — mai a intuito",
+  "shipEmpty": "Nessun lotto di lavoro in questo snapshot.",
+  "shipNoWhy": "Manca ancora il perché in parole semplici — lo scrive il prossimo rituale di aggiornamento nel brief.",
+  "shipNoMilestone": "Nessuna milestone dichiarata",
+  "planHeadline": "{n} milestone portano il piano — {openMs} hanno ancora lavoro aperto."
 }
