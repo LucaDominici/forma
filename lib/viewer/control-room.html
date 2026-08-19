@@ -1082,7 +1082,12 @@ function viewExec(view,program,summary){
  kpi(list,STR.kpiOpen,k.openCount);kpi(list,STR.kpiBlocked,blockedClaim.known?blockedClaim.value:null,blockedClaim.known?null:STR.ruleUnknown);kpi(list,STR.kpiNoMilestone,k.noMilestoneCount);
  kpi(list,STR.kpiLinked,k.linkCoveragePct==null?null:k.linkCoveragePct+"%",k.linkCoveragePct==null?STR.notMeasured:STR.kpiLinkedNote);
  kpi(list,STR.kpiRequirements,rtm&&rtm.coverage.pct!=null?rtm.coverage.pct+"%":null,rtm?fmt(STR.planCoverageNote,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements,withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly}):STR.notMeasured);
- kp.body.appendChild(list);ev.appendChild(kp);
+ kp.body.appendChild(list);
+ // Different denominators are not contradictions — they are declared. The reference control room
+ // paid for this once (a note it called "come leggere i conteggi"); the lesson is kept here as one
+ // line under the numbers, built from what each KPI actually counts.
+ kp.body.appendChild(el("p","muted kpi-read",fmt(STR.kpiHowToRead,{total:program.issuesSnapshot.issues.length,today:ROOM.meta.today,rule:blockedClaim.known?STR.kpiHowToReadRuleDeclared:STR.ruleUnknown})));
+ ev.appendChild(kp);
  if(history)ev.appendChild(chartHistory(history,program));
  else{var hp=panel(STR.historyChart,STR.provDerived,"span2");hp.body.appendChild(el("p","muted",STR.historyMissing));ev.appendChild(hp);}
  ev.appendChild(chartMilestones(summary,program));
