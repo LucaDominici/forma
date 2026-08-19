@@ -56,31 +56,7 @@
   "dependencyConfirmations": [],
   "lastApply": {
     "at": "2026-08-18",
-    "accepted": 5,
-    "rejected": [],
-    "unanswered": [
-      "brief:inv-I12",
-      "brief:inv-I2",
-      "brief:inv-I6",
-      "brief:risk-ci-branch",
-      "brief:risk-no-user",
-      "node:done:cli",
-      "node:done:dev",
-      "node:done:ghci",
-      "node:done:lib",
-      "node:done:npmjs",
-      "node:done:scripts",
-      "node:done:test",
-      "health:50",
-      "health:51",
-      "health:53",
-      "health:54",
-      "milestone:R1 — Unstall / green baseline",
-      "milestone:R2 — Per-project parity with CEREBRO",
-      "milestone:R3 — Audit + agentic counter-verification",
-      "milestone:R4 — init/update GA + parametricity",
-      "milestone:R5 — Dogfood and 1.0 freeze",
-      "milestone:confine — sostituire PowerPoint"
-    ]
+    "accepted": 1,
+    "rejected": []
   }
 }

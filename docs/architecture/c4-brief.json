@@ -142,35 +142,6 @@
       }
     },
     {
-      "id": "decide-merge-rework",
-      "kind": "decide",
-      "text": "Merge PR #86 — its head cc642f4a is green in CI — so main carries what this room describes, or hold it and say why.",
-      "about": {
-        "signal": "workflows/ci"
-      },
-      "evidence": [
-        {
-          "type": "signal",
-          "ref": "workflows/ci"
-        },
-        {
-          "type": "commit",
-          "ref": "cc642f4a"
-        }
-      ],
-      "writtenAt": "2026-08-18",
-      "evidenceHash": "2f201208dfa3f0800880d0e90b975079a774a7c1508d99d285f0c943a45f83cc",
-      "verified": {
-        "verdict": "holds",
-        "reason": "PR #86 is OPEN and MERGEABLE with head cc642f4a3177966490abb1389692302231d6d9c5, and the newest ci.yml run for exactly that sha (feat/control-room-rework, 2026-08-18T20:33Z) concluded success, so the merge the claim proposes is available and green.",
-        "evidence": {
-          "type": "commit",
-          "ref": "cc642f4a3177966490abb1389692302231d6d9c5"
-        },
-        "at": "2026-08-18"
-      }
-    },
-    {
       "id": "decide-layout-floor",
       "kind": "decide",
       "text": "Decide whether the layout floor (#53) stays a measured number (debt D-8) or gets the browser step in the docs job that #53 names as the only thing that would close it.",
