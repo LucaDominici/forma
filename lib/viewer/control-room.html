@@ -17,13 +17,34 @@
  --ink:oklch(93.0% 0.006 60);--muted:oklch(61.5% 0.012 63);
  --ok:oklch(74.6% 0.145 152);--warn:oklch(86.8% 0.126 80);--bad:oklch(64.7% 0.185 25);
  --accent:oklch(61.4% 0.130 250);--series2:oklch(52.5% 0.014 67);
- --ramp1:oklch(52.5% 0.070 250);--ramp2:oklch(56.0% 0.090 250);--ramp3:oklch(59.5% 0.110 250);--ramp4:oklch(63.0% 0.132 250)}
+ --ramp1:oklch(52.5% 0.070 250);--ramp2:oklch(56.0% 0.090 250);--ramp3:oklch(59.5% 0.110 250);--ramp4:oklch(63.0% 0.132 250);
+ --font:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--mono:"SF Mono",Menlo,Consolas,monospace}
 html[data-theme="light"]{color-scheme:light;
  --bg:oklch(97.4% 0.006 75);--surface:oklch(99.5% 0.005 78);--line:oklch(88.0% 0.010 82);
  --ink:oklch(22.0% 0.009 75);--muted:oklch(54.0% 0.013 72);
  --ok:oklch(52.9% 0.141 151);--warn:oklch(44.4% 0.094 73);--bad:oklch(35.5% 0.144 25);
  --accent:oklch(54.2% 0.169 255);--series2:oklch(63.3% 0.013 80);
  --ramp1:oklch(63.3% 0.079 255);--ramp2:oklch(59.2% 0.110 255);--ramp3:oklch(55.1% 0.145 255);--ramp4:oklch(51.0% 0.172 255)}
+/* SKINS. A skin is one complete look: a token block selected by html[data-skin], chosen in the
+   manifest (`skin`), measured by scripts/palette.mjs like every other palette here, and nothing
+   else — no second template, no second string table. A skin fixes its own colour scheme, so the
+   theme toggle is hidden while one is active; the map follows through mapSkin(). To add a skin:
+   one block below, one entry in SKINS, one line in palette.mjs SOURCES, one value in the schema. */
+html[data-skin="paper"]{color-scheme:light;
+ --bg:oklch(96.0% 0.012 85);--surface:oklch(99.0% 0.008 90);--line:oklch(86.0% 0.014 85);
+ --ink:oklch(24.0% 0.012 60);--muted:oklch(52.0% 0.016 65);
+ --ok:oklch(50.5% 0.141 151);--warn:oklch(44.4% 0.094 73);--bad:oklch(35.5% 0.144 25);
+ --accent:oklch(50.0% 0.150 40);--series2:oklch(63.3% 0.013 80);
+ --ramp1:oklch(63.3% 0.079 40);--ramp2:oklch(59.2% 0.110 40);--ramp3:oklch(55.1% 0.145 40);--ramp4:oklch(51.0% 0.172 40);
+ --font:Georgia,"Iowan Old Style","Palatino Linotype",serif}
+html[data-skin="blueprint"]{color-scheme:dark;
+ --bg:oklch(19.0% 0.030 255);--surface:oklch(23.5% 0.030 255);--line:oklch(33.0% 0.030 255);
+ --ink:oklch(94.0% 0.008 240);--muted:oklch(66.0% 0.020 240);
+ --ok:oklch(76.0% 0.145 152);--warn:oklch(86.8% 0.126 80);--bad:oklch(68.0% 0.185 25);
+ --accent:oklch(70.0% 0.120 220);--series2:oklch(55.0% 0.020 255);
+ --ramp1:oklch(55.0% 0.080 220);--ramp2:oklch(60.0% 0.100 220);--ramp3:oklch(65.0% 0.120 220);--ramp4:oklch(70.0% 0.140 220);
+ --font:"IBM Plex Sans","Segoe UI",sans-serif;--mono:"IBM Plex Mono","SF Mono",Menlo,Consolas,monospace}
+html[data-skin] #theme-toggle{display:none}
 
 /* THE SHELL. This is a viewport-sized application, not a document: the page never scrolls, panels
    scroll inside themselves, and every view fits the screen it was opened on. The number that
@@ -35,7 +56,7 @@ html[data-theme="light"]{color-scheme:light;
 :root{--pad:16px;--gap:16px;--bar:52px}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);
- font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.5;
+ font-family:var(--font);font-size:14px;line-height:1.5;
  display:grid;grid-template-rows:auto minmax(0,1fr);height:100dvh;overflow:hidden}
 button,a,summary,select{font:inherit;color:inherit}
 a{color:inherit;text-decoration-color:var(--muted);text-underline-offset:2px}
@@ -52,7 +73,7 @@ a:hover{color:var(--accent)}
  border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap;scrollbar-width:thin}
 .brand{display:flex;align-items:baseline;gap:9px;min-width:0;flex:0 1 auto}
 .brand h1{margin:0;font-size:14px;font-weight:650;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis}
-.brand span{color:var(--muted);font-size:11px;font-family:"SF Mono",Menlo,Consolas,monospace}
+.brand span{color:var(--muted);font-size:11px;font-family:var(--mono)}
 .tabs{display:flex;gap:2px;align-items:center;flex:0 0 auto}
 .tabs a{display:flex;align-items:center;min-height:36px;padding:5px 10px;color:var(--muted);font-size:12.5px;text-decoration:none;border-radius:5px}
 .tabs a:hover{color:var(--ink);background:var(--surface)}
@@ -77,7 +98,7 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
 .panel h2{margin:0;font-size:13px;font-weight:650;letter-spacing:.01em}
 /* THE SIGNATURE. No panel without its provenance: one line saying what was counted and what
    re-checks it. Every other dashboard asks to be believed; this one says how to check it. */
-.prov{margin:1px 0 6px;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace;
+.prov{margin:1px 0 6px;color:var(--muted);font-size:10.5px;font-family:var(--mono);
  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 0 auto}
 .panel-body{min-height:0;overflow:auto;flex:1 1 auto;scrollbar-width:thin}
 .panel-body>p{max-width:72ch}
@@ -132,7 +153,7 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
 .thesis{margin:0;font-size:clamp(19px,1.55vw,30px);line-height:1.15;letter-spacing:-.02em;font-weight:650;max-width:26ch}
 .lede{margin:6px 0 0;color:var(--muted);font-size:12px;max-width:52ch}
 .muted{color:var(--muted)}
-.data{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:11.5px}
+.data{font-family:var(--mono);font-size:11.5px}
 
 /* KPI strip: one row of numbers, hairline-separated, no boxes. */
 .kpis{display:flex;gap:0;flex-wrap:wrap}
@@ -146,25 +167,25 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
 .rows>details{border-bottom:1px solid var(--line)}
 summary{list-style:none;cursor:pointer;padding:7px 22px 7px 0;position:relative}
 summary::-webkit-details-marker{display:none}
-summary:after{content:"+";position:absolute;right:4px;top:6px;color:var(--muted);font-family:"SF Mono",Menlo,Consolas,monospace}
+summary:after{content:"+";position:absolute;right:4px;top:6px;color:var(--muted);font-family:var(--mono)}
 details[open]>summary:after{content:"\2212"}
 .row-head{display:grid;grid-template-columns:auto auto 1fr;align-items:baseline;gap:9px}
 .row-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.ref{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:11px;color:var(--muted);white-space:nowrap}
+.ref{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
 .row-title{font-weight:600;overflow:hidden;text-overflow:ellipsis}
 .detail{padding:0 22px 10px 0;display:grid;grid-template-columns:minmax(96px,132px) 1fr;gap:4px 14px;font-size:12.5px}
 .detail dt{color:var(--muted);font-size:11px}
 .detail dd{margin:0;min-width:0}
 .chips{display:flex;gap:5px;flex-wrap:wrap}
-.chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace}
+.chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:var(--mono)}
 .status{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;white-space:nowrap}
-.glyph{width:12px;text-align:center;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13px}
+.glyph{width:12px;text-align:center;font-family:var(--mono);font-size:13px}
 .status-ok{color:var(--ok)}.status-warn{color:var(--warn)}.status-bad{color:var(--bad)}.status-none{color:var(--muted)}
-.state-chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace}
+.state-chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:var(--mono)}
 .state-chip.on{color:var(--ok);border-color:var(--ok)}
 /* The brief: a claim's verdict chip is the reader's only source of trust in the sentence — it always
    says a word (held / not verified / stale / contradicted / unsupported), and only `holds` is green. */
-.verdict-chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace;white-space:nowrap}
+.verdict-chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:var(--mono);white-space:nowrap}
 .verdict-holds{color:var(--ok);border-color:var(--ok)}.verdict-contradicted{color:var(--bad);border-color:var(--bad)}
 .thesis.held,.thesis.unheld{max-width:72ch;font-size:clamp(17px,1.3vw,24px)}
 .thesis.unheld{color:var(--muted)}
@@ -219,8 +240,8 @@ details[open]>summary:after{content:"\2212"}
 .meter-track{fill:var(--accent);opacity:.18}.area-fill{fill:var(--accent);opacity:.16}
 .area-line{fill:none;stroke:var(--accent);stroke-width:2}
 .line-series2{fill:none;stroke:var(--series2);stroke-width:2;stroke-dasharray:4 3}
-.svg-label{fill:var(--muted);font:10.5px "SF Mono",Menlo,Consolas,monospace}
-.svg-value{fill:var(--ink);font:10.5px "SF Mono",Menlo,Consolas,monospace}
+.svg-label{fill:var(--muted);font:10.5px var(--mono)}
+.svg-value{fill:var(--ink);font:10.5px var(--mono)}
 .hit{cursor:help;outline:none}
 .hit:focus{stroke:var(--accent);stroke-width:2}
 .legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:10.5px;flex:0 0 auto;padding-bottom:4px}
@@ -234,7 +255,7 @@ table{width:100%;border-collapse:collapse;font-size:11.5px}
 th,td{text-align:left;padding:4px 8px 4px 0;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)}
 .nums{font-variant-numeric:tabular-nums}
-.matrix .id{font-family:"SF Mono",Menlo,Consolas,monospace;white-space:nowrap}
+.matrix .id{font-family:var(--mono);white-space:nowrap}
 .hole{padding:5px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(120px,170px) 1fr;gap:12px;font-size:12px}
 .hole>span:first-child{color:var(--bad);font-size:11px}
 
@@ -256,15 +277,15 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
 .md-li::marker{color:var(--muted)}
 .md-q{margin:0 0 10px;padding-left:12px;border-left:2px solid var(--line);color:var(--muted);max-width:70ch}
 .md-q>p:last-child{margin-bottom:0}
-.md-pre{margin:0 0 10px;padding:8px 10px;background:var(--surface);overflow:auto;font:11.5px/1.5 "SF Mono",Menlo,Consolas,monospace}
-.md-code{font:11.5px "SF Mono",Menlo,Consolas,monospace;color:var(--muted)}
+.md-pre{margin:0 0 10px;padding:8px 10px;background:var(--surface);overflow:auto;font:11.5px/1.5 var(--mono)}
+.md-code{font:11.5px var(--mono);color:var(--muted)}
 .md-table{margin:0 0 12px;font-size:11.5px}
 .md-hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 .print-all{display:none}
 .doclist button{display:block;width:100%;text-align:left;appearance:none;background:none;border:0;border-bottom:1px solid var(--line);padding:6px 4px;cursor:pointer;font-size:12.5px}
 .doclist button:hover{color:var(--accent)}
 .doclist button[aria-current]{color:var(--ink);box-shadow:inset 2px 0 0 var(--accent);padding-left:9px}
-.doclist small{display:block;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace}
+.doclist small{display:block;color:var(--muted);font-size:10.5px;font-family:var(--mono)}
 .opt{padding:7px 0;border-bottom:1px solid var(--line)}
 .flags{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
 .flag{display:inline-block;padding:1px 7px;border:1px solid var(--line);border-radius:999px;font-size:10.5px;color:var(--muted)}
@@ -348,7 +369,7 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  .reader>.md{display:none}
  .doc-reader-head{display:none!important}
  .print-id{display:block!important;margin:0 0 8pt;padding-bottom:4pt;border-bottom:1pt solid var(--line);
-  font:9pt "SF Mono",Menlo,Consolas,monospace;color:var(--muted)}
+  font:9pt var(--mono);color:var(--muted)}
 }
 .print-id{display:none}
 </style>
@@ -1254,7 +1275,10 @@ function renderQueue(target,program){
    palette mapped onto the explorer's token names (DESIGN.md §D6); `blueprint-dark` is the same
    mapping onto the dark one. Before this, the map was light in both and the theme control silently
    did not apply to one of five programme views. */
-function mapSkin(){return document.documentElement.getAttribute("data-theme")==="light"?"blueprint":"blueprint-dark";}
+// Each skin declares the scheme it fixes; the default look is the dark/light pair above.
+var SKINS={paper:"light",blueprint:"dark"};
+function skinScheme(){var k=ROOM&&ROOM.meta&&ROOM.meta.skin;return SKINS.hasOwnProperty(k)?SKINS[k]:null;}
+function mapSkin(){return (skinScheme()||document.documentElement.getAttribute("data-theme"))==="light"?"blueprint":"blueprint-dark";}
 function pushSkin(skin){
  var f=document.querySelectorAll("iframe.frame"),i,s=skin||mapSkin();
  for(i=0;i<f.length;i++){try{f[i].contentWindow.postMessage({forma:"skin",skin:s},"*");}catch(e){}}
@@ -1690,7 +1714,9 @@ function onHash(){show(normalize(location.hash));}
 function applyTheme(){
  var saved=null,t;
  try{saved=localStorage.getItem("forma-room-theme");}catch(e){}
- t=saved==="light"||saved==="dark"?saved:(ROOM&&ROOM.meta&&ROOM.meta.theme==="dark"?"dark":"light");
+ var scheme=skinScheme();
+ if(scheme){document.documentElement.setAttribute("data-skin",ROOM.meta.skin);t=scheme;}
+ else t=saved==="light"||saved==="dark"?saved:(ROOM&&ROOM.meta&&ROOM.meta.theme==="dark"?"dark":"light");
  document.documentElement.setAttribute("data-theme",t);themeButton(t);
 }
 function themeButton(t){var b=document.getElementById("theme-toggle"),n=t==="dark"?STR.themeLight:STR.themeDark;b.textContent=n;b.setAttribute("aria-label",n);b.setAttribute("aria-pressed",t==="light"?"true":"false");}

@@ -2079,6 +2079,30 @@ const diffPaths = (a, b, at = '') => {
     if (n2('#/beta/exec') !== '/beta/exec') die('room: with two programmes a programme route must resolve as itself')
   }
 
+  // A skin is one token block chosen in the manifest: every id the viewer knows has a palette block
+  // the palette audit measures and a value the schema accepts — a skin that is not measured, or one
+  // the manifest cannot name, is a look nobody gated.
+  {
+    const skinIds = [...(/var SKINS=\{([^}]*)\}/.exec(shell) || ['', ''])[1].matchAll(/([a-z-]+):"(light|dark)"/g)].map((m) => m[1])
+    if (!skinIds.length) die('room: SKINS not found in the shell — the skin contract moved')
+    const paletteSrc = readFileSync(join(HERE, '..', 'scripts/palette.mjs'), 'utf-8')
+    const roomSchemaJson = readJson(roomSchema)
+    const schemaSkins = roomSchemaJson.properties.skin && roomSchemaJson.properties.skin.enum
+    for (const id of skinIds) {
+      if (shell.indexOf('html[data-skin="' + id + '"]{') < 0) die('room: skin ' + id + ' has no token block in the shell')
+      if (paletteSrc.indexOf("selector: 'html[data-skin=\"" + id + "\"]{'") < 0) die('room: skin ' + id + ' is not registered in scripts/palette.mjs, so its palette is not measured')
+      if (!schemaSkins || !schemaSkins.includes(id)) die('room: skin ' + id + ' is not a value forma.room.schema.json accepts')
+    }
+    if (!/html\[data-skin\] #theme-toggle\{display:none\}/.test(shell)) die('room: the theme toggle stays visible under a skin that fixes its own scheme')
+    const skinned = readJson(manifest); skinned.skin = skinIds[0]
+    const skinnedPath = join(R, 'manifest.skin.json'); writeFileSync(skinnedPath, JSON.stringify(skinned))
+    const skinnedOut = join(R, 'room.skin.html')
+    r = run(['room', '--manifest', skinnedPath, '--out', skinnedOut]); if (r.status !== 0) die('room: skinned render exit ' + r.status, r)
+    const skinnedRoom = JSON.parse(/window\.__ROOM__ = ([\s\S]*?);\s*<\/script>/.exec(readFileSync(skinnedOut, 'utf-8'))[1])
+    if (skinnedRoom.meta.skin !== skinIds[0]) die('room: manifest.skin did not reach ROOM.meta.skin')
+    if (ROOM.meta.skin !== null) die('room: a manifest without a skin must compose with meta.skin null, got ' + JSON.stringify(ROOM.meta.skin))
+  }
+
   console.log('  ok room — the briefing composes deterministically, both gates fire, and both refuse a hand-altered aggregate')
   console.log('  ok rtm — requirements trace to issues, and check names each of the four holes at its source line')
   console.log('  ok views — history from one snapshot, checkpoints with measured completion, a canon within budget, and a programme deliberately left out')
