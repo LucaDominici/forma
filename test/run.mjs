@@ -2803,6 +2803,15 @@ const diffPaths = (a, b, at = '') => {
   if (bp.status === 0 || !/FAIL no decision goes out without a fresh hostile hold.*decide-1 \(unverified\)/.test(bp.stdout)) die('brief: presentable published a decision nobody verified: ' + bp.stdout)
   if (!/decide-1/.test(readFileSync(briefRoom, 'utf-8')) || !/briefUnverified|not verified/.test(readFileSync(briefRoom, 'utf-8'))) die('brief: the composed room does not carry the claim or the not-verified word')
   writeFileSync(brief, goodBrief)
+  // A decision that has been TAKEN must be able to leave the brief. Upsert-only would let the
+  // judgement layer only grow — the rot it exists to prevent — and an anchor that git has since
+  // discarded (a squash-merged head) would keep the gate red forever. Explicit, never by omission.
+  r = run([...briefArgs, '--plan', plan]); if (r.status !== 0) die('brief: re-plan before retire exit ' + r.status, r)
+  claimsFill([{ id: 'decide-1', drop: true }, { id: 'ghost', drop: true }])
+  r = run([...briefArgs, '--apply', fill, '--audit-plan', plan]); if (r.status !== 0) die('brief: retire apply exit ' + r.status, r)
+  if (readJson(brief).claims.some((c) => c.id === 'decide-1')) die('brief: a retired claim survived the drop')
+  if (!readJson(health).lastApply.rejected.some((x) => x.ref === 'ghost' && /no such claim/.test(x.reason))) die('brief: retiring an unknown id was not refused')
+  writeFileSync(brief, goodBrief)
 
   // `room update --counter` owns the deterministic half of unattended operation. The external
   // adapter writes the result; update regenerates the plan, refuses stale/missing output, applies
@@ -2830,7 +2839,7 @@ const diffPaths = (a, b, at = '') => {
   if (r.status === 0 || !/counter result missing/.test(r.stderr || '')) die('audit update: missing counter result did not fail loud', r)
   if (readFileSync(health, 'utf-8') !== beforeMissingResult) die('audit update: missing result changed health')
   console.log('  ok audit — deterministic offline plan; item-by-item apply that names every refusal in lastApply; findings and keyed signal/milestone evidence expire')
-  console.log('  ok brief — claims need a subject and an anchor that can move; caps hold; colour only under a fresh hostile hold; a rewritten claim loses it; check refuses an unresolvable claim')
+  console.log('  ok brief — claims need a subject and an anchor that can move; caps hold; colour only under a fresh hostile hold; a rewritten claim loses it; a taken decision can be retired; check refuses an unresolvable claim')
 }
 
 // Frontmatter is the one document lifecycle source. Superseded UI names and duplicate inline
