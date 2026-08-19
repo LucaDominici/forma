@@ -1817,8 +1817,13 @@ const diffPaths = (a, b, at = '') => {
   if (!B.derived.kanban || B.derived.kanban.chiuse.join() !== '6') die('room: beta kanban should still bucket its own issues, got ' + JSON.stringify(B.derived.kanban))
   if (ROOM.portfolio.totals.unknownRule !== 1) die('room: beta declares no blocking rule, so unknownRule must be 1 (absent is not empty, I7), got ' + ROOM.portfolio.totals.unknownRule)
   if (ROOM.portfolio.totals.blocked !== null) die('room: one unknown blocking rule makes the portfolio blocked total unknown, got ' + ROOM.portfolio.totals.blocked)
+  // Blocked has two sources and the row says which: alpha #2 carries the declared label AND an open
+  // cross-repo blocker on a native edge; the counts split, and the item names both (I7, never fused).
+  const alphaSummary = ROOM.portfolio.programs.find((p) => p.id === 'alpha'), alphaBlocked = ROOM.portfolio.blocked.find((b) => b.program === 'alpha' && b.n === 2)
+  if (!alphaSummary || alphaSummary.blocked !== 1 || alphaSummary.blockedByLabel !== 1 || alphaSummary.blockedByDependency !== 1) die('room: alpha blocked sources not split, got ' + JSON.stringify(alphaSummary && [alphaSummary.blocked, alphaSummary.blockedByLabel, alphaSummary.blockedByDependency]))
+  if (!alphaBlocked || JSON.stringify(alphaBlocked.blockedBy) !== JSON.stringify({ labels: ['needs-human'], blockers: [{ repo: 'acme/platform', number: 90, source: 'native' }] })) die('room: the blocked row does not say which label and which blocker: ' + JSON.stringify(alphaBlocked && alphaBlocked.blockedBy))
   const betaSummary = ROOM.portfolio.programs.find((p) => p.id === 'beta'), betaMoving = ROOM.portfolio.moving.find((p) => p.program === 'beta')
-  if (!betaSummary || betaSummary.blocked !== null) die('room: beta unknown blocking state collapsed to a number: ' + JSON.stringify(betaSummary))
+  if (!betaSummary || betaSummary.blocked !== null || betaSummary.blockedByLabel !== null || betaSummary.blockedByDependency !== null) die('room: beta unknown blocking state collapsed to a number: ' + JSON.stringify(betaSummary))
   if (!betaMoving || betaMoving.count !== null || betaMoving.byCluster !== null) die('room: beta moving claim collapsed unknown into an empty queue: ' + JSON.stringify(betaMoving))
   if (A.derived.kpis.snapshotAgeDays !== 1 || betaSummary.snapshotAgeDays !== 1) die('room: snapshot civil age was not derived consistently')
   if (daysBetween('2026-08-17T23:59:59Z', '2026-08-17') !== 0 || daysBetween('not-a-date', '2026-08-17') !== null) die('room: civil date comparison regressed to timestamp rounding')
@@ -2121,6 +2126,18 @@ const diffPaths = (a, b, at = '') => {
     if (blockNotes({ derived: {} }, { ms: 'M1', iss: [] }).length !== 0) die('room: a programme without a brief must yield no block narrative')
     if (!/STR\.blockWhy/.test(shell)) die('room: the block narrative heading string is not read by the template')
   }
+
+  // A room over programmes that have no architecture map is gated from a directory with no model:
+  // `--room` makes the C4 half not applicable — said out loud — and the room half still runs in full
+  // (the tamper tests below prove it bites). Without `--room`, a missing model is still the failure.
+  const noModelDir = join(R, 'no-model'); mkdirSync(noModelDir, { recursive: true })
+  r = run(['check', '--repo', noModelDir, '--room', roomHtml, '--manifest', manifest])
+  if (r.status !== 0 || !/no model at .*C4 assertions not applicable/.test(r.stdout || '')) die('room: check --room from a model-less directory must gate the room only and say so\n' + (r.stdout || '') + (r.stderr || ''))
+  const tamperedNoModel = join(R, 'tampered-nomodel.html'); tamper(roomHtml, tamperedNoModel, '"openCount":2', '"openCount":7')
+  r = run(['check', '--repo', noModelDir, '--room', tamperedNoModel, '--manifest', manifest])
+  if (r.status === 0) die('room: check --room without a model accepted a hand-altered aggregate')
+  r = run(['check', '--repo', noModelDir])
+  if (r.status === 0 || !/model missing \(no SKIP\)/.test(r.stderr || '')) die('room: check without --room must still fail on a missing model')
 
   console.log('  ok room — the briefing composes deterministically, both gates fire, and both refuse a hand-altered aggregate')
   console.log('  ok rtm — requirements trace to issues, and check names each of the four holes at its source line')

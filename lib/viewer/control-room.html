@@ -686,6 +686,10 @@ function blockedRow(b){
  if(b.priority)meta.appendChild(el("span","chip",b.priority));
  s.appendChild(program?pill(program,b.n,b.program+" #"+b.n):statusMark(b.verdict));s.appendChild(meta);s.appendChild(el("span","row-title",b.title));
  d.appendChild(s);
+ if(b.blockedBy){var src=el("span","chips"),k;
+  for(k=0;k<b.blockedBy.labels.length;k++)src.appendChild(el("span","chip",fmt(STR.blockedByLabel,{label:b.blockedBy.labels[k]})));
+  for(k=0;k<b.blockedBy.blockers.length;k++){var bk=b.blockedBy.blockers[k],bp=bk.repo===(program&&program.ghRepo)?byId(b.program):null;src.appendChild(bp?pill(bp,bk.number,bk.repo+" #"+bk.number):el("span","chip",bk.repo+" #"+bk.number));src.appendChild(el("span","chip",bk.source==="native"?STR.edgeNative:STR.edgeProse));}
+  pair(dl,STR.blockedByHeading,src);}
  pair(dl,STR.verdictLabel,statusMark(b.verdict));
  pair(dl,STR.why,b.why||STR.notAudited);
  for(j=0;j<(b.evidence||[]).length;j++)ev.appendChild(el("span","chip",b.evidence[j].type+":"+b.evidence[j].ref));
@@ -1178,7 +1182,7 @@ var i,j;
  view.appendChild(answer);
 
  var ev=el("div","evidence");
- ev.appendChild(rowsPanel(panel(STR.techBlocked,blockedClaim.known?fmt(plural(mine.length,STR.provBlockedOne,STR.provBlocked),{n:mine.length}):STR.provBlockedUnknown,"span2"),mine,blockedRow,blockedClaim.known?STR.noBlockedHere:STR.ruleUnknown));
+ ev.appendChild(rowsPanel(panel(STR.techBlocked,blockedClaim.known?fmt(STR.provBlockedSources,{n:mine.length,labels:summary.blockedByLabel,deps:summary.blockedByDependency}):STR.provBlockedUnknown,"span2"),mine,blockedRow,blockedClaim.known?STR.noBlockedHere:STR.ruleUnknown));
  ev.appendChild(signalsPanel(program));
 
  var findings=(program.derived.findings&&program.derived.findings.findings)||(program.findings&&program.findings.findings)||[];
