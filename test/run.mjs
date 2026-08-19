@@ -2434,9 +2434,12 @@ const diffPaths = (a, b, at = '') => {
     const body = viewerFn(fn)
     if (!(fn === 'renderQueue' ? /filteredList\(/ : /pagedList\(/).test(body)) die('room-dom: ' + fn + ' bypasses the bounded pager')
   }
-  const filter = viewerFn('filteredList'), queue = viewerFn('renderQueue'), kanban = viewerFn('renderKanban')
+  const filter = viewerFn('filteredList'), queue = viewerFn('renderQueue'), kanban = viewerFn('renderKanban'), queueItem = viewerFn('queueItem')
   if (!/item\.search/.test(filter) || !/input\.addEventListener\("input",draw\)/.test(filter)) die('room-search: the bounded shared list filter no longer searches on input')
-  if (!/filteredList\(lane\.body,items/.test(queue) || !/block\.auto&&block\.cmd\?commandLine\(block\.cmd\):el\("span","state-chip",STR\.human\)/.test(queue)) die('room-queue: blocks lost search or the exact auto/manual command boundary')
+  // One block renderer for the archive and for the "next block" panel on the Tech screen: the
+  // auto/manual command boundary lives in exactly one place.
+  if (!/filteredList\(lane\.body,items/.test(queue) || !/queueItem\(program,entry\.block,entry\.notes\)/.test(queue) || !/block\.auto&&block\.cmd\?commandLine\(block\.cmd\):el\("span","state-chip",STR\.human\)/.test(queueItem)) die('room-queue: blocks lost search or the exact auto/manual command boundary')
+  if (!/queueItem\(program,blocks\[0\],blockNotes\(program,blocks\[0\]\)\)/.test(viewerFn('viewTech'))) die('room-tech: the head of the queue is no longer on the Tech screen')
   if (!/input\.type="search"/.test(kanban) || !/source\.filter/.test(kanban) || !/names\.concat\(\[\["chiuse"/.test(kanban)) die('room-kanban: search or the CLOSED archive lane is missing')
   const tech = viewerFn('viewTech')
   if (!/names\[i\]\[0\]!=="aspettano-umano"\|\|program\.derived\.kanbanHumanDeclared/.test(tech) || !/key!=="aspettano-umano"\|\|program\.derived\.kanbanHumanDeclared/.test(kanban)) die('room-kanban: an undeclared human-label rule is rendered as a measured empty bucket')

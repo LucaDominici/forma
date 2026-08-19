@@ -336,5 +336,6 @@
   "blockedByHeading": "Bloccata da",
   "blockedByLabel": "etichetta {label}",
   "edgeNative": "arco nativo",
-  "edgeProse": "prosa, confermata"
+  "edgeProse": "prosa, confermata",
+  "queueNext": "Prossimo lotto — la testa della coda prioritizzata"
 }

@@ -336,5 +336,6 @@
   "blockedByHeading": "Blocked by",
   "blockedByLabel": "label {label}",
   "edgeNative": "native edge",
-  "edgeProse": "prose, confirmed"
+  "edgeProse": "prose, confirmed",
+  "queueNext": "Next block — the head of the prioritised queue"
 }
