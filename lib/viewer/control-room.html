@@ -1254,7 +1254,7 @@ function commandLine(command){
 }
 function renderQueue(target,program){
  var blocks=program.derived.blocks||[],board=el("div","queue-board"),i,items=[];
- for(i=0;i<blocks.length;i++){var block=blocks[i];items.push({block:block,search:[block.t,block.ms,JSON.stringify(block.note),JSON.stringify(block.why)].concat(block.iss.map(function(issue){return "#"+issue[0]+" "+issue[1];})).join(" ")});}
+ for(i=0;i<blocks.length;i++){var block=blocks[i],notes=blockNotes(program,block);items.push({block:block,notes:notes,search:[block.t,block.ms,JSON.stringify(block.note),JSON.stringify(block.why)].concat(block.iss.map(function(issue){return "#"+issue[0]+" "+issue[1];}),notes.map(function(c){return c.text;})).join(" ")});}
  if(items.length){
   var lane=panel(STR.routeQueue,fmt(STR.blockCount,{n:items.length}));markState(lane,"present");
   filteredList(lane.body,items,function(entry){
@@ -1265,11 +1265,23 @@ function renderQueue(target,program){
    if(block.note&&block.note.external.length)item.appendChild(el("div","muted",fmt(STR.blockExternal,{issues:block.note.external.map(function(n){return "#"+n;}).join(", ")})));
    for(j=0;j<Math.min(block.why.length,EDGE_LIST_MAX);j++)item.appendChild(el("div","muted",fmt(STR.blockDependency,{from:block.why[j].from.repo+"#"+block.why[j].from.number,to:block.why[j].to.repo+"#"+block.why[j].to.number})));
    if(block.why.length>EDGE_LIST_MAX)item.appendChild(el("div","muted",fmt(STR.moreEdges,{n:block.why.length-EDGE_LIST_MAX})));
+   if(entry.notes.length){item.appendChild(el("div","prov",STR.blockWhy));for(j=0;j<entry.notes.length;j++)item.appendChild(briefClaimRow(program,entry.notes[j]));}
    item.appendChild(block.auto&&block.cmd?commandLine(block.cmd):el("span","state-chip",STR.human));return item;
   });
   board.appendChild(lane);
  }else{var emptyLane=panel(STR.routeQueue,STR.queueComplete);markState(emptyLane,"empty",STR.noMoving);board.appendChild(emptyLane);}
  target.appendChild(board);
+}
+// "Why this batch" is not a curated blocks file (SCOPE-room §4): it is whatever the brief already
+// says about this block's milestone or one of its issues — a typed `note` claim with the same
+// anchor, staleness and refusal path as every other claim, so the narrative rots in the open.
+function blockNotes(program,block){
+ var b=program.derived.brief,out=[],i,j,c,nums={};
+ if(!b||!b.notes)return out;
+ for(i=0;i<block.iss.length;i++)nums[block.iss[i][0]]=true;
+ for(i=0;i<b.notes.length;i++){c=b.notes[i];if(!c.about)continue;
+  if((block.ms&&c.about.milestone===block.ms)||(c.about.issue!=null&&nums[c.about.issue]))out.push(c);}
+ return out;
 }
 /* The architecture skin that matches the briefing's theme. `blueprint` IS the briefing's light
    palette mapped onto the explorer's token names (DESIGN.md §D6); `blueprint-dark` is the same

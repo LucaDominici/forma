@@ -330,5 +330,6 @@
   "briefDeltaChanged": "Riscritti",
   "briefDeltaReverdicted": "Verdetto cambiato",
   "kpiHowToRead": "Come leggere: Aperte conta ogni issue aperta nello snapshot del {today} su {total}; In attesa di un umano conta solo le aperte con un'etichetta di blocco dichiarata ({rule}); legate al codice e requisiti hanno denominatori propri — tutte le issue, e la matrice dei requisiti — quindi le percentuali non sono confrontabili fra loro.",
-  "kpiHowToReadRuleDeclared": "regola dichiarata, mai dedotta"
+  "kpiHowToReadRuleDeclared": "regola dichiarata, mai dedotta",
+  "blockWhy": "Perché questo lotto — come scritto nel brief, ancorato e soggetto a scadenza come ogni altra claim"
 }

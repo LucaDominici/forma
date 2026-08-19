@@ -50,9 +50,14 @@ Write `docs/architecture/audit-fill.json`:
    {"id":"thesis","kind":"thesis","text":"<where the programme stands, one sentence>","about":{"milestone":"v1.4"},"evidence":[{"type":"milestone","ref":"v1.4"},{"type":"signal","ref":"workflows/ci"}]},
    {"id":"risk-nightly","kind":"risk","severity":"bad","text":"<what could sink it, first-hand>","about":{"signal":"workflows/nightly"},"evidence":[{"type":"signal","ref":"workflows/nightly"},{"type":"issue","ref":"4241"}]},
    {"id":"decide-...","kind":"decide","text":"<what only a human can settle now, actionable in one sentence>","about":{"issue":4031},"evidence":[{"type":"issue","ref":"4031"}]},
-   {"id":"inv-01","kind":"invariant","severity":"warn","class":"MECCANIZZATO|DOCUMENTATO|SCOPERTO","ifBroken":"<what falls if it falls>","text":"<the invariant, as guarded today>","about":{"path":"docs/GLOBAL_INVARIANTS.md"},"evidence":[{"type":"path","ref":"docs/GLOBAL_INVARIANTS.md:41"},{"type":"path","ref":"test/run.mjs:120"}]}
+   {"id":"inv-01","kind":"invariant","severity":"warn","class":"MECCANIZZATO|DOCUMENTATO|SCOPERTO","ifBroken":"<what falls if it falls>","text":"<the invariant, as guarded today>","about":{"path":"docs/GLOBAL_INVARIANTS.md"},"evidence":[{"type":"path","ref":"docs/GLOBAL_INVARIANTS.md:41"},{"type":"path","ref":"test/run.mjs:120"}]},
+   {"id":"why-v1.4","kind":"note","text":"<why this batch, in this order — the narrative of a work block>","about":{"milestone":"v1.4"},"evidence":[{"type":"milestone","ref":"v1.4"},{"type":"issue","ref":"4031"}]}
  ]}}
 ```
+
+A `note` anchored to a milestone or to an issue is shown on the work block that carries that milestone or
+issue ("why this batch"): that is where the narrative of the queue lives — not in a curated blocks file — with
+the same anchor, staleness and refusal path as every other claim.
 
 Rules Forma enforces — write to them, do not test them:
 1. **Every claim names its subject** (`about`: exactly one of `issue | signal | milestone | path`) and cites
