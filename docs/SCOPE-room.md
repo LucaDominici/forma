@@ -132,6 +132,11 @@ one confine while `docs/SCOPE.md` still governs the rest of the product.
   disagrees with `main` at the moment this document was written (`d9a0694…` vs `d5be89f`) because
   `gen` only runs on demand. The `tec` tab must say how many commits behind the architecture layer
   is; it is not required to be zero.
+- **The brief is anchored judgement, not verified truth.** A claim is refused without a subject and
+  evidence that resolves, and a risk or a decision must cite something that can move — but whether the
+  sentence is *about* the evidence it cites is not decidable by code. That relevance is a second model's
+  verdict, which is why a claim carries colour only under a fresh hostile `holds` and reads grey, saying
+  so, the moment its anchor moves or the verdict ages. Grey is the honest default, not a failure.
 - **Counter-verification validates coverage and anchors, not judgment.** The portfolio run covered
   every emitted claim and refused unresolvable evidence, but an agent result can still be wrong.
   This is why `unsupported` remains a visible warning instead of being coerced into green.
