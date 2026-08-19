@@ -2053,6 +2053,32 @@ const diffPaths = (a, b, at = '') => {
     if (shell.indexOf('"' + legacy + '"') < 0) die('room: the pre-tab anchor #' + legacy + ' is no longer a section id, so an existing link breaks')
   }
 
+  // One programme has no portfolio to roll up: the front door is that programme's Executive, the
+  // aggregate view is not mounted, and the pre-tab anchors land on the same door. Two programmes
+  // keep the briefing as front door (ADR-0007). The routing is lifted out of the shipped template
+  // and driven directly, the same trick this suite uses for the viewer's other pure functions.
+  {
+    const homeFn = /function home\(\)\{[^\n]*\n/.exec(shell)
+    const keyFn = /function key\(p,t\)\{[^\n]*\n/.exec(shell)
+    const normFn = /function normalize\(h\)\{[\s\S]*?\n\}/.exec(shell)
+    const regFn = /function registerAll\(\)\{[\s\S]*?\n\}/.exec(shell)
+    if (!homeFn || !keyFn || !normFn || !regFn) die('room: home()/key()/normalize()/registerAll() not found in the shell — the routing moved')
+    if (!/if\(ROOM\.programs\.length!==1\)\{mount\("\/"\)/.test(regFn[0])) die('room: the portfolio view is mounted for a single programme, so print and routing meet an empty aggregate')
+    const route = new Function('ROOM', 'VIEWS', `var LEGACY={verdict:"/",now:"/",moving:"/",mismatch:"/",programs:"/",map:null};
+      function byId(id){var i;for(i=0;i<ROOM.programs.length;i++)if(ROOM.programs[i].id===id)return ROOM.programs[i];return null;}
+      ${keyFn[0]}${homeFn[0]}${normFn[0]} return normalize`)
+    const one = { programs: [{ id: 'alpha' }] }, two = { programs: [{ id: 'alpha' }, { id: 'beta' }] }
+    const oneViews = { '/alpha/exec': 1, '/alpha/tech': 1, '/options': 1 }, twoViews = { '/': 1, '/alpha/exec': 1, '/beta/exec': 1, '/options': 1 }
+    const n1 = route(one, oneViews), n2 = route(two, twoViews)
+    for (const h of ['', '#', '#/', '#now', '#/nope', '#/alpha/auto']) {
+      const want = h === '#/alpha/auto' ? '/alpha/tech' : '/alpha/exec'
+      if (n1(h) !== want) die('room: with one programme ' + JSON.stringify(h) + ' must open ' + want + ', got ' + n1(h))
+    }
+    if (n1('#/options') !== '/options') die('room: with one programme the Options view must stay reachable')
+    for (const h of ['', '#/', '#now', '#/nope']) if (n2(h) !== '/') die('room: with two programmes ' + JSON.stringify(h) + ' must open the briefing, got ' + n2(h))
+    if (n2('#/beta/exec') !== '/beta/exec') die('room: with two programmes a programme route must resolve as itself')
+  }
+
   console.log('  ok room — the briefing composes deterministically, both gates fire, and both refuse a hand-altered aggregate')
   console.log('  ok rtm — requirements trace to issues, and check names each of the four holes at its source line')
   console.log('  ok views — history from one snapshot, checkpoints with measured completion, a canon within budget, and a programme deliberately left out')

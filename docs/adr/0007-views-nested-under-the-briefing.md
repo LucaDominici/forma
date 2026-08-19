@@ -42,6 +42,11 @@ each programme has five views addressed by hash route:
 #/options             what is in this briefing, and why
 ```
 
+- **One programme has no portfolio to roll up** (amendment, 2026-08-19). Measured on forma's own
+  briefing: with a single programme `#/` read *"0 things need you out of 4 open across one programme"*
+  while the brief sat one click away. At `programs.length === 1` the aggregate view is not mounted,
+  `#/` and the pre-tab anchors resolve to that programme's `exec`, and the Portfolio link is absent.
+  Two or more programmes keep the briefing as front door; nothing above changes for them.
 - **Still one file, one composer, one gate.** `--out` remains a single self-contained artifact.
 - **Views are mounted on demand.** Printing forces the five official projections to mount, while
   interactive issue archives stay summarized. The whole briefing prints without making page or

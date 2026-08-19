@@ -54,6 +54,9 @@ const pageSize = Number((/var ISSUE_PAGE_SIZE=(\d+)/.exec(html) || [])[1])
 const boundedDom = pageSize > 0 && pageSize <= 50 && /function pagedList\(/.test(html) && /function ensureView\(/.test(html) && !/function buildAll\(/.test(html)
 const mobileNav = /id="mobile-program"/.test(html) && /id="mobile-view"/.test(html) && /@media\(max-width:600px\)/.test(html)
 const boundedPrint = /\.screen-list,\.workflow\{display:none!important\}/.test(html) && !/details:not\(\[open\]\)/.test(html)
+// A single programme opens on its own Executive: the aggregate front door that read "0 things need
+// you out of 4 open" over one programme is not mounted at N=1 (map ticket #90).
+const singleHome = /function home\(\)\{return ROOM\.programs\.length===1\?key\(ROOM\.programs\[0\]\.id,"exec"\):"\/";\}/.test(html) && /if\(ROOM\.programs\.length!==1\)\{mount\("\/"\)/.test(html)
 const documentGateVisible = /var documentPanel=documentGatePanel\(program\);if\(documentPanel\)ev\.appendChild\(documentPanel\)/.test(html)
 
 for (const program of programs) {
@@ -156,6 +159,7 @@ const predicates = [
   ['no gh snapshot is stale', staleSnapshots.length === 0, staleSnapshots.length ? staleSnapshots.join('; ') : `today ${manifest.today}, limit ${staleAfterDays}d`],
   ['re-generating from the same manifest is byte-deterministic', deterministic, determinismNote],
   ['every open issue is covered (Kanban or queue), none orphaned', orphanOpen.length === 0, orphanOpen.length ? `orphaned: ${orphanOpen.join(', ')}` : `${openCount} open, 0 orphaned`],
+  ['a single programme opens on its Executive, not on an aggregate over itself', singleHome, singleHome ? (programs.length === 1 ? 'one programme: front door is its Executive' : `${programs.length} programmes: the briefing stays the front door`) : 'home()/registerAll() contract missing'],
   ['the programme IA is exactly five evidence views', officialIa, officialViews.length ? officialViews.join(', ') : 'TABS contract missing'],
   ['issue DOM is lazy and page-bounded', boundedDom, Number.isFinite(pageSize) ? `${pageSize} issue rows per page` : 'pagination contract missing'],
   ['mobile navigation has native programme and view controls', mobileNav, mobileNav ? 'two labelled selects at the 600px breakpoint' : 'mobile controls missing'],

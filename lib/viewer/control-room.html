@@ -1575,9 +1575,15 @@ function stampPrintIds(){
    (ROOM.meta.title||STR.appTitle)+"  ·  "+(p?p+"  ·  ":"")+name+"  ·  "+ROOM.meta.today;
  }
 }
+// One programme has no portfolio to roll up. Measured on forma's own briefing, 2026-08-19: with a
+// single programme the aggregate front door read "0 things need you out of 4 open across one
+// programme" while the brief — thesis, risks, decisions — sat one click away. The reader's first
+// screen is that programme's Executive; the aggregate view is not mounted at all, so print and
+// routing never meet it. With two or more programmes the briefing stays the front door (ADR-0007).
+function home(){return ROOM.programs.length===1?key(ROOM.programs[0].id,"exec"):"/";}
 function registerAll(){
  var i,j;
- mount("/");VIEW_SPEC["/"]={kind:"portfolio"};
+ if(ROOM.programs.length!==1){mount("/");VIEW_SPEC["/"]={kind:"portfolio"};}
  for(i=0;i<ROOM.programs.length;i++){
   var program=ROOM.programs[i];
   for(j=0;j<TABS.length;j++){var k=key(program.id,TABS[j][0]);mount(k);VIEW_SPEC[k]={kind:"program",program:program,tab:TABS[j][0]};}
@@ -1596,17 +1602,17 @@ function ensureView(k){
 var LEGACY={verdict:"/",now:"/",moving:"/",mismatch:"/",programs:"/",map:null};
 function normalize(h){
  var raw=String(h||"").replace(/^#/,"");
- if(!raw)return "/";
+ if(!raw)return home();
  if(raw.charAt(0)==="/"){
   var old=/^\/([^/]+)\/(auto|kanban)$/.exec(raw);
   if(old&&byId(old[1]))return key(old[1],"tech");
-  return VIEWS[raw]?raw:"/";
+  return VIEWS[raw]?raw:home();
  }
  if(LEGACY.hasOwnProperty(raw)){
-  if(LEGACY[raw])return LEGACY[raw];
-  var f=ROOM.programs[0];return f?key(f.id,raw==="map"?"map":"exec"):"/";
+  if(LEGACY[raw])return home();
+  var f=ROOM.programs[0];return f?key(f.id,raw==="map"?"map":"exec"):home();
  }
- return "/";
+ return home();
 }
 function progOf(k){var m=/^\/([^/]+)\/([^/]+)$/.exec(k);return m?m[1]:null;}
 function navLink(href,text){var a=el("a","",text);a.href="#"+href;return a;}
@@ -1614,7 +1620,7 @@ function navLink(href,text){var a=el("a","",text);a.href="#"+href;return a;}
 // and left focus on <body>, so each navigation forced a Tab-from-the-top.
 function buildNav(){
  var progs=document.getElementById("nav-programs"),views=document.getElementById("nav-views"),i,j;
- progs.appendChild(navLink("/",STR.routePortfolio));
+ if(VIEWS["/"])progs.appendChild(navLink("/",STR.routePortfolio));
  for(i=0;i<ROOM.programs.length;i++)progs.appendChild(navLink(key(ROOM.programs[i].id,"exec"),ROOM.programs[i].id));
  progs.appendChild(navLink("/options",STR.routeOptions));
  // One set of view tabs, re-pointed at whichever programme is open. They are present from the
@@ -1629,7 +1635,7 @@ function buildNav(){
  views.addEventListener("focusin",function(e){e.target.scrollIntoView({block:"nearest",inline:"nearest"});});
  var mobileProgram=document.getElementById("mobile-program"),mobileView=document.getElementById("mobile-view"),o;
  mobileProgram.setAttribute("aria-label",STR.navMain);mobileView.setAttribute("aria-label",STR.navProgram);
- o=el("option","",STR.routePortfolio);o.value="/";mobileProgram.appendChild(o);
+ if(VIEWS["/"]){o=el("option","",STR.routePortfolio);o.value="/";mobileProgram.appendChild(o);}
  for(i=0;i<ROOM.programs.length;i++){o=el("option","",ROOM.programs[i].id);o.value=ROOM.programs[i].id;mobileProgram.appendChild(o);}
  o=el("option","",STR.routeOptions);o.value="/options";mobileProgram.appendChild(o);
  for(i=0;i<TABS.length;i++){o=el("option","",TABS[i][1]());o.value=TABS[i][0];mobileView.appendChild(o);}
