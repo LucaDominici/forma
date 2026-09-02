@@ -1,13 +1,14 @@
 ---
-title: 'Global invariants'
-doc_version: '1.0.0'
+title: "Global invariants"
+doc_version: "1.0.0"
 status: active
-last_review: '2026-08-10'
-owner: 'Luca Dominici'
-canonical_id: 'global-invariants'
-tags: ['audience/dev', 'kind/invariant']
-related: ['AGENTS.md', 'CONTRIBUTING.md']
+last_review: "2026-08-10"
+owner: "Luca Dominici"
+canonical_id: "global-invariants"
+tags: ["audience/dev", "kind/invariant"]
+related: ["AGENTS.md", "CONTRIBUTING.md"]
 ---
+
 # Global invariants
 
 The rules Forma does not break. Each one names where it is enforced and what turns red when it is
@@ -200,6 +201,21 @@ before writing, so a rejected edit leaves the file exactly as it was.
 - **Enforced by:** the `PUT /programs` handler in `lib/room.mjs`; `npm test` asserts the bind is
   loopback.
 - **Red when:** anything else becomes writable through the page, or a rejected edit lands half-applied.
+
+## I19. A shape shared with arbiter cannot change on one side
+
+arbiter owns the governance ontology; Forma owns the C4 model shape and renders what arbiter
+defines. Two repositories that share schemas by agreement drift the first time either ships alone,
+and the drift surfaces as a briefing rendering a model it half-understands. `lib/schema/CONTRACT.json`
+pins every shared schema — owner, path, sha256, which repos vendor a copy — and both repositories
+hold a byte-identical copy and gate their own half.
+
+- **Enforced by:** `scripts/check-arbiter-contract.mjs`, run by `npm test` and as its own CI step;
+  arbiter runs the mirror `scripts/check-forma-contract.mjs`. When an arbiter checkout sits beside
+  this one the cross-checkout half also runs; when it does not, it **skips out loud** — a
+  cross-repo check that quietly does nothing is the failure the contract exists to prevent.
+- **Red when:** a shared schema is edited without re-pinning in BOTH copies, a vendored copy drifts
+  from the shape its owner defines, or the two copies of the manifest stop being identical.
 
 ---
 

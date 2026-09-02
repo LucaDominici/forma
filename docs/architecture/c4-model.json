@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-08-17T10:45:23.367Z",
+  "generatedAt": "2026-09-02T09:46:30.711Z",
   "source": {
     "repo": "forma",
-    "commit": "e4ece0d3d2b4734931c1ef8a38b1cb1e27cb3963",
-    "branch": "control-room-rework",
+    "commit": "afd74bd82cdbb99a02f5462ecfaa8dd04553fe94",
+    "branch": "claude/project-lifecycle-visualization-ml5kld",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -82,12 +82,7 @@
     },
     "verifyMethod": "code+topology (gh re-verify optional)"
   },
-  "levels": [
-    "context",
-    "container",
-    "component",
-    "leaf"
-  ],
+  "levels": ["context", "container", "component", "leaf"],
   "nodes": [
     {
       "status": "current",
@@ -273,7 +268,7 @@
         {
           "type": "glob",
           "ref": "scripts",
-          "count": 6
+          "count": 7
         }
       ],
       "category": "container",
@@ -788,7 +783,26 @@
       "category": "lib",
       "status2": "unknown",
       "target": "",
-      "func": "forma verify — refresh programme status from LIVE GitHub issues, through the user's gh CLI. This is the ONLY command that touches the network, and it is opt-in: gen and check stay deterministic and offline forever (that is the product). It ",
+      "func": "forma verify — refresh programme facts from LIVE GitHub data, through the user's gh CLI. This is the ONLY snapshot writer and the only networked path used by the Control Room. Usage: node verify.mjs [--repo <path] [--model <path] [--issues ",
+      "descSource": "docstring"
+    },
+    {
+      "id": "scripts__check_arbiter_contract_mjs",
+      "level": "leaf",
+      "parent": "scripts",
+      "kind": "leaf",
+      "name": "check-arbiter-contract",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "scripts/check-arbiter-contract.mjs"
+        }
+      ],
+      "category": "scripts",
+      "status2": "unknown",
+      "target": "",
+      "func": "SPDX-License-Identifier: Apache-2.0 scripts/check-arbiter-contract.mjs — the forma half of the shared schema contract (I19). forma and arbiter are extensions of each other, not neighbours that happen to agree today: arbiter owns the governa",
       "descSource": "docstring"
     },
     {
@@ -959,7 +973,7 @@
       "category": "test",
       "status2": "unknown",
       "target": "",
-      "func": "Offline stand-in for the gh CLI, used via forma verify --gh-cmd \"node test/stub-gh.mjs\". Prints the same shape as gh issue list --json number,title,state,milestone,labels. #7 closed (milestone v1), #8 open (no milestone) — nothing else.",
+      "func": "Offline stand-in for the gh commands used by forma verify.",
       "descSource": "docstring"
     }
   ],
