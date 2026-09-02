@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `lib/schema/CONTRACT.json` and `scripts/check-arbiter-contract.mjs` pin every schema shared with
+  arbiter (owner, path, sha256, vendoring consumers). Both repositories hold a byte-identical copy
+  and gate their own half, so a shared shape cannot change on one side and stay green (I19). The
+  cross-checkout half skips out loud when no sibling checkout is present.
+- `docs/adr/0008-lifecycle-ontology-and-six-lenses.md` — arbiter owns the lifecycle ontology, forma
+  derives and renders it as portfolio plus six lenses, each answering one question. Supersedes the
+  five-view publication predicate of ADR-0007.
+- I19 in `docs/GLOBAL_INVARIANTS.md`, with the tamper test that proves it non-vacuous.
+
+### Fixed
+- `scripts/lint.mjs` named its files by hand and had drifted to checking no script at all — palette,
+  presentable, room-presentable, check-clean and gen-doc-index were syntax-unverified. It now walks
+  `lib/` and `scripts/`.
+
 ## [1.0.0] - 2026-08-17
 
 The Control Room contract is now exercised across five real GitHub programmes and frozen for 1.0.
