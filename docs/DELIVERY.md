@@ -17,7 +17,7 @@ This file records realization status for the Control Room branch. A feature is l
 | Claim | Proof command or recorded check | Why the proof is relevant |
 |---|---|---|
 | The public CLI dispatches `init`, `gen`, `check`, `doc`, `serve`, `verify`, `scan`, and `room`. | `node bin/forma.mjs --help` | The dispatcher is the package entry point, so this proves the installed command surface ([`bin/forma.mjs:15-38`](../bin/forma.mjs#L15-L38)). |
-| The shipped JavaScript entry points parse. | `npm run lint` | This passes on the branch and checks 27 files through `node --check`. |
+| The shipped JavaScript entry points parse. | `npm run lint` | This passes on the branch and checks 34 files through `node --check`. |
 | Forma's own committed model is adherent to Forma's current source. | `node bin/forma.mjs check` | This passes on the branch and independently re-walks source, document facts, evidence, and optional artifacts. |
 | The npm selection is clean of editor residue and includes the Control Room runtime files. | `npm pack --dry-run --json` | The prepack guard passes and the dry run lists `room.mjs`, `roomderive.mjs`, the four overlay or manifest schemas, and `control-room.html`. |
 | The single-model public demo meets its five publication predicates. | `node scripts/presentable.mjs docs/demo/c4-model.json` | The suite grades the shipped model itself, not a cleaned copy ([`test/run.mjs:1407-1411`](../test/run.mjs#L1407-L1411)). |
