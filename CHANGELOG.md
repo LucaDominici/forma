@@ -28,6 +28,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "has this file" flags that restated half of the publication predicates and drifted from them.
 
 ### Fixed
+- **Six panels of the verdict lens were unreachable on every desktop window.** The shell is
+  viewport-locked, so an answer tier sized `auto` does not overflow — it STARVES the evidence row
+  to zero height and lays its panels out below a page that cannot scroll, with no scrollbar and no
+  affordance. Measured headless at 1440×900, 1280×800 and 1920×1080: the answer took 868–967px and
+  the whole findings archive, all four headline numbers and three charts were invisible; readable
+  only at 2560×1440 and below the 760px breakpoint where the shell releases. The tier is capped and
+  scrollable now — a short answer still sizes to its content — and zero panels sit below the fold at
+  any of the four sizes. The contract is gated in `npm test` and in `room-presentable`.
+- **Every list item in every embedded document rendered blank.** The markdown renderer took the
+  wrong capture group — the indent for a bullet, the number for an ordered item — so 104 items
+  across forma's own canon were empty `<li>` or a bare digit, in the lens whose entire payload is
+  that canon. `GLOBAL_INVARIANTS.md` alone lost 57. The tests counted `<li>` elements and never
+  read one, which is exactly how it survived; they read them now.
+- **The blocked row showed a verdict's reason with its evidence blanked.** Hop 2 pointed the mark
+  and the reason at the verdict lens's index and left `evidence` on the portfolio's copy — and the
+  portfolio filters stale verdicts out while the index keeps them. A stale-but-real verdict
+  rendered its reason and "Evidence: None" three lines apart, from two sources that disagree: the
+  same defect moved, not closed. The index carries all three now.
 - **What the adversarial pass found in the partition itself**, hop 1 of ADR-0008's closure: the
   verdict index was a pass-through, so `derived.health` still had a home in every lens that draws
   an issue pill — the very laundering the rule names. The verdict lens now *interprets* the overlay

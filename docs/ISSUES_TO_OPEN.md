@@ -202,6 +202,56 @@ DoD: the shell replaces the hash after a redirect without re-entering the router
 and no `lenses` block, referenced by no test. DoD: revived as the acceptance fixture ADR-0008 wave 4
 intended, or removed.
 
+## Found by a four-persona walk over the six lenses, 2026-09-04
+
+A product review, not a code review: the briefing was composed, driven headlessly at five viewport
+sizes and read as a stakeholder, a tech lead, an auditor and a new joiner. Two defects it found are
+fixed in the same commit as this list — the answer tier starving the evidence tier (six panels
+below an unscrollable fold at every desktop size), and every list item in every embedded document
+rendering blank. The rest are filed.
+
+**P-1 · The portfolio cannot answer its own question**
+`area:room kind:feat` — Why: "Which programme needs me now?" is answered by the blocking-rule count
+and nothing else. `ROOM.portfolio.programs[]` carries no verdict, health, brief or findings signal,
+and `lenses.mjs` gives the portfolio `owns: []`. A programme with a contradicted claim, three
+Problem findings and a stale architecture snapshot reads as "0 things need you". DoD: one line per
+programme carrying its verdict chip and worst severity, ordered worst-first.
+
+**P-2 · The same subject is graded twice, with contradictory verdicts, on two lenses**
+`area:room kind:bug` — Why: verdict's "Invariants" panel grades I2 `MECCANIZZATO` while
+provenance's document gate grades the same I2 "Watch — enforcement remains unproven". Two lenses,
+one subject, opposite answers. Operations shows the CI run green while verdict's thesis is that the
+same run proves nothing. I20 cannot see either: one reads `derived.brief`, the other
+`derived.documentGate` — the same FACT under different derived keys, which is the duplication the
+rule was built for, surviving underneath it. DoD: one home per subject, or an explicit
+cross-reference where two lenses must both mention it.
+
+**P-3 · Panel-level absence, and a scroll policy**
+`area:viewer kind:debt` — Why: I7 is applied at lens granularity and survives at panel granularity —
+traceability publishes a capability ledger reading "0 capabilities · no capability source is
+declared", verdict publishes a chart rendering the words "No data available.". Separately, measured
+at 1440x900: the C4 map iframe shows 336 of 420px, the document gate 195 of 1808, the embedded PRD
+195 of 2517. DoD: the same absent-not-empty rule one level down, and a scroll policy that does not
+show an 8% slice of a document.
+
+**P-4 · The seven questions exist only as tooltips**
+`area:viewer kind:feat` — Why: `window.__LENSES__` carries each lens's question and the rendered DOM
+contains none of them; a reader sees compressed tab labels ("The system" — a noun, not a question)
+and, in print, nothing. The architectural premise is invisible to the reader it was built for.
+
+**P-5 · Mechanism names in reader labels**
+`area:viewer kind:bug` — Why: `altro` (hard-coded at `lib/roomderive.mjs:181`, never passed through
+the locale table, unlike the other bucket keys), `MECCANIZZATO`/`DOCUMENTATO`, `azione`, `issue`;
+and backticks rendered literally in invariant row titles. An English briefing with Italian
+mechanism keys in it.
+
+**P-6 · Smaller truths**
+`area:viewer kind:bug` — the findings panel labels 9 rows "5 finding(s) whose evidence moved";
+portfolio Moving shows issue numbers with no titles while the same issues carry titles on the plan
+lens; the portfolio says "Blocking rule not declared" and "Every programme declares its blocking
+rule" on the same screen with two programmes; the architecture lens shows three dates and two
+version numbers; an unpublished lens redirects but leaves the wrong address in the bar (see L-6).
+
 ## Carried debt (open regardless of release)
 
 D-1 shipped-file count unenforced · D-2 `docmap` prefix false-alive · D-3 every view in the DOM at load

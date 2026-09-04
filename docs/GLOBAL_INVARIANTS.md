@@ -257,9 +257,10 @@ The analyzer is lexical, and the rule is stated as narrowly as the mechanism act
    derivation cannot land with no home by being forgotten in two places at once.
 7. **A comment is not a read, and a string is.** Comments are stripped before measuring — the
    fail-closed direction. String literals deliberately are not, so `p["derived"]` stays visible to
-   the spelling rule. The stripper is regex-based, which is a known limit: a `//` or `/*` inside a
-   string literal would truncate the rest of that line, and the failure would be silent. The viewer
-   contains none, and the behaviour is pinned in both directions by test.
+   the spelling rule. The stripper is regex-based, which is a known limit: a `//` inside a string
+   literal would truncate the rest of that line and a `/*` would swallow everything up to the next
+   `*/`, across lines — both silent, and both the fail-open direction. The viewer contains neither,
+   and the behaviour is pinned in both directions by test.
 8. **Shared primitives read nothing derived.** The issue pill wears a health verdict on every lens,
    so the verdict lens *interprets* the overlay once — staleness beats the verdict, an unaudited
    issue is not a green one — and publishes the finished mark and reason. The pill draws them and

@@ -203,8 +203,6 @@
   "wbsSkipped": "Documents that contributed nothing",
   "docsCanon": "The canon",
   "docsOther": "Everything else",
-  "docsNone": "This programme has no declared document set.",
-  "docsNext": "Configure the documents to carry in forma.room.json, then rebuild this briefing.",
   "docsBudget": "{n} documents embedded, within the byte budget.",
   "docsTooLarge": "over the byte budget",
   "docsOpen": "Open on GitHub",

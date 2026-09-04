@@ -6065,6 +6065,19 @@ const diffPaths = (a, b, at = "") => {
     die(
       "markdown: `1.`/`2.` did not produce two <li> — numbered lists are being joined into a paragraph",
     );
+  // Structure AND content. Every one of these assertions passed while every list item on screen was
+  // empty: the renderer took the wrong capture group — the indent for a bullet, the number for an
+  // ordered item — so 104 items across forma's own canon rendered as blank <li> or a bare digit, in
+  // the lens whose entire payload is that canon. Counting the <li> proves a list exists; reading it
+  // proves the list says something.
+  const liText = (node) =>
+    node.children
+      .filter((c) => c.tagName === "LI")
+      .map((li) => String(li.text || li.textContent || "") + (li.children || []).map(textOf).join(""));
+  if (JSON.stringify(liText(find(doc, "UL"))) !== JSON.stringify(["one", "two"]))
+    die("markdown: bullet items rendered without their text — got " + JSON.stringify(liText(find(doc, "UL"))));
+  if (JSON.stringify(liText(ol)) !== JSON.stringify(["first", "second"]))
+    die("markdown: numbered items rendered without their text — got " + JSON.stringify(liText(ol)));
   if (!find(doc, "BLOCKQUOTE"))
     die("markdown: `>` did not become a <blockquote>");
   // A list that starts at 3 renders as 3, 4 — silently renumbering somebody else\'s document is a
@@ -6325,6 +6338,11 @@ const diffPaths = (a, b, at = "") => {
     !/thesisUnknown/.test(template)
   )
     die("room-truth: unknown claims have no explicit headline path");
+  // A viewport-locked shell turns "too tall" into "invisible", not "scrollable": an uncapped answer
+  // tier took 868-967px on the verdict lens and left the evidence row at zero height with six
+  // panels below an unscrollable fold. Measured at 1440x900, 1280x800 and 1920x1080.
+  if (!/\.answer\{[^}]*max-height:\d+vh[^}]*overflow:auto/.test(template))
+    die("room-layout: the answer tier is unbounded and can starve the evidence tier to zero height");
   if (!/\.pager button\{min-height:44px/.test(template))
     die("room-mobile: pager target is below 44px");
   if (!/\.skip\{[^}]*min-height:44px/.test(template))

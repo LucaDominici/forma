@@ -65,6 +65,11 @@ const pageSize = Number((/var ISSUE_PAGE_SIZE=(\d+)/.exec(html) || [])[1])
 const boundedDom = pageSize > 0 && pageSize <= 50 && /function pagedList\(/.test(html) && /function ensureView\(/.test(html) && !/function buildAll\(/.test(html)
 const mobileNav = /id="mobile-program"/.test(html) && /id="mobile-view"/.test(html) && /@media\(max-width:600px\)/.test(html)
 const boundedPrint = /\.screen-list,\.workflow\{display:none!important\}/.test(html) && !/details:not\(\[open\]\)/.test(html)
+// The shell is viewport-locked, so an unbounded answer tier does not overflow — it STARVES the
+// evidence row to zero and lays six panels out below a page that cannot scroll. Measured at
+// 1440x900, 1280x800 and 1920x1080 before this cap existed. A layout property, checked here as a
+// source contract because this gate has no browser; the measurement lives in the commit that set it.
+const boundedAnswer = /\.answer\{[^}]*max-height:\d+vh[^}]*overflow:auto/.test(html)
 const documentGateVisible = /var documentPanel=documentGatePanel\(program\);if\(documentPanel\)ev\.appendChild\(documentPanel\)/.test(html)
 
 for (const program of programs) {
@@ -185,6 +190,7 @@ const predicates = [
   ['issue DOM is lazy and page-bounded', boundedDom, Number.isFinite(pageSize) ? `${pageSize} issue rows per page` : 'pagination contract missing'],
   ['mobile navigation has native programme and view controls', mobileNav, mobileNav ? 'two labelled selects at the 600px breakpoint' : 'mobile controls missing'],
   ['print does not expand interactive issue archives', boundedPrint, boundedPrint ? 'interactive lists summarized on paper' : 'unbounded print path detected'],
+  ['the answer tier cannot starve the evidence tier', boundedAnswer, boundedAnswer ? 'answer capped and scrollable inside the locked shell' : 'the answer row is unbounded — evidence can be laid out below an unscrollable fold'],
 ]
 
 let ok = true

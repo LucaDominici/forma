@@ -203,8 +203,6 @@
   "wbsSkipped": "Documenti che non hanno contribuito nulla",
   "docsCanon": "Il canone",
   "docsOther": "Tutto il resto",
-  "docsNone": "Questo programma non dichiara un insieme di documenti.",
-  "docsNext": "Configura i documenti da includere in forma.room.json, poi ricostruisci questo briefing.",
   "docsBudget": "{n} documenti incorporati, entro il budget di byte.",
   "docsTooLarge": "oltre il budget di byte",
   "docsOpen": "Apri su GitHub",

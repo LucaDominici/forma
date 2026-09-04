@@ -88,7 +88,15 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
 .empty-state p{margin:0 0 8px;color:var(--muted)}
 .empty-state .next{color:var(--ink)}
 
-.answer{display:grid;gap:var(--gap);grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+/* The answer tier takes what it needs and no more. Sized `auto` it grew to 868–967px on the
+   verdict lens — the brief's thesis, risks, decisions, invariants and delta stacked — and starved
+   the evidence row of a viewport-locked shell to ZERO height: six panels, the whole findings
+   archive among them, laid out below a page that cannot scroll, with no scrollbar and no
+   affordance. Measured broken at 1440x900, 1280x800 and 1920x1080; readable only at 2560x1440 and
+   below the 760px breakpoint where the shell releases. Capped and scrollable, a short answer still
+   sizes to its content and a long one can no longer eat the evidence. */
+.answer{display:grid;gap:var(--gap);grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;
+        min-height:0;max-height:52vh;overflow:auto;scrollbar-width:thin}
 .evidence{display:grid;gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin;
  grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(0,auto);align-content:start}
 .span2{grid-column:span 2}
@@ -676,12 +684,16 @@ function blockedRow(b){
  // ones out — so this row used to show a stale-but-real verdict as a "Stale" pill in its summary
  // and "Not audited" in its own detail list, two lines apart, about the same issue. A stale verdict
  // keeps its text and loses its colour (I8); it is not an issue nobody looked at.
- var mark=program?verdictMarkOf(program,b.n):null;
+ var mark=program?verdictMarkOf(program,b.n):null,anchors=(mark&&mark.evidence)||[];
  s.appendChild(program?pill(program,b.n,b.program+" #"+b.n):statusMark(mark&&mark.mark));s.appendChild(meta);s.appendChild(el("span","row-title",b.title));
  d.appendChild(s);
  pair(dl,STR.verdictLabel,statusMark(mark&&mark.mark));
  pair(dl,STR.why,(mark&&mark.why)||STR.notAudited);
- for(j=0;j<(b.evidence||[]).length;j++)ev.appendChild(el("span","chip",b.evidence[j].type+":"+b.evidence[j].ref));
+ // Evidence from the SAME source as the mark and the reason. Reading it off the portfolio's copy
+ // left a stale verdict showing its reason with its anchoring blanked — the portfolio filters
+ // stale verdicts out, the index keeps them — which is the two-sources-one-row defect moved from
+ // `why` to `evidence` rather than closed.
+ for(j=0;j<anchors.length;j++)ev.appendChild(el("span","chip",anchors[j].type+":"+anchors[j].ref));
  if(!ev.childNodes.length)ev.appendChild(el("span","muted",STR.none));
  pair(dl,STR.evidence,ev);
  pair(dl,STR.nodes,chips(b.nodes));pair(dl,STR.labels,chips(b.labels));
@@ -721,7 +733,7 @@ function markView(view,state){
  // Idempotent: a second call REPLACES the chip rather than appending a second one. Two calls used
  // to leave "Present" and "Unknown" side by side with a data-state of whichever ran last, plus an
  // extra child in a grid sized for three. Safety here, not in the callers' control flow.
- var line=view.querySelector(":scope > p.view-state")||el("p","view-state");
+ var line=view.querySelector("p.view-state")||el("p","view-state");
  line.textContent="";
  view.setAttribute("data-state",state);line.appendChild(el("span","state-chip",labels[state]||state));
  if(!line.parentNode)view.appendChild(line);
@@ -860,7 +872,11 @@ function renderMarkdown(src,program){
     i++;n++;continue;
    }
    lastLi=el("li","md-li","");
-   inline(lastLi,m[tag==="ol"?2:1],program);box.appendChild(lastLi);i++;n++;
+   // Group 3 for an ordered item, group 2 for a bullet: both regexes capture the indent first, and
+   // the ordered one captures its number second. Off by one on both, every list item in every
+   // embedded document rendered as an empty <li> or a bare digit — 104 of them across forma's own
+   // canon, in the lens whose entire payload is that canon.
+   inline(lastLi,m[tag==="ol"?3:2],program);box.appendChild(lastLi);i++;n++;
   }
   // Belt and braces: the caller decided this line starts a list using a DIFFERENT pattern from the
   // one above. If the two ever disagree again, consume the line as prose rather than spin — a
@@ -1040,7 +1056,7 @@ function indexVerdicts(){
   // bare literal "__proto__" would set a prototype instead of an own key — one programme's marks
   // leaking into another's lookups. Same reason I14 keeps repository text out of markup.
   marks=Object.create(null);
-  for(j=0;j<verdicts.length;j++)marks[verdicts[j].n]={mark:verdicts[j].stale?"stale":verdicts[j].verdict,why:verdicts[j].why};
+  for(j=0;j<verdicts.length;j++)marks[verdicts[j].n]={mark:verdicts[j].stale?"stale":verdicts[j].verdict,why:verdicts[j].why,evidence:verdicts[j].evidence||[]};
   VERDICT_MARKS[program.id]=marks;
  }
 }
@@ -1204,7 +1220,7 @@ function viewOperations(view,program){
  // panel that had just marked itself Unknown, on the same screen. And no data-single here — the
  // lens renders an answer AND evidence, and the single-tier template would drop the evidence into
  // an implicit row outside the scroll container.
- markView(view,signals.getAttribute("data-state")||"present");
+ markView(view,signals.getAttribute("data-state"));
  var answer=el("div","answer"),lead=el("section","panel answer-lead");
  lead.appendChild(el("p","thesis",STR.routeOperations));
  lead.appendChild(el("p","lede",STR.operationsLede));
@@ -1415,7 +1431,7 @@ function frameDoc(program){
 function viewArchitecture(view,program,summary){
  view.setAttribute("data-single","");
  var drift=(program.derived&&program.derived.commitDrift)||null;
- markView(view,!program.model||!drift||!drift.resolvable?"unknown":(drift.commitsBehind?"stale":"present"));
+ markView(view,!drift.resolvable?"unknown":(drift.commitsBehind?"stale":"present"));
  var ev=el("div","evidence"),date=String(program.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
  /* The staleness belongs HERE, not only 500px away on another view. This is the page most likely
     to be photographed into a deck, and it presented a snapshot ten commits behind HEAD as
@@ -1613,13 +1629,13 @@ function viewProvenance(view,program){
   var documentOnly=documentGatePanel(program);
   if(documentOnly)ev.appendChild(documentOnly);
   else markView(view,"unknown");
-  // Two different claims, and only one of them is reachable from a mounted route: this lens
-  // publishes on documents OR a gate, and a gate exists only where a document set was declared.
-  // So "no declared document set" would be false exactly where it used to be printed — what is
-  // true here is that the include matched nothing git-tracked (I6).
-  var undeclared=!program.docs;
+  // Only one claim is reachable from a mounted route: this lens publishes on documents OR a gate,
+  // a gate exists only where a document set was declared, and program.docs is non-null whenever a
+  // gate is. So "no declared document set" cannot be true here — the include matched nothing
+  // git-tracked (I6). Branching on it anyway would keep two more strings alive from dead code,
+  // which is what the rest of this wave spent its time removing.
   var np=panel(STR.routeProvenance,STR.provDocsNone,"full");
-  emptyState(np,undeclared?STR.docsNone:STR.docsUnreadable,undeclared?STR.docsNext:STR.docsUnreadableNext);
+  emptyState(np,STR.docsUnreadable,STR.docsUnreadableNext);
   ev.appendChild(np);view.appendChild(ev);return;
  }
  var lp=panel(STR.docsCanon,fmt(STR.docsBudget,{n:docs.embedded.length}));
