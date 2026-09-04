@@ -103,7 +103,6 @@
   "techNoFindings": "No findings supplied.",
   "repoSignals": "Repository signals",
   "signalProv": "Collected by forma verify from declared workflows and releases",
-  "signalNotDeclared": "No workflow or release signal is declared.",
   "signalUnknown": "At least one declared signal could not be collected.",
   "release": "Release",
   "docGate": "Document gate",
@@ -173,15 +172,12 @@
   "sweepsCount": "{n} commits touched more files than the threshold. They are counted here and attributed to no node.",
   "sweepFiles": "{n} files",
   "mapStatic": "Static architecture snapshot from {date}.",
-  "mapMissing": "No architecture model and source inventory were supplied for this programme.",
-  "mapNext": "Generate the programme architecture, then rebuild this briefing.",
   "mapFrame": "Static architecture snapshot for {program}",
   "timeline": "Checkpoints",
   "timelineMissing": "This programme declares no architecture timeline, so there is nothing beyond the current state.",
   "milestones": "Milestones",
   "milestoneProv": "{n} observed milestone groups · grouped from the issue snapshot",
   "milestoneIncomplete": "Incomplete: milestones with no issues are not observable in this snapshot.",
-  "milestoneEmpty": "No milestone is present in the issue snapshot.",
   "milestoneSummary": "{open} open · {closed} closed",
   "milestoneNoIssues": "No matching issue is present in the snapshot.",
   "checkpointIssues": "{closed} of {total} issues closed",
@@ -331,5 +327,7 @@
   "reconciliationClean": "Every claimed milestone matches GitHub.",
   "driftNoMilestone": "GitHub has no milestone by this name.",
   "driftMembership": "Claimed and not in GitHub: {claimed} · in GitHub and not claimed: {github}",
-  "milestonePathSpan": "day {start} → {finish}"
+  "milestonePathSpan": "day {start} → {finish}",
+  "docsUnreadable": "This programme declares documents, and none of them is readable here.",
+  "docsUnreadableNext": "The include patterns match no git-tracked file — check them, or commit the documents they name."
 }

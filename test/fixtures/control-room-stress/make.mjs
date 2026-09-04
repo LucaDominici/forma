@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 // The IA comes from the one table the composer injects, never a copy of it — a fixture that
 // restated the routes would go on measuring an IA the product had left behind.
-import { LENSES } from '../../../lib/lenses.mjs'
+import { LENSES, derivedLenses } from '../../../lib/lenses.mjs'
 
 const LENS_SPEC = LENSES.map(({ id, route, question }) => ({ id, route, question }))
 export function makeStressRoom(total = 2500, openCount = 250) {
@@ -55,6 +55,21 @@ export function makeStressRoom(total = 2500, openCount = 250) {
       },
     }],
   }
+}
+
+/**
+ * The fixture's declared publication set must be what derivedLenses would compute from its own
+ * artifacts. A hand-kept copy desynchronises the first time a predicate changes, and then every
+ * DOM, paging, mobile and print measurement taken over it is measuring an IA the product would
+ * never produce — which is exactly how this fixture came to compose an empty shell.
+ * @returns {string[]} mismatches, empty when the fixture is honest
+ */
+export function lensDrift(room = makeStressRoom()) {
+  const program = room.programs[0]
+  const fresh = derivedLenses(program)
+  return Object.keys(fresh)
+    .filter((id) => fresh[id] !== (program.derived.lenses || {})[id])
+    .map((id) => `${id}: fixture declares ${String((program.derived.lenses || {})[id])}, artifacts say ${String(fresh[id])}`)
 }
 
 if (fileURLToPath(import.meta.url) === process.argv[1]) {

@@ -671,10 +671,16 @@ function blockedRow(b){
  var program=byId(b.program),d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),dl=el("dl","detail"),ev=el("span","chips"),j;
  var land=landingText(b.daysSinceLastLanding);
  if(b.priority)meta.appendChild(el("span","chip",b.priority));
- s.appendChild(program?pill(program,b.n,b.program+" #"+b.n):statusMark(b.verdict));s.appendChild(meta);s.appendChild(el("span","row-title",b.title));
+ // ONE source for an issue's verdict on screen: the index the verdict lens publishes, the same one
+ // the pill draws from. The portfolio carries its own copy of verdict and why, and it FILTERS stale
+ // ones out — so this row used to show a stale-but-real verdict as a "Stale" pill in its summary
+ // and "Not audited" in its own detail list, two lines apart, about the same issue. A stale verdict
+ // keeps its text and loses its colour (I8); it is not an issue nobody looked at.
+ var mark=program?verdictMarkOf(program,b.n):null;
+ s.appendChild(program?pill(program,b.n,b.program+" #"+b.n):statusMark(mark&&mark.mark));s.appendChild(meta);s.appendChild(el("span","row-title",b.title));
  d.appendChild(s);
- pair(dl,STR.verdictLabel,statusMark(b.verdict));
- pair(dl,STR.why,b.why||STR.notAudited);
+ pair(dl,STR.verdictLabel,statusMark(mark&&mark.mark));
+ pair(dl,STR.why,(mark&&mark.why)||STR.notAudited);
  for(j=0;j<(b.evidence||[]).length;j++)ev.appendChild(el("span","chip",b.evidence[j].type+":"+b.evidence[j].ref));
  if(!ev.childNodes.length)ev.appendChild(el("span","muted",STR.none));
  pair(dl,STR.evidence,ev);
@@ -711,8 +717,15 @@ function markState(node,state,reason){
  if(reason&&node.body)node.body.appendChild(el("p","muted",reason));return node;
 }
 function markView(view,state){
- var labels={unknown:STR.stateUnknown,empty:STR.stateEmpty,present:STR.statePresent,stale:STR.stateStale},line=el("p","view-state");
- view.setAttribute("data-state",state);line.appendChild(el("span","state-chip",labels[state]||state));view.appendChild(line);return view;
+ var labels={unknown:STR.stateUnknown,empty:STR.stateEmpty,present:STR.statePresent,stale:STR.stateStale};
+ // Idempotent: a second call REPLACES the chip rather than appending a second one. Two calls used
+ // to leave "Present" and "Unknown" side by side with a data-state of whichever ran last, plus an
+ // extra child in a grid sized for three. Safety here, not in the callers' control flow.
+ var line=view.querySelector(":scope > p.view-state")||el("p","view-state");
+ line.textContent="";
+ view.setAttribute("data-state",state);line.appendChild(el("span","state-chip",labels[state]||state));
+ if(!line.parentNode)view.appendChild(line);
+ return view;
 }
 function filteredList(target,items,render){
  var filter=el("div","list-filter"),input=document.createElement("input"),results=el("div"),print=el("div","print-only"),i;
@@ -1017,18 +1030,21 @@ function briefAboutEvidence(about){if(!about)return null;if(about.issue!=null)re
 // once and publishes the finished mark and reason per issue; the shared pill only draws them, and
 // could not re-interpret the overlay if it wanted to. Handing the raw verdicts across instead would
 // give derived.health a home in every lens that draws a pill, which is what I20 refuses.
-var VERDICT_MARKS={};
+var VERDICT_MARKS=Object.create(null);
 function indexVerdicts(){
  var i,j,program,verdicts,marks;
  for(i=0;i<ROOM.programs.length;i++){
   program=ROOM.programs[i];
   verdicts=(program.derived&&program.derived.health&&program.derived.health.verdicts)||[];
-  marks={};
+  // Null-prototype: both keys are repository-controlled (a programme id, an issue number), and on a
+  // bare literal "__proto__" would set a prototype instead of an own key — one programme's marks
+  // leaking into another's lookups. Same reason I14 keeps repository text out of markup.
+  marks=Object.create(null);
   for(j=0;j<verdicts.length;j++)marks[verdicts[j].n]={mark:verdicts[j].stale?"stale":verdicts[j].verdict,why:verdicts[j].why};
   VERDICT_MARKS[program.id]=marks;
  }
 }
-function verdictMarkOf(program,n){return (VERDICT_MARKS[program.id]||{})[n]||null;}
+function verdictMarkOf(program,n){var marks=VERDICT_MARKS[program.id];return (marks&&marks[n])||null;}
 function briefStatusStrip(program){
  var b=program.derived.brief,f=program.derived.findings,strip=el("p","brief-strip"),parts=[];
  if(!b)return null;
@@ -1157,12 +1173,14 @@ function githubLink(url,label){
 }
 /*lens:operations*/
 function signalsPanel(program){
- var signals=program.issuesSnapshot.signals||{workflows:{},release:{listState:"unknown",reason:STR.signalNotDeclared}},keys=Object.keys(signals.workflows||{}).sort(),release=signals.release||{},unknown=0,i;
+ // Signals are guaranteed here: this lens publishes only where they are declared, so the
+ // undeclared-signals fallback and its "empty" arm below were unreachable and kept a locale string
+ // alive from dead code.
+ var signals=program.issuesSnapshot.signals,keys=Object.keys(signals.workflows||{}).sort(),release=signals.release||{},unknown=0,i;
  var p=panel(STR.repoSignals,STR.signalProv,"span2"),rows=el("div","stack");
  for(i=0;i<keys.length;i++)if(signals.workflows[keys[i]].state==="unknown")unknown++;
  if(release.listState==="unknown"&&!/not declared/i.test(release.reason||""))unknown++;
- if(!keys.length&&release.listState==="unknown"&&/not declared/i.test(release.reason||""))markState(p,"empty",STR.signalNotDeclared);
- else markState(p,unknown?"unknown":"present",unknown?STR.signalUnknown:null);
+ markState(p,unknown?"unknown":"present",unknown?STR.signalUnknown:null);
  for(i=0;i<keys.length;i++){
   var id=keys[i],signal=signals.workflows[id],row=el("div","kv"),left=el("span","row-meta"),right=el("span","row-meta"),mark=signal.state==="unknown"?"unknown":(signal.conclusion==="success"?"ok":(/^(failure|cancelled|timed_out)$/.test(signal.conclusion||"")?"bad":"warn"));
   left.appendChild(statusMark(mark));left.appendChild(el("span","ref",id));left.appendChild(el("span","state-chip",signal.state==="present"?STR.statePresent:STR.stateUnknown));
@@ -1409,14 +1427,13 @@ function viewArchitecture(view,program,summary){
  else if(drift)prov+="  ·  "+STR.aligned;
  var mp=panel(STR.routeArchitecture,prov,"span2");
  mp.classList.add("span2");
- if(!program.hasMap)emptyState(mp,STR.mapMissing,STR.mapNext);
- else{
-  var f=el("iframe","frame");
-  f.setAttribute("sandbox","allow-scripts");f.title=fmt(STR.mapFrame,{program:program.id});f.srcdoc=frameDoc(program);
-  mp.body.style.overflow="hidden";mp.body.appendChild(f);
- }
+ // No `if(!program.hasMap)` arm: this lens publishes only when the programme HAS a model
+ // (lib/lenses.mjs), so the arm was unreachable and its two locale strings were kept alive by dead
+ // code — the same defect the unused-string guard was just hardened against, one axis over.
+ var f=el("iframe","frame");
+ f.setAttribute("sandbox","allow-scripts");f.title=fmt(STR.mapFrame,{program:program.id});f.srcdoc=frameDoc(program);
+ mp.body.style.overflow="hidden";mp.body.appendChild(f);
  ev.appendChild(mp);
- if(!program.hasMap){view.appendChild(ev);return;}
 
  var cps=program.derived.checkpoints,cp=panel(STR.timeline,STR.provCheckpoints);
  if(!cps||!cps.length)cp.body.appendChild(el("p","muted",STR.timelineMissing));
@@ -1479,8 +1496,11 @@ function milestonePanel(program){
  // not tell" is exactly what a reader must not be left to infer from a missing panel (I6/I7).
  if(!items.length&&complete)return null;
  var p=panel(STR.milestones,fmt(STR.milestoneProv,{n:items.length}),"full"),issues=program.issuesSnapshot.issues||[];
- if(!complete)markState(p,"unknown",STR.milestoneIncomplete);
- else markState(p,items.length?"present":"empty",items.length?null:STR.milestoneEmpty);
+ // `complete` is false on every snapshot forma writes — milestones are read off issue payloads, so
+ // one with no issues is not observable (lib/verify.mjs). That makes "no milestone here" a thing we
+ // CANNOT KNOW rather than a measured zero, and it is disclosed as unknown (I6). The measured-empty
+ // arm returned above; what is left is present, or unknown.
+ markState(p,complete?"present":"unknown",complete?null:STR.milestoneIncomplete);
  if(items.length)pagedList(p.body,items,function(m){return milestoneRow(program,issues,m);});
  return p;
 }
@@ -1496,12 +1516,14 @@ function viewTraceability(view,program){
   missing.appendChild(capabilityPanel([program]));view.appendChild(missing);return;
  }
  var answer=el("div","answer"),lead=el("section","panel answer-lead");
- lead.appendChild(el("p","thesis",rtm?fmt(STR.wbsHeadline,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements}):STR.wbsMissing));
- lead.appendChild(el("p","lede",rtm?fmt(STR.wbsSplit,{withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly}):""));
+ // Past the early return rtm is guaranteed, so the `rtm ? … : missing` arms below it were three
+ // more branches that could not run, each keeping a string alive from dead code.
+ lead.appendChild(el("p","thesis",fmt(STR.wbsHeadline,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements})));
+ lead.appendChild(el("p","lede",fmt(STR.wbsSplit,{withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly})));
  answer.appendChild(lead);
 
  var holes=[],hp=panel(STR.wbsHoles,STR.provRtm,"span2");
- if(rtm){
+ {
   holes=[[STR.wbsDuplicate,rtm.orphans.duplicateIds.map(function(o){return o.id+" ("+o.from+":"+o.line+")";})],
          [STR.wbsDangling,rtm.orphans.danglingRefs.map(function(o){return o.id+" → "+o.ref;})],
          [STR.wbsUncovered,rtm.orphans.uncovered.map(function(o){return o.id+" — "+short(o.text,70);})],
@@ -1517,14 +1539,14 @@ function viewTraceability(view,program){
    hr.appendChild(cell);hp.body.appendChild(hr);
   }
   if(!anyHole)hp.body.appendChild(el("p","muted",rtm.scopeComplete?STR.wbsComplete:STR.wbsObserved));
- }else hp.body.appendChild(el("p","muted",STR.wbsMissing));
+ }
  answer.appendChild(hp);
  view.appendChild(answer);
 
  var ev=el("div","evidence");
  ev.appendChild(capabilityPanel([program]));
  var mp=panel(STR.wbsMatrix,STR.provRtm,"span2");
- if(rtm){
+ {
   var wrap=el("div","tablewrap"),tb=el("table","matrix"),th=el("thead"),htr=el("tr"),tbody=el("tbody");
   var heads=[STR.wbsRequirement,STR.wbsRole,STR.wbsSatisfies,STR.wbsVerified,STR.wbsIssues,STR.wbsProgress,STR.wbsSource];
   // A column every row answers identically is a scan that teaches nothing (F3): on the demo, Role
@@ -1559,7 +1581,7 @@ function viewTraceability(view,program){
   }
   tb.appendChild(tbody);wrap.appendChild(tb);mp.body.appendChild(wrap);
   mp.body.style.overflow="hidden";
- }else mp.body.appendChild(el("p","muted",STR.wbsMissing));
+ }
  ev.appendChild(mp);
 
  view.appendChild(ev);
@@ -1591,7 +1613,14 @@ function viewProvenance(view,program){
   var documentOnly=documentGatePanel(program);
   if(documentOnly)ev.appendChild(documentOnly);
   else markView(view,"unknown");
-  var np=panel(STR.routeProvenance,STR.provDocsNone,"full");emptyState(np,STR.docsNone,STR.docsNext);ev.appendChild(np);view.appendChild(ev);return;
+  // Two different claims, and only one of them is reachable from a mounted route: this lens
+  // publishes on documents OR a gate, and a gate exists only where a document set was declared.
+  // So "no declared document set" would be false exactly where it used to be printed — what is
+  // true here is that the include matched nothing git-tracked (I6).
+  var undeclared=!program.docs;
+  var np=panel(STR.routeProvenance,STR.provDocsNone,"full");
+  emptyState(np,undeclared?STR.docsNone:STR.docsUnreadable,undeclared?STR.docsNext:STR.docsUnreadableNext);
+  ev.appendChild(np);view.appendChild(ev);return;
  }
  var lp=panel(STR.docsCanon,fmt(STR.docsBudget,{n:docs.embedded.length}));
  var rp=panel("",STR.provDocsReader,"span2"),listWrap=el("div","doclist"),i;

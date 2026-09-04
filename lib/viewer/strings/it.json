@@ -103,7 +103,6 @@
   "techNoFindings": "Nessuna segnalazione fornita.",
   "repoSignals": "Segnali del repository",
   "signalProv": "Raccolti da forma verify sui workflow e sulle release dichiarati",
-  "signalNotDeclared": "Nessun segnale workflow o release è dichiarato.",
   "signalUnknown": "Almeno un segnale dichiarato non è stato raccolto.",
   "release": "Release",
   "docGate": "Gate documentale",
@@ -173,15 +172,12 @@
   "sweepsCount": "{n} commit hanno toccato più file della soglia. Sono contati qui e attribuiti a nessun nodo.",
   "sweepFiles": "{n} file",
   "mapStatic": "Fotografia architetturale statica del {date}.",
-  "mapMissing": "Per questo programma non sono stati forniti il modello architetturale e l'inventario delle sorgenti.",
-  "mapNext": "Genera l'architettura del programma, poi ricostruisci questo briefing.",
   "mapFrame": "Fotografia architetturale statica di {program}",
   "timeline": "Checkpoint",
   "timelineMissing": "Questo programma non dichiara una timeline architetturale, quindi non c'è nulla oltre lo stato attuale.",
   "milestones": "Milestone",
   "milestoneProv": "{n} gruppi milestone osservati · raggruppati dalla fotografia delle issue",
   "milestoneIncomplete": "Incompleto: le milestone senza issue non sono osservabili in questa fotografia.",
-  "milestoneEmpty": "Nessuna milestone è presente nella fotografia delle issue.",
   "milestoneSummary": "{open} aperte · {closed} chiuse",
   "milestoneNoIssues": "Nessuna issue corrispondente è presente nella fotografia.",
   "checkpointIssues": "{closed} issue chiuse su {total}",
@@ -331,5 +327,7 @@
   "reconciliationClean": "Ogni milestone dichiarata coincide con GitHub.",
   "driftNoMilestone": "GitHub non ha nessuna milestone con questo nome.",
   "driftMembership": "Dichiarate e assenti da GitHub: {claimed} · in GitHub e non dichiarate: {github}",
-  "milestonePathSpan": "giorno {start} → {finish}"
+  "milestonePathSpan": "giorno {start} → {finish}",
+  "docsUnreadable": "Questo programma dichiara dei documenti e nessuno di essi è leggibile qui.",
+  "docsUnreadableNext": "I pattern di include non corrispondono a nessun file tracciato da git: correggili, oppure committa i documenti che nominano."
 }

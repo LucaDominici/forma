@@ -53,9 +53,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`chartNodes` ("work landed per C4 node") was dropped in the restructure and nobody noticed**,
   because it reads the portfolio summary rather than a derived surface and I20 measures only the
   latter. Restored in the architecture lens, whose question it answers.
-- One absence policy in the plan lens, not two: the critical path and the milestone panel were
-  reserving "Unknown"/"Empty" chips beside two siblings that vanish. F1 was closed at lens
-  granularity and survived at panel granularity.
+- One absence policy in the plan lens where absence is knowable. The critical path now vanishes
+  when there is no schedule, like its two siblings. The milestone panel does NOT, and the first
+  version of this line claimed otherwise: `forma verify` records `milestonesComplete: false` on
+  every snapshot it writes, because milestones are read off issue payloads and one with no issues
+  is not observable. So "this programme has no milestones" is a thing forma cannot know, and it is
+  disclosed as unknown rather than rendered as absence (I6). What was removed is the measured-empty
+  arm, which was unreachable, and the locale string it kept alive.
 - The operations lens published a green "Present" chip over a panel that had marked itself Unknown,
   and put three tiers into a two-row template so its evidence fell outside the scroll container.
 - The portfolio's Moving list captured the loop's programme by reference: from page two onward

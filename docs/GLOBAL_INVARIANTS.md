@@ -247,12 +247,20 @@ The analyzer is lexical, and the rule is stated as narrowly as the mechanism act
 4. **Code, not commentary.** Comments are stripped before measuring, so a comment can neither
    satisfy a declaration nor invent a duplicate.
 5. **Nothing above the partition.** The first region begins exactly where the script does — an
-   anchored check, not an existence test. Template-only: a composed briefing's head carries the room
-   JSON, both locale tables and the whole C4 hologram viewer, any of which may quote a surface while
-   explaining this rule.
+   anchored check, not an existence test — and the head is held to the SAME spelling rule as every
+   region, or a script wedged in ahead of the partition could read a surface through an alias while
+   leaving the anchor pair intact. Template-only: a composed briefing's head carries the room JSON,
+   both locale tables and the whole C4 hologram viewer, any of which may quote a surface while
+   explaining this rule. For the same reason the marker scan starts at the script body, so a
+   document that quotes a concrete marker cannot become the first region.
 6. **The pin is pinned.** `DERIVED_KEYS` is compared against a live `deriveAll` call, so a new
    derivation cannot land with no home by being forgotten in two places at once.
-7. **Shared primitives read nothing derived.** The issue pill wears a health verdict on every lens,
+7. **A comment is not a read, and a string is.** Comments are stripped before measuring — the
+   fail-closed direction. String literals deliberately are not, so `p["derived"]` stays visible to
+   the spelling rule. The stripper is regex-based, which is a known limit: a `//` or `/*` inside a
+   string literal would truncate the rest of that line, and the failure would be silent. The viewer
+   contains none, and the behaviour is pinned in both directions by test.
+8. **Shared primitives read nothing derived.** The issue pill wears a health verdict on every lens,
    so the verdict lens *interprets* the overlay once — staleness beats the verdict, an unaudited
    issue is not a green one — and publishes the finished mark and reason. The pill draws them and
    could not re-interpret the overlay if it wanted to.
@@ -261,8 +269,12 @@ The analyzer is lexical, and the rule is stated as narrowly as the mechanism act
 
 - **`ROOM.portfolio` is a second surface.** It is cross-programme, the portfolio lens owns it, and
   it is outside this rule: it recomputes three aggregates the programme already derived, and copies
-  health verdicts, reasons and evidence into its blocked rows. Tracked as L-1 in
-  `docs/ISSUES_TO_OPEN.md`, not covered here.
+  health verdicts, reasons and evidence into its blocked rows. Nothing stops a future surface being
+  given a second home by that route. Tracked as **L-3** in `docs/ISSUES_TO_OPEN.md`, not covered
+  here. What the viewer no longer does is RENDER those copies: the blocked row reads the verdict
+  index the verdict lens publishes, the same one the pill draws, so the two cannot disagree on
+  screen — which they did, one line apart, because the portfolio drops stale verdicts and the index
+  keeps them.
 - **Markers are lexical, not structural.** Nothing ties a region to the view its code appends to, so
   a foreign panel wrapped in the owning lens's marker would be attributed correctly and rendered in
   the wrong lens. The rule catches drift, not deliberate misdirection.

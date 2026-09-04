@@ -38,6 +38,7 @@ import {
 import { loadDocs } from "../lib/roomdocs.mjs";
 import { deriveRtm } from "../lib/rtm.mjs";
 import { componentsFor } from "../lib/cluster.mjs";
+import { lensDrift } from "./fixtures/control-room-stress/make.mjs";
 import {
   DERIVED_KEYS,
   LENSES,
@@ -5859,7 +5860,7 @@ const diffPaths = (a, b, at = "") => {
       createElement: function (t) { return { nodeType: 1, tagName: t.toUpperCase(), attrs: {}, children: [], className: '', textContent: '', setAttribute: function (k, v) { this.attrs[k] = v }, appendChild: function (c) { this.children.push(c); return c }, get lastChild() { return this.children[this.children.length - 1] } } },
       createTextNode: function (t) { return { nodeType: 3, text: String(t) } },
     };
-    var ROOM = {programs: []}, VERDICT_MARKS = {};
+    var ROOM = {programs: []}, VERDICT_MARKS = Object.create(null);
     ${indexFn[0]}
     ${verdictsOfFn[0]}
     ${elFn[0]}
@@ -5989,6 +5990,15 @@ const diffPaths = (a, b, at = "") => {
     !/Closed/.test(closedPill.attrs["aria-label"])
   )
     die("room-pill: CLOSED did not override an older stale health verdict");
+  // A foreign-repo endpoint carries no verdict of OURS. Without the guard the briefing stamps our
+  // verdict and our reason onto another repository's issue number — a confident false claim about a
+  // repository it has never audited, which is the whole class the pill projection exists to refuse.
+  const foreign = lifted.pill(programme, 7, null, { repo: "other/repo", number: 7, state: "OPEN" });
+  if (foreign.attrs["data-tip"] !== "Not audited" || /Anchored failure/.test(foreign.attrs["aria-label"] || ""))
+    die("room-pill: a cross-repo endpoint was stamped with this programme's verdict");
+  if (!/other\/repo/.test(foreign.attrs.href || foreign.href || ""))
+    die("room-pill: a cross-repo endpoint does not link to its own repository");
+
   // Re-index, because the pill no longer re-reads the overlay: the verdict lens decides the mark
   // once and the pill draws it. Mutating the overlay without re-indexing is exactly the state the
   // projection makes impossible to render.
@@ -6268,15 +6278,20 @@ const diffPaths = (a, b, at = "") => {
     plan = viewerFn("viewPlan");
   if (
     !/milestonesComplete/.test(milestones) ||
-    !/markState\(p,"unknown",STR\.milestoneIncomplete\)/.test(milestones)
+    !/complete\?"present":"unknown"/.test(milestones) ||
+    !/STR\.milestoneIncomplete/.test(milestones)
   )
     die(
       "room-milestones: an issue-derived milestone panel does not disclose incomplete collection",
     );
-  if (!/milestonePanel\(program\)/.test(plan))
+  // The RESULT must reach the DOM, not merely the call. A nullable panel makes `foo(program)`
+  // matchable while the append is gone, which is how a panel disappears with the test still green.
+  if (!/var msPanel=milestonePanel\(program\);if\(msPanel\)ev\.appendChild\(msPanel\)/.test(plan))
     die(
       "room-milestones: milestone evidence is not nested under the plan lens, whose question it answers",
     );
+  if (!/var cpPanel=criticalPathPanel\(program\);if\(cpPanel\)ev\.appendChild\(cpPanel\)/.test(plan))
+    die("room-plan: the critical path is computed and not mounted");
   if (!/documentGatePanel\(program\)/.test(viewerFn("viewProvenance")))
     die(
       "room-docs: the document gate is not nested under the provenance lens",
@@ -8444,23 +8459,39 @@ const diffPaths = (a, b, at = "") => {
   // every check below iterating a stale set and reporting green — the wave-3/6 defect again, one
   // level up.
   {
-    const empty = { issues: [], milestones: [], fetchedAt: "2026-01-01", collection: {}, dependencies: { supported: false, edges: [] } };
-    const live = Object.keys(
-      deriveAll({
-        repo: HERE, model: null, topo: null, issuesSnapshot: empty,
-        health: { verdicts: [], dependencyConfirmations: [] }, findings: { findings: [] },
-        brief: null, briefPath: null, manifest: { today: "2026-01-01" },
-        gateInputs: null, arbiterMilestones: null, docs: null,
-      }),
-    ).sort();
+    const snapshot = (issues) => ({ issues, milestones: [], fetchedAt: "2026-01-01", collection: {}, dependencies: { supported: false, edges: [] } });
+    const keysFor = (over) =>
+      Object.keys(
+        deriveAll({
+          repo: HERE, model: null, topo: null, issuesSnapshot: snapshot([]),
+          health: { verdicts: [], dependencyConfirmations: [] }, findings: { findings: [] },
+          brief: null, briefPath: null, manifest: { today: "2026-01-01" },
+          gateInputs: null, arbiterMilestones: null, docs: null,
+          ...over,
+        }),
+      ).sort();
     const pinned = [...DERIVED_KEYS].sort();
-    if (JSON.stringify(live) !== JSON.stringify(pinned))
-      die(
-        "lenses: DERIVED_KEYS has drifted from deriveAll — only in deriveAll: " +
-          live.filter((k) => !pinned.includes(k)).join(", ") +
-          " · only in DERIVED_KEYS: " +
-          pinned.filter((k) => !live.includes(k)).join(", "),
-      );
+    // Two samples, because one proves only that the key set matches for THAT input. A key added
+    // conditionally — present only when some artifact exists — would slip past a single-sample pin
+    // and land with no home, which is the defect the pin exists to stop.
+    for (const [label, over] of [
+      ["a programme with nothing declared", {}],
+      ["a programme with issues, a gate and a milestone projection", {
+        issuesSnapshot: snapshot([{ n: 1, state: "OPEN", labels: [], ms: null, title: "x", createdAt: "2026-01-01", closedAt: null }]),
+        gateInputs: { documents: [], wiring: [], freshness: [], claims: [], errors: [] },
+        arbiterMilestones: { schema: "arbiter-milestones-v1", milestones: [] },
+        docs: { embedded: [], listed: [] },
+      }],
+    ]) {
+      const live = keysFor(over);
+      if (JSON.stringify(live) !== JSON.stringify(pinned))
+        die(
+          `lenses: DERIVED_KEYS has drifted from deriveAll for ${label} — only in deriveAll: ` +
+            live.filter((k) => !pinned.includes(k)).join(", ") +
+            " · only in DERIVED_KEYS: " +
+            pinned.filter((k) => !live.includes(k)).join(", "),
+        );
+    }
   }
 
   // Every key deriveAll returns is either owned or explicitly declared unrendered WITH a reason —
@@ -8485,6 +8516,39 @@ const diffPaths = (a, b, at = "") => {
   const dup = ownershipViolations(twoHomes, DERIVED_KEYS);
   if (!dup.some((v) => /commitDrift/.test(v) && /operations/.test(v) && /architecture/.test(v)))
     die("lenses: a surface read from two lens regions must be refused, naming both — got " + JSON.stringify(dup));
+
+  // TAMPER 1b — every spelling that is NOT `derived.<key>`. The one-home rule is lexical, so the
+  // only defence against writing the same read differently is to allow exactly two spellings and
+  // refuse the rest BY NAME. Untested, that branch could be deleted and every other assertion here
+  // would stay green while an alias walked through.
+  for (const [name, code] of Object.entries({
+    alias: "function stray(p){var d=p.derived;return d.rtm;}",
+    destructure: "function stray(p){var {rtm}=p.derived;return rtm;}",
+    bracket: 'function stray(p){return p["derived"].rtm;}',
+    optional: "function stray(p){return p.derived?.rtm;}",
+    computed: "function stray(p,k){return p.derived[k];}",
+  })) {
+    const spelled = HTML.replace("/*lens:operations*/", "/*lens:operations*/\n" + code + "\n");
+    if (!ownershipViolations(spelled, DERIVED_KEYS).some((v) => /operations.*reaches a derived surface as/.test(v)))
+      die(`lenses: a derived surface spelled as a ${name} must be refused by name`);
+  }
+  // ...and the same rule above the partition, where a weaker check would be a bypass: a script
+  // inserted before the opening one leaves the anchor pair intact.
+  const aliasedHead = HTML.replace('<script>\n(function(){', '<script>function stray(p){var d=p.derived;return d.rtm;}</script>\n<script>\n(function(){');
+  if (!unpartitionedReads(aliasedHead).some((v) => /above the first lens region/.test(v)))
+    die("lenses: an aliased derived read above the partition must be refused");
+
+  // A comment is not code, and a string is. codeOnly() decides that, and it decides it with
+  // regexes, so both directions are pinned: a comment must not create a read, and a string must
+  // not lose one. The second is the fail-OPEN direction — a swallowed line hides a duplicate home.
+  if (derivedReads('// renders derived.rtm\nvar x=1;').size !== 0)
+    die("lenses: a comment must not count as a read");
+  if (!derivedReads('var url="https://x/y";var v=p.derived.rtm;').has("rtm"))
+    die("lenses: a URL in code must not swallow the rest of the line");
+  if (!derivedReads('/* derived.kpis */\nvar v=p.derived.rtm;').has("rtm"))
+    die("lenses: a block comment must not swallow the code after it");
+  if (derivedReads('/* derived.kpis */').size !== 0)
+    die("lenses: a surface named only inside a block comment is not rendered");
 
   // TAMPER 2 — a shared primitive reaching into derived. Allowed once, it re-scatters the partition.
   const sharedRead = HTML.replace(
@@ -8515,11 +8579,12 @@ const diffPaths = (a, b, at = "") => {
   const outside = HTML.replace('"use strict";\n/*lens:shared*/', '"use strict";\nfunction stray(p){return p.derived.rtm;}\n/*lens:shared*/');
   if (!unpartitionedReads(outside).some((v) => /does not open on a lens region/.test(v)))
     die("lenses: code above the first lens region must be refused");
-  // ...and the anchor must be an anchor, not an existence test: a whole script wedged in ahead of
-  // the partition leaves the pair intact and would pass a `.test()`.
+  // A whole script wedged in ahead of the partition leaves the anchor pair intact — the anchor
+  // branch does NOT fire — so what must catch it is the head read. Asserted on that message alone,
+  // because an alternation would have concealed which half was doing the work.
   const wedged = HTML.replace('<script>\n(function(){', '<script>function stray(p){return p.derived.rtm;}</script>\n<script>\n(function(){');
-  if (!unpartitionedReads(wedged).some((v) => /does not open on a lens region|above the first lens region/.test(v)))
-    die("lenses: a script wedged in above the partition must be refused");
+  if (!unpartitionedReads(wedged).some((v) => /derived\.rtm is read above the first lens region/.test(v)))
+    die("lenses: a script wedged in above the partition must be refused by its read");
 
   // ...and the converse, which is not hypothetical: room-presentable runs this same analyzer over
   // the COMPOSED artifact, whose head carries the room JSON, the locale tables and the embedded
@@ -8594,6 +8659,31 @@ const diffPaths = (a, b, at = "") => {
       die("lenses: a programme publishing every lens must mount six routes plus portfolio and options, got " + full.join(" "));
     if (full.some((id) => id === "view--full-portfolio"))
       die("lenses: the portfolio is the entry route, never a per-programme one");
+  }
+
+  // The stress fixture is the only artifact the DOM, paging, mobile and print measurements run
+  // over, and it declares its own publication set. Pinned against a fresh derivation so it cannot
+  // drift into asserting an IA the product would never produce — the state it was actually in.
+  if (lensDrift().length) die("lenses: the stress fixture declares lenses its own artifacts do not — " + lensDrift().join("; "));
+
+  // hasMapDeclared: the predicate and the viewer must read ONE definition of hasMap. Passing it
+  // explicitly wins over the value deriveAll computes for itself, and an omitted one falls back —
+  // both directions, because a fallback that silently reinstated the other definition would undo
+  // the fix without failing anything.
+  {
+    const base = {
+      repo: HERE, model: null, topo: null,
+      issuesSnapshot: { issues: [], milestones: [], fetchedAt: "2026-01-01", collection: {}, dependencies: { supported: false, edges: [] } },
+      health: { verdicts: [], dependencyConfirmations: [] }, findings: { findings: [] },
+      brief: null, briefPath: null, manifest: { today: "2026-01-01" },
+      gateInputs: null, arbiterMilestones: null, docs: null,
+    };
+    if (deriveAll({ ...base, hasMapDeclared: true }).lenses.architecture !== true)
+      die("lenses: a declared model must publish the architecture lens even when deriveAll computes hasMap itself");
+    if (deriveAll({ ...base, hasMapDeclared: false }).lenses.architecture !== false)
+      die("lenses: an explicit false must be honoured, not read as absent");
+    if (deriveAll(base).lenses.architecture !== false)
+      die("lenses: with nothing declared the architecture lens must stay absent");
   }
 
   console.log("  ok lenses — one home per derived surface, publication measured from backing artifacts, routing mounts only what publishes");
