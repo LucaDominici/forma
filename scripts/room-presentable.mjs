@@ -171,7 +171,7 @@ const predicates = [
   ['every health verdict carries resolvable evidence', badEvidence.length === 0, badEvidence.length ? badEvidence.slice(0, 5).join('; ') : `${verdictCount} verdict(s), 0 unresolvable`],
   ['every finding row carries resolvable evidence', badFindings.length === 0, badFindings.length ? badFindings.join(', ') : `${findingCount} finding(s), 0 unresolvable`],
   ['every document-gate row carries resolvable evidence', badDocumentEvidence.length === 0, badDocumentEvidence.length ? badDocumentEvidence.join(', ') : `${documentFindingCount} row(s), 0 unresolvable`],
-  ['document-gate evidence is rendered in the Docs view', documentGateVisible, documentGateVisible ? 'shared documentGatePanel mounted' : 'panel missing from Docs'],
+  ['document-gate evidence is rendered in the provenance lens', documentGateVisible, documentGateVisible ? 'shared documentGatePanel mounted' : 'panel missing from the provenance lens'],
   ['no aggregate is presented as `completion`', fakedCompletion.length === 0, fakedCompletion.length ? fakedCompletion.join(', ') : 'closureRate only'],
   ['every brief claim carries resolvable evidence', badBriefEvidence.length === 0, badBriefEvidence.length ? badBriefEvidence.slice(0, 5).join('; ') : `${briefClaimCount} claim(s), 0 unresolvable`],
   ['no brief claim is coloured without a fresh hostile hold', colouredUnheld.length === 0, colouredUnheld.length ? colouredUnheld.join(', ') : `${briefClaimCount} claim(s), colour only on holds`],

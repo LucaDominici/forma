@@ -140,7 +140,7 @@ schema, tag, npm.
 
 ## Found by the lens partition (I20), 2026-09-04
 
-**L-1 · `derivePortfolio` recomputes three aggregates the programme already derived**
+**L-1 · `derivePortfolio` recomputes three aggregates the programme already derived** *(absorbed into L-3)*
 `area:room kind:debt` — Why: the portfolio summary calls `deriveMilestones`, `coverageOf` and
 `deriveCommitDrift` again, per programme, over inputs `deriveAll` has already reduced. One surface,
 two computations, two chances to disagree — duplication one level BELOW what I20 measures, which
@@ -161,6 +161,46 @@ BELOW the last panel, where no alignment rule reaches; closing it means a differ
 sparse views, which is a design decision and not a CSS tweak. DoD: a measured target (say ≥60% ink
 on every published route at 1440×900) and a layout that reaches it without turning any dense lens
 into a long scroll.
+
+**L-3 · `ROOM.portfolio` is a second derived surface, outside I20**
+`area:room kind:debt` — Why: I20 measures `program.derived` reads. The portfolio summary is a
+separate cross-programme structure that (a) recomputes `milestones`, `linkCoverage` and
+`commitDrift`, (b) copies health verdicts, reasons and evidence into `blocked[].item`, rendered by
+`blockedRow` in the shared region, and (c) carries `workPerNode` and `workPerNodeOpen`, of which
+only the first has a renderer. Any surface can therefore be given a second home by teaching
+`derivePortfolio` to copy it and rendering `summary.x` — zero violations reported. DoD: either a
+second ownership axis over `ROOM.portfolio.<key>` with the same declared/measured rule, or
+`derivePortfolio` consumes `program.derived` and the summary stops being a place things can hide.
+Supersedes and absorbs L-1.
+
+**L-4 · `deriveBlocks` discloses no dependency completeness, and two dependency fields render nowhere**
+`area:room kind:debt` — Why: `criticalPath` names its excluded foreign edges and the capability
+ledger carries `dependenciesComplete`, but `deriveBlocks` returns `{n,t,ms,cmd,auto,why,iss,note}`
+with nothing saying whether the dependency snapshot was complete — so a block list computed from a
+partial graph reads exactly like one computed from a whole graph (I6). Separately,
+`dependencies.candidates` (unconfirmed prose-derived edges) and `dependencies.staleConfirmations`
+are computed on every run, gated by `forma check`, and read by nothing: the "derived, gated,
+rendered nowhere" defect one level below I20's granularity. DoD: blocks carry their own
+completeness flag; the two fields either reach a lens or are removed.
+
+**L-5 · The printed briefing carries no Queue and no Kanban**
+`area:viewer kind:debt` — Why: `.screen-list,.workflow{display:none!important}` hides the whole
+`<details>`, summary included, so paper shows no trace that either exists. Predates the lens IA
+(both were already disclosures inside a view), but the restructure is the moment it became visible:
+`criticalPathPanel` renders through `pagedList` and prints as "N records are available in the
+interactive briefing" while its sibling `milestonePathPanel` prints in full, two adjacent panels
+answering the same question with opposite print behaviour. DoD: one print policy for bounded
+evidence, and a check that measures printed CONTENT rather than the presence of a selector.
+
+**L-6 · A redirect does not rewrite the address**
+`area:viewer kind:debt` — Why: `normalize` resolves a legacy or unpublished route to a real one but
+leaves `location.hash` as typed, so copying the URL propagates an address that resolves elsewhere.
+DoD: the shell replaces the hash after a redirect without re-entering the router.
+
+**L-7 · `test/fixtures/golden/viafera-control-room-golden.html` is a pre-lens artifact nothing reads**
+`area:test kind:debt` — Why: a composed briefing from the five-view IA, with no `__LENSES__` seam
+and no `lenses` block, referenced by no test. DoD: revived as the acceptance fixture ADR-0008 wave 4
+intended, or removed.
 
 ## Carried debt (open regardless of release)
 

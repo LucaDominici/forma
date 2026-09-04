@@ -28,6 +28,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "has this file" flags that restated half of the publication predicates and drifted from them.
 
 ### Fixed
+- **What the adversarial pass found in the partition itself**, hop 1 of ADR-0008's closure: the
+  verdict index was a pass-through, so `derived.health` still had a home in every lens that draws
+  an issue pill — the very laundering the rule names. The verdict lens now *interprets* the overlay
+  once (staleness beats the verdict) and publishes the finished mark and reason. Alongside it:
+  comments are stripped before measuring (a comment could satisfy a declaration nothing honoured);
+  a `derived` token must be spelled `derived.<key>` or be the `&&` guard, so an alias, a
+  destructure, an optional chain, a computed key and `p["derived"]` are each refused by name;
+  the "nothing above the partition" check is anchored rather than an existence test, and moved to
+  template scope where a composed briefing's head cannot confuse it; `DERIVED_KEYS` is compared
+  against a live `deriveAll` call, so a new derivation cannot land homeless by being forgotten in
+  two places at once; and the missing-region tamper test removes **every** marker for its lens —
+  removing one of two left the region present and the test passing for a different reason.
+  I20's wording in `GLOBAL_INVARIANTS.md` now states exactly what the mechanism holds, and names
+  what it does not cover.
+- **The provenance lens dropped the document gate** whenever a programme had a gate but no readable
+  document — an include matching only untracked files. The predicate publishes on either, the
+  builder returned early on the reader's emptiness, and every invariant row, typed claim, freshness
+  signal and input error went off-screen behind a route that still mounted.
+- **The 2,500-issue stress fixture was not migrated**, so it composed a briefing with no programme
+  route and no nav tabs at all — every DOM, paging, mobile and print measurement taken over it
+  would have been measuring an empty shell. It now declares its lenses and fills the `__LENSES__`
+  seam from the same table.
+- **`chartNodes` ("work landed per C4 node") was dropped in the restructure and nobody noticed**,
+  because it reads the portfolio summary rather than a derived surface and I20 measures only the
+  latter. Restored in the architecture lens, whose question it answers.
+- One absence policy in the plan lens, not two: the critical path and the milestone panel were
+  reserving "Unknown"/"Empty" chips beside two siblings that vanish. F1 was closed at lens
+  granularity and survived at panel granularity.
+- The operations lens published a green "Present" chip over a panel that had marked itself Unknown,
+  and put three tiers into a two-row template so its evidence fell outside the scroll container.
+- The portfolio's Moving list captured the loop's programme by reference: from page two onward
+  every pill linked the wrong repository and read "not audited" out of the wrong snapshot.
+- The unused-string guard matched by substring, so `STR.drift` read as live inside
+  `STR.driftNoMilestone` — a key added in the same change masking one it had orphaned. Word-boundary
+  now; `drift` and `criticalPathNone` removed.
+- One definition of `hasMap` reaches both the publication predicate and the viewer, so the
+  architecture lens cannot mount over a model the frame cannot draw.
 - Three surfaces the partition found with **no home at all**: `criticalPath`, `milestonePath` and
   `milestoneReconciliation` were derived in waves 3 and 6, gated by `forma check`, and rendered
   nowhere. All three now render in the `plan` lens, each printing its duration model beside its

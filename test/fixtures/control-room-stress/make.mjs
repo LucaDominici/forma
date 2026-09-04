@@ -4,6 +4,11 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+// The IA comes from the one table the composer injects, never a copy of it — a fixture that
+// restated the routes would go on measuring an IA the product had left behind.
+import { LENSES } from '../../../lib/lenses.mjs'
+
+const LENS_SPEC = LENSES.map(({ id, route, question }) => ({ id, route, question }))
 export function makeStressRoom(total = 2500, openCount = 250) {
   const issues = []
   for (let n = 1; n <= total; n++) issues.push({
@@ -42,6 +47,11 @@ export function makeStressRoom(total = 2500, openCount = 250) {
         kanban: { chiuse: closed, sane: [], 'a-meta': [], 'premessa-falsa': [], 'aspettano-umano': [], 'non-auditate': open },
         queue: { axes: [], other: [], clusterFamily: null, clusters },
         commitDrift: null, checkpoints: null, link: null, rtm: null,
+        // Under the lens IA the routing mounts what a programme PUBLISHES (I20), so a fixture with
+        // no `lenses` block composes a shell with no programme route at all — and every DOM,
+        // paging, mobile and print measurement taken over it would be measuring an empty page.
+        // This is the stress programme's honest set: 2,500 issues and nothing else declared.
+        lenses: { portfolio: true, verdict: true, plan: true, architecture: false, traceability: false, operations: false, provenance: false },
       },
     }],
   }
@@ -59,6 +69,7 @@ if (fileURLToPath(import.meta.url) === process.argv[1]) {
     const html = readFileSync(templatePath, 'utf8')
       .replace('/*__ROOM_JSON__*/null', JSON.stringify(makeStressRoom()).replace(/</g, '\\u003c'))
       .replace('/*__STRINGS__*/null', JSON.stringify(strings).replace(/</g, '\\u003c'))
+      .replace('/*__LENSES__*/null', JSON.stringify(LENS_SPEC).replace(/</g, '\\u003c'))
       .replace('<!--__HOLO_SRC__-->', '')
     writeFileSync(out, html)
   } else process.stdout.write(JSON.stringify(makeStressRoom(Number(process.argv[2]) || 2500, Number(process.argv[3]) || 250)))

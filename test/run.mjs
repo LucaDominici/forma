@@ -22,6 +22,7 @@ import { materializeTimeline, validateModel } from "../lib/validate.mjs";
 import { indexByNode, statusFor, loadDocRows } from "../lib/docmap.mjs";
 import {
   daysBetween,
+  deriveAll,
   documentGate,
   deriveBlocks,
   deriveCapabilities,
@@ -46,6 +47,7 @@ import {
   derivedReads,
   ownershipViolations,
   scriptRegions,
+  unpartitionedReads,
 } from "../lib/lenses.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -5830,7 +5832,7 @@ const diffPaths = (a, b, at = "") => {
   // the index the lens publishes, never derived.health itself. Both halves are lifted, so this test
   // exercises the real lookup rather than a stand-in that could stay green while the pair diverged.
   const indexFn = /function indexVerdicts\(\)\{[\s\S]*?\n\}/.exec(src);
-  const verdictsOfFn = /function verdictsOf\(p\)\{[^\n]*\n/.exec(src);
+  const verdictsOfFn = /function verdictMarkOf\(program,n\)\{[^\n]*\n/.exec(src);
   if (!indexFn || !verdictsOfFn)
     die("markdown: the verdict index the pill reads is not in control-room.html");
   const mdFn = /function renderMarkdown\(src,program\)\{[\s\S]*?\n\}\n/.exec(
@@ -5857,7 +5859,7 @@ const diffPaths = (a, b, at = "") => {
       createElement: function (t) { return { nodeType: 1, tagName: t.toUpperCase(), attrs: {}, children: [], className: '', textContent: '', setAttribute: function (k, v) { this.attrs[k] = v }, appendChild: function (c) { this.children.push(c); return c }, get lastChild() { return this.children[this.children.length - 1] } } },
       createTextNode: function (t) { return { nodeType: 3, text: String(t) } },
     };
-    var ROOM = {programs: []}, VERDICTS = {};
+    var ROOM = {programs: []}, VERDICT_MARKS = {};
     ${indexFn[0]}
     ${verdictsOfFn[0]}
     ${elFn[0]}
@@ -5987,7 +5989,11 @@ const diffPaths = (a, b, at = "") => {
     !/Closed/.test(closedPill.attrs["aria-label"])
   )
     die("room-pill: CLOSED did not override an older stale health verdict");
+  // Re-index, because the pill no longer re-reads the overlay: the verdict lens decides the mark
+  // once and the pill draws it. Mutating the overlay without re-indexing is exactly the state the
+  // projection makes impossible to render.
   programme.derived.health.verdicts[0].stale = true;
+  lifted.index([programme]);
   const stalePill = lifted.pill(programme, 7);
   if (
     stalePill.attrs["data-tip"] !== "Anchored failure." ||
@@ -6149,8 +6155,11 @@ const diffPaths = (a, b, at = "") => {
     join(HERE, "..", "lib/viewer/control-room.html"),
     "utf-8",
   );
+  // Word-boundary, not substring: `STR.drift` "reads" inside `STR.driftNoMilestone`, so a key that
+  // became dead was reported alive by a key added in the same change. Any short key that prefixes a
+  // longer one was invisible to this check.
   const unused = Object.keys(en).filter(function (k) {
-    return template.indexOf("STR." + k) < 0;
+    return !new RegExp("STR\\." + k + "\\b").test(template);
   });
   if (unused.length)
     die(
@@ -6477,11 +6486,15 @@ const diffPaths = (a, b, at = "") => {
   // The colour still comes from the derived, staleness-aware health overlay — but through the index
   // the verdict lens publishes, because a shared primitive reaching into a derived surface itself
   // gives that surface a home in every lens that draws a pill (I20).
-  const indexer = (template.match(/function indexVerdicts\(\)\{[^]*?\n}/) || [])[0] || "";
-  if (!/var verdicts=verdictsOf\(p\)/.test(pill))
+  const indexer = (template.match(/function indexVerdicts\(\)\{[^]*?\n}\n/) || [])[0] || "";
+  if (!/verdictMarkOf\(p,n\)/.test(pill) || /derived/.test(pill))
     die("room-pill: colour is not read from the verdict lens's published index");
+  // The index must INTERPRET, not pass through: staleness beats the verdict here, once, so no
+  // other lens can get that precedence wrong (I8).
+  if (!/verdicts\[j\]\.stale\?"stale":verdicts\[j\]\.verdict/.test(indexer))
+    die("room-pill: the verdict index hands on the raw overlay instead of the decided mark");
   if (
-    !/p\.derived&&p\.derived\.health&&p\.derived\.health\.verdicts/.test(indexer)
+    !/program\.derived&&program\.derived\.health&&program\.derived\.health\.verdicts/.test(indexer)
   )
     die(
       "room-pill: colour is not sourced from the derived, staleness-aware health overlay",
@@ -8426,6 +8439,30 @@ const diffPaths = (a, b, at = "") => {
   const live = ownershipViolations(HTML, DERIVED_KEYS);
   if (live.length) die("lenses: I20 fails on the shipped viewer —\n  " + live.join("\n  "));
 
+  // DERIVED_KEYS is the pin, so it has to BE pinned: measured against a real deriveAll call, not
+  // hand-kept beside it. Without this, adding a key to deriveAll and forgetting the list leaves
+  // every check below iterating a stale set and reporting green — the wave-3/6 defect again, one
+  // level up.
+  {
+    const empty = { issues: [], milestones: [], fetchedAt: "2026-01-01", collection: {}, dependencies: { supported: false, edges: [] } };
+    const live = Object.keys(
+      deriveAll({
+        repo: HERE, model: null, topo: null, issuesSnapshot: empty,
+        health: { verdicts: [], dependencyConfirmations: [] }, findings: { findings: [] },
+        brief: null, briefPath: null, manifest: { today: "2026-01-01" },
+        gateInputs: null, arbiterMilestones: null, docs: null,
+      }),
+    ).sort();
+    const pinned = [...DERIVED_KEYS].sort();
+    if (JSON.stringify(live) !== JSON.stringify(pinned))
+      die(
+        "lenses: DERIVED_KEYS has drifted from deriveAll — only in deriveAll: " +
+          live.filter((k) => !pinned.includes(k)).join(", ") +
+          " · only in DERIVED_KEYS: " +
+          pinned.filter((k) => !live.includes(k)).join(", "),
+      );
+  }
+
   // Every key deriveAll returns is either owned or explicitly declared unrendered WITH a reason —
   // a surface that is computed and rendered nowhere is the defect this found in waves 3 and 6.
   const owned = new Set(LENSES.flatMap((l) => l.owns).concat(SHELL_OWNS));
@@ -8463,16 +8500,26 @@ const diffPaths = (a, b, at = "") => {
   if (!ownershipViolations(HTML, DERIVED_KEYS, phantom).some((v) => /operations/.test(v) && /kpis/.test(v)))
     die("lenses: a lens declaring a surface it does not read must be refused");
 
-  // TAMPER 4 — a region silently deleted. Regions may repeat, but a missing one means a lens whose
-  // code went somewhere else, so the analyzer must not simply attribute it to its neighbour.
-  if (!ownershipViolations(HTML.replace("/*lens:provenance*/", ""), DERIVED_KEYS).some((v) => /provenance/.test(v)))
+  // TAMPER 4 — a region silently deleted. EVERY marker for the lens, because regions may repeat and
+  // removing one of two leaves the region present: the check that would then fire is the duplicate-
+  // home one, and the missing-region branch would go untested while looking tested.
+  const noRegion = HTML.split("/*lens:provenance*/").join("");
+  if (!ownershipViolations(noRegion, DERIVED_KEYS).some((v) => /declares no \/\*lens:provenance\*\//.test(v)))
     die("lenses: a lens region missing from the viewer must be refused by name");
 
-  // TAMPER 5 — viewer code above the first region. The partition is only total if nothing can sit
-  // outside it, so the script must OPEN on a region rather than merely contain some.
+  // Nothing may sit above the partition. This is a TEMPLATE rule, checked here rather than in
+  // room-presentable, because a composed briefing's head legitimately carries the room JSON, both
+  // locale tables and the whole C4 hologram viewer spliced in ahead of the main script.
+  if (unpartitionedReads(HTML).length)
+    die("lenses: the shipped template has code above the partition — " + unpartitionedReads(HTML).join("; "));
   const outside = HTML.replace('"use strict";\n/*lens:shared*/', '"use strict";\nfunction stray(p){return p.derived.rtm;}\n/*lens:shared*/');
-  if (!ownershipViolations(outside, DERIVED_KEYS).some((v) => /does not open on a lens region/.test(v)))
+  if (!unpartitionedReads(outside).some((v) => /does not open on a lens region/.test(v)))
     die("lenses: code above the first lens region must be refused");
+  // ...and the anchor must be an anchor, not an existence test: a whole script wedged in ahead of
+  // the partition leaves the pair intact and would pass a `.test()`.
+  const wedged = HTML.replace('<script>\n(function(){', '<script>function stray(p){return p.derived.rtm;}</script>\n<script>\n(function(){');
+  if (!unpartitionedReads(wedged).some((v) => /does not open on a lens region|above the first lens region/.test(v)))
+    die("lenses: a script wedged in above the partition must be refused");
 
   // ...and the converse, which is not hypothetical: room-presentable runs this same analyzer over
   // the COMPOSED artifact, whose head carries the room JSON, the locale tables and the embedded

@@ -228,30 +228,55 @@ A comment is not a mechanism. The failure runs the other way too: `criticalPath`
 and `milestoneReconciliation` were derived, gated and rendered **nowhere**, and nothing noticed.
 
 `lib/lenses.mjs` declares the partition — each lens, its one question, the derived surfaces it owns
-and the artifacts that publish it — and the viewer is partitioned by `/*lens:<id>*/` markers. Every
-`derived.<surface>` read belongs to the region that encloses it; the shared-primitive region may
-read none at all, which is why the issue pill reads the verdict index that lens publishes rather
-than reaching into `derived.health` itself. What is declared and what is measured must agree
-exactly, in both directions.
-
-The table is the routing, too: the composer injects it as `window.__LENSES__` and the viewer mounts
-what it finds there, so a route cannot exist in one place and not the other. Publication is per
+and the artifacts that publish it — and the viewer is partitioned by `/*lens:<id>*/` markers. The
+table is the routing too: the composer injects it as `window.__LENSES__` and the viewer mounts what
+it finds there, so a route cannot exist in one place and not the other. Publication is per
 programme and rests on backing artifacts — a lens with nothing behind it is **absent**, not an empty
 panel (I7).
 
-**Scope:** I20 governs `program.derived` — the aggregates `deriveAll` produces and `forma check`
-re-derives. The cross-programme portfolio summary is a separate structure the portfolio lens owns,
-and it still recomputes three of those aggregates independently; that duplication is real and
-tracked, not covered here.
+### Exactly what is enforced
 
-- **Enforced by:** `ownershipViolations()` in `lib/lenses.mjs`, run by `npm test` against the
-  shipped viewer and by `scripts/room-presentable.mjs` against the composed artifact. `derived.lenses`
-  is computed in `roomderive.mjs`, so `forma check` re-derives publication like every other
-  aggregate and refuses a briefing whose routing was edited by hand.
+The analyzer is lexical, and the rule is stated as narrowly as the mechanism actually holds:
+
+1. **One home.** No derived surface is read in two lens regions of the viewer's partitioned script.
+2. **Both directions.** Each lens's measured reads equal its declared `owns` — a declaration nobody
+   honours is the same lie seen from the other side.
+3. **One spelling.** A `derived` token must be followed by `.<key>`, or by the `&&` of the guard
+   idiom that precedes one. An alias (`var d = p.derived`), a destructure, an optional chain, a
+   computed key and `p["derived"]` are each refused **by name** rather than silently missed.
+4. **Code, not commentary.** Comments are stripped before measuring, so a comment can neither
+   satisfy a declaration nor invent a duplicate.
+5. **Nothing above the partition.** The first region begins exactly where the script does — an
+   anchored check, not an existence test. Template-only: a composed briefing's head carries the room
+   JSON, both locale tables and the whole C4 hologram viewer, any of which may quote a surface while
+   explaining this rule.
+6. **The pin is pinned.** `DERIVED_KEYS` is compared against a live `deriveAll` call, so a new
+   derivation cannot land with no home by being forgotten in two places at once.
+7. **Shared primitives read nothing derived.** The issue pill wears a health verdict on every lens,
+   so the verdict lens *interprets* the overlay once — staleness beats the verdict, an unaudited
+   issue is not a green one — and publishes the finished mark and reason. The pill draws them and
+   could not re-interpret the overlay if it wanted to.
+
+### What it does not cover, said plainly
+
+- **`ROOM.portfolio` is a second surface.** It is cross-programme, the portfolio lens owns it, and
+  it is outside this rule: it recomputes three aggregates the programme already derived, and copies
+  health verdicts, reasons and evidence into its blocked rows. Tracked as L-1 in
+  `docs/ISSUES_TO_OPEN.md`, not covered here.
+- **Markers are lexical, not structural.** Nothing ties a region to the view its code appends to, so
+  a foreign panel wrapped in the owning lens's marker would be attributed correctly and rendered in
+  the wrong lens. The rule catches drift, not deliberate misdirection.
+
+- **Enforced by:** `ownershipViolations()` and `unpartitionedReads()` in `lib/lenses.mjs`, run by
+  `npm test` against the shipped viewer with the tamper cases above, and `ownershipViolations()`
+  again in `scripts/room-presentable.mjs` against the composed artifact. `derived.lenses` is
+  computed in `roomderive.mjs`, so `forma check` re-derives publication like every other aggregate
+  and refuses a briefing whose routing was edited by hand.
 - **Red when:** two lens regions read the same derived surface; a lens declares a surface it does
-  not read, or reads one it does not declare; a shared primitive reads any derived surface; a new
-  derivation lands with no home and no reasoned entry in `UNRENDERED`; or the artifact publishes a
-  lens whose backing artifacts do not exist.
+  not read, or reads one it does not declare; a derived surface is spelled any way but
+  `derived.<key>`; a shared primitive reads any derived surface; code sits above the first region;
+  `DERIVED_KEYS` drifts from `deriveAll`; a new derivation lands with no home and no reasoned entry
+  in `UNRENDERED`; or the artifact publishes a lens whose backing artifacts do not exist.
 
 ---
 
