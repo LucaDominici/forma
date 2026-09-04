@@ -28,6 +28,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "has this file" flags that restated half of the publication predicates and drifted from them.
 
 ### Fixed
+- **The 52vh cap made the verdict lens differently broken, and only a screenshot showed it.** With
+  `auto` rows inside the capped answer tier, the grid absorbed the cap by crushing every panel body
+  to 7–25px and painting the lead over the Risks header — `scrollHeight` equalled `clientHeight`,
+  nothing scrolled, and every DOM assertion stayed green. Rows are `max-content` now, so the tier
+  overflows and scrolls; the evidence grid gets a 180px row floor so eight panels can no longer
+  share 290px; the cap is released with the rest of the shell below the 760px floor (on a phone it
+  had painted 1,400px of brief rows over the KPIs) and in print; a row head on a phone gives the
+  title its own line instead of a 0px column 672px tall; the traceability matrix body scrolls, so
+  R-6..R-9 are reachable; and the capability ledger no longer prints "0 capabilities · 0 skipped ·
+  0 duplicates" under an Unknown chip (I6). Verified in a headless browser at 1440×900, 1280×800,
+  1920×1080 and 390×844, light and dark, and in print — a full visual matrix over every lens found
+  it, after three rounds of code review had not.
 - **Six panels of the verdict lens were unreachable on every desktop window.** The shell is
   viewport-locked, so an answer tier sized `auto` does not overflow — it STARVES the evidence row
   to zero height and lays its panels out below a page that cannot scroll, with no scrollbar and no

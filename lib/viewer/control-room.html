@@ -95,10 +95,19 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
    affordance. Measured broken at 1440x900, 1280x800 and 1920x1080; readable only at 2560x1440 and
    below the 760px breakpoint where the shell releases. Capped and scrollable, a short answer still
    sizes to its content and a long one can no longer eat the evidence. */
+/* Rows sized to their content, never shrunk to fit the cap. With `auto` rows inside a capped
+   container the grid absorbed the cap by crushing every panel body to 7–25px and painting the lead
+   over the Risks header — `scrollHeight` equalled `clientHeight` and nothing scrolled. Seen only in
+   a screenshot; every DOM assertion was green. `max-content` rows make the tier overflow, and an
+   overflowing `overflow:auto` tier is one that scrolls. */
 .answer{display:grid;gap:var(--gap);grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;
-        min-height:0;max-height:52vh;overflow:auto;scrollbar-width:thin}
-.evidence{display:grid;gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin;
- grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(0,auto);align-content:start}
+        grid-auto-rows:max-content;min-height:0;max-height:52vh;overflow:auto;scrollbar-width:thin;scrollbar-gutter:stable}
+/* A floor per row. `minmax(0,auto)` let the locked shell hand eight panels 290px between them —
+   the findings archive in an 8px box, a chart as a 7px sliver, two of nine requirements below a
+   scroll that did not exist. 180px is the chart's own minimum; below it a panel is a heading. The
+   tier already scrolls, and with a floor it has something to scroll. */
+.evidence{display:grid;gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin;scrollbar-gutter:stable;
+ grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(180px,auto);align-content:start}
 .span2{grid-column:span 2}
 .full{grid-column:1/-1}
 @media(min-width:1500px){
@@ -108,7 +117,7 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
  :root{--pad:22px;--gap:20px}
  .answer,.evidence{grid-template-columns:repeat(4,minmax(0,1fr))}
  body{font-size:15px}
- .evidence{grid-auto-rows:minmax(0,auto)}
+ .evidence{grid-auto-rows:minmax(220px,auto)}
  .chart-viz{min-height:220px}
 }
 /* Below the floor the shell is released rather than crushed: the page scrolls.
@@ -122,6 +131,10 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
  .bar{position:sticky;top:0;z-index:20;background:var(--bg)}
  .view{height:auto;display:block}
  .answer,.evidence{overflow:visible;grid-auto-rows:auto}
+ /* The cap belongs to the locked shell. Left in place here it painted 1,400px of brief rows over
+    the KPIs on a phone, with `overflow:visible` making the overlap invisible to every measurement
+    but a screenshot. */
+ .answer{max-height:none}
  .panel{margin-bottom:var(--gap)}
  .panel-body{overflow:visible;max-height:none}
 }
@@ -296,6 +309,10 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  .issue-pill{align-items:center}
  .kv,.hole{grid-template-columns:1fr;gap:2px}
  .detail{grid-template-columns:1fr;gap:2px}
+ /* `auto auto 1fr` handed the status chip and the ref token the whole 390px and the title a 0px
+    column 672px tall — one character per line, invisible. The title takes its own full line. */
+ .row-head{display:flex;flex-wrap:wrap;gap:4px 9px}
+ .row-title{flex:1 1 100%;white-space:normal;overflow:visible;text-overflow:clip}
  .kanban-board,.queue-board{grid-template-columns:minmax(0,1fr)}
  .workflow,.workflow-body{min-width:0}
  .kpi{flex-basis:48%;padding:8px 10px}.kpi:nth-child(odd){border-left:0;padding-left:0}
@@ -336,7 +353,7 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  .view[hidden]{display:block!important}
  .view{break-after:page}
  .view:last-child{break-after:auto}
- .answer,.evidence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:10pt}
+ .answer,.evidence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:auto;overflow:visible;gap:10pt;max-height:none}
  .answer-lead,.full,.span2{grid-column:1/-1}
  .kanban-board,.queue-board{grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
  .panel{break-inside:avoid;border-top:1px solid #999;margin-bottom:10pt}
@@ -760,7 +777,9 @@ function capabilityPanel(programs){
   for(j=0;j<c.rows.length;j++)items.push({program:programs[i],row:c.rows[j],complete:c.dependenciesComplete!==false,search:[programs[i].id,c.rows[j].id,c.rows[j].capability,c.rows[j].originalStatus,c.rows[j].openIssues.join(" ")].join(" ")});
  }
  items.sort(function(a,b){var left=String(a.row.id),right=String(b.row.id);return b.row.blockers.length-a.row.blockers.length||b.row.openIssues.length-a.row.openIssues.length||(left<right?-1:left>right?1:0);});
- var p=panel(STR.capabilities,fmt(STR.capabilityProv,{n:items.length,skipped:skipped,duplicates:duplicates}),"full cap-ledger");
+ // "0 capabilities · 0 skipped · 0 duplicates" under an Unknown chip is three zeros for a thing
+ // that was never measured (I6). An undeclared source has no counts to print.
+ var p=panel(STR.capabilities,declared?fmt(STR.capabilityProv,{n:items.length,skipped:skipped,duplicates:duplicates}):STR.notMeasured,"full cap-ledger");
  if(!declared)return markState(p,"unknown",STR.capabilityUnknown);
  if(!items.length)return markState(p,"empty",STR.capabilityEmpty);
  markState(p,missing.length?"unknown":"present",missing.length?fmt(STR.missingPrograms,{programs:missing.join(", ")}):null);
@@ -1596,7 +1615,9 @@ function viewTraceability(view,program){
    tbody.appendChild(tr);
   }
   tb.appendChild(tbody);wrap.appendChild(tb);mp.body.appendChild(wrap);
-  mp.body.style.overflow="hidden";
+  // The body scrolls like every other panel's. Forcing it hidden here, to avoid a second scrollbar
+  // beside the table wrapper's, left R-6..R-9 unreachable at 1440x900 and 1280x800 — "9 of 9
+  // requirements accounted for" above a table that showed five and could not be scrolled.
  }
  ev.appendChild(mp);
 
