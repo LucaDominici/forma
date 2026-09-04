@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `deriveMilestonePath` and `deriveMilestoneReconciliation` in `lib/roomderive.mjs` — forma now
+  derives from **arbiter's** plan, not just its own issue graph. arbiter owns `MILESTONES.yml` and
+  emits an `arbiter-milestones-v1` projection (`check-milestones.mjs --emit`); forma consumes it
+  because it has zero dependencies and cannot parse YAML, and because deriving beats restating.
+  Declared per programme as `arbiter: { milestones }`, opt-in by presence, resolved against the
+  **programme's** checkout like RTM docs.
+  - The milestone path is reported **beside** the issue critical path and never merged into it:
+    `estimate_days` is a figure a human wrote down, the issue duration is a declared heuristic, and
+    one number carrying both would read as more than it is. Each names its own `durationModel`.
+  - A milestone with no estimate is **named** in `unestimated`, and its presence sets
+    `isLowerBound`, so the total never passes as a forecast.
+  - Reconciliation compares what the SSOT **claims** a milestone contains against what GitHub
+    actually holds (each issue's `ms`), reporting drift **both ways** — including an issue filed
+    under the wrong milestone, which a title-only join can never see. Agreement is silence.
+  - The projection is read with a **version check, not shape validation**: re-validating arbiter's
+    own output here would make forma hold a second opinion about it, which is what the pinned
+    schema contract exists to prevent. Absent and malformed stay distinguishable — the first is
+    silence, the second an error.
+  - Wired into `deriveAll` and loaded through `roomload` so composer and gate read the identical
+    file by the identical rule; tamper-proven end to end, with the fixture declaring a real
+    projection so the comparison is not vacuous.
 - `deriveCriticalPath` in `lib/roomderive.mjs` — CPM over the issue-blocking DAG with the full
   six-field float model (early/late start, early/late finish, total and free float, `isCritical`).
   "What is on the critical path" and "how far can this slip before the finish moves" are different

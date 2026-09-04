@@ -26,6 +26,8 @@ import {
   deriveBlocks,
   deriveCapabilities,
   deriveCriticalPath,
+  deriveMilestonePath,
+  deriveMilestoneReconciliation,
   deriveDependencies,
   deriveHistory,
   deriveKanban,
@@ -3959,6 +3961,39 @@ const diffPaths = (a, b, at = "") => {
         "document claims schema: " + id + " without " + field + " was accepted",
       );
   }
+  // #2480 wave 6: give the programme an arbiter milestone projection so the room actually derives
+  // a milestone path and a reconciliation. Without this the two keys are null in every fixture and
+  // `check`'s comparison of them is vacuous — a gate nobody has seen go red.
+  writeFileSync(
+    join(alpha, "milestones.json"),
+    JSON.stringify(
+      {
+        schema: "arbiter-milestones-v1",
+        milestones: [
+          {
+            id: "MS-01",
+            title: "Alpha groundwork",
+            depends_on: [],
+            horizon: "now",
+            status: "active",
+            estimate_days: 8,
+            members: { issues: [1, 2] },
+          },
+          {
+            id: "MS-02",
+            title: "Alpha delivery",
+            depends_on: ["MS-01"],
+            horizon: "next",
+            status: "planned",
+            estimate_days: 4,
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  );
+  claimsManifest.programs[0].arbiter = { milestones: "milestones.json" };
   writeFileSync(manifest, JSON.stringify(claimsManifest, null, 2));
   let r = run(["init", "--repo", alpha, "--out", topo, "--force"]);
   if (r.status !== 0) die("room: init exit " + r.status, r);
@@ -4930,6 +4965,27 @@ const diffPaths = (a, b, at = "") => {
   r = checkRoom(roomHtml);
   if (r.status !== 0)
     die("room: restoring the critical path did not restore the green gate", r);
+
+  // The milestone path derives from arbiter's projection, so it is arbiter's claim rendered by
+  // forma — and it must be gated exactly like a derivation forma computed alone. Rewriting the
+  // published schedule must be refused (#2480 wave 6).
+  const mpAt = pristineRoom.indexOf('"milestonePath":');
+  const mpEnd = pristineRoom.indexOf(',"milestoneReconciliation":', mpAt);
+  if (mpAt < 0 || mpEnd < 0)
+    die("room: the briefing carries no milestonePath aggregate — the arbiter projection did not reach it");
+  writeFileSync(
+    roomHtml,
+    pristineRoom.slice(0, mpAt) +
+      '"milestonePath":{"durationModel":"invented","projectDurationDays":4242,"isLowerBound":false,"unestimated":[],"nodes":[],"criticalPath":[],"cycles":[]}' +
+      pristineRoom.slice(mpEnd),
+  );
+  r = checkRoom(roomHtml);
+  if (r.status === 0 || !/[Mm]ilestone/.test((r.stderr || "") + (r.stdout || "")))
+    die("room: check did not reject and NAME an invented milestone path", r);
+  writeFileSync(roomHtml, pristineRoom);
+  r = checkRoom(roomHtml);
+  if (r.status !== 0)
+    die("room: restoring the milestone path did not restore the green gate", r);
 
   const missingJsonConfig = JSON.parse(JSON.stringify(alphaConfig.docs));
   missingJsonConfig.gate.claims.push(
@@ -8189,6 +8245,124 @@ const diffPaths = (a, b, at = "") => {
 
   console.log(
     "  ok critical-path — six-field float over the blocking DAG, cycles excluded, heuristic named",
+  );
+}
+
+// §milestone-path — CPM over arbiter's milestone DAG, and reconciliation (#2480 wave 6).
+//
+// This is the mutual-extension seam: arbiter owns the plan and emits a machine projection because
+// forma has ZERO dependencies and cannot parse YAML. forma derives; it does not restate.
+//
+// Two rules govern the shape of the answer, and both exist to stop a number reading as more than
+// it is:
+//   1. Milestone estimates and the issue heuristic are NEVER blended into one figure. A measured
+//      estimate_days and a guessed 1-day-per-open-issue mixed together produce something that looks
+//      authoritative and is not, so the two paths stay separate and each names its own model.
+//   2. A milestone with no estimate is NAMED, and its presence makes the total an explicit LOWER
+//      BOUND rather than silently contributing zero.
+{
+  const proj = (milestones) => ({ schema: "arbiter-milestones-v1", milestones });
+  const ms = (id, over = {}) => ({
+    id,
+    title: `Milestone ${id}`,
+    depends_on: [],
+    horizon: "next",
+    status: "planned",
+    ...over,
+  });
+
+  // Cannot answer is not the same claim as no path (I6/I7).
+  if (deriveMilestonePath(null) !== null)
+    die("milestone-path: absent projection must return null, not an empty path");
+
+  const straight = deriveMilestonePath(
+    proj([
+      ms("MS-01", { estimate_days: 10 }),
+      ms("MS-02", { estimate_days: 5, depends_on: ["MS-01"] }),
+    ]),
+  );
+  if (straight.projectDurationDays !== 15)
+    die("milestone-path: 10 + 5 in series must span 15 days, got " + straight.projectDurationDays);
+  if (straight.durationModel !== "arbiter-estimate-days")
+    die("milestone-path: the duration model must be named, got " + straight.durationModel);
+  if (straight.isLowerBound !== false)
+    die("milestone-path: a fully estimated plan is not a lower bound");
+  if (JSON.stringify(straight.criticalPath) !== JSON.stringify(["MS-01", "MS-02"]))
+    die("milestone-path: chain must be predecessor-first, got " + JSON.stringify(straight.criticalPath));
+
+  // An unestimated milestone must be NAMED and must make the total honest about being a floor.
+  const partial = deriveMilestonePath(
+    proj([ms("MS-01", { estimate_days: 10 }), ms("MS-02", { depends_on: ["MS-01"] })]),
+  );
+  if (!partial.unestimated.includes("MS-02"))
+    die("milestone-path: an unestimated milestone must be named, not silently zero");
+  if (partial.isLowerBound !== true)
+    die("milestone-path: any unestimated node makes the total a LOWER BOUND and must say so");
+
+  // A cycle cannot be scheduled: reported, excluded, never hung on.
+  const cyclic = deriveMilestonePath(
+    proj([
+      ms("MS-01", { estimate_days: 1, depends_on: ["MS-02"] }),
+      ms("MS-02", { estimate_days: 1, depends_on: ["MS-01"] }),
+    ]),
+  );
+  if (!cyclic.cycles.length)
+    die("milestone-path: a milestone cycle must be reported, not silently scheduled");
+
+  // Determinism (I12): declaration order must not change the answer.
+  const forward = deriveMilestonePath(
+    proj([ms("MS-01", { estimate_days: 3 }), ms("MS-02", { estimate_days: 4, depends_on: ["MS-01"] })]),
+  );
+  const reversed = deriveMilestonePath(
+    proj([ms("MS-02", { estimate_days: 4, depends_on: ["MS-01"] }), ms("MS-01", { estimate_days: 3 })]),
+  );
+  if (JSON.stringify(forward) !== JSON.stringify(reversed))
+    die("milestone-path: declaration order changed the derivation");
+
+  // ── Reconciliation: the SSOT's CLAIM against what GitHub actually holds ──
+  //
+  // MILESTONES.yml states that GitHub milestones are a PROJECTION of it and that drift is a
+  // finding, never silently resolved in either direction. Drift is exactly this comparison, and it
+  // is why the projection has to carry `members` at all.
+  const snapshot = {
+    issues: [
+      { n: 1, ms: "Milestone MS-01" },
+      { n: 2, ms: "Milestone MS-01" },
+      { n: 9, ms: "Milestone MS-01" },
+      { n: 3, ms: null },
+    ],
+    milestones: [{ title: "Milestone MS-01", open: 3, closed: 0 }],
+  };
+  const rec = deriveMilestoneReconciliation(
+    proj([ms("MS-01", { members: { issues: [1, 2, 7] } })]),
+    snapshot,
+  );
+  const d1 = rec.drift.find((entry) => entry.id === "MS-01");
+  if (!d1) die("reconciliation: expected a drift entry for MS-01");
+  if (!d1.claimedNotInGithub.includes(7))
+    die("reconciliation: issue 7 is claimed by the SSOT but GitHub does not file it there");
+  if (!d1.githubNotClaimed.includes(9))
+    die("reconciliation: issue 9 sits under the milestone in GitHub but the SSOT does not claim it");
+
+  // The drift a title-only join could never see: an issue filed under the WRONG milestone.
+  if (d1.claimedNotInGithub.includes(1) || d1.githubNotClaimed.includes(1))
+    die("reconciliation: issue 1 agrees on both sides and must not be reported as drift");
+
+  // A milestone with no GitHub counterpart at all is its own, distinct finding.
+  const orphan = deriveMilestoneReconciliation(proj([ms("MS-77", { members: { issues: [5] } })]), snapshot);
+  if (!orphan.drift.some((entry) => entry.id === "MS-77" && entry.reason === "no-github-milestone"))
+    die("reconciliation: a milestone GitHub has never heard of must be named as such");
+
+  // Agreement is silence: no drift entry when both sides match exactly.
+  const clean = deriveMilestoneReconciliation(
+    proj([ms("MS-01", { members: { issues: [1, 2, 9] } })]),
+    snapshot,
+  );
+  if (clean.drift.length !== 0)
+    die("reconciliation: a milestone whose claim matches GitHub must produce no drift, got " + JSON.stringify(clean.drift));
+
+  console.log(
+    "  ok milestone-path — estimates never blended with the heuristic, unestimated named, drift both ways",
   );
 }
 
