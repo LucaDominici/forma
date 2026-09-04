@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-09-02T09:46:30.711Z",
+  "generatedAt": "2026-09-04T17:07:50.526Z",
   "source": {
     "repo": "forma",
-    "commit": "afd74bd82cdbb99a02f5462ecfaa8dd04553fe94",
+    "commit": "61801b557deee69f9261c1a05467c4a86783069c",
     "branch": "claude/project-lifecycle-visualization-ml5kld",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
@@ -82,7 +82,12 @@
     },
     "verifyMethod": "code+topology (gh re-verify optional)"
   },
-  "levels": ["context", "container", "component", "leaf"],
+  "levels": [
+    "context",
+    "container",
+    "component",
+    "leaf"
+  ],
   "nodes": [
     {
       "status": "current",
@@ -240,7 +245,7 @@
         {
           "type": "glob",
           "ref": "lib",
-          "count": 24
+          "count": 25
         }
       ],
       "category": "container",
@@ -518,6 +523,25 @@
       "status2": "unknown",
       "target": "",
       "func": "lang.mjs — per-language adapters for TOPOLOGY and EDGES. Pure, no side effects at import. The name-matching heuristic in gen.mjs is the fallback for stacks that never say what depends on what. Some languages do say it, and guessing where a ",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__lenses_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "lenses",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/lenses.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "lenses.mjs — the declared lens partition of the Control Room, and the analyzer that proves the viewer honours it (I20). ADR-0008 named a portfolio and six lenses, one question each, and said the partition \"is only real if it is enforced, so",
       "descSource": "docstring"
     },
     {

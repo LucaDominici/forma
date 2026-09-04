@@ -6,6 +6,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **The Control Room is six lenses, not five views.** ADR-0008 named a portfolio and six lenses,
+  one question each, and said the partition "is only real if it is enforced". It is now **I20**:
+  `lib/lenses.mjs` declares each lens, its question, the derived surfaces it owns and the artifacts
+  that publish it; the composer injects that table as `window.__LENSES__` and the viewer mounts what
+  it finds, so a route cannot exist in one place and not the other. The viewer is partitioned by
+  `/*lens:<id>*/` markers and `ownershipViolations()` measures every `derived.<surface>` read back
+  out of the shipped file — declared and measured must agree in both directions. Enforced by
+  `npm test` (four tamper tests, plus the routing itself lifted and run) and by
+  `scripts/room-presentable.mjs` over the composed artifact.
+- **A lens is published only where its backing artifacts exist** — absent, never a reserved empty
+  panel (I7). `derived.lenses` is computed in `roomderive.mjs`, so `forma check` re-derives
+  publication like every other aggregate and refuses a briefing whose routing was hand-edited. This
+  closes UX finding **F1**: on a programme with everything closed, no model and no requirements
+  source, four of the six routes do not exist rather than rendering three zeros and "No data
+  available.". Charts of nothing are gone with them — a series needs two points to be a series.
+- Every address the five-view IA published still resolves: `exec`, `tech`, `map`, `wbs`, `docs` and
+  the retired `auto`/`kanban` redirect to the lens that inherited the question.
+- The inclusion drawer reports what each programme can **answer** instead of six hand-maintained
+  "has this file" flags that restated half of the publication predicates and drifted from them.
+
+### Fixed
+- Three surfaces the partition found with **no home at all**: `criticalPath`, `milestonePath` and
+  `milestoneReconciliation` were derived in waves 3 and 6, gated by `forma check`, and rendered
+  nowhere. All three now render in the `plan` lens, each printing its duration model beside its
+  number.
+- Duplicated renderings the five-view IA carried, each now single-homed: commit drift (`map` and
+  `tech`), the KPI strip's requirement coverage (`exec` and `wbs`), unlinked sweeps (`tech`, three
+  hundred lines from the picture they qualify), findings (`tech`, two routes from the brief they
+  contradict), and the capability ledger and history series (portfolio **and** `exec`).
+- `deriveCapabilities` carries its own `dependenciesComplete` flag. The ledger had to reach into
+  `derived.dependencies` to tell "nothing blocks this" from "we cannot see what blocks this"
+  (I6/I7) — a second surface read from a third lens.
+- `stripGateInputs` in `lib/roomdocs.mjs`: `room` and `check` each carried their own copy of the
+  rule for what the viewer is handed, which is exactly the drift `roomload.mjs` exists to prevent.
+
+### Removed
+- `taborder.json` — a tab-order capture from a browser run against an IA that no longer exists,
+  referenced by nothing.
+
 ### Added
 - `deriveMilestonePath` and `deriveMilestoneReconciliation` in `lib/roomderive.mjs` — forma now
   derives from **arbiter's** plan, not just its own issue graph. arbiter owns `MILESTONES.yml` and

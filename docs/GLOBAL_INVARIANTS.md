@@ -217,6 +217,42 @@ hold a byte-identical copy and gate their own half.
 - **Red when:** a shared schema is edited without re-pinning in BOTH copies, a vendored copy drifts
   from the shape its owner defines, or the two copies of the manifest stop being identical.
 
+## I20. Every derived surface has exactly one home lens
+
+The Control Room answers seven questions — a portfolio and six lenses (ADR-0008) — and a question
+answered in two places is answered twice differently the first time either half changes. The
+five-view IA it replaces proved that: `commitDrift` was rendered on `map` and again on `tech`,
+`kpis` on `exec` and again on `tech`, requirement coverage on `exec` and again on `wbs`; the code
+even said so, in a comment reading *"the same fact `tech` reports, on the surface that shows it"*.
+A comment is not a mechanism. The failure runs the other way too: `criticalPath`, `milestonePath`
+and `milestoneReconciliation` were derived, gated and rendered **nowhere**, and nothing noticed.
+
+`lib/lenses.mjs` declares the partition — each lens, its one question, the derived surfaces it owns
+and the artifacts that publish it — and the viewer is partitioned by `/*lens:<id>*/` markers. Every
+`derived.<surface>` read belongs to the region that encloses it; the shared-primitive region may
+read none at all, which is why the issue pill reads the verdict index that lens publishes rather
+than reaching into `derived.health` itself. What is declared and what is measured must agree
+exactly, in both directions.
+
+The table is the routing, too: the composer injects it as `window.__LENSES__` and the viewer mounts
+what it finds there, so a route cannot exist in one place and not the other. Publication is per
+programme and rests on backing artifacts — a lens with nothing behind it is **absent**, not an empty
+panel (I7).
+
+**Scope:** I20 governs `program.derived` — the aggregates `deriveAll` produces and `forma check`
+re-derives. The cross-programme portfolio summary is a separate structure the portfolio lens owns,
+and it still recomputes three of those aggregates independently; that duplication is real and
+tracked, not covered here.
+
+- **Enforced by:** `ownershipViolations()` in `lib/lenses.mjs`, run by `npm test` against the
+  shipped viewer and by `scripts/room-presentable.mjs` against the composed artifact. `derived.lenses`
+  is computed in `roomderive.mjs`, so `forma check` re-derives publication like every other
+  aggregate and refuses a briefing whose routing was edited by hand.
+- **Red when:** two lens regions read the same derived surface; a lens declares a surface it does
+  not read, or reads one it does not declare; a shared primitive reads any derived surface; a new
+  derivation lands with no home and no reasoned entry in `UNRENDERED`; or the artifact publishes a
+  lens whose backing artifacts do not exist.
+
 ---
 
 ## How to add an invariant

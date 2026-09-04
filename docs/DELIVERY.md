@@ -112,8 +112,8 @@ Every row names its measurement date or its durable source. No value is extrapol
 | `viafera` issue JSON corpus | 1,079,693 bytes | Evidence that Node's former 1 MiB child-process buffer was insufficient. |
 | Sweep commits excluded from issue attribution | 1% to 3% | Commits over the file threshold are named and counted but linked to no node. |
 | Sweep-size p99 across measured repositories | 64 to 101 files | Supports treating broad sweeps as non-attributable changes. |
-| Control Room routes | 2 + 5N | The composition contract: the briefing and the options view, plus five views per programme. Eight flat tabs were the ADR-0004 shape, replaced by ADR-0005 and re-nested by ADR-0007. |
-| Control Room locale keys | 219 | At en/it parity, and every one read by the template — both halves asserted by `npm test`. |
+| Control Room routes | 2 + kN, k ≤ 6 | The composition contract: the briefing and the options view, plus one route per lens a programme can actually answer. Eight flat tabs were the ADR-0004 shape, replaced by ADR-0005, re-nested by ADR-0007 and partitioned into six justified lenses by ADR-0008 — where k is measured per programme, not reserved (I7, I20). |
+| Control Room locale keys | 335 | At en/it parity, and every one read by the template — both halves asserted by `npm test`. |
 | Control Room charts | 13 | Each chart has a table twin carrying the same numbers. |
 | Generated Control Room artifact size | 1,362,899 bytes for five programmes | Measured on the 2026-08-17 portfolio briefing, architecture viewer embedded once. |
 

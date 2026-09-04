@@ -37,6 +37,16 @@ import {
 import { loadDocs } from "../lib/roomdocs.mjs";
 import { deriveRtm } from "../lib/rtm.mjs";
 import { componentsFor } from "../lib/cluster.mjs";
+import {
+  DERIVED_KEYS,
+  LENSES,
+  SHELL_OWNS,
+  UNRENDERED,
+  derivedLenses,
+  derivedReads,
+  ownershipViolations,
+  scriptRegions,
+} from "../lib/lenses.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BIN = join(HERE, "..", "bin", "forma.mjs");
@@ -5816,6 +5826,13 @@ const diffPaths = (a, b, at = "") => {
   const elFn = /function el\(t,c,x\)\{[^\n]*\n/.exec(src);
   const markFn = /function statusMark\(v\)\{[^\n]*\n/.exec(src);
   const pillFn = /function pill\(p,n,t,endpoint\)\{[\s\S]*?\n\}/.exec(src);
+  // The pill wears a health verdict, and the verdict lens owns that surface (I20): the pill reads
+  // the index the lens publishes, never derived.health itself. Both halves are lifted, so this test
+  // exercises the real lookup rather than a stand-in that could stay green while the pair diverged.
+  const indexFn = /function indexVerdicts\(\)\{[\s\S]*?\n\}/.exec(src);
+  const verdictsOfFn = /function verdictsOf\(p\)\{[^\n]*\n/.exec(src);
+  if (!indexFn || !verdictsOfFn)
+    die("markdown: the verdict index the pill reads is not in control-room.html");
   const mdFn = /function renderMarkdown\(src,program\)\{[\s\S]*?\n\}\n/.exec(
     src,
   );
@@ -5840,13 +5857,17 @@ const diffPaths = (a, b, at = "") => {
       createElement: function (t) { return { nodeType: 1, tagName: t.toUpperCase(), attrs: {}, children: [], className: '', textContent: '', setAttribute: function (k, v) { this.attrs[k] = v }, appendChild: function (c) { this.children.push(c); return c }, get lastChild() { return this.children[this.children.length - 1] } } },
       createTextNode: function (t) { return { nodeType: 3, text: String(t) } },
     };
+    var ROOM = {programs: []}, VERDICTS = {};
+    ${indexFn[0]}
+    ${verdictsOfFn[0]}
     ${elFn[0]}
     ${markFn[0]}
     ${pillFn[0]}
     ${inlineFn[0]}
     ${mdhFn[0]}
     ${mdFn[0]}
-    return {inline: inline, pill: pill, renderMarkdown: renderMarkdown};`;
+    return {inline: inline, pill: pill, renderMarkdown: renderMarkdown,
+            index: function (programs) { ROOM = {programs: programs}; indexVerdicts(); }};`;
   // new Function over text lifted from a TRACKED first-party file, which is the same no-jsdom trick
   // this suite already uses to test the viewer's pure functions. The interpolated strings are our
   // own source at a reviewed commit, never input; the thing being tested is precisely that the
@@ -5909,6 +5930,7 @@ const diffPaths = (a, b, at = "") => {
   // remain literal repository prose; known references use the same health-aware pill as every
   // operational projection, including stale and CLOSED precedence.
   const programme = {
+    id: "thing",
     ghRepo: "acme/thing",
     issuesSnapshot: {
       issues: [
@@ -5925,6 +5947,7 @@ const diffPaths = (a, b, at = "") => {
       },
     },
   };
+  lifted.index([programme]);
   const issueDoc = lifted.renderMarkdown(
     "Known #7, closed #8, unknown #99.",
     programme,
@@ -6153,7 +6176,8 @@ const diffPaths = (a, b, at = "") => {
 }
 
 // Queue and Kanban are supporting technical evidence, not two undocumented top-level products.
-// They stay complete through lazy, bounded disclosure inside Tech; legacy hashes remain valid.
+// They stay complete through lazy, bounded disclosure inside the plan lens; every address the
+// five-view IA published stays a valid one.
 {
   const template = readFileSync(
     join(HERE, "..", "lib/viewer/control-room.html"),
@@ -6162,22 +6186,20 @@ const diffPaths = (a, b, at = "") => {
   const viewerFn = (name) =>
     (new RegExp("function " + name + "\\([^]*?\\n}\\n").exec(template) ||
       [])[0] || "";
-  const tabsSource =
-    (/var TABS=([\s\S]*?);\s*var BUILD=/.exec(template) || [])[1] || "";
-  const tabs = [...tabsSource.matchAll(/\["([^"]+)",function/g)].map(
-    (m) => m[1],
-  );
-  if (tabs.join() !== "exec,tech,map,wbs,docs")
-    die(
-      "room-ia: programme views drifted from the five-view contract: " + tabs,
-    );
-  if (/var BUILD=\{[^}]*\b(?:auto|kanban):/.test(template))
-    die("room-ia: removed queue/Kanban routes still exist in BUILD");
-  if (
-    !/\^\\\/\(\[\^\/\]\+\)\\\/\(auto\|kanban\)\$/.test(template) ||
-    !/return key\(old\[1\],"tech"\)/.test(template)
-  )
-    die("room-ia: legacy /auto and /kanban hashes do not redirect to Tech");
+  // The viewer holds no literal list of routes any more: BUILD names one builder per lens and the
+  // order, labels and questions arrive injected. A hard-coded array here would just restate the
+  // table a third time, which is the drift lib/lenses.mjs exists to end — so what is checked is
+  // that every declared lens has a builder and nothing else does.
+  const buildSource = (/var BUILD=\{([^}]*)\}/.exec(template) || [])[1] || "";
+  const built = [...buildSource.matchAll(/(\w+):view/g)].map((m) => m[1]);
+  const routes = LENSES.map((l) => l.id).filter((id) => id !== "portfolio");
+  if (built.join() !== routes.join())
+    die("room-ia: BUILD does not mount exactly the declared lenses: " + built);
+  if (!/var LENS_SPEC=\(window\.__LENSES__\|\|\[\]\)/.test(template))
+    die("room-ia: the viewer restates its own route table instead of reading the injected one");
+  for (const [from, to] of Object.entries({ exec: "verdict", tech: "plan", map: "architecture", wbs: "traceability", docs: "provenance", auto: "plan", kanban: "plan" }))
+    if (!new RegExp(from + ':"' + to + '"').test(template))
+      die(`room-ia: the retired /${from} address no longer redirects to ${to}`);
   if (
     !/function workflow\(/.test(template) ||
     !/d\.open&&!d\.getAttribute\("data-filled"\)/.test(template)
@@ -6221,7 +6243,7 @@ const diffPaths = (a, b, at = "") => {
     !/names\.concat\(\[\["chiuse"/.test(kanban)
   )
     die("room-kanban: search or the CLOSED archive lane is missing");
-  const tech = viewerFn("viewTech");
+  const tech = viewerFn("viewPlan");
   if (
     !/names\[i\]\[0\]!=="aspettano-umano"\|\|program\.derived\.kanbanHumanDeclared/.test(
       tech,
@@ -6234,7 +6256,7 @@ const diffPaths = (a, b, at = "") => {
       "room-kanban: an undeclared human-label rule is rendered as a measured empty bucket",
     );
   const milestones = viewerFn("milestonePanel"),
-    wbs = viewerFn("viewWbs");
+    plan = viewerFn("viewPlan");
   if (
     !/milestonesComplete/.test(milestones) ||
     !/markState\(p,"unknown",STR\.milestoneIncomplete\)/.test(milestones)
@@ -6242,13 +6264,13 @@ const diffPaths = (a, b, at = "") => {
     die(
       "room-milestones: an issue-derived milestone panel does not disclose incomplete collection",
     );
-  if (!/milestonePanel\(program\)/.test(wbs))
+  if (!/milestonePanel\(program\)/.test(plan))
     die(
-      "room-milestones: milestone evidence is not nested under the existing WBS view",
+      "room-milestones: milestone evidence is not nested under the plan lens, whose question it answers",
     );
-  if (!/documentGatePanel\(program\)/.test(viewerFn("viewDocs")))
+  if (!/documentGatePanel\(program\)/.test(viewerFn("viewProvenance")))
     die(
-      "room-docs: the document gate is not nested under the existing Docs view",
+      "room-docs: the document gate is not nested under the provenance lens",
     );
   const documentPanel = viewerFn("documentGatePanel");
   if (
@@ -6293,7 +6315,7 @@ const diffPaths = (a, b, at = "") => {
   if (!/theme: manifest\.theme \|\| 'light'/.test(composer))
     die("room-theme: a fresh client briefing does not default to light");
   console.log(
-    "  ok room-workflow — five-view IA, searchable blocks/Kanban, honest milestones, bounded lazy evidence, mobile and print contracts",
+    "  ok room-workflow — lens routing from the injected table, searchable blocks/Kanban, honest milestones, bounded lazy evidence, mobile and print contracts",
   );
 }
 
@@ -6452,8 +6474,14 @@ const diffPaths = (a, b, at = "") => {
   );
   const pill = (template.match(/function pill\([^]*?\n}/) || [])[0];
   if (!pill) die("room-pill: the shared pill() primitive is missing");
+  // The colour still comes from the derived, staleness-aware health overlay — but through the index
+  // the verdict lens publishes, because a shared primitive reaching into a derived surface itself
+  // gives that surface a home in every lens that draws a pill (I20).
+  const indexer = (template.match(/function indexVerdicts\(\)\{[^]*?\n}/) || [])[0] || "";
+  if (!/var verdicts=verdictsOf\(p\)/.test(pill))
+    die("room-pill: colour is not read from the verdict lens's published index");
   if (
-    !/p\.derived&&p\.derived\.health&&p\.derived\.health\.verdicts/.test(pill)
+    !/p\.derived&&p\.derived\.health&&p\.derived\.health\.verdicts/.test(indexer)
   )
     die(
       "room-pill: colour is not sourced from the derived, staleness-aware health overlay",
@@ -8366,6 +8394,164 @@ const diffPaths = (a, b, at = "") => {
   );
 }
 
+
+// §lenses — the declared lens partition, and I20: one home per derived surface (#2480 wave 7).
+//
+// ADR-0008 named six lenses and said the partition "is only real if it is enforced". A partition
+// that lives in ~400 lines of DOM code is a convention: two views read `derived.commitDrift`, one
+// of them says so in a comment, and nothing goes red. So the partition is DECLARED in lib/lenses.mjs
+// and MEASURED out of the viewer, and the two must agree exactly — an unread declaration is a lie
+// in the other direction, so the check refuses that too.
+{
+  const HTML = readFileSync(join(HERE, "..", "lib", "viewer", "control-room.html"), "utf-8");
+  const ids = LENSES.map((l) => l.id);
+
+  // The table is the IA. Portfolio plus six lenses, one question each (owner decision 5).
+  if (ids.length !== 7) die("lenses: expected portfolio + 6 lenses, got " + ids.join(", "));
+  if (ids[0] !== "portfolio") die("lenses: the portfolio is the entry route and must come first");
+  for (const lens of LENSES) {
+    if (!lens.question) die(`lenses: ${lens.id} has no question — a lens without one is a drawer`);
+    if (typeof lens.publishes !== "function") die(`lenses: ${lens.id} has no publication predicate`);
+  }
+
+  // Every region the analyzer knows must be present in the viewer exactly as declared, and the
+  // regions that are NOT lenses (shared primitives, the shell) must own nothing derived.
+  const regions = scriptRegions(HTML);
+  for (const id of [...ids, "shared", "shell"])
+    if (!regions.has(id)) die(`lenses: the viewer declares no /*lens:${id}*/ region`);
+  if (derivedReads(regions.get("shared")).size !== 0)
+    die("lenses: a shared primitive that reads a derived surface gives that surface two homes");
+
+  // I20 proper, over the real viewer: measured == declared, and no surface read twice.
+  const live = ownershipViolations(HTML, DERIVED_KEYS);
+  if (live.length) die("lenses: I20 fails on the shipped viewer —\n  " + live.join("\n  "));
+
+  // Every key deriveAll returns is either owned or explicitly declared unrendered WITH a reason —
+  // a surface that is computed and rendered nowhere is the defect this found in waves 3 and 6.
+  const owned = new Set(LENSES.flatMap((l) => l.owns).concat(SHELL_OWNS));
+  for (const key of DERIVED_KEYS) {
+    if (owned.has(key)) continue;
+    const excused = UNRENDERED.find((u) => u.key === key);
+    if (!excused) die(`lenses: derived.${key} is computed and has no home lens (I20)`);
+    if (!excused.why || excused.why.length < 24)
+      die(`lenses: derived.${key} is excused from I20 without a reason worth reading`);
+  }
+  for (const key of owned)
+    if (!DERIVED_KEYS.includes(key)) die(`lenses: ${key} is owned by a lens but deriveAll never returns it`);
+
+  // TAMPER 1 — the same surface rendered in two lenses. This is the actual defect in the five-view
+  // viewer (commitDrift on `map` and on `tech`), and the one a comment cannot catch.
+  const twoHomes = HTML.replace(
+    "/*lens:operations*/",
+    "/*lens:operations*/\nfunction stray(program){return program.derived.commitDrift;}\n",
+  );
+  const dup = ownershipViolations(twoHomes, DERIVED_KEYS);
+  if (!dup.some((v) => /commitDrift/.test(v) && /operations/.test(v) && /architecture/.test(v)))
+    die("lenses: a surface read from two lens regions must be refused, naming both — got " + JSON.stringify(dup));
+
+  // TAMPER 2 — a shared primitive reaching into derived. Allowed once, it re-scatters the partition.
+  const sharedRead = HTML.replace(
+    "/*lens:shared*/",
+    "/*lens:shared*/\nfunction stray(program){return program.derived.rtm;}\n",
+  );
+  if (!ownershipViolations(sharedRead, DERIVED_KEYS).some((v) => /shared/.test(v) && /rtm/.test(v)))
+    die("lenses: a derived read inside the shared region must be refused");
+
+  // TAMPER 3 — a declaration nobody honours. The table must not be able to claim a surface the
+  // viewer never renders: that is exactly how the five-view predicate rotted into decoration.
+  const phantom = LENSES.map((l) => (l.id === "operations" ? { ...l, owns: [...l.owns, "kpis"] } : l));
+  if (!ownershipViolations(HTML, DERIVED_KEYS, phantom).some((v) => /operations/.test(v) && /kpis/.test(v)))
+    die("lenses: a lens declaring a surface it does not read must be refused");
+
+  // TAMPER 4 — a region silently deleted. Regions may repeat, but a missing one means a lens whose
+  // code went somewhere else, so the analyzer must not simply attribute it to its neighbour.
+  if (!ownershipViolations(HTML.replace("/*lens:provenance*/", ""), DERIVED_KEYS).some((v) => /provenance/.test(v)))
+    die("lenses: a lens region missing from the viewer must be refused by name");
+
+  // TAMPER 5 — viewer code above the first region. The partition is only total if nothing can sit
+  // outside it, so the script must OPEN on a region rather than merely contain some.
+  const outside = HTML.replace('"use strict";\n/*lens:shared*/', '"use strict";\nfunction stray(p){return p.derived.rtm;}\n/*lens:shared*/');
+  if (!ownershipViolations(outside, DERIVED_KEYS).some((v) => /does not open on a lens region/.test(v)))
+    die("lenses: code above the first lens region must be refused");
+
+  // ...and the converse, which is not hypothetical: room-presentable runs this same analyzer over
+  // the COMPOSED artifact, whose head carries the room JSON, the locale tables and the embedded
+  // canon. docs/GLOBAL_INVARIANTS.md quotes `derived.health` while explaining this very rule, so an
+  // analyzer that read the whole file would fail every briefing that documents its own invariant.
+  const composed = `<script>window.__ROOM__ = {"docs":["I20 keeps derived.health and derived.rtm to one lens each"]};</script>\n${HTML}`;
+  if (ownershipViolations(composed, DERIVED_KEYS).length)
+    die("lenses: embedded repository prose quoting a surface must not read as a lens rendering it");
+
+  // Publication is a predicate over BACKING ARTIFACTS, not a route that always exists (I7, F1).
+  // The flagship demo — every issue closed, no map, no rtm — must publish fewer lenses, not the
+  // same six full of zeros.
+  const bare = {
+    id: "bare", hasMap: false, docs: { embedded: [], listed: [] },
+    issuesSnapshot: { issues: [{ n: 1, state: "CLOSED" }], signals: { workflows: {}, release: { listState: "unknown", reason: "not declared" } } },
+    derived: { kpis: { openCount: 0 }, milestones: [], rtm: null, capabilities: null, documentGate: null, criticalPath: null, milestonePath: null },
+  };
+  const bareLenses = derivedLenses(bare);
+  if (bareLenses.verdict !== true) die("lenses: the verdict lens answers even when the answer is 'nothing open'");
+  if (bareLenses.plan !== false) die("lenses: a programme with no open work and no milestones must not publish a plan lens (F1)");
+  if (bareLenses.architecture !== false) die("lenses: no model means the architecture lens is absent, not empty (I7)");
+  if (bareLenses.traceability !== false) die("lenses: no rtm and no capabilities means no traceability lens");
+  if (bareLenses.operations !== false) die("lenses: undeclared signals means no operations lens");
+  if (bareLenses.provenance !== false) die("lenses: no documents and no gate means no provenance lens");
+  if (bareLenses.portfolio !== true) die("lenses: the portfolio is always the entry route");
+
+  const rich = {
+    id: "rich", hasMap: true, docs: { embedded: [{ path: "docs/PRD.md" }], listed: [] },
+    issuesSnapshot: { issues: [{ n: 1, state: "OPEN" }], signals: { workflows: { ci: { state: "present" } }, release: { listState: "present" } } },
+    derived: { kpis: { openCount: 1 }, milestones: [], rtm: { coverage: {} }, capabilities: null, documentGate: null, criticalPath: null, milestonePath: null },
+  };
+  const richLenses = derivedLenses(rich);
+  for (const id of ids)
+    if (richLenses[id] !== true) die(`lenses: a programme with every artifact must publish ${id}, got ${richLenses[id]}`);
+
+  // The map is exactly the declared set — a stray key here is a route the shell would mount blind.
+  if (JSON.stringify(Object.keys(richLenses).sort()) !== JSON.stringify([...ids].sort()))
+    die("lenses: the publication map must carry exactly the declared lenses");
+
+  // The routing itself, lifted and run — not grepped. A publication predicate that decides
+  // correctly while registerAll mounts all six anyway would leave every one of the assertions above
+  // green and the empty panels still on screen, which is precisely UX finding F1.
+  {
+    const fn = (name, multiline = true) =>
+      (new RegExp("function " + name + "\\(" + (multiline ? "[^]*?\\n\\}" : "[^\\n]*\\n")).exec(HTML) || [])[0] ||
+      die(`lenses: ${name}() not found in control-room.html`);
+    const stub = `
+      var mounted = [];
+      var content = {appendChild: function (c) { mounted.push(c.id) }};
+      var document = {
+        getElementById: function () { return content },
+        createElement: function (t) { return {tagName: t, id: "", className: "", hidden: false, textContent: "",
+          children: [], appendChild: function (c) { this.children.push(c); return c }} },
+      };
+      var VIEWS = {}, VIEW_SPEC = {}, ORDER = [];
+      var LENS_SPEC = ${JSON.stringify(LENSES.filter((l) => l.id !== "portfolio").map(({ id }) => ({ id })))};
+      var ROOM = {programs: []};
+      ${fn("el", false)}
+      ${fn("key", false)}
+      ${fn("mount")}
+      ${fn("lensesOf")}
+      ${fn("registerAll")}
+      return function (programs) { ROOM = {programs: programs}; mounted = []; VIEWS = {}; VIEW_SPEC = {}; ORDER = [];
+                                   registerAll(); return mounted; };`;
+    const mountAll = new Function(stub)();
+    const withLenses = (id, lenses) => ({id: id, derived: {lenses: lenses}});
+    const bare = mountAll([withLenses("bare", {portfolio: true, verdict: true, plan: false, architecture: false, traceability: false, operations: false, provenance: false})]);
+    if (bare.join() !== "view--,view--bare-verdict,view--options")
+      die("lenses: a programme whose artifacts publish one lens must mount one route, got " + bare.join(" "));
+    const full = mountAll([withLenses("full", Object.fromEntries(ids.map((id) => [id, true])))]);
+    if (full.length !== 8)
+      die("lenses: a programme publishing every lens must mount six routes plus portfolio and options, got " + full.join(" "));
+    if (full.some((id) => id === "view--full-portfolio"))
+      die("lenses: the portfolio is the entry route, never a per-programme one");
+  }
+
+  console.log("  ok lenses — one home per derived surface, publication measured from backing artifacts, routing mounts only what publishes");
+}
+
 console.log(
-  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood all green.",
+  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood, lenses all green.",
 );

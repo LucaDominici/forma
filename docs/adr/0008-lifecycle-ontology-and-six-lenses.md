@@ -1,8 +1,8 @@
 ---
 title: "ADR-0008: The lifecycle ontology arbiter owns, rendered as six justified lenses"
-doc_version: "1.0.0"
+doc_version: "1.1.0"
 status: active
-last_review: "2026-09-02"
+last_review: "2026-09-04"
 owner: "Luca Dominici"
 canonical_id: "0008"
 tags: ["audience/dev", "kind/adr"]
@@ -74,6 +74,29 @@ reserved empty panel, per I7.
 three times, and the exec/tech boundary asks the same question twice in different clothes. The
 partition above is only real if it is enforced, so the one-home rule becomes an invariant with a
 tamper test when the lenses land, not a convention in this document.
+
+**Landed (2026-09-04).** The lenses shipped and the rule is **I20**. The partition is declared once
+in `lib/lenses.mjs` — the lens, its question, the derived surfaces it owns and the artifacts that
+publish it — and it is the routing too: the composer injects it as `window.__LENSES__`, so a route
+cannot exist in the viewer and not in the table. The viewer is partitioned by `/*lens:<id>*/`
+markers and `ownershipViolations()` measures every `derived.<surface>` read back out of the shipped
+file; declared and measured must agree in both directions, four tamper tests prove it, and the
+shared-primitive region may read no derived surface at all (the issue pill reads the verdict index
+that lens publishes instead of `derived.health`).
+
+Two things the rule found that no reviewer had:
+
+- `criticalPath`, `milestonePath` and `milestoneReconciliation` were derived, gated and rendered
+  **nowhere**. A surface with no home is as invisible as one with six; all three now live in `plan`.
+- The portfolio summary independently recomputes `milestones`, `linkCoverage` and `commitDrift`.
+  That is duplication at the DERIVATION level, below what I20 measures, and it is tracked rather
+  than quietly folded into this change.
+
+What the lenses cost, deliberately: the portfolio lost its cross-programme capability ledger and
+its "cumulative code landings" panel. Both answered a question the portfolio does not ask, and both
+were the second home of a surface — the ledger belongs to `traceability`, the history series to
+`verdict`, and UX finding F1 had already named the landings panel as a chart that exists to say one
+month is not a series.
 
 ## Rejected alternatives
 

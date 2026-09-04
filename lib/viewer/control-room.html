@@ -374,10 +374,12 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
 <script>window.__ROOM__ = /*__ROOM_JSON__*/null;</script>
 <script>window.__STRINGS__ = /*__STRINGS__*/null;</script>
 <script>window.__WRITABLE__ = /*__WRITABLE__*/false;</script>
+<script>window.__LENSES__ = /*__LENSES__*/null;</script>
 <script type="text/plain" id="holo-src"><!--__HOLO_SRC__--></script>
 <script>
 (function(){
 "use strict";
+/*lens:shared*/
 var ROOM=window.__ROOM__,BUNDLE=window.__STRINGS__,NS="http://www.w3.org/2000/svg",seq=0;
 var LANG=(navigator.language||"en").slice(0,2)==="it"?"it":"en";
 var STR=(BUNDLE&&(BUNDLE[LANG]||BUNDLE.en))||{};
@@ -409,7 +411,7 @@ function hit(svg,a,tip){a=a||{};a["class"]="hit";a.fill="transparent";a.tabindex
 function statusMark(v){var map={ok:["●",STR.statusOk],warn:["◐",STR.statusWarn],bad:["×",STR.statusBad],closed:["✓",STR.closed],stale:["◇",STR.stateStale],unknown:["◇",STR.stateUnknown],empty:["○",STR.stateEmpty]},p=map[v]||["◇",STR.notAudited];var s=el("span","status status-"+(/^(ok|warn|bad)$/.test(v)?v:"none")),g=el("span","glyph",p[0]);g.setAttribute("aria-hidden","true");s.appendChild(g);s.appendChild(el("span","",p[1]));return s;}
 function chips(v){var w=el("span","chips"),i;if(!v||!v.length){w.appendChild(el("span","muted",STR.none));return w;}for(i=0;i<v.length;i++)w.appendChild(el("span","chip",v[i]));return w;}
 function pill(p,n,t,endpoint){
- var verdicts=(p.derived&&p.derived.health&&p.derived.health.verdicts)||[],v=null,issue=endpoint||null,i,repo=endpoint&&endpoint.repo||p.ghRepo;
+ var verdicts=verdictsOf(p),v=null,issue=endpoint||null,i,repo=endpoint&&endpoint.repo||p.ghRepo;
  if(repo===p.ghRepo)for(i=0;i<verdicts.length;i++)if(verdicts[i].n===n){v=verdicts[i];break;}
  if(!endpoint)for(i=0;i<p.issuesSnapshot.issues.length;i++)if(p.issuesSnapshot.issues[i].n===n){issue=p.issuesSnapshot.issues[i];break;}
  var closed=issue&&issue.state==="CLOSED",why=closed?STR.closed:(v?v.why:STR.notAudited),word=closed?"closed":(v?(v.stale?"stale":v.verdict):null),text=t==null?"#"+n:t;
@@ -560,6 +562,7 @@ function chartLoad(programs){
   }),{gutter:150});
  },"span2");
 }
+/*lens:plan*/
 function chartMilestones(s,program){
  var d=s.milestones||[],rows=d.map(function(m){return [m.title,m.due||STR.none,m.open,m.closed,m.closureRate==null?STR.none:m.closureRate+"%"];});
  var p=chart(STR.milestoneChart,snapshotProv(program),[STR.milestone,STR.due,STR.open,STR.closed,STR.closure],rows,function(svg,w,h){
@@ -570,6 +573,7 @@ function chartMilestones(s,program){
  });
  if(program.issuesSnapshot.collection.milestonesComplete===false)markState(p,"unknown",STR.milestoneIncomplete);return p;
 }
+/*lens:shared*/
 function chartHistory(history,program){
  var d=(history&&history.points)||[],rows=d.map(function(p){return [p.at,p.open,p.closed,p.created];});
  var p=chart(STR.historyChart,fmt(STR.provHistory,{n:history?history.counted:0}),[STR.date,STR.open,STR.closed,STR.total],rows,function(svg,w,h){
@@ -718,12 +722,13 @@ function filteredList(target,items,render){
 }
 var EDGE_QUOTE_MAX=320,EDGE_LIST_MAX=8;
 function verdictMark(verdict){var v=String(verdict||"").toUpperCase();return /^(PROVEN|PASS|OK)$/.test(v)?"ok":(/^(STALE|WARN|WARNING)$/.test(v)?"warn":(/^(UNCOVERED|FAIL|BAD)$/.test(v)?"bad":null));}
+/*lens:traceability*/
 function capabilityPanel(programs){
  var declared=false,items=[],skipped=0,duplicates=0,missing=[],i,j;
  for(i=0;i<programs.length;i++){
   var c=programs[i].derived&&programs[i].derived.capabilities;
   if(!c){missing.push(programs[i].id);continue;}declared=true;skipped+=c.skipped.length;duplicates+=c.duplicates.length;
-  for(j=0;j<c.rows.length;j++)items.push({program:programs[i],row:c.rows[j],search:[programs[i].id,c.rows[j].id,c.rows[j].capability,c.rows[j].originalStatus,c.rows[j].openIssues.join(" ")].join(" ")});
+  for(j=0;j<c.rows.length;j++)items.push({program:programs[i],row:c.rows[j],complete:c.dependenciesComplete!==false,search:[programs[i].id,c.rows[j].id,c.rows[j].capability,c.rows[j].originalStatus,c.rows[j].openIssues.join(" ")].join(" ")});
  }
  items.sort(function(a,b){var left=String(a.row.id),right=String(b.row.id);return b.row.blockers.length-a.row.blockers.length||b.row.openIssues.length-a.row.openIssues.length||(left<right?-1:left>right?1:0);});
  var p=panel(STR.capabilities,fmt(STR.capabilityProv,{n:items.length,skipped:skipped,duplicates:duplicates}),"full cap-ledger");
@@ -740,7 +745,7 @@ function capabilityPanel(programs){
   cell=el("span","links");
   for(k=0;k<Math.min(row.blockers.length,EDGE_LIST_MAX);k++){edge=row.blockers[k];cell.appendChild(pill(program,edge.to.number,edge.to.repo+"#"+edge.to.number,edge.to));cell.appendChild(document.createTextNode(" "));}
   if(row.blockers.length>EDGE_LIST_MAX)cell.appendChild(el("span","muted",fmt(STR.moreEdges,{n:row.blockers.length-EDGE_LIST_MAX})));
-  if(!cell.childNodes.length)cell.appendChild(el("span","muted",program.derived.dependencies&&!program.derived.dependencies.complete?STR.dependencyUnknown:STR.none));pair(dl,STR.capabilityBlockedBy,cell);
+  if(!cell.childNodes.length)cell.appendChild(el("span","muted",item.complete?STR.none:STR.dependencyUnknown));pair(dl,STR.capabilityBlockedBy,cell);
   cell=el("span");
   for(k=0;k<Math.min(row.blockers.length,EDGE_LIST_MAX);k++){edge=row.blockers[k];cell.appendChild(el("div","",edge.quote?short(edge.quote,EDGE_QUOTE_MAX):fmt(STR.dependencyFact,{source:edge.source,line:edge.line||"—"})));}
   if(!cell.childNodes.length)cell.appendChild(el("span","muted",STR.none));pair(dl,STR.why,cell);
@@ -753,18 +758,7 @@ function capabilityPanel(programs){
  });
  return p;
 }
-function changedPanel(programs){
- var items=[],missing=[],unplaceable=0,i;
- for(i=0;i<programs.length;i++){
-  var history=programs[i].derived&&programs[i].derived.history,points=history&&history.points||[];
-  if(points.length){var first=points[0],last=points[points.length-1];items.push({id:programs[i].id,from:first.at,to:last.at,opened:last.created-first.created,closed:last.closed-first.closed});}else{missing.push(programs[i].id);unplaceable+=history&&history.unplaceable||0;}
- }
- var p=panel(STR.changed,STR.changedProv,"full");
- if(!items.length)return markState(p,"unknown",unplaceable?fmt(STR.historyUnplaceable,{n:unplaceable}):STR.historyMissing);
- markState(p,missing.length?"unknown":"present",missing.length?fmt(STR.missingPrograms,{programs:missing.join(", ")}):null);var list=el("dl","kpis");
- for(i=0;i<items.length;i++){var item=items[i];kpi(list,items.length>1?item.id+" · "+STR.changedOpened:STR.changedOpened,item.opened,item.from+" → "+item.to);kpi(list,items.length>1?item.id+" · "+STR.changedClosed:STR.changedClosed,item.closed);}
- p.body.appendChild(list);return p;
-}
+/*lens:shared*/
 
 
 /* A restrained markdown renderer. The reader was handing a client the source: literal `#`, `**`
@@ -902,6 +896,7 @@ function renderMarkdown(src,program){
 }
 
 /* --------------------------------- views --------------------------------- */
+/*lens:portfolio*/
 function viewPortfolio(view){
  markView(view,ROOM.programs.length?"present":"empty");
  var t=ROOM.portfolio.totals;
@@ -919,8 +914,6 @@ function viewPortfolio(view){
  if(quiet)lead.appendChild(el("p","lede",fmt(STR.thesisQuietLede,{closed:t.closed})));
  lead.appendChild(el("p","lede",fmt(STR.generated,{source:ROOM.meta.generatedFrom,date:ROOM.meta.today})));
  answer.appendChild(lead);
- answer.appendChild(capabilityPanel(ROOM.programs));
- answer.appendChild(changedPanel(ROOM.programs));
  view.appendChild(answer);
 
  var ev=el("div","evidence");
@@ -1007,6 +1000,17 @@ function briefClaimRow(program,claim,extra){
  d.appendChild(dl);return d;
 }
 function briefAboutEvidence(about){if(!about)return null;if(about.issue!=null)return{type:"issue",ref:String(about.issue)};if(about.path)return{type:"path",ref:about.path};if(about.signal)return{type:"signal",ref:about.signal};if(about.milestone)return{type:"milestone",ref:about.milestone};return null;}
+/*lens:verdict*/
+// The issue pill wears a health verdict on every lens that shows an issue, so the verdict lens
+// indexes them ONCE and publishes the lookup, rather than five builders reaching into
+// derived.health themselves. That is what "one home" means for a surface other lenses consume:
+// one lens interprets it, the rest read its product.
+var VERDICTS={};
+function indexVerdicts(){
+ var i,p;
+ for(i=0;i<ROOM.programs.length;i++){p=ROOM.programs[i];VERDICTS[p.id]=(p.derived&&p.derived.health&&p.derived.health.verdicts)||[];}
+}
+function verdictsOf(p){return VERDICTS[p.id]||[];}
 function briefStatusStrip(program){
  var b=program.derived.brief,f=program.derived.findings,strip=el("p","brief-strip"),parts=[];
  if(!b)return null;
@@ -1055,8 +1059,8 @@ function briefPanels(program){
  return out;
 }
 
-function viewExec(view,program,summary){
- var k=program.derived.kpis,rtm=program.derived.rtm,history=program.derived.history;
+function viewVerdict(view,program,summary){
+ var k=program.derived.kpis,history=program.derived.history;
  markView(view,program.derived.health&&program.derived.health.staleCount?"stale":"present");
  var blockedClaim=claimOf(summary,"blocked",summary.blocked,summary.blockedRule.declared);
  var answer=el("div","answer"),lead=el("section","panel answer-lead"),brief=program.derived.brief,thesis=brief&&brief.thesis;
@@ -1073,29 +1077,67 @@ function viewExec(view,program,summary){
  var strip=briefStatusStrip(program);if(strip)lead.appendChild(strip);
  answer.appendChild(lead);
  var bp=briefPanels(program),bi;for(bi=0;bi<bp.length;bi++)answer.appendChild(bp[bi]);
- answer.appendChild(capabilityPanel([program]));
- answer.appendChild(changedPanel([program]));
  view.appendChild(answer);
 
  var ev=el("div","evidence");
  var kp=panel(STR.kpiHeading,STR.provDerived,"span2"),list=el("dl","kpis");
+ // Requirement coverage used to sit here too, and again as the traceability headline. One number,
+ // two homes, two chances to disagree — it is the traceability lens's answer, not this lens's (I20).
  kpi(list,STR.kpiOpen,k.openCount);kpi(list,STR.kpiBlocked,blockedClaim.known?blockedClaim.value:null,blockedClaim.known?null:STR.ruleUnknown);kpi(list,STR.kpiNoMilestone,k.noMilestoneCount);
  kpi(list,STR.kpiLinked,k.linkCoveragePct==null?null:k.linkCoveragePct+"%",k.linkCoveragePct==null?STR.notMeasured:STR.kpiLinkedNote);
- kpi(list,STR.kpiRequirements,rtm&&rtm.coverage.pct!=null?rtm.coverage.pct+"%":null,rtm?fmt(STR.planCoverageNote,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements,withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly}):STR.notMeasured);
  kp.body.appendChild(list);ev.appendChild(kp);
- if(history)ev.appendChild(chartHistory(history,program));
- else{var hp=panel(STR.historyChart,STR.provDerived,"span2");hp.body.appendChild(el("p","muted",STR.historyMissing));ev.appendChild(hp);}
- ev.appendChild(chartMilestones(summary,program));
- ev.appendChild(chartPriority(summary,program));
- ev.appendChild(chartLanding(summary,program));
- if(summary.hasMap)ev.appendChild(chartNodes(summary,program));
+ ev.appendChild(findingsPanel(program));
+ ev.appendChild(honestyPanel(program,summary));
+ // A chart of nothing is not an empty state, it is a chart that has to be read before it can be
+ // dismissed (UX finding F1). A series needs at least two points to be a series; a distribution
+ // needs something to distribute. Neither is reserved when it has nothing to draw (I7).
+ if(history&&(history.points||[]).length>1)ev.appendChild(chartHistory(history,program));
+ if(summary.open)ev.appendChild(chartPriority(summary,program));
+ if(summary.closed)ev.appendChild(chartLanding(summary,program));
  view.appendChild(ev);
 }
 
+// Audit findings are counter-evidence against this programme's own claims, so they answer the
+// verdict lens's question and no other. They were rendered on `tech`, two routes away from the
+// brief they contradict.
+function findingsPanel(program){
+ var findings=(program.derived.findings&&program.derived.findings.findings)||(program.findings&&program.findings.findings)||[];
+ var fp=panel(STR.techFindings,STR.provAudit);
+ if(program.derived.findings&&program.derived.findings.staleCount)markState(fp,"stale",fmt(STR.findingsStale,{n:program.derived.findings.staleCount}));
+ return rowsPanel(fp,findings,function(f){
+  var d=el("details"),s=el("summary","row-head"),dl=el("dl","detail");
+  // A stale finding keeps its text and loses its colour: the reader sees what was found and that
+  // its evidence has moved since — never a red that nobody re-checked.
+  s.appendChild(statusMark(f.stale?"stale":f.severity));s.appendChild(el("span","ref",f.id));s.appendChild(el("span","row-title",f.text));
+  if(f.stale)s.appendChild(el("span","state-chip",fmt(STR.briefStale,{reason:staleReasonText(f.staleReason)})));
+  d.appendChild(s);
+  pair(dl,STR.evidence,evidenceNode(program,f.evidence));
+  if(f.auditedAt)pair(dl,STR.briefWritten,f.auditedAt);
+  if(f.trace)pair(dl,STR.techAudit,f.trace);
+  d.appendChild(dl);return d;
+ },STR.techNoFindings);
+}
+
+// What this briefing cannot see. Commit drift and unlinked sweeps used to be listed here as well
+// as on the map, which is the duplication I20 exists to refuse: they are the architecture lens's
+// facts, and this panel keeps only what qualifies the VERDICT — which rule decided "blocked", and
+// how old the snapshot the verdict rests on is.
+function honestyPanel(program,summary){
+ var hp=panel(STR.techHonesty,STR.provHonesty);
+ function kv(k,v){var r=el("div","kv");r.appendChild(el("span","",k));r.appendChild(v&&v.nodeType?v:el("span","",v));hp.body.appendChild(r);}
+ kv(STR.rules,!summary.blockedRule.declared?STR.ruleUnknown:(summary.blockedRule.inert?STR.ruleInert:summary.blockedRule.labels.join(", ")));
+ kv(STR.noMilestones,program.derived.kpis.noMilestoneCount?fmt(STR.noMilestoneCount,{n:program.derived.kpis.noMilestoneCount}):STR.allMilestoned);
+ var age=summary.snapshotAgeDays,dt=String(program.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
+ kv(STR.snapshots,snapshotAge(age,dt));
+ return hp;
+}
+
+/*lens:shared*/
 function githubLink(url,label){
  if(/^https:\/\/github\.com\//.test(String(url||""))){var a=el("a","data",label);a.href=url;a.target="_blank";a.rel="noopener noreferrer";return a;}
  return el("span","data",label);
 }
+/*lens:operations*/
 function signalsPanel(program){
  var signals=program.issuesSnapshot.signals||{workflows:{},release:{listState:"unknown",reason:STR.signalNotDeclared}},keys=Object.keys(signals.workflows||{}).sort(),release=signals.release||{},unknown=0,i;
  var p=panel(STR.repoSignals,STR.signalProv,"span2"),rows=el("div","stack");
@@ -1116,6 +1158,24 @@ function signalsPanel(program){
  rr.appendChild(rl);rr.appendChild(rv);rows.appendChild(rr);p.body.appendChild(rows);return p;
 }
 
+// Can we run it, and survive it failing? Today that is what the repository itself reports about
+// its workflows and releases. Runbook-to-invariant coverage and tabletop hotwashes land here in
+// wave 8; until they exist this lens publishes only where signals are declared, and is absent
+// where they are not (I7) rather than showing a panel of "unknown".
+function viewOperations(view,program){
+ view.setAttribute("data-single","");
+ markView(view,"present");
+ var answer=el("div","answer"),lead=el("section","panel answer-lead");
+ lead.appendChild(el("p","thesis",STR.routeOperations));
+ lead.appendChild(el("p","lede",STR.operationsLede));
+ answer.appendChild(lead);
+ view.appendChild(answer);
+ var ev=el("div","evidence");
+ ev.appendChild(signalsPanel(program));
+ view.appendChild(ev);
+}
+
+/*lens:provenance*/
 function gateReason(reason){var reasons={"no-enforcement-claim":STR.docGateNoClaim,"prose-only":STR.docGateProseOnly,"registry-not-mapped":STR.docGateNoRegistry,"wiring-missing":STR.docGateUnregistered,wired:STR.docGateWired,"input-error":STR.docGateInputError,mismatch:STR.docGateMismatch,"target-unresolved":STR.docGateTargetMissing,"pointer-unresolved":STR.docGatePointerMissing,"target-non-scalar":STR.docGateTargetNonScalar,"capture-unresolved":STR.docGateCaptureMissing,"source-untracked":STR.docGateInputError,"git-unavailable":STR.docGateInputError,"read-error":STR.docGateInputError,"pattern-invalid":STR.docGateInputError,ambiguous:STR.docGateAmbiguous,"not-found":STR.docGateClaimMissing,"target-unreadable":STR.docGateInputError,"type-unsupported":STR.docGateInputError};return reasons[reason]||reason;}
 function freshnessText(signal){if(signal.reason==="date-invalid")return STR.docFreshnessInvalid;if(signal.reason==="date-future")return STR.docFreshnessFuture;if(!signal.at)return STR.docFreshnessUnknown;return fmt(STR.docFreshnessAge,{date:signal.at,days:signal.ageDays,limit:signal.staleAfterDays});}
 function documentGatePanel(program){
@@ -1133,19 +1193,19 @@ function documentGatePanel(program){
  return p;
 }
 
-function viewTech(view,program,summary){
- markView(view,program.derived.health&&program.derived.health.staleCount?"stale":"present");
+/*lens:plan*/
+function viewPlan(view,program,summary){
+ markView(view,program.derived.milestonePath||program.derived.criticalPath?"present":"unknown");
  var mine=(ROOM.portfolio.blocked||[]).filter(function(b){return b.program===program.id;});
  var blockedClaim=claimOf(summary,"blocked",summary.blocked,summary.blockedRule.declared);
- var answer=el("div","answer"),lead=el("section","panel answer-lead");
+ var answer=el("div","answer"),lead=el("section","panel answer-lead"),i;
  lead.appendChild(el("p","thesis",blockedClaim.known?(mine.length?fmt(STR.techHeadline,{n:mine.length}):STR.noBlocked):STR.techHeadlineUnknown));
- lead.appendChild(el("p","lede",STR.techLede));
+ lead.appendChild(el("p","lede",STR.planLede));
  answer.appendChild(lead);
-var i,j;
+
  var buckets=program.derived.kanban,names=[["chiuse",STR.bucketChiuse],["sane",STR.bucketSane],["a-meta",STR.bucketAMeta],["premessa-falsa",STR.bucketPremessaFalsa],["aspettano-umano",STR.bucketAspettanoUmano],["non-auditate",STR.bucketNonAuditate]];
  var openTotal=0;
  for(i=1;i<names.length;i++)openTotal+=(buckets[names[i][0]]||[]).length;
-
  var bp=panel(STR.techBuckets,fmt(STR.provBuckets,{closed:(buckets.chiuse||[]).length,open:openTotal}),"span2"),bl=el("dl","kpis");
  for(i=0;i<names.length;i++){var known=names[i][0]!=="aspettano-umano"||program.derived.kanbanHumanDeclared;kpi(bl,names[i][1],known?(buckets[names[i][0]]||[]).length:null,i===0?STR.bucketClosedNote:(known?null:STR.ruleUnknown));}
  bp.body.appendChild(bl);answer.appendChild(bp);
@@ -1153,42 +1213,90 @@ var i,j;
 
  var ev=el("div","evidence");
  ev.appendChild(rowsPanel(panel(STR.techBlocked,blockedClaim.known?fmt(plural(mine.length,STR.provBlockedOne,STR.provBlocked),{n:mine.length}):STR.provBlockedUnknown,"span2"),mine,blockedRow,blockedClaim.known?STR.noBlockedHere:STR.ruleUnknown));
- ev.appendChild(signalsPanel(program));
-
- var findings=(program.derived.findings&&program.derived.findings.findings)||(program.findings&&program.findings.findings)||[];
- var fp=panel(STR.techFindings,STR.provAudit);
- if(program.derived.findings&&program.derived.findings.staleCount)markState(fp,"stale",fmt(STR.findingsStale,{n:program.derived.findings.staleCount}));
- ev.appendChild(rowsPanel(fp,findings,function(f){
-  var d=el("details"),s=el("summary","row-head"),dl=el("dl","detail");
-  // A stale finding keeps its text and loses its colour: the reader sees what was found and that
-  // its evidence has moved since — never a red that nobody re-checked.
-  s.appendChild(statusMark(f.stale?"stale":f.severity));s.appendChild(el("span","ref",f.id));s.appendChild(el("span","row-title",f.text));
-  if(f.stale)s.appendChild(el("span","state-chip",fmt(STR.briefStale,{reason:staleReasonText(f.staleReason)})));
-  d.appendChild(s);
-  pair(dl,STR.evidence,evidenceNode(program,f.evidence));
-  if(f.auditedAt)pair(dl,STR.briefWritten,f.auditedAt);
-  if(f.trace)pair(dl,STR.techAudit,f.trace);
-  d.appendChild(dl);return d;
- },STR.techNoFindings));
-
- var hp=panel(STR.techHonesty,STR.provHonesty),cd=summary.commitDrift;
- function kv(k,v){var r=el("div","kv");r.appendChild(el("span","",k));r.appendChild(v&&v.nodeType?v:el("span","",v));hp.body.appendChild(r);}
- kv(STR.drift,!cd?STR.noDrift:(!cd.resolvable?fmt(STR.unresolved,{reason:cd.reason}):(cd.commitsBehind?fmt(STR.behind,{n:cd.commitsBehind}):STR.aligned)));
- kv(STR.noMilestones,program.derived.kpis.noMilestoneCount?fmt(STR.noMilestoneCount,{n:program.derived.kpis.noMilestoneCount}):STR.allMilestoned);
- kv(STR.rules,!summary.blockedRule.declared?STR.ruleUnknown:(summary.blockedRule.inert?STR.ruleInert:summary.blockedRule.labels.join(", ")));
- var sweeps=(program.derived.link&&program.derived.link.excludedSweeps)||[],cell=el("span");
- cell.appendChild(el("div","",sweeps.length?fmt(STR.sweepsCount,{n:sweeps.length}):STR.sweepsNone));
- for(i=0;i<sweeps.length;i++){var sw=el("div","muted");sw.appendChild(el("span","data",String(sweeps[i].sha).slice(0,8)+" "));sw.appendChild(document.createTextNode(short(sweeps[i].subject,60)+" — "+fmt(STR.sweepFiles,{n:sweeps[i].files})));cell.appendChild(sw);}
- kv(STR.sweeps,cell);
- var age=summary.snapshotAgeDays,dt=String(program.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
- kv(STR.snapshots,snapshotAge(age,dt));
- ev.appendChild(hp);
-
+ ev.appendChild(criticalPathPanel(program));
+ var msPath=milestonePathPanel(program);if(msPath)ev.appendChild(msPath);
+ var drift=reconciliationPanel(program);if(drift)ev.appendChild(drift);
+ ev.appendChild(milestonePanel(program));
+ if((program.derived.milestones||[]).length)ev.appendChild(chartMilestones(summary,program));
  // The two projections used to be full routes. They are supporting evidence for the same human
- // decision, so they now disclose here and build only when opened.
+ // decision, so they disclose here and build only when opened.
  ev.appendChild(workflow(program,STR.routeQueue,function(target){renderQueue(target,program);}));
  ev.appendChild(workflow(program,STR.routeKanban,function(target){renderKanban(target,program);}));
  view.appendChild(ev);
+}
+
+// CPM over the issue-blocking DAG. Waves 3 and 6 derived this, gated it, and rendered it nowhere —
+// which is the failure I20 catches from the other side: a surface with no home is as invisible as
+// one with six. The duration model is printed beside the number, always: an unlabelled heuristic
+// read as an estimate is the exact mistake this briefing exists to refuse.
+function criticalPathPanel(program){
+ var cp=program.derived.criticalPath,p=panel(STR.criticalPath,STR.provDerived,"span2"),i;
+ if(!cp)return markState(p,"unknown",STR.criticalPathNone);
+ var critical=cp.nodes.filter(function(node){return node.isCritical;});
+ markState(p,critical.length?"present":"empty",null);
+ var provEl=p.querySelector("p.prov");
+ if(provEl)provEl.textContent=fmt(STR.criticalPathProv,{days:cp.projectDurationDays,n:cp.nodes.length,model:cp.durationModel});
+ if(cp.cycles.length)p.body.appendChild(el("p","muted",fmt(STR.criticalPathCycles,{n:cp.cycles.length})));
+ if(cp.excludedForeign.length)p.body.appendChild(el("p","muted",fmt(STR.criticalPathExcluded,{n:cp.excludedForeign.length})));
+ if(!cp.nodes.length){p.body.appendChild(el("p","muted",STR.noBlocked));return p;}
+ var order=cp.criticalPath,rank={};
+ for(i=0;i<order.length;i++)rank[order[i]]=i;
+ var rows=cp.nodes.slice().sort(function(a,b){
+  return (a.isCritical===b.isCritical)?(a.earlyStart-b.earlyStart||a.n-b.n):(a.isCritical?-1:1);
+ });
+ pagedList(p.body,rows,function(node){
+  var row=el("div","kv"),left=el("span","row-meta"),right=el("span","row-meta");
+  left.appendChild(pill(program,node.n));
+  if(node.isCritical)left.appendChild(el("span","state-chip",STR.onCriticalPath));
+  right.appendChild(el("span","chip",fmt(STR.milestonePathSpan,{start:node.earlyStart,finish:node.earlyFinish})));
+  right.appendChild(el("span","muted",STR.cpmFloat+": "+node.totalFloat));
+  row.appendChild(left);row.appendChild(right);return row;
+ });
+ return p;
+}
+
+// arbiter's own milestone DAG, scheduled with the estimates a HUMAN wrote down. Reported alongside
+// the issue path and never merged into it: one number carrying both a declared estimate and a
+// uniform heuristic would read as more than it is.
+function milestonePathPanel(program){
+ var mp=program.derived.milestonePath;
+ if(!mp)return null;
+ var p=panel(STR.milestonePlan,fmt(STR.milestonePlanProv,{days:mp.projectDurationDays,n:mp.nodes.length,model:mp.durationModel})),i;
+ markState(p,mp.nodes.length?"present":"empty",null);
+ if(mp.isLowerBound)p.body.appendChild(el("p","muted",fmt(STR.milestonePlanLowerBound,{n:mp.unestimated.length,ids:mp.unestimated.join(", ")})));
+ if(mp.cycles.length)p.body.appendChild(el("p","muted",fmt(STR.criticalPathCycles,{n:mp.cycles.length})));
+ var rows=mp.nodes.slice().sort(function(a,b){return a.earlyStart-b.earlyStart||(a.id<b.id?-1:1);});
+ for(i=0;i<rows.length;i++){
+  var node=rows[i],row=el("div","kv"),left=el("span","row-meta"),right=el("span","row-meta");
+  left.appendChild(el("span","ref",node.id));
+  if(node.isCritical)left.appendChild(el("span","state-chip",STR.onCriticalPath));
+  if(!node.estimated)left.appendChild(el("span","state-chip",STR.stateUnknown));
+  right.appendChild(el("span","chip",fmt(STR.milestonePathSpan,{start:node.earlyStart,finish:node.earlyFinish})));
+  right.appendChild(el("span","muted",STR.cpmDuration+": "+node.duration+" · "+STR.cpmFloat+": "+node.totalFloat));
+  row.appendChild(left);row.appendChild(right);p.body.appendChild(row);
+ }
+ return p;
+}
+
+// The milestone SSOT is committed in arbiter; GitHub milestones are a projection of it. Where the
+// two disagree the briefing SAYS SO — reconciling them quietly would make the drift unobservable,
+// which is the whole reason the SSOT was moved out of GitHub in the first place.
+function reconciliationPanel(program){
+ var rec=program.derived.milestoneReconciliation;
+ if(!rec)return null;
+ var p=panel(STR.reconciliation,STR.reconciliationProv,"span2"),i;
+ if(!rec.drift.length)return markState(p,"present",STR.reconciliationClean);
+ markState(p,"stale",null);
+ for(i=0;i<rec.drift.length;i++){
+  var entry=rec.drift[i],row=el("div","kv"),left=el("span","row-meta");
+  left.appendChild(statusMark("warn"));left.appendChild(el("span","ref",entry.id));
+  row.appendChild(left);
+  row.appendChild(el("span","",entry.reason==="no-github-milestone"
+   ?STR.driftNoMilestone
+   :fmt(STR.driftMembership,{claimed:(entry.claimedNotInGithub||[]).map(function(n){return "#"+n;}).join(", ")||STR.none,github:(entry.githubNotClaimed||[]).map(function(n){return "#"+n;}).join(", ")||STR.none})));
+  p.body.appendChild(row);
+ }
+ return p;
 }
 
 function workflow(program,title,fill){
@@ -1249,6 +1357,7 @@ function renderQueue(target,program){
    palette mapped onto the explorer's token names (DESIGN.md §D6); `blueprint-dark` is the same
    mapping onto the dark one. Before this, the map was light in both and the theme control silently
    did not apply to one of five programme views. */
+/*lens:architecture*/
 function mapSkin(){return document.documentElement.getAttribute("data-theme")==="light"?"blueprint":"blueprint-dark";}
 function pushSkin(skin){
  var f=document.querySelectorAll("iframe.frame"),i,s=skin||mapSkin();
@@ -1260,7 +1369,7 @@ function frameDoc(program){
  var seed="<script>window.__C4_MODEL__="+model+";window.__C4_SKIN__=\""+mapSkin()+"\";window.__C4_EMBED__=true;window.__C4_LANG__="+JSON.stringify(LANG)+";"+"<"+"/script>";
  return src.replace("<head>","<head>"+seed);
 }
-function viewMap(view,program){
+function viewArchitecture(view,program){
  view.setAttribute("data-single","");
  var drift=program.derived.commitDrift;markView(view,!program.model||!drift||!drift.resolvable?"unknown":(drift.commitsBehind?"stale":"present"));
  var ev=el("div","evidence"),date=String(program.issuesSnapshot.fetchedAt||"").slice(0,10)||STR.unknownDate;
@@ -1273,7 +1382,7 @@ function viewMap(view,program){
  if(drift&&!drift.resolvable)prov+="  ·  "+fmt(STR.unresolved,{reason:drift.reason});
  else if(drift&&drift.commitsBehind)prov+="  ·  "+fmt(plural(drift.commitsBehind,STR.behindOne,STR.behind),{n:drift.commitsBehind});
  else if(drift)prov+="  ·  "+STR.aligned;
- var mp=panel(STR.routeMap,prov,"span2");
+ var mp=panel(STR.routeArchitecture,prov,"span2");
  mp.classList.add("span2");
  if(!program.hasMap)emptyState(mp,STR.mapMissing,STR.mapNext);
  else{
@@ -1304,9 +1413,27 @@ function viewMap(view,program){
   cp.body.appendChild(wrap);
  }
  ev.appendChild(cp);
+ ev.appendChild(sweepsPanel(program));
  view.appendChild(ev);
 }
 
+// Commits that touched code no issue claims. The map's coverage percentage is only honest beside
+// the work it could not place, and this panel used to sit on `tech` — the second home for
+// derived.link, three hundred lines from the picture it qualifies.
+function sweepsPanel(program){
+ var sweeps=(program.derived.link&&program.derived.link.excludedSweeps)||[],p=panel(STR.sweeps,STR.provHonesty),i;
+ markState(p,sweeps.length?"present":"empty",null);
+ p.body.appendChild(el("div","",sweeps.length?fmt(STR.sweepsCount,{n:sweeps.length}):STR.sweepsNone));
+ for(i=0;i<sweeps.length;i++){
+  var sw=el("div","muted");
+  sw.appendChild(el("span","data",String(sweeps[i].sha).slice(0,8)+" "));
+  sw.appendChild(document.createTextNode(short(sweeps[i].subject,60)+" — "+fmt(STR.sweepFiles,{n:sweeps[i].files})));
+  p.body.appendChild(sw);
+ }
+ return p;
+}
+
+/*lens:plan*/
 function milestoneRow(program,issues,m){
  var d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),body=el("div"),numbers=[],i;
  meta.appendChild(el("span","chip",fmt(STR.milestoneSummary,{open:m.open,closed:m.closed})));
@@ -1324,13 +1451,15 @@ function milestonePanel(program){
  return p;
 }
 
-function viewWbs(view,program){
+/*lens:traceability*/
+function viewTraceability(view,program){
  var rtm=program.derived.rtm,i,j;
  markView(view,rtm?"present":"unknown");
  if(!rtm){
   view.setAttribute("data-single","");
-  var missing=el("div","evidence"),missingPanel=panel(STR.routeWbs,STR.provRtm,"full");
-  missing.appendChild(milestonePanel(program));emptyState(missingPanel,STR.wbsMissing,STR.wbsNext);missing.appendChild(missingPanel);view.appendChild(missing);return;
+  var missing=el("div","evidence"),missingPanel=panel(STR.routeTraceability,STR.provRtm,"full");
+  emptyState(missingPanel,STR.wbsMissing,STR.wbsNext);missing.appendChild(missingPanel);
+  missing.appendChild(capabilityPanel([program]));view.appendChild(missing);return;
  }
  var answer=el("div","answer"),lead=el("section","panel answer-lead");
  lead.appendChild(el("p","thesis",rtm?fmt(STR.wbsHeadline,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements}):STR.wbsMissing));
@@ -1359,7 +1488,7 @@ function viewWbs(view,program){
  view.appendChild(answer);
 
  var ev=el("div","evidence");
- ev.appendChild(milestonePanel(program));
+ ev.appendChild(capabilityPanel([program]));
  var mp=panel(STR.wbsMatrix,STR.provRtm,"span2");
  if(rtm){
   var wrap=el("div","tablewrap"),tb=el("table","matrix"),th=el("thead"),htr=el("tr"),tbody=el("tbody");
@@ -1408,16 +1537,17 @@ function viewWbs(view,program){
    "Design h2, Design h3, Global invariants h2, Global invariants h3" for all eight documents, on
    screen and on paper. Removed here rather than in roomdocs, because `text` is what the byte
    budget counts and what the determinism gate re-derives. */
+/*lens:provenance*/
 function docBody(d){
  var t=String(d.text||""),m=/^\s*#\s+(.*)(?:\n|$)/.exec(t);
  return (m&&m[1].trim()===String(d.title||"").trim())?t.slice(m[0].length):t;
 }
-function viewDocs(view,program){
+function viewProvenance(view,program){
  view.setAttribute("data-single","");
  var docs=program.docs,ev=el("div","evidence");
  if(!docs||(!docs.embedded.length&&!docs.listed.length)){
   markView(view,"unknown");
-  var np=panel(STR.routeDocs,STR.provDocsNone,"full");emptyState(np,STR.docsNone,STR.docsNext);ev.appendChild(np);view.appendChild(ev);return;
+  var np=panel(STR.routeProvenance,STR.provDocsNone,"full");emptyState(np,STR.docsNone,STR.docsNext);ev.appendChild(np);view.appendChild(ev);return;
  }
  var documentGate=program.derived.documentGate;
  markView(view,documentGate&&documentGate.errors.length?"unknown":(documentGate&&documentGate.summary.stale?"stale":"present"));
@@ -1483,6 +1613,7 @@ function viewDocs(view,program){
  if(docs.embedded.length)open(0);
 }
 
+/*lens:shell*/
 function viewOptions(view){
  view.setAttribute("data-single","");
  markView(view,"present");
@@ -1493,11 +1624,16 @@ function viewOptions(view){
   head.appendChild(el("strong","",p.id));head.appendChild(el("span","muted"," — "+p.ghRepo));
   if(SERVED)head.appendChild(toggle(p.id,true));
   row.appendChild(head);
-  var has=[[STR.optHasMap,p.hasMap],[STR.optHasHealth,((p.health&&p.health.verdicts)||[]).length>0],
-           [STR.optHasFindings,((p.findings&&p.findings.findings)||[]).length>0],
-           [STR.optHasRtm,!!p.derived.rtm],[STR.optHasDocs,!!(p.docs&&p.docs.embedded.length)],
-           [STR.optHasBlockedBy,sumOf(p.id).blockedRule.declared]];
-  for(j=0;j<has.length;j++)flags.appendChild(el("span","flag"+(has[j][1]?" on":""),has[j][0]+": "+(has[j][1]?STR.optYes:STR.optNo)));
+  // The inclusion ledger reports what each programme can ANSWER, not which files happened to be
+  // found: the six flags it used to carry ("Architecture map: yes") re-stated, by hand, half of
+  // what the publication predicates now decide, and drifted from them the moment either changed.
+  var published=p.derived.lenses||{};
+  for(j=0;j<LENS_SPEC.length;j++){
+   var lens=LENS_SPEC[j],on=published[lens.id]===true;
+   var flag=el("span","flag"+(on?" on":""),lensLabel(lens.id)+": "+(on?STR.optYes:STR.optNo));
+   flag.setAttribute("title",lens.question);
+   flags.appendChild(flag);
+  }
   row.appendChild(flags);ip.body.appendChild(row);
  }
  ev.appendChild(ip);
@@ -1539,10 +1675,31 @@ function toggle(id,enabled){
 
 /* --------------------------------- routing -------------------------------- */
 var VIEWS={},VIEW_SPEC={},ORDER=[],PRINT_FILL=[];
-var TABS=[["exec",function(){return STR.routeExec;}],["tech",function(){return STR.routeTech;}],
-          ["map",function(){return STR.routeMap;}],["wbs",function(){return STR.routeWbs;}],
-          ["docs",function(){return STR.routeDocs;}]];
-var BUILD={exec:viewExec,tech:viewTech,map:viewMap,wbs:viewWbs,docs:viewDocs};
+/* The lens table is INJECTED, never restated here. lib/lenses.mjs is the single declaration of the
+   information architecture: the composer writes it into window.__LENSES__, this routing mounts it,
+   and scripts/room-presentable.mjs grades the artifact against the same table. A viewer holding its
+   own literal list of routes is how the five-view IA outlived two of the questions it answered. */
+var LENS_SPEC=(window.__LENSES__||[]).filter(function(l){return l.id!=="portfolio";});
+var BUILD={verdict:viewVerdict,plan:viewPlan,architecture:viewArchitecture,traceability:viewTraceability,operations:viewOperations,provenance:viewProvenance};
+// Named one by one rather than composed from the id: a computed STR lookup is invisible to the
+// gate that refuses a declared-but-unread string (I15), and an unread label is how a locale rots.
+function lensLabel(id){
+ var labels={verdict:STR.routeVerdict,plan:STR.routePlan,architecture:STR.routeArchitecture,
+             traceability:STR.routeTraceability,operations:STR.routeOperations,provenance:STR.routeProvenance};
+ return labels[id]||id;
+}
+/* Publication is per PROGRAMME and rests on backing artifacts. A lens with nothing behind it is
+   ABSENT, not an empty panel (I7) — which is the whole of UX finding F1: on a programme with every
+   issue closed, no map and no requirements source, four of the six routes simply do not exist
+   instead of rendering three zeros and "No data available.". derived.lenses is computed in
+   roomderive from this same table and re-derived by `forma check`, so a hand-edited briefing cannot
+   mount a route its artifacts do not support. */
+function lensesOf(program){
+ var out=[],i,published=(program.derived&&program.derived.lenses)||{};
+ for(i=0;i<LENS_SPEC.length;i++)if(published[LENS_SPEC[i].id]===true)out.push(LENS_SPEC[i].id);
+ return out;
+}
+function homeOf(program){var l=lensesOf(program);return l.length?key(program.id,l[0]):"/";}
 function key(p,t){return p?"/"+p+"/"+t:"/"+t;}
 function mount(k){
  var v=el("section","view");v.id="view-"+k.replace(/[^a-z0-9]+/gi,"-");v.hidden=true;
@@ -1579,8 +1736,8 @@ function registerAll(){
  var i,j;
  mount("/");VIEW_SPEC["/"]={kind:"portfolio"};
  for(i=0;i<ROOM.programs.length;i++){
-  var program=ROOM.programs[i];
-  for(j=0;j<TABS.length;j++){var k=key(program.id,TABS[j][0]);mount(k);VIEW_SPEC[k]={kind:"program",program:program,tab:TABS[j][0]};}
+  var program=ROOM.programs[i],lenses=lensesOf(program);
+  for(j=0;j<lenses.length;j++){var k=key(program.id,lenses[j]);mount(k);VIEW_SPEC[k]={kind:"program",program:program,tab:lenses[j]};}
  }
  mount("/options");VIEW_SPEC["/options"]={kind:"options"};
 }
@@ -1594,17 +1751,25 @@ function ensureView(k){
 }
 // The pre-tab anchors stay valid addresses: #now was a link somebody could have sent.
 var LEGACY={verdict:"/",now:"/",moving:"/",mismatch:"/",programs:"/",map:null};
+var LEGACY_TAB={exec:"verdict",tech:"plan",map:"architecture",wbs:"traceability",docs:"provenance",auto:"plan",kanban:"plan"};
 function normalize(h){
  var raw=String(h||"").replace(/^#/,"");
  if(!raw)return "/";
  if(raw.charAt(0)==="/"){
-  var old=/^\/([^/]+)\/(auto|kanban)$/.exec(raw);
-  if(old&&byId(old[1]))return key(old[1],"tech");
+  var m=/^\/([^/]+)\/([^/]+)$/.exec(raw),program=m&&byId(m[1]);
+  if(program){
+   // Every address the five-view IA published stays valid, and so do the two routes retired before
+   // it: a link somebody sent is not invalidated by a rename. A lens this programme does not
+   // publish is not a broken link either — it is a question this programme cannot answer, so the
+   // reader lands on one it can.
+   var target=key(m[1],LEGACY_TAB[m[2]]||m[2]);
+   return VIEWS[target]?target:homeOf(program);
+  }
   return VIEWS[raw]?raw:"/";
  }
  if(LEGACY.hasOwnProperty(raw)){
   if(LEGACY[raw])return LEGACY[raw];
-  var f=ROOM.programs[0];return f?key(f.id,raw==="map"?"map":"exec"):"/";
+  var f=ROOM.programs[0];return f?(raw==="map"&&VIEWS[key(f.id,"architecture")]?key(f.id,"architecture"):homeOf(f)):"/";
  }
  return "/";
 }
@@ -1615,14 +1780,15 @@ function navLink(href,text){var a=el("a","",text);a.href="#"+href;return a;}
 function buildNav(){
  var progs=document.getElementById("nav-programs"),views=document.getElementById("nav-views"),i,j;
  progs.appendChild(navLink("/",STR.routePortfolio));
- for(i=0;i<ROOM.programs.length;i++)progs.appendChild(navLink(key(ROOM.programs[i].id,"exec"),ROOM.programs[i].id));
+ for(i=0;i<ROOM.programs.length;i++)progs.appendChild(navLink(homeOf(ROOM.programs[i]),ROOM.programs[i].id));
  progs.appendChild(navLink("/options",STR.routeOptions));
  // One set of view tabs, re-pointed at whichever programme is open. They are present from the
  // first screen rather than appearing only after the reader guesses that a lowercase repo id
  // between two sentence-case labels is the primary action.
- for(i=0;i<TABS.length;i++){
-  var a=navLink("/",TABS[i][1]());
-  a.setAttribute("data-tab",TABS[i][0]);
+ for(i=0;i<LENS_SPEC.length;i++){
+  var a=navLink("/",lensLabel(LENS_SPEC[i].id));
+  a.setAttribute("data-tab",LENS_SPEC[i].id);
+  a.setAttribute("title",LENS_SPEC[i].question);
   views.appendChild(a);
  }
  progs.addEventListener("focusin",function(e){e.target.scrollIntoView({block:"nearest",inline:"nearest"});});
@@ -1632,8 +1798,8 @@ function buildNav(){
  o=el("option","",STR.routePortfolio);o.value="/";mobileProgram.appendChild(o);
  for(i=0;i<ROOM.programs.length;i++){o=el("option","",ROOM.programs[i].id);o.value=ROOM.programs[i].id;mobileProgram.appendChild(o);}
  o=el("option","",STR.routeOptions);o.value="/options";mobileProgram.appendChild(o);
- for(i=0;i<TABS.length;i++){o=el("option","",TABS[i][1]());o.value=TABS[i][0];mobileView.appendChild(o);}
- mobileProgram.addEventListener("change",function(){location.hash=mobileProgram.value.charAt(0)==="/"?mobileProgram.value:key(mobileProgram.value,mobileView.value||"exec");});
+ for(i=0;i<LENS_SPEC.length;i++){o=el("option","",lensLabel(LENS_SPEC[i].id));o.value=LENS_SPEC[i].id;mobileView.appendChild(o);}
+ mobileProgram.addEventListener("change",function(){var v=mobileProgram.value;location.hash=v.charAt(0)==="/"?v:normalize(key(v,mobileView.value||"verdict"));});
  mobileView.addEventListener("change",function(){var p=mobileProgram.value;if(p.charAt(0)!=="/")location.hash=key(p,mobileView.value);});
 }
 function renderNav(k){
@@ -1645,14 +1811,19 @@ function renderNav(k){
   // "true", not "page". Two landmarks both marking their selection as aria-current="page" made a
   // screen reader announce "current page" twice on one screen; only ONE of them is the page. The
   // programme is the current item within its list, which is what the plain token means.
-  if(href===k||(progOf(k)&&href===key(progOf(k),"exec")))links[i].setAttribute("aria-current","true");
+  if(href===k||(progOf(k)&&href===homeOf(byId(progOf(k)))))links[i].setAttribute("aria-current","true");
   else links[i].removeAttribute("aria-current");
  }
- var tabs=views.querySelectorAll("a");
+ // Built once and re-pointed, never rebuilt: rebuilding destroyed the anchor the reader had just
+ // pressed. A lens this programme does not publish is hidden rather than removed, for the same
+ // reason — and hidden rather than shown-and-dead, because a tab leading to nothing is the dead
+ // switch this briefing cannot afford.
+ var tabs=views.querySelectorAll("a"),mobileOptions=document.getElementById("mobile-view").options;
  for(i=0;i<tabs.length;i++){
-  var t=tabs[i].getAttribute("data-tab"),target=p?key(p,t):"/";
-  tabs[i].href="#"+target;
-  if(k===target){tabs[i].setAttribute("aria-current","page");tabs[i].scrollIntoView({block:"nearest",inline:"nearest"});}
+  var t=tabs[i].getAttribute("data-tab"),target=p?key(p,t):"/",live=Boolean(VIEWS[target]);
+  tabs[i].href="#"+target;tabs[i].hidden=!live;
+  if(mobileOptions[i]){mobileOptions[i].hidden=!live;mobileOptions[i].disabled=!live;}
+  if(live&&k===target){tabs[i].setAttribute("aria-current","page");tabs[i].scrollIntoView({block:"nearest",inline:"nearest"});}
   else tabs[i].removeAttribute("aria-current");
  }
  var mp=document.getElementById("mobile-program"),mv=document.getElementById("mobile-view"),match=/^\/([^/]+)\/([^/]+)$/.exec(k);
@@ -1669,9 +1840,8 @@ function show(k){
  relayoutAll(VIEWS[k]);focusScrollers(VIEWS[k]);
 }
 function tabLabel(k){
- var m=/^\/[^/]+\/([^/]+)$/.exec(k),i;
- if(m)for(i=0;i<TABS.length;i++)if(TABS[i][0]===m[1])return TABS[i][1]();
- return k;
+ var m=/^\/[^/]+\/([^/]+)$/.exec(k);
+ return m?lensLabel(m[1]):k;
 }
 function announce(text){var l=document.getElementById("live");if(l)l.textContent=text;}
 function onHash(){show(normalize(location.hash));}
@@ -1714,7 +1884,7 @@ function start(){
  applyTheme();wireTheme();
  document.getElementById("page-title").textContent=ROOM.meta.title||STR.appTitle;
  document.getElementById("page-stamp").textContent=ROOM.meta.today;
- registerAll();buildNav();stampRunningHead();
+ indexVerdicts();registerAll();buildNav();stampRunningHead();
  window.addEventListener("hashchange",onHash);
  window.addEventListener("resize",onResize);
  // Printing un-hides every view, so every chart must be drawn before the dialog opens.

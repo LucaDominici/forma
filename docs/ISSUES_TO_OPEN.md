@@ -138,6 +138,30 @@ reconciled by `room update` with zero hand-edits and zero counter-verification c
 R5-1 done (a second+ repo has driven the pipeline), all mandatory gates seen to fail and pass → freeze
 schema, tag, npm.
 
+## Found by the lens partition (I20), 2026-09-04
+
+**L-1 · `derivePortfolio` recomputes three aggregates the programme already derived**
+`area:room kind:debt` — Why: the portfolio summary calls `deriveMilestones`, `coverageOf` and
+`deriveCommitDrift` again, per programme, over inputs `deriveAll` has already reduced. One surface,
+two computations, two chances to disagree — duplication one level BELOW what I20 measures, which
+governs `program.derived` only. It is also the one path by which a lens could read a derived
+surface it does not own (`summary.commitDrift` was read on `tech` until this wave deleted the row).
+DoD: `derivePortfolio` consumes `program.derived` instead of recomputing; `forma check` re-derives
+the portfolio as it already re-derives `deriveAll`; I20's scope note in `GLOBAL_INVARIANTS.md` is
+narrowed or removed accordingly.
+
+**L-2 · F2 stands: two sparse views are still mostly void**
+`area:viewer kind:debt` — Why: UX finding F2 measured ~40% void on every screen and 83% on
+`/options`. Measured again after the lens partition, headless at 1440×900: the portfolio and the
+six lenses now run 60–91% ink, but `/options` is still 25% and a sparse `operations` will be no
+better. The obvious fix — `align-items:start` on the evidence grid so a panel is as tall as what it
+has to say — was tried and **reverted**: it turned `verdict` and `provenance` from per-panel
+scrolling into a 3.5× page scroll, which trades one defect for a worse one. The remaining void sits
+BELOW the last panel, where no alignment rule reaches; closing it means a different layout for
+sparse views, which is a design decision and not a CSS tweak. DoD: a measured target (say ≥60% ink
+on every published route at 1440×900) and a layout that reaches it without turning any dense lens
+into a long scroll.
+
 ## Carried debt (open regardless of release)
 
 D-1 shipped-file count unenforced · D-2 `docmap` prefix false-alive · D-3 every view in the DOM at load
