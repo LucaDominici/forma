@@ -25,6 +25,7 @@ import {
   documentGate,
   deriveBlocks,
   deriveCapabilities,
+  deriveCriticalPath,
   deriveDependencies,
   deriveHistory,
   deriveKanban,
@@ -4908,6 +4909,28 @@ const diffPaths = (a, b, at = "") => {
   if (r.status !== 0)
     die("room: restoring a typed claim did not restore the green gate", r);
 
+  // The critical path is a live comparison like every other aggregate, not decorative metadata
+  // written once and never read (#2480 wave 3). Rewriting the published schedule must make the
+  // shared room/check gate refuse the artifact — a derivation nobody recomputes is prose in JSON.
+  const pristineRoom = readFileSync(roomHtml, "utf-8");
+  const cpAt = pristineRoom.indexOf('"criticalPath":');
+  const cpEnd = pristineRoom.indexOf(',"blocks":', cpAt);
+  if (cpAt < 0 || cpEnd < 0)
+    die("room: the briefing carries no criticalPath aggregate to compare");
+  writeFileSync(
+    roomHtml,
+    pristineRoom.slice(0, cpAt) +
+      '"criticalPath":{"durationModel":"invented","projectDurationDays":999,"nodes":[],"criticalPath":[],"cycles":[],"excludedForeign":[]}' +
+      pristineRoom.slice(cpEnd),
+  );
+  r = checkRoom(roomHtml);
+  if (r.status === 0 || !/[Cc]ritical[ Pp]?[Pp]ath/.test((r.stderr || "") + (r.stdout || "")))
+    die("room: check did not reject and NAME the invented critical path", r);
+  writeFileSync(roomHtml, pristineRoom);
+  r = checkRoom(roomHtml);
+  if (r.status !== 0)
+    die("room: restoring the critical path did not restore the green gate", r);
+
   const missingJsonConfig = JSON.parse(JSON.stringify(alphaConfig.docs));
   missingJsonConfig.gate.claims.push(
     {
@@ -8057,6 +8080,115 @@ const diffPaths = (a, b, at = "") => {
   rmSync(scratch, { recursive: true, force: true });
   console.log(
     "  ok arbiter-contract — a shared shape cannot move on one side and stay green",
+  );
+}
+
+// §critical-path — CPM over the issue-blocking DAG (#2480 wave 3).
+//
+// An edge means `from` is blocked by `to`, so `to` is the PREDECESSOR. The six-field float model
+// answers two questions a `blocked` boolean cannot: what is on the critical path, and how much can
+// a given issue slip before the finish moves. Durations are a NAMED heuristic, never an estimate
+// forma invented — that naming is asserted here, because an unlabelled heuristic read as a
+// measurement is the failure this whole programme is about.
+{
+  const snap = (issues, edges, supported = true) => ({
+    issues: issues.map(([n, state]) => ({ n, state })),
+    dependencies: { supported, complete: true, edges },
+  });
+  const edge = (from, to) => ({
+    from: { repo: "o/r", number: from, url: "u", state: "OPEN" },
+    to: { repo: "o/r", number: to, url: "u", state: "OPEN" },
+    source: "native",
+  });
+  const at = (cp, n) => cp.nodes.find((node) => node.n === n);
+
+  // Cannot answer is not the same claim as no critical path (I6/I7).
+  if (deriveCriticalPath({ supported: false, edges: [] }, snap([], [])) !== null)
+    die("critical-path: an unsupported dependency snapshot must return null, not an empty path");
+
+  // 3 -> 2 -> 1 : a straight chain of three open issues is entirely critical.
+  const chain = deriveCriticalPath(
+    { supported: true, edges: [edge(1, 2), edge(2, 3)] },
+    snap([[1, "OPEN"], [2, "OPEN"], [3, "OPEN"]], []),
+  );
+  if (chain.projectDurationDays !== 3)
+    die("critical-path: a three-open-issue chain must span 3 days, got " + chain.projectDurationDays);
+  if (JSON.stringify(chain.criticalPath) !== JSON.stringify([3, 2, 1]))
+    die("critical-path: the chain must be reported predecessor-first, got " + JSON.stringify(chain.criticalPath));
+  if (chain.nodes.some((node) => !node.isCritical))
+    die("critical-path: every node of a single chain is on the critical path");
+  if (chain.nodes.some((node) => node.totalFloat !== 0))
+    die("critical-path: a node on the critical path has zero total float by definition");
+  if (chain.durationModel !== "open-issue-uniform-1d")
+    die("critical-path: the duration heuristic must be named in the output, got " + chain.durationModel);
+
+  // A closed blocker is finished: it cannot extend the REMAINING path.
+  const withClosed = deriveCriticalPath(
+    { supported: true, edges: [edge(1, 2), edge(2, 3)] },
+    snap([[1, "OPEN"], [2, "OPEN"], [3, "CLOSED"]], []),
+  );
+  if (withClosed.projectDurationDays !== 2)
+    die("critical-path: a CLOSED blocker must contribute 0 days, got " + withClosed.projectDurationDays);
+  if (at(withClosed, 3).duration !== 0)
+    die("critical-path: a CLOSED issue must have duration 0");
+
+  // Diamond: 1 blocked by 2 and 3; both blocked by 4. The short arm carries float.
+  //   4 -> 2 -> 1
+  //   4 -> 3 -> 1   with 3 CLOSED, so the 3-arm is shorter and must float.
+  const diamond = deriveCriticalPath(
+    { supported: true, edges: [edge(1, 2), edge(1, 3), edge(2, 4), edge(3, 4)] },
+    snap([[1, "OPEN"], [2, "OPEN"], [3, "CLOSED"], [4, "OPEN"]], []),
+  );
+  if (!at(diamond, 2).isCritical)
+    die("critical-path: the longer arm of a diamond is critical");
+  if (at(diamond, 3).isCritical)
+    die("critical-path: the shorter arm of a diamond must NOT be critical");
+  if (at(diamond, 3).totalFloat !== 1)
+    die("critical-path: the shorter arm must carry exactly 1 day of total float, got " + at(diamond, 3).totalFloat);
+  if (at(diamond, 1).isCritical !== true || at(diamond, 4).isCritical !== true)
+    die("critical-path: the join and the fork of a diamond are both critical");
+
+  // Free float is not total float: it is the slack that does not disturb any successor.
+  if (typeof at(diamond, 3).freeFloat !== "number")
+    die("critical-path: every node reports free float, not only total float");
+
+  // A cycle cannot be scheduled. It must be reported and excluded, never hang the derivation.
+  const cyclic = deriveCriticalPath(
+    { supported: true, edges: [edge(1, 2), edge(2, 1)] },
+    snap([[1, "OPEN"], [2, "OPEN"]], []),
+  );
+  if (!cyclic.cycles.length)
+    die("critical-path: a dependency cycle must be reported, not silently scheduled");
+  if (cyclic.nodes.some((node) => node.n === 1 || node.n === 2))
+    die("critical-path: nodes inside a cycle must be excluded from the schedule");
+
+  // An endpoint this snapshot does not own has no duration we can know. Excluded, and VISIBLY so.
+  const foreign = deriveCriticalPath(
+    { supported: true, edges: [edge(1, 2), { ...edge(1, 99), to: { repo: "other/repo", number: 99, url: "u", state: "OPEN" } }] },
+    snap([[1, "OPEN"], [2, "OPEN"]], []),
+  );
+  if (foreign.excludedForeign.length !== 1)
+    die("critical-path: an edge leaving this snapshot must be counted as excluded, not dropped in silence");
+
+  // Determinism: the same inputs in a different edge order give byte-identical output (I12).
+  const forward = deriveCriticalPath(
+    { supported: true, edges: [edge(1, 2), edge(2, 3), edge(1, 3)] },
+    snap([[1, "OPEN"], [2, "OPEN"], [3, "OPEN"]], []),
+  );
+  const shuffled = deriveCriticalPath(
+    { supported: true, edges: [edge(1, 3), edge(2, 3), edge(1, 2)] },
+    snap([[3, "OPEN"], [1, "OPEN"], [2, "OPEN"]], []),
+  );
+  if (JSON.stringify(forward) !== JSON.stringify(shuffled))
+    die("critical-path: edge order changed the derivation — it is not deterministic");
+
+  // No edges at all is a real answer (an empty schedule), not "cannot answer".
+  const empty = deriveCriticalPath({ supported: true, edges: [] }, snap([[1, "OPEN"]], []));
+  if (empty === null || empty.nodes.length !== 0 || empty.projectDurationDays !== 0)
+    die("critical-path: a supported snapshot with no edges is an empty schedule, not null");
+
+  console.log(
+    "  ok critical-path — six-field float over the blocking DAG, cycles excluded, heuristic named",
   );
 }
 

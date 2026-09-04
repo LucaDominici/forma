@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `deriveCriticalPath` in `lib/roomderive.mjs` — CPM over the issue-blocking DAG with the full
+  six-field float model (early/late start, early/late finish, total and free float, `isCritical`).
+  "What is on the critical path" and "how far can this slip before the finish moves" are different
+  questions and a `blocked` boolean answers neither. Durations are a **named** heuristic, never an
+  estimate forma invented: an open issue counts one day, a closed one zero because it cannot extend
+  the remaining path, and the model is published as `durationModel` so no reader mistakes it for a
+  measurement. Dependency cycles are reported and excluded rather than silently scheduled, and an
+  edge leaving the snapshot is counted in `excludedForeign` rather than dropped in silence. Returns
+  `null` when the snapshot does not support dependency edges — "cannot answer" is not "no critical
+  path" (I6/I7). Wired into `deriveAll`, so `check` recomputes it and refuses a tampered schedule;
+  the tamper test asserts the rejection **names** the aggregate rather than merely exiting non-zero.
+  When arbiter's `MILESTONES.yml` reaches forma, its real `estimate_days` replace the heuristic and
+  the milestone DAG merges into this same computation.
 - `lib/schema/CONTRACT.json` and `scripts/check-arbiter-contract.mjs` pin every schema shared with
   arbiter (owner, path, sha256, vendoring consumers). Both repositories hold a byte-identical copy
   and gate their own half, so a shared shape cannot change on one side and stay green (I19). The
