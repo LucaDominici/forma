@@ -572,15 +572,23 @@
           "arbiter": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "milestones"
-            ],
-            "description": "Machine outputs this programme's arbiter checkout emits. forma DERIVES from them and never restates them: arbiter owns the plan, forma renders it. Paths are relative to the PROGRAMME'S checkout, not the manifest — the same exception rtm docs take, and for the same reason: `.arbiter/milestones.json` means that repository's projection.",
+            "minProperties": 1,
+            "description": "Machine outputs this programme's arbiter checkout emits. Each key is an INDEPENDENT opt-in: `milestones` was required here until wave 8 added two siblings, which made the requirement wrong — a project with runbooks and no codified roadmap could not declare them, contradicting the opt-in-by-presence contract every one of these keys documents. `minProperties: 1` replaces it, because an empty block declares nothing and saying nothing is what omitting the block already means. forma DERIVES from them and never restates them: arbiter owns the plan, forma renders it. Paths are relative to the PROGRAMME'S checkout, not the manifest — the same exception rtm docs take, and for the same reason: `.arbiter/milestones.json` means that repository's projection.",
             "properties": {
               "milestones": {
                 "type": "string",
                 "minLength": 1,
                 "description": "Path to the arbiter-milestones-v1 projection written by `check-milestones.mjs --emit`. Opt-in by presence: a programme that declares none derives no milestone path and no reconciliation, and says so rather than showing an empty plan."
+              },
+              "useCases": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Path to the arbiter-use-cases-v1 projection written by `check-use-cases.mjs --emit`. Opt-in by presence, exactly as `milestones` is: a programme that declares none publishes no use-case surface and says so, rather than rendering an empty grid that reads like a product with no use cases (I7). Its `exercisedBy` is arbiter's MEASUREMENT of which tabletop scenarios walk each use case, not the declared status — forma renders the measurement and never recomputes it."
+              },
+              "runbooks": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Path to the arbiter-runbooks-v1 projection written by `check-runbook-coverage.mjs --emit`. Opt-in by presence. Carries both halves of the coverage algebra INCLUDING the uncovered list, which is the half an operator needs: a number cannot say which failure has no procedure behind it."
               }
             }
           }

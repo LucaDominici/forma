@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **The traceability and operations lenses have content.** Both were declared in wave 7 and had
+  nothing behind them. arbiter now emits two projections — `arbiter-use-cases-v1` and
+  `arbiter-runbooks-v1` — and the manifest's `arbiter` block reads them as independent opt-ins
+  beside `milestones`. Traceability renders use cases, each with its actor, the features it rests
+  on, and the tabletop scenarios that walk it; operations renders runbook coverage with the
+  **uncovered list**, not a count, because a number cannot tell an operator which failure has no
+  procedure behind it. `exercisedBy` is arbiter's measurement and is passed through untouched:
+  forma derives what it can see and never recomputes a join a gate already proved.
+- Two derivations the projections cannot state alone, because both are questions about the set:
+  a use case **no scenario walks** (arbiter's gate is silent unless the row claimed `exercised`),
+  and a runbook that **handles nothing**.
+
+### Fixed
+- `arbiter.milestones` was **required**, so a project with runbooks and no codified roadmap could
+  not declare them — contradicting the opt-in-by-presence contract every key in that block
+  documents. Replaced with `minProperties: 1`.
+- A filtered list printed **two contradictory paragraphs**: `pagedList`'s "the printed briefing
+  carries the count, not the archive" directly above the twelve records `filteredList` expands
+  onto paper. Latent since `filteredList` was written — forma's own briefing had no filtered list
+  with rows until the use-case panel arrived, so nothing had ever printed it.
+
 ### Changed
 - **The Control Room is six lenses, not five views.** ADR-0008 named a portfolio and six lenses,
   one question each, and said the partition "is only real if it is enforced". It is now **I20**:

@@ -34,6 +34,8 @@ import {
   deriveKanban,
   deriveKpis,
   deriveQueue,
+  deriveUseCases,
+  deriveRunbooks,
 } from "../lib/roomderive.mjs";
 import { loadDocs } from "../lib/roomdocs.mjs";
 import { deriveRtm } from "../lib/rtm.mjs";
@@ -8440,6 +8442,123 @@ const diffPaths = (a, b, at = "") => {
   );
 }
 
+
+// §ontology-lenses — use cases and runbook coverage, the two surfaces wave 8 gave a home (#2480).
+//
+// Both arrive as arbiter projections, and the discipline is the one the milestone seam established:
+// forma derives what it can SEE and restates nothing arbiter already decided. Two properties are
+// computed here because they are questions about the SET, which no row can answer alone — and one
+// property is deliberately NOT computed, because arbiter already proved it.
+{
+  const ucDoc = (useCases) => ({ schema: "arbiter-use-cases-v1", useCases });
+  const uc = (id, over = {}) => ({
+    id,
+    actor: "Traveler",
+    goal: "do a thing worth doing",
+    featureIds: ["F-A"],
+    exercisedBy: [],
+    ...over,
+  });
+
+  // The measurement travels; forma does not recompute the join.
+  {
+    const d = deriveUseCases(ucDoc([uc("UC-01", { status: "linked", exercisedBy: ["1. A journey"] })]));
+    if (d.rows[0].exercisedBy.length !== 1) die("use-cases: exercisedBy must pass through untouched");
+    if (d.rows[0].status !== "linked")
+      die("use-cases: the declared status must survive even when it disagrees with the walk");
+    if (d.exercised !== 1) die("use-cases: a walked use case counts as exercised");
+  }
+
+  // The rule arbiter's gate CANNOT report: a use case that never claimed `exercised` and that no
+  // scenario walks. The gate only fails a row that made the claim, so this surface is the only
+  // place the silent case shows.
+  {
+    const d = deriveUseCases(ucDoc([uc("UC-01"), uc("UC-02", { exercisedBy: ["1. J"] })]));
+    if (d.unexercised.join() !== "UC-01") die("use-cases: an unwalked use case must be named");
+    if (d.exercised !== 1 || d.total !== 2) die("use-cases: exercised/total wrong");
+  }
+
+  {
+    const d = deriveUseCases(ucDoc([uc("UC-02", { actor: "Ops", featureIds: ["F-B", "F-A"] }), uc("UC-01")]));
+    if (d.rows.map((r) => r.id).join() !== "UC-01,UC-02") die("use-cases: rows must sort by id");
+    if (d.featuresReached.join() !== "F-A,F-B") die("use-cases: featuresReached must be the sorted union");
+    if (d.actors.join() !== "Ops,Traveler") die("use-cases: actors must be the sorted distinct set");
+  }
+
+  // Absent and empty are different claims (I6/I7): no projection means the lens does not publish;
+  // an empty projection means the programme declares none, which is a fact worth rendering.
+  if (deriveUseCases(null) !== null) die("use-cases: an absent projection derives null, not an empty set");
+  if (deriveUseCases({ schema: "x" }) !== null) die("use-cases: a projection with no array derives null");
+  {
+    const d = deriveUseCases(ucDoc([]));
+    if (d === null || d.total !== 0) die("use-cases: an EMPTY projection is a declaration, not an absence");
+  }
+
+  const rbDoc = (runbooks, coverage) => ({ schema: "arbiter-runbooks-v1", runbooks, coverage });
+
+  // The uncovered LIST, not its length: a number cannot say which failure has no procedure.
+  {
+    const d = deriveRunbooks(rbDoc([{ id: "RB-01", file: "a.md", handles: ["INV-74"] }], { operationalTotal: 49, uncovered: ["INV-17", "INV-16"] }));
+    if (d.uncovered.join() !== "INV-16,INV-17") die("runbooks: the uncovered list must survive, sorted");
+    if (d.coveredCount !== 47) die("runbooks: coveredCount must be total minus uncovered");
+  }
+
+  // A total arbiter did not declare must NOT become zero: "no procedures at all" and "the projection
+  // did not say" are different claims, and a percentage invented from the second is undetectable.
+  {
+    const d = deriveRunbooks(rbDoc([{ id: "RB-01", file: "a.md", handles: ["INV-1"] }], {}));
+    if (d.operationalTotal !== null || d.coveredCount !== null)
+      die("runbooks: an undeclared operational total must stay null, never 0");
+  }
+
+  // The other direction. arbiter's gate already fails a runbook handling nothing, so this should
+  // always be empty — derived anyway, because a surface that can only display agreement cannot
+  // show a disagreement.
+  {
+    const d = deriveRunbooks(rbDoc([{ id: "RB-02", file: "b.md", handles: [] }], { operationalTotal: 1, uncovered: [] }));
+    if (d.orphans.join() !== "RB-02") die("runbooks: a runbook handling nothing must be named");
+  }
+
+  if (deriveRunbooks(null) !== null) die("runbooks: an absent projection derives null");
+  {
+    const d = deriveRunbooks(rbDoc([], { operationalTotal: 5, uncovered: ["INV-1"] }));
+    if (d === null || d.total !== 0 || d.uncovered.length !== 1)
+      die("runbooks: no runbooks with uncovered invariants is the WORST case, not an absent one");
+  }
+
+  // Both surfaces must reach a viewer through deriveAll, or the lens has a home for nothing.
+  {
+    const out = deriveAll({
+      repo: HERE, model: null, topo: null,
+      issuesSnapshot: { issues: [], milestones: [], fetchedAt: "2026-01-01", collection: {}, dependencies: { supported: false, edges: [] } },
+      health: { verdicts: [], dependencyConfirmations: [] }, findings: { findings: [] },
+      brief: null, briefPath: null, manifest: { today: "2026-01-01" },
+      gateInputs: null, arbiterMilestones: null, docs: null,
+      arbiterUseCases: ucDoc([uc("UC-01")]),
+      arbiterRunbooks: rbDoc([{ id: "RB-01", file: "a.md", handles: ["INV-1"] }], { operationalTotal: 2, uncovered: ["INV-2"] }),
+    });
+    if (!out.useCases || out.useCases.total !== 1) die("use-cases: deriveAll must expose the surface");
+    if (!out.runbooks || out.runbooks.uncovered.length !== 1) die("runbooks: deriveAll must expose the surface");
+  }
+
+  // Publication is per programme on backing artifacts (I7): a programme with neither projection
+  // must not publish a route that renders three zeros.
+  {
+    const traceability = LENSES.find((l) => l.id === "traceability");
+    const operations = LENSES.find((l) => l.id === "operations");
+    if (traceability.publishes({ derived: { useCases: { total: 1 } } }) !== true)
+      die("lenses: traceability must publish on use cases alone");
+    if (operations.publishes({ derived: { runbooks: { total: 1 } }, issuesSnapshot: null }) !== true)
+      die("lenses: operations must publish on runbooks alone");
+    if (operations.publishes({ derived: {}, issuesSnapshot: null }) !== false)
+      die("lenses: operations must NOT publish with neither signals nor runbooks");
+  }
+
+  console.log(
+    "  ok ontology-lenses — use cases and runbook coverage derived from arbiter's projections, " +
+      "the measurement passed through and the unwalked named",
+  );
+}
 
 // §lenses — the declared lens partition, and I20: one home per derived surface (#2480 wave 7).
 //

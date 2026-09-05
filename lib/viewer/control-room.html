@@ -347,7 +347,7 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
      measured tokens belong to the compared selector would have been reading a coin flip. */
   color-scheme:light;background:var(--bg)}
  body{height:auto;overflow:visible;display:block;background:var(--bg);color:var(--ink);font-size:10pt}
- .bar,.toggle,.tip,.skip,.ghost,.mobile-nav,.list-filter{display:none!important}
+ .bar,.toggle,.tip,.skip,.ghost,.mobile-nav,.list-filter,.list-live{display:none!important}
  main{overflow:visible;height:auto;padding:0}
  .view{height:auto;display:block}
  .view[hidden]{display:block!important}
@@ -757,7 +757,12 @@ function markView(view,state){
  return view;
 }
 function filteredList(target,items,render){
- var filter=el("div","list-filter"),input=document.createElement("input"),results=el("div"),print=el("div","print-only"),i;
+ // `list-live` exists so print can hide it: it holds pagedList's output, whose own print note
+ // ("the printed briefing carries the count, not the archive") was printing directly above the
+ // twelve records this function expands onto paper — the page contradicting itself in two
+ // paragraphs. Latent since filteredList was written; forma's own briefing had no filtered list
+ // with rows until the use-case panel arrived (#2480 wave 8), so nothing had ever printed it.
+ var filter=el("div","list-filter"),input=document.createElement("input"),results=el("div","list-live"),print=el("div","print-only"),i;
  input.type="search";input.maxLength=120;input.placeholder=STR.filterPlaceholder;input.setAttribute("aria-label",STR.filterLabel);
  function draw(){
   var q=input.value.toLowerCase().trim(),shown=q?items.filter(function(item){return String(item.search||"").toLowerCase().indexOf(q)!==-1;}):items;
@@ -803,6 +808,88 @@ function capabilityPanel(programs){
   if(!cell.childNodes.length)cell.appendChild(el("span","muted",STR.none));pair(dl,STR.capabilityProof,cell);
   if(row.release)pair(dl,STR.capabilityRelease,row.release);
   pair(dl,STR.capabilitySource,docLink(program,row.source.path,row.source.line));d.appendChild(dl);return d;
+ });
+ return p;
+}
+/*lens:traceability*/
+// Use cases (#2480 wave 8). arbiter measures which tabletop scenarios walk each one and ships that
+// as `exercisedBy`; this panel renders the measurement and recomputes nothing — the join was proven
+// by a gate, and a second opinion here would be forma disagreeing with the thing it derives from.
+function useCasePanel(programs){
+ var declared=false,items=[],missing=[],features=0,actors=0,total=0,exercised=0,i,j;
+ for(i=0;i<programs.length;i++){
+  var u=programs[i].derived&&programs[i].derived.useCases;
+  if(!u){missing.push(programs[i].id);continue;}
+  declared=true;total+=u.total;exercised+=u.exercised;features+=u.featuresReached.length;actors+=u.actors.length;
+  for(j=0;j<u.rows.length;j++)items.push({program:programs[i],row:u.rows[j],search:[programs[i].id,u.rows[j].id,u.rows[j].actor,u.rows[j].goal,u.rows[j].featureIds.join(" ")].join(" ")});
+ }
+ // Unwalked first: a use case nothing exercises is the finding, and arbiter's gate is silent on it
+ // unless the row CLAIMED `exercised`, so this surface is the only place it shows.
+ items.sort(function(a,b){var l=String(a.row.id),r=String(b.row.id);return a.row.exercisedBy.length-b.row.exercisedBy.length||(l<r?-1:l>r?1:0);});
+ var p=panel(STR.useCases,declared?fmt(STR.useCasesProv,{n:total,exercised:exercised}):STR.notMeasured,"full");
+ if(!declared)return markState(p,"unknown",STR.useCasesUnknown);
+ if(!items.length)return markState(p,"empty",STR.useCasesEmpty);
+ markState(p,missing.length?"unknown":"present",missing.length?fmt(STR.missingPrograms,{programs:missing.join(", ")}):null);
+ p.body.appendChild(el("p","muted",fmt(STR.useCasesReach,{n:features,actors:actors})));
+ filteredList(p.body,items,function(item){
+  var program=item.program,row=item.row,d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),dl=el("dl","detail"),cell,k;
+  meta.appendChild(statusMark(row.exercisedBy.length?"ok":"warn"));
+  meta.appendChild(el("span","chip",row.actor));
+  if(programs.length>1)meta.appendChild(el("span","chip",program.id));
+  s.appendChild(el("span","ref",row.id));s.appendChild(meta);s.appendChild(el("span","row-title",row.goal));d.appendChild(s);
+  pair(dl,STR.useCasesActor,row.actor);
+  cell=el("span");
+  for(k=0;k<row.featureIds.length;k++)cell.appendChild(el("span","chip",row.featureIds[k]));
+  if(!cell.childNodes.length)cell.appendChild(el("span","muted",STR.none));
+  pair(dl,STR.useCasesFeatures,cell);
+  cell=el("span");
+  for(k=0;k<row.exercisedBy.length;k++)cell.appendChild(el("div","",row.exercisedBy[k]));
+  if(!cell.childNodes.length)cell.appendChild(el("span","muted",STR.useCasesUnwalked));
+  pair(dl,STR.useCasesWalkedBy,cell);
+  if(row.prdRef)pair(dl,STR.capabilitySource,row.prdRef);
+  d.appendChild(dl);return d;
+ });
+ return p;
+}
+/*lens:operations*/
+// Runbook coverage (#2480 wave 8). Both halves of the algebra, and the uncovered LIST rather than
+// its length — a number cannot tell an operator WHICH failure has no procedure behind it, which is
+// the whole reason arbiter ships the list.
+function runbookPanel(programs){
+ var declared=false,rows=[],uncovered=[],orphans=[],missing=[],total=null,covered=null,i,j;
+ for(i=0;i<programs.length;i++){
+  var r=programs[i].derived&&programs[i].derived.runbooks;
+  if(!r){missing.push(programs[i].id);continue;}
+  declared=true;
+  for(j=0;j<r.rows.length;j++)rows.push({program:programs[i],row:r.rows[j]});
+  uncovered=uncovered.concat(r.uncovered);orphans=orphans.concat(r.orphans);
+  if(r.operationalTotal!==null){total=(total||0)+r.operationalTotal;covered=(covered||0)+r.coveredCount;}
+ }
+ // Null total and zero total are different claims (I6): the first is "arbiter did not say", the
+ // second is "there are none". A percentage invented from the first is a lie a reader cannot spot.
+ var prov=!declared?STR.notMeasured
+   :total===null?fmt(STR.runbooksProvNoTotal,{n:rows.length})
+   :fmt(STR.runbooksProv,{n:rows.length,covered:covered,total:total});
+ var p=panel(STR.runbooks,prov,"full");
+ if(!declared)return markState(p,"unknown",STR.runbooksUnknown);
+ if(!rows.length)return markState(p,"empty",STR.runbooksEmpty);
+ markState(p,uncovered.length?"warn":"present",missing.length?fmt(STR.missingPrograms,{programs:missing.join(", ")}):null);
+ var hole=el("div","hole");
+ hole.appendChild(el("span","",STR.runbooksUncovered));
+ var cell=el("span"),k;
+ for(k=0;k<uncovered.length;k++)cell.appendChild(el("span","chip",uncovered[k]));
+ if(!uncovered.length)cell.appendChild(el("span","muted",STR.runbooksCovered));
+ hole.appendChild(cell);p.body.appendChild(hole);
+ filteredList(p.body,rows.map(function(x){return {program:x.program,row:x.row,search:[x.program.id,x.row.id,x.row.file,x.row.handles.join(" ")].join(" ")};}),function(item){
+  var program=item.program,row=item.row,d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),dl=el("dl","detail"),c=el("span"),k;
+  meta.appendChild(statusMark(row.handles.length?"ok":"warn"));
+  if(programs.length>1)meta.appendChild(el("span","chip",program.id));
+  s.appendChild(el("span","ref",row.id));s.appendChild(meta);s.appendChild(el("span","row-title",row.file));d.appendChild(s);
+  for(k=0;k<row.handles.length;k++)c.appendChild(el("span","chip",row.handles[k]));
+  if(!c.childNodes.length)c.appendChild(el("span","muted",STR.runbooksOrphan));
+  pair(dl,STR.runbooksHandles,c);
+  pair(dl,STR.capabilitySource,docLink(program,row.file,null));
+  d.appendChild(dl);return d;
  });
  return p;
 }
@@ -1230,23 +1317,32 @@ function signalsPanel(program){
 }
 
 // Can we run it, and survive it failing? Today that is what the repository itself reports about
-// its workflows and releases. Runbook-to-invariant coverage and tabletop hotwashes land here in
-// wave 8; until they exist this lens publishes only where signals are declared, and is absent
-// where they are not (I7) rather than showing a panel of "unknown".
+// its workflows and releases, plus runbook-to-invariant coverage since wave 8. The lens publishes
+// on EITHER, so a programme with runbooks and no CI signals still gets the lens, and one with
+// neither is absent rather than showing a panel of "unknown" (I7).
 function viewOperations(view,program){
- var signals=signalsPanel(program);
- // The view's chip is the panel's, not a constant: this lens published a green "Present" over a
- // panel that had just marked itself Unknown, on the same screen. And no data-single here — the
- // lens renders an answer AND evidence, and the single-tier template would drop the evidence into
- // an implicit row outside the scroll container.
- markView(view,signals.getAttribute("data-state"));
+ // signalsPanel asserts signals are present, so it may only be built where they are. The lens
+ // publishes on runbooks too now, which means this view can legitimately render without it.
+ var signals=(program.issuesSnapshot&&program.issuesSnapshot.signals)?signalsPanel(program):null;
+ var runbooks=(program.derived&&program.derived.runbooks)?runbookPanel([program]):null;
+ // The view's chip is the panels', not a constant: this lens once published a green "Present" over
+ // a panel that had just marked itself Unknown, on the same screen. With two panels the view takes
+ // the worse of the two, because a reader scanning the nav must not be told everything is fine by
+ // a chip that only consulted the healthier half.
+ var states=[];
+ if(signals)states.push(signals.getAttribute("data-state"));
+ if(runbooks)states.push(runbooks.getAttribute("data-state"));
+ var rank={unknown:0,warn:1,stale:1,empty:2,present:3};
+ states.sort(function(a,b){return (rank[a]===undefined?3:rank[a])-(rank[b]===undefined?3:rank[b]);});
+ markView(view,states[0]||"unknown");
  var answer=el("div","answer"),lead=el("section","panel answer-lead");
  lead.appendChild(el("p","thesis",STR.routeOperations));
  lead.appendChild(el("p","lede",STR.operationsLede));
  answer.appendChild(lead);
  view.appendChild(answer);
  var ev=el("div","evidence");
- ev.appendChild(signals);
+ if(signals)ev.appendChild(signals);
+ if(runbooks)ev.appendChild(runbooks);
  view.appendChild(ev);
 }
 
@@ -1548,7 +1644,11 @@ function viewTraceability(view,program){
   view.setAttribute("data-single","");
   var missing=el("div","evidence"),missingPanel=panel(STR.routeTraceability,STR.provRtm,"full");
   emptyState(missingPanel,STR.wbsMissing,STR.wbsNext);missing.appendChild(missingPanel);
-  missing.appendChild(capabilityPanel([program]));view.appendChild(missing);return;
+  missing.appendChild(capabilityPanel([program]));
+  // The lens publishes on use cases alone, so this no-RTM arm must render them too — otherwise a
+  // programme with a use-case projection and no RTM gets a route that exists and shows nothing.
+  if(program.derived&&program.derived.useCases)missing.appendChild(useCasePanel([program]));
+  view.appendChild(missing);return;
  }
  var answer=el("div","answer"),lead=el("section","panel answer-lead");
  // Past the early return rtm is guaranteed, so the `rtm ? … : missing` arms below it were three
@@ -1580,6 +1680,7 @@ function viewTraceability(view,program){
 
  var ev=el("div","evidence");
  ev.appendChild(capabilityPanel([program]));
+ if(program.derived&&program.derived.useCases)ev.appendChild(useCasePanel([program]));
  var mp=panel(STR.wbsMatrix,STR.provRtm,"span2");
  {
   var wrap=el("div","tablewrap"),tb=el("table","matrix"),th=el("thead"),htr=el("tr"),tbody=el("tbody");
