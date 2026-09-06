@@ -2059,7 +2059,7 @@ function navLink(href,text){var a=el("a","",text);a.href="#"+href;return a;}
 function buildNav(){
  var progs=document.getElementById("nav-programs"),views=document.getElementById("nav-views"),i,j;
  if(VIEWS["/"])progs.appendChild(navLink("/",STR.routePortfolio));
- for(i=0;i<ROOM.programs.length;i++)progs.appendChild(navLink(key(ROOM.programs[i].id,"exec"),ROOM.programs[i].id));
+ for(i=0;i<ROOM.programs.length;i++)progs.appendChild(navLink(homeOf(ROOM.programs[i]),ROOM.programs[i].id));
  progs.appendChild(navLink("/options",STR.routeOptions));
  // One set of view tabs, re-pointed at whichever programme is open. They are present from the
  // first screen rather than appearing only after the reader guesses that a lowercase repo id

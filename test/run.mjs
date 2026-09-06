@@ -5595,6 +5595,9 @@ const diffPaths = (a, b, at = "") => {
     const legacy = grab(/var LEGACY=\{[^\n]*\n/, 'the legacy hash table')
     const legacyTab = grab(/var LEGACY_TAB=\{[^\n]*\n/, 'the legacy tab table')
     const regFn = grab(/function registerAll\(\)\{[\s\S]*?\n\}/, 'registerAll()')
+    const navFn = grab(/function buildNav\(\)\{[\s\S]*?\n\}/, 'buildNav()')
+    if (!/navLink\(homeOf\(ROOM\.programs\[i\]\),ROOM\.programs\[i\]\.id\)/.test(navFn))
+      die('room: programme navigation must link to each programme\'s first published lens')
     if (!/if\(ROOM\.programs\.length!==1\)\{mount\("\/"\)/.test(regFn)) die('room: the portfolio view is mounted for a single programme, so print and routing meet an empty aggregate')
     const route = new Function('ROOM', 'VIEWS', 'LENS_SPEC', `${legacy}${legacyTab}
       function byId(id){var i;for(i=0;i<ROOM.programs.length;i++)if(ROOM.programs[i].id===id)return ROOM.programs[i];return null;}
