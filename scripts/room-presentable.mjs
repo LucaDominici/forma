@@ -65,6 +65,9 @@ const pageSize = Number((/var ISSUE_PAGE_SIZE=(\d+)/.exec(html) || [])[1])
 const boundedDom = pageSize > 0 && pageSize <= 50 && /function pagedList\(/.test(html) && /function ensureView\(/.test(html) && !/function buildAll\(/.test(html)
 const mobileNav = /id="mobile-program"/.test(html) && /id="mobile-view"/.test(html) && /@media\(max-width:600px\)/.test(html)
 const boundedPrint = /\.screen-list,\.workflow\{display:none!important\}/.test(html) && !/details:not\(\[open\]\)/.test(html)
+// A single programme opens on its own first published lens: the aggregate front door that read
+// "0 things need you out of 4 open" over one programme is not mounted at N=1 (map ticket #90).
+const singleHome = /function home\(\)\{return ROOM\.programs\.length===1\?homeOf\(ROOM\.programs\[0\]\):"\/";\}/.test(html) && /if\(ROOM\.programs\.length!==1\)\{mount\("\/"\)/.test(html)
 // The shell is viewport-locked, so an unbounded answer tier does not overflow — it STARVES the
 // evidence row to zero and lays six panels out below a page that cannot scroll. Measured at
 // 1440x900, 1280x800 and 1920x1080 before this cap existed. A layout property, checked here as a
@@ -184,6 +187,7 @@ const predicates = [
   ['no gh snapshot is stale', staleSnapshots.length === 0, staleSnapshots.length ? staleSnapshots.join('; ') : `today ${manifest.today}, limit ${staleAfterDays}d`],
   ['re-generating from the same manifest is byte-deterministic', deterministic, determinismNote],
   ['every open issue is covered (Kanban or queue), none orphaned', orphanOpen.length === 0, orphanOpen.length ? `orphaned: ${orphanOpen.join(', ')}` : `${openCount} open, 0 orphaned`],
+  ['a single programme opens on its own first lens, not on an aggregate over itself', singleHome, singleHome ? (programs.length === 1 ? 'one programme: front door is its first published lens' : `${programs.length} programmes: the briefing stays the front door`) : 'home()/registerAll() contract missing'],
   ['the artifact carries the declared lens table, not a copy of it', injectedIa, injected ? injected.map((lens) => lens.id).join(', ') : 'the __LENSES__ seam is missing or unparseable'],
   ['every derived surface has exactly one home lens (I20)', oneHome.length === 0, oneHome.length ? oneHome.slice(0, 4).join('; ') : `${DERIVED_KEYS.length} surfaces, ${declaredIds.length} homes, no surface twice`],
   ['every published lens has backing artifacts, and every absent one has none', badPublication.length === 0, badPublication.length ? badPublication.join('; ') : `${publishedCount} lens(es) published across ${programs.length} programme(s)`],

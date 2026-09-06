@@ -26,6 +26,14 @@
       ],
       "description": "Control Room color theme. Default light; dark remains opt-in."
     },
+    "skin": {
+      "type": "string",
+      "enum": [
+        "paper",
+        "blueprint"
+      ],
+      "description": "Optional graphic skin: one complete look (token block in the viewer, measured by scripts/palette.mjs). A skin fixes its own colour scheme; the theme toggle is hidden while one is active. Absent = the default dark/light pair."
+    },
     "staleAfterDays": {
       "type": "integer",
       "minimum": 1,

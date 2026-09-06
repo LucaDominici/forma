@@ -176,6 +176,10 @@ forma scan   --root .. --manifest forma.room.json
 forma room   --manifest forma.room.json --out control-room.html
 ```
 
+The look is a manifest choice: `"theme": "dark"|"light"` for the default pair, or `"skin": "paper"|"blueprint"`
+for one complete look (a token block the palette audit measures like every other; the map follows). A
+skin is added with one CSS block, one `SKINS` entry, one line in `scripts/palette.mjs` and one schema value.
+
 **Counts are not a briefing.** The judgement — where the programme stands in one sentence, the risks
 with first-hand evidence, what only a human can decide now, how each invariant is guarded — is
 written by an agent into the **brief** (`c4-brief.json`) as typed claims: each names its subject

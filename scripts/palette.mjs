@@ -314,6 +314,10 @@ const SOURCES = [
       // palette is declared and measured like the other two.
       // `rule` is the selector INSIDE the block that carries the tokens, and it must out-specify
       // every other palette rule in the file — see `specificity` above for what going without cost.
+      // Skins are complete looks chosen in the manifest. Each is a palette a reader sees, so each
+      // is measured; a skin block that is not listed here is one this audit has stopped seeing.
+      { theme: 'briefing/skin-paper', selector: 'html[data-skin="paper"]{' },
+      { theme: 'briefing/skin-blueprint', selector: 'html[data-skin="blueprint"]{' },
       { theme: 'briefing/print', selector: '@media print{', rule: 'html:root:root' },
     ],
   },

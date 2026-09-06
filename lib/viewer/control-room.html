@@ -17,13 +17,34 @@
  --ink:oklch(93.0% 0.006 60);--muted:oklch(61.5% 0.012 63);
  --ok:oklch(74.6% 0.145 152);--warn:oklch(86.8% 0.126 80);--bad:oklch(64.7% 0.185 25);
  --accent:oklch(61.4% 0.130 250);--series2:oklch(52.5% 0.014 67);
- --ramp1:oklch(52.5% 0.070 250);--ramp2:oklch(56.0% 0.090 250);--ramp3:oklch(59.5% 0.110 250);--ramp4:oklch(63.0% 0.132 250)}
+ --ramp1:oklch(52.5% 0.070 250);--ramp2:oklch(56.0% 0.090 250);--ramp3:oklch(59.5% 0.110 250);--ramp4:oklch(63.0% 0.132 250);
+ --font:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--mono:"SF Mono",Menlo,Consolas,monospace}
 html[data-theme="light"]{color-scheme:light;
  --bg:oklch(97.4% 0.006 75);--surface:oklch(99.5% 0.005 78);--line:oklch(88.0% 0.010 82);
  --ink:oklch(22.0% 0.009 75);--muted:oklch(54.0% 0.013 72);
  --ok:oklch(52.9% 0.141 151);--warn:oklch(44.4% 0.094 73);--bad:oklch(35.5% 0.144 25);
  --accent:oklch(54.2% 0.169 255);--series2:oklch(63.3% 0.013 80);
  --ramp1:oklch(63.3% 0.079 255);--ramp2:oklch(59.2% 0.110 255);--ramp3:oklch(55.1% 0.145 255);--ramp4:oklch(51.0% 0.172 255)}
+/* SKINS. A skin is one complete look: a token block selected by html[data-skin], chosen in the
+   manifest (`skin`), measured by scripts/palette.mjs like every other palette here, and nothing
+   else — no second template, no second string table. A skin fixes its own colour scheme, so the
+   theme toggle is hidden while one is active; the map follows through mapSkin(). To add a skin:
+   one block below, one entry in SKINS, one line in palette.mjs SOURCES, one value in the schema. */
+html[data-skin="paper"]{color-scheme:light;
+ --bg:oklch(96.0% 0.012 85);--surface:oklch(99.0% 0.008 90);--line:oklch(86.0% 0.014 85);
+ --ink:oklch(24.0% 0.012 60);--muted:oklch(52.0% 0.016 65);
+ --ok:oklch(50.5% 0.141 151);--warn:oklch(44.4% 0.094 73);--bad:oklch(35.5% 0.144 25);
+ --accent:oklch(50.0% 0.150 40);--series2:oklch(63.3% 0.013 80);
+ --ramp1:oklch(63.3% 0.079 40);--ramp2:oklch(59.2% 0.110 40);--ramp3:oklch(55.1% 0.145 40);--ramp4:oklch(51.0% 0.172 40);
+ --font:Georgia,"Iowan Old Style","Palatino Linotype",serif}
+html[data-skin="blueprint"]{color-scheme:dark;
+ --bg:oklch(19.0% 0.030 255);--surface:oklch(23.5% 0.030 255);--line:oklch(33.0% 0.030 255);
+ --ink:oklch(94.0% 0.008 240);--muted:oklch(66.0% 0.020 240);
+ --ok:oklch(76.0% 0.145 152);--warn:oklch(86.8% 0.126 80);--bad:oklch(68.0% 0.185 25);
+ --accent:oklch(70.0% 0.120 220);--series2:oklch(55.0% 0.020 255);
+ --ramp1:oklch(55.0% 0.080 220);--ramp2:oklch(60.0% 0.100 220);--ramp3:oklch(65.0% 0.120 220);--ramp4:oklch(70.0% 0.140 220);
+ --font:"IBM Plex Sans","Segoe UI",sans-serif;--mono:"IBM Plex Mono","SF Mono",Menlo,Consolas,monospace}
+html[data-skin] #theme-toggle{display:none}
 
 /* THE SHELL. This is a viewport-sized application, not a document: the page never scrolls, panels
    scroll inside themselves, and every view fits the screen it was opened on. The number that
@@ -35,7 +56,7 @@ html[data-theme="light"]{color-scheme:light;
 :root{--pad:16px;--gap:16px;--bar:52px}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);
- font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.5;
+ font-family:var(--font);font-size:14px;line-height:1.5;
  display:grid;grid-template-rows:auto minmax(0,1fr);height:100dvh;overflow:hidden}
 button,a,summary,select{font:inherit;color:inherit}
 a{color:inherit;text-decoration-color:var(--muted);text-underline-offset:2px}
@@ -52,7 +73,7 @@ a:hover{color:var(--accent)}
  border-bottom:1px solid var(--line);overflow-x:auto;white-space:nowrap;scrollbar-width:thin}
 .brand{display:flex;align-items:baseline;gap:9px;min-width:0;flex:0 1 auto}
 .brand h1{margin:0;font-size:14px;font-weight:650;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis}
-.brand span{color:var(--muted);font-size:11px;font-family:"SF Mono",Menlo,Consolas,monospace}
+.brand span{color:var(--muted);font-size:11px;font-family:var(--mono)}
 .tabs{display:flex;gap:2px;align-items:center;flex:0 0 auto}
 .tabs a{display:flex;align-items:center;min-height:36px;padding:5px 10px;color:var(--muted);font-size:12.5px;text-decoration:none;border-radius:5px}
 .tabs a:hover{color:var(--ink);background:var(--surface)}
@@ -65,6 +86,10 @@ a:hover{color:var(--accent)}
 .mobile-nav select{min-width:0;width:100%;height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 28px 0 10px}
 
 main{min-height:0;padding:var(--pad);overflow:hidden}
+/* Two tiers, and neither may starve the other. Measured on the viafera room at 1400x900 (the
+   density pass of 2026-08-19): `.answer` grew to 2089px inside the 900px shell and `.evidence`
+   — the KPIs and all four charts — was painted into a 0px container. The answer is bounded and
+   scrolls; the evidence keeps at least its share. */
 .view{display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:var(--gap);height:100%;min-height:0}
 .view[data-single]{grid-template-rows:auto minmax(0,1fr)}
 
@@ -77,9 +102,11 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
 .panel h2{margin:0;font-size:13px;font-weight:650;letter-spacing:.01em}
 /* THE SIGNATURE. No panel without its provenance: one line saying what was counted and what
    re-checks it. Every other dashboard asks to be believed; this one says how to check it. */
-.prov{margin:1px 0 6px;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace;
+.prov{margin:1px 0 6px;color:var(--muted);font-size:10.5px;font-family:var(--mono);
  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 0 auto}
-.panel-body{min-height:0;overflow:auto;flex:1 1 auto;scrollbar-width:thin}
+/* The tier scrolls, not every panel: six inner scrollers at 0.05 of their content is a wall of
+   scrollbars; one scroller per tier leaves the first rows of every panel on the screen. */
+.panel-body{min-height:0;overflow:visible;flex:1 1 auto;scrollbar-width:thin}
 .panel-body>p{max-width:72ch}
 .answer-lead{grid-column:1/-1;padding:14px 0 12px}
 .answer-lead .lede{max-width:70ch}
@@ -153,7 +180,7 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
 .thesis{margin:0;font-size:clamp(19px,1.55vw,30px);line-height:1.15;letter-spacing:-.02em;font-weight:650;max-width:26ch}
 .lede{margin:6px 0 0;color:var(--muted);font-size:12px;max-width:52ch}
 .muted{color:var(--muted)}
-.data{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:11.5px}
+.data{font-family:var(--mono);font-size:11.5px}
 
 /* KPI strip: one row of numbers, hairline-separated, no boxes. */
 .kpis{display:flex;gap:0;flex-wrap:wrap}
@@ -167,25 +194,25 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
 .rows>details{border-bottom:1px solid var(--line)}
 summary{list-style:none;cursor:pointer;padding:7px 22px 7px 0;position:relative}
 summary::-webkit-details-marker{display:none}
-summary:after{content:"+";position:absolute;right:4px;top:6px;color:var(--muted);font-family:"SF Mono",Menlo,Consolas,monospace}
+summary:after{content:"+";position:absolute;right:4px;top:6px;color:var(--muted);font-family:var(--mono)}
 details[open]>summary:after{content:"\2212"}
 .row-head{display:grid;grid-template-columns:auto auto 1fr;align-items:baseline;gap:9px}
 .row-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.ref{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:11px;color:var(--muted);white-space:nowrap}
+.ref{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
 .row-title{font-weight:600;overflow:hidden;text-overflow:ellipsis}
 .detail{padding:0 22px 10px 0;display:grid;grid-template-columns:minmax(96px,132px) 1fr;gap:4px 14px;font-size:12.5px}
 .detail dt{color:var(--muted);font-size:11px}
 .detail dd{margin:0;min-width:0}
 .chips{display:flex;gap:5px;flex-wrap:wrap}
-.chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace}
+.chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:var(--mono)}
 .status{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;white-space:nowrap}
-.glyph{width:12px;text-align:center;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13px}
+.glyph{width:12px;text-align:center;font-family:var(--mono);font-size:13px}
 .status-ok{color:var(--ok)}.status-warn{color:var(--warn)}.status-bad{color:var(--bad)}.status-none{color:var(--muted)}
-.state-chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace}
+.state-chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:var(--mono)}
 .state-chip.on{color:var(--ok);border-color:var(--ok)}
 /* The brief: a claim's verdict chip is the reader's only source of trust in the sentence — it always
    says a word (held / not verified / stale / contradicted / unsupported), and only `holds` is green. */
-.verdict-chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace;white-space:nowrap}
+.verdict-chip{display:inline-block;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:10.5px;font-family:var(--mono);white-space:nowrap}
 .verdict-holds{color:var(--ok);border-color:var(--ok)}.verdict-contradicted{color:var(--bad);border-color:var(--bad)}
 .thesis.held,.thesis.unheld{max-width:72ch;font-size:clamp(17px,1.3vw,24px)}
 .thesis.unheld{color:var(--muted)}
@@ -204,7 +231,7 @@ details[open]>summary:after{content:"\2212"}
 .list-filter{display:flex;gap:8px;margin:2px 0 8px}
 .list-filter input{width:100%;min-height:44px;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);font:inherit;font-size:16px}
 .view-state{margin:0 0 6px;display:flex;justify-content:flex-end}
-.cap-ledger .panel-body{max-height:260px}
+.cap-ledger .panel-body{max-height:260px;overflow:auto}
 .links{display:flex;gap:6px;flex-wrap:wrap}
 .kanban-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin}
 .kanban-issue{padding:6px 0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;min-width:0}
@@ -214,6 +241,7 @@ details[open]>summary:after{content:"\2212"}
 .queue-item .issue-pill{display:flex;font-weight:600;margin-bottom:4px}
 .queue-command{display:flex;align-items:center;gap:6px;min-width:0}
 .queue-command code{min-width:0;overflow:auto;white-space:nowrap;flex:1 1 auto}
+.ship-why{margin:2px 0 6px;max-width:80ch;font-size:13px}
 @media(max-width:1199px){.queue-board{grid-template-columns:minmax(0,1fr)}}
 .workflow{border-top:1px solid var(--line)}
 .workflow>summary{min-height:44px;display:flex;align-items:center;font-weight:650}
@@ -240,8 +268,8 @@ details[open]>summary:after{content:"\2212"}
 .meter-track{fill:var(--accent);opacity:.18}.area-fill{fill:var(--accent);opacity:.16}
 .area-line{fill:none;stroke:var(--accent);stroke-width:2}
 .line-series2{fill:none;stroke:var(--series2);stroke-width:2;stroke-dasharray:4 3}
-.svg-label{fill:var(--muted);font:10.5px "SF Mono",Menlo,Consolas,monospace}
-.svg-value{fill:var(--ink);font:10.5px "SF Mono",Menlo,Consolas,monospace}
+.svg-label{fill:var(--muted);font:10.5px var(--mono)}
+.svg-value{fill:var(--ink);font:10.5px var(--mono)}
 .hit{cursor:help;outline:none}
 .hit:focus{stroke:var(--accent);stroke-width:2}
 .legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:10.5px;flex:0 0 auto;padding-bottom:4px}
@@ -255,7 +283,7 @@ table{width:100%;border-collapse:collapse;font-size:11.5px}
 th,td{text-align:left;padding:4px 8px 4px 0;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)}
 .nums{font-variant-numeric:tabular-nums}
-.matrix .id{font-family:"SF Mono",Menlo,Consolas,monospace;white-space:nowrap}
+.matrix .id{font-family:var(--mono);white-space:nowrap}
 .hole{padding:5px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(120px,170px) 1fr;gap:12px;font-size:12px}
 .hole>span:first-child{color:var(--bad);font-size:11px}
 
@@ -277,15 +305,15 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
 .md-li::marker{color:var(--muted)}
 .md-q{margin:0 0 10px;padding-left:12px;border-left:2px solid var(--line);color:var(--muted);max-width:70ch}
 .md-q>p:last-child{margin-bottom:0}
-.md-pre{margin:0 0 10px;padding:8px 10px;background:var(--surface);overflow:auto;font:11.5px/1.5 "SF Mono",Menlo,Consolas,monospace}
-.md-code{font:11.5px "SF Mono",Menlo,Consolas,monospace;color:var(--muted)}
+.md-pre{margin:0 0 10px;padding:8px 10px;background:var(--surface);overflow:auto;font:11.5px/1.5 var(--mono)}
+.md-code{font:11.5px var(--mono);color:var(--muted)}
 .md-table{margin:0 0 12px;font-size:11.5px}
 .md-hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 .print-all{display:none}
 .doclist button{display:block;width:100%;text-align:left;appearance:none;background:none;border:0;border-bottom:1px solid var(--line);padding:6px 4px;cursor:pointer;font-size:12.5px}
 .doclist button:hover{color:var(--accent)}
 .doclist button[aria-current]{color:var(--ink);box-shadow:inset 2px 0 0 var(--accent);padding-left:9px}
-.doclist small{display:block;color:var(--muted);font-size:10.5px;font-family:"SF Mono",Menlo,Consolas,monospace}
+.doclist small{display:block;color:var(--muted);font-size:10.5px;font-family:var(--mono)}
 .opt{padding:7px 0;border-bottom:1px solid var(--line)}
 .flags{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
 .flag{display:inline-block;padding:1px 7px;border:1px solid var(--line);border-radius:999px;font-size:10.5px;color:var(--muted)}
@@ -373,7 +401,7 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  .reader>.md{display:none}
  .doc-reader-head{display:none!important}
  .print-id{display:block!important;margin:0 0 8pt;padding-bottom:4pt;border-bottom:1pt solid var(--line);
-  font:9pt "SF Mono",Menlo,Consolas,monospace;color:var(--muted)}
+  font:9pt var(--mono);color:var(--muted)}
 }
 .print-id{display:none}
 </style>
@@ -704,6 +732,12 @@ function blockedRow(b){
  var mark=program?verdictMarkOf(program,b.n):null,anchors=(mark&&mark.evidence)||[];
  s.appendChild(program?pill(program,b.n,b.program+" #"+b.n):statusMark(mark&&mark.mark));s.appendChild(meta);s.appendChild(el("span","row-title",b.title));
  d.appendChild(s);
+ // Blocked says by WHAT: the declared label, or the open blocker on a dependency edge — with the
+ // edge's own source beside it. Never inferred, and never fused into one number (I7).
+ if(b.blockedBy){var src=el("span","chips"),k;
+  for(k=0;k<b.blockedBy.labels.length;k++)src.appendChild(el("span","chip",fmt(STR.blockedByLabel,{label:b.blockedBy.labels[k]})));
+  for(k=0;k<b.blockedBy.blockers.length;k++){var bk=b.blockedBy.blockers[k],bp=bk.repo===(program&&program.ghRepo)?byId(b.program):null;src.appendChild(bp?pill(bp,bk.number,bk.repo+" #"+bk.number):el("span","chip",bk.repo+" #"+bk.number));src.appendChild(el("span","chip",bk.source==="native"?STR.edgeNative:STR.edgeProse));}
+  pair(dl,STR.blockedByHeading,src);}
  pair(dl,STR.verdictLabel,statusMark(mark&&mark.mark));
  pair(dl,STR.why,(mark&&mark.why)||STR.notAudited);
  // Evidence from the SAME source as the mark and the reason. Reading it off the portfolio's copy
@@ -726,7 +760,7 @@ function pagedList(target,items,render){
  prev.type="button";next.type="button";
  function draw(){
   var start=page*ISSUE_PAGE_SIZE,end=Math.min(items.length,start+ISSUE_PAGE_SIZE),i;
-  wrap.textContent="";for(i=start;i<end;i++)wrap.appendChild(render(items[i]));
+  wrap.textContent="";for(i=start;i<end;i++)wrap.appendChild(render(items[i],i));
   state.textContent=fmt(STR.pageStatus,{from:items.length?start+1:0,to:end,total:items.length});
   prev.disabled=page===0;next.disabled=page>=total-1;focusScrollers(target);
  }
@@ -1232,16 +1266,25 @@ function viewVerdict(view,program,summary){
  }
  var strip=briefStatusStrip(program);if(strip)lead.appendChild(strip);
  answer.appendChild(lead);
+ // The numbers and the milestone bars sit under the sentence, above the fold — the reference puts
+ // four tiles and seven bars on its first screen, and a reader who opens this cold looks for them
+ // before reading a risk. The remaining charts stay in the evidence tier below.
+ var kp=panel(STR.kpiHeading,STR.provDerived),list=el("dl","kpis");
+ kpi(list,STR.kpiOpen,k.openCount);kpi(list,STR.kpiBlocked,blockedClaim.known?blockedClaim.value:null,blockedClaim.known?null:STR.ruleUnknown);kpi(list,STR.kpiNoMilestone,k.noMilestoneCount);
+ kpi(list,STR.kpiLinked,k.linkCoveragePct==null?null:k.linkCoveragePct+"%",k.linkCoveragePct==null?STR.notMeasured:STR.kpiLinkedNote);
+ // Requirement coverage used to sit here too, and again as the traceability headline. One number,
+ // two homes, two chances to disagree — it is the traceability lens's answer, not this lens's (I20).
+ kp.body.appendChild(list);
+ // Different denominators are not contradictions — they are declared. The reference control room
+ // paid for this once (a note it called "come leggere i conteggi"); the lesson is kept here as one
+ // line under the numbers, built from what each KPI actually counts.
+ kp.body.appendChild(el("p","muted kpi-read",fmt(STR.kpiHowToRead,{total:program.issuesSnapshot.issues.length,today:ROOM.meta.today,rule:blockedClaim.known?STR.kpiHowToReadRuleDeclared:STR.ruleUnknown})));
+ answer.appendChild(kp);
+ answer.appendChild(chartMilestones(summary,program));
  var bp=briefPanels(program),bi;for(bi=0;bi<bp.length;bi++)answer.appendChild(bp[bi]);
  view.appendChild(answer);
 
  var ev=el("div","evidence");
- var kp=panel(STR.kpiHeading,STR.provDerived,"span2"),list=el("dl","kpis");
- // Requirement coverage used to sit here too, and again as the traceability headline. One number,
- // two homes, two chances to disagree — it is the traceability lens's answer, not this lens's (I20).
- kpi(list,STR.kpiOpen,k.openCount);kpi(list,STR.kpiBlocked,blockedClaim.known?blockedClaim.value:null,blockedClaim.known?null:STR.ruleUnknown);kpi(list,STR.kpiNoMilestone,k.noMilestoneCount);
- kpi(list,STR.kpiLinked,k.linkCoveragePct==null?null:k.linkCoveragePct+"%",k.linkCoveragePct==null?STR.notMeasured:STR.kpiLinkedNote);
- kp.body.appendChild(list);ev.appendChild(kp);
  ev.appendChild(findingsPanel(program));
  ev.appendChild(honestyPanel(program,summary));
  // A chart of nothing is not an empty state, it is a chart that has to be read before it can be
@@ -1383,7 +1426,7 @@ function viewPlan(view,program,summary){
  view.appendChild(answer);
 
  var ev=el("div","evidence");
- ev.appendChild(rowsPanel(panel(STR.techBlocked,blockedClaim.known?fmt(plural(mine.length,STR.provBlockedOne,STR.provBlocked),{n:mine.length}):STR.provBlockedUnknown,"span2"),mine,blockedRow,blockedClaim.known?STR.noBlockedHere:STR.ruleUnknown));
+ ev.appendChild(rowsPanel(panel(STR.techBlocked,blockedClaim.known?fmt(STR.provBlockedSources,{n:mine.length,labels:summary.blockedByLabel,deps:summary.blockedByDependency}):STR.provBlockedUnknown,"span2"),mine,blockedRow,blockedClaim.known?STR.noBlockedHere:STR.ruleUnknown));
  // One absence policy across the four schedule panels: a panel with nothing behind it is ABSENT,
  // not reserved (I7). Two of these used to vanish and two used to render "Unknown"/"Empty" chips
  // side by side, which is the F1 defect surviving inside a lens that legitimately published.
@@ -1510,29 +1553,37 @@ function commandLine(command){
 }
 function renderQueue(target,program){
  var blocks=program.derived.blocks||[],board=el("div","queue-board"),i,items=[];
- for(i=0;i<blocks.length;i++){var block=blocks[i];items.push({block:block,search:[block.t,block.ms,JSON.stringify(block.note),JSON.stringify(block.why)].concat(block.iss.map(function(issue){return "#"+issue[0]+" "+issue[1];})).join(" ")});}
+ for(i=0;i<blocks.length;i++){var block=blocks[i],notes=block.notes||[];items.push({block:block,search:[block.t,block.ms,JSON.stringify(block.note),JSON.stringify(block.why)].concat(block.iss.map(function(issue){return "#"+issue[0]+" "+issue[1];}),notes.map(function(c){return c.text;})).join(" ")});}
  if(items.length){
   var lane=panel(STR.routeQueue,fmt(STR.blockCount,{n:items.length}));markState(lane,"present");
-  filteredList(lane.body,items,function(entry){
-   var block=entry.block,item=el("div","queue-item"),head=el("div","row-meta"),links=el("div","links"),j;
-   head.appendChild(el("span","chip",block.t));if(block.ms)head.appendChild(el("span","chip",block.ms));head.appendChild(el("span","ref",fmt(STR.blockIssues,{n:block.iss.length})));item.appendChild(head);
-   for(j=0;j<block.iss.length;j++){links.appendChild(pill(program,block.iss[j][0],"#"+block.iss[j][0]+" "+short(block.iss[j][1],64)));links.appendChild(document.createTextNode(" "));}item.appendChild(links);
-   if(block.note&&block.note.labelled.length)item.appendChild(el("div","muted",fmt(STR.blockDeclaredLabels,{issues:block.note.labelled.map(function(n){return "#"+n;}).join(", ")})));
-   if(block.note&&block.note.external.length)item.appendChild(el("div","muted",fmt(STR.blockExternal,{issues:block.note.external.map(function(n){return "#"+n;}).join(", ")})));
-   for(j=0;j<Math.min(block.why.length,EDGE_LIST_MAX);j++)item.appendChild(el("div","muted",fmt(STR.blockDependency,{from:block.why[j].from.repo+"#"+block.why[j].from.number,to:block.why[j].to.repo+"#"+block.why[j].to.number})));
-   if(block.why.length>EDGE_LIST_MAX)item.appendChild(el("div","muted",fmt(STR.moreEdges,{n:block.why.length-EDGE_LIST_MAX})));
-   item.appendChild(block.auto&&block.cmd?commandLine(block.cmd):el("span","state-chip",STR.human));return item;
-  });
+  filteredList(lane.body,items,function(entry){return queueItem(program,entry.block);});
   board.appendChild(lane);
  }else{var emptyLane=panel(STR.routeQueue,STR.queueComplete);markState(emptyLane,"empty",STR.noMoving);board.appendChild(emptyLane);}
  target.appendChild(board);
+}
+// "Why this batch": the brief's own `note` claims about this block's milestone or issues, attached
+// in roomderive (deriveBlocks) so the narrative reaches the queue without giving derived.brief a
+// second home. Every claim keeps its anchor, staleness and refusal path.
+function queueItem(program,block){
+ var item=el("div","queue-item"),head=el("div","row-meta"),links=el("div","links"),notes=block.notes||[],j;
+ head.appendChild(el("span","chip",block.t));if(block.ms)head.appendChild(el("span","chip",block.ms));head.appendChild(el("span","ref",fmt(STR.blockIssues,{n:block.iss.length})));item.appendChild(head);
+ for(j=0;j<block.iss.length;j++){links.appendChild(pill(program,block.iss[j][0],"#"+block.iss[j][0]+" "+short(block.iss[j][1],64)));links.appendChild(document.createTextNode(" "));}item.appendChild(links);
+ if(block.note&&block.note.labelled.length)item.appendChild(el("div","muted",fmt(STR.blockDeclaredLabels,{issues:block.note.labelled.map(function(n){return "#"+n;}).join(", ")})));
+ if(block.note&&block.note.external.length)item.appendChild(el("div","muted",fmt(STR.blockExternal,{issues:block.note.external.map(function(n){return "#"+n;}).join(", ")})));
+ for(j=0;j<Math.min(block.why.length,EDGE_LIST_MAX);j++)item.appendChild(el("div","muted",fmt(STR.blockDependency,{from:block.why[j].from.repo+"#"+block.why[j].from.number,to:block.why[j].to.repo+"#"+block.why[j].to.number})));
+ if(block.why.length>EDGE_LIST_MAX)item.appendChild(el("div","muted",fmt(STR.moreEdges,{n:block.why.length-EDGE_LIST_MAX})));
+ if(notes.length){item.appendChild(el("div","prov",STR.blockWhy));for(j=0;j<notes.length;j++)item.appendChild(briefClaimRow(program,notes[j]));}
+ item.appendChild(block.auto&&block.cmd?commandLine(block.cmd):el("span","state-chip",STR.human));return item;
 }
 /* The architecture skin that matches the briefing's theme. `blueprint` IS the briefing's light
    palette mapped onto the explorer's token names (DESIGN.md §D6); `blueprint-dark` is the same
    mapping onto the dark one. Before this, the map was light in both and the theme control silently
    did not apply to one of five programme views. */
 /*lens:architecture*/
-function mapSkin(){return document.documentElement.getAttribute("data-theme")==="light"?"blueprint":"blueprint-dark";}
+// Each skin declares the scheme it fixes; the default look is the dark/light pair above.
+var SKINS={paper:"light",blueprint:"dark"};
+function skinScheme(){var k=ROOM&&ROOM.meta&&ROOM.meta.skin;return SKINS.hasOwnProperty(k)?SKINS[k]:null;}
+function mapSkin(){return (skinScheme()||document.documentElement.getAttribute("data-theme"))==="light"?"blueprint":"blueprint-dark";}
 function pushSkin(skin){
  var f=document.querySelectorAll("iframe.frame"),i,s=skin||mapSkin();
  for(i=0;i<f.length;i++){try{f[i].contentWindow.postMessage({forma:"skin",skin:s},"*");}catch(e){}}
@@ -1612,13 +1663,19 @@ function sweepsPanel(program){
 }
 
 /*lens:plan*/
-function milestoneRow(program,issues,m){
- var d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),body=el("div"),numbers=[],i;
+function milestoneRow(program,issues,m,openByDefault){
+ var d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),body=el("div"),numbers=[],titles={},i;
  meta.appendChild(el("span","chip",fmt(STR.milestoneSummary,{open:m.open,closed:m.closed})));
  if(m.due)meta.appendChild(el("span","muted",m.due));
  s.appendChild(el("span","ref",m.closureRate==null?"—":m.closureRate+"%"));s.appendChild(meta);s.appendChild(el("span","row-title",m.title));d.appendChild(s);d.appendChild(body);
- for(i=0;i<issues.length;i++)if(issues[i].ms===m.title)numbers.push(issues[i].n);
- d.addEventListener("toggle",function(){if(d.open&&!d.getAttribute("data-filled")){d.setAttribute("data-filled","true");if(numbers.length)pagedList(body,numbers,function(n){var row=el("div","links");row.appendChild(pill(program,n));return row;});else body.appendChild(el("p","muted",STR.milestoneNoIssues));}});return d;
+ for(i=0;i<issues.length;i++)if(issues[i].ms===m.title){numbers.push(issues[i].n);titles[issues[i].n]=issues[i].title;}
+ // A pill in a milestone carries the issue's title — "#116" alone is a lookup, "#116 UMBRELLA S2 …"
+ // is a row. The fill stays lazy (it runs in the toggle handler), so a row opened by default is
+ // opened by assignment AFTER the listener is attached: `<details open>` in markup fires no toggle
+ // and would open empty.
+ d.addEventListener("toggle",function(){if(d.open&&!d.getAttribute("data-filled")){d.setAttribute("data-filled","true");if(numbers.length)pagedList(body,numbers,function(n){var row=el("div","links");row.appendChild(pill(program,n,"#"+n+" "+short(titles[n]||"",58)));return row;});else body.appendChild(el("p","muted",STR.milestoneNoIssues));}});
+ if(openByDefault)d.open=true;
+ return d;
 }
 function milestonePanel(program){
  var items=program.derived.milestones||[],collection=program.issuesSnapshot.collection||{},complete=collection.milestonesComplete!==false;
@@ -1632,7 +1689,9 @@ function milestonePanel(program){
  // CANNOT KNOW rather than a measured zero, and it is disclosed as unknown (I6). The measured-empty
  // arm returned above; what is left is present, or unknown.
  markState(p,complete?"present":"unknown",complete?null:STR.milestoneIncomplete);
- if(items.length)pagedList(p.body,items,function(m){return milestoneRow(program,issues,m);});
+ // The two busiest milestones open on arrival (the reference pre-expands two); the rest disclose.
+ var opened=0;
+ if(items.length)pagedList(p.body,items,function(m){var o=opened<2&&m.open>0;if(o)opened++;return milestoneRow(program,issues,m,o);});
  return p;
 }
 
@@ -1656,6 +1715,7 @@ function viewTraceability(view,program){
  lead.appendChild(el("p","thesis",fmt(STR.wbsHeadline,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements})));
  lead.appendChild(el("p","lede",fmt(STR.wbsSplit,{withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly})));
  answer.appendChild(lead);
+ answer.appendChild(milestonePanel(program));
 
  var holes=[],hp=panel(STR.wbsHoles,STR.provRtm,"span2");
  {
@@ -1941,9 +2001,15 @@ function stampPrintIds(){
    (ROOM.meta.title||STR.appTitle)+"  ·  "+(p?p+"  ·  ":"")+name+"  ·  "+ROOM.meta.today;
  }
 }
+// One programme has no portfolio to roll up. Measured on forma's own briefing, 2026-08-19: with a
+// single programme the aggregate front door read "0 things need you out of 4 open across one
+// programme" while the brief — thesis, risks, decisions — sat one click away. The reader's first
+// screen is that programme's Executive; the aggregate view is not mounted at all, so print and
+// routing never meet it. With two or more programmes the briefing stays the front door (ADR-0007).
+function home(){return ROOM.programs.length===1?homeOf(ROOM.programs[0]):"/";}
 function registerAll(){
  var i,j;
- mount("/");VIEW_SPEC["/"]={kind:"portfolio"};
+ if(ROOM.programs.length!==1){mount("/");VIEW_SPEC["/"]={kind:"portfolio"};}
  for(i=0;i<ROOM.programs.length;i++){
   var program=ROOM.programs[i],lenses=lensesOf(program);
   for(j=0;j<lenses.length;j++){var k=key(program.id,lenses[j]);mount(k);VIEW_SPEC[k]={kind:"program",program:program,tab:lenses[j]};}
@@ -1963,7 +2029,7 @@ var LEGACY={verdict:"/",now:"/",moving:"/",mismatch:"/",programs:"/",map:null};
 var LEGACY_TAB={exec:"verdict",tech:"plan",map:"architecture",wbs:"traceability",docs:"provenance",auto:"plan",kanban:"plan"};
 function normalize(h){
  var raw=String(h||"").replace(/^#/,"");
- if(!raw)return "/";
+ if(!raw)return home();
  if(raw.charAt(0)==="/"){
   var m=/^\/([^/]+)\/([^/]+)$/.exec(raw),program=m&&byId(m[1]);
   if(program){
@@ -1976,13 +2042,15 @@ function normalize(h){
   }
   var bare=/^\/([^/]+)$/.exec(raw),bareProgram=bare&&byId(bare[1]);
   if(bareProgram)return homeOf(bareProgram);
-  return VIEWS[raw]?raw:"/";
+  // home(), never a literal "/": with one programme the aggregate front door is not mounted, so a
+  // route that does not resolve must land on that programme's first published lens.
+  return VIEWS[raw]?raw:home();
  }
  if(LEGACY.hasOwnProperty(raw)){
-  if(LEGACY[raw])return LEGACY[raw];
-  var f=ROOM.programs[0];return f?(raw==="map"&&VIEWS[key(f.id,"architecture")]?key(f.id,"architecture"):homeOf(f)):"/";
+  if(LEGACY[raw])return home();
+  var f=ROOM.programs[0];return f?(raw==="map"&&VIEWS[key(f.id,"architecture")]?key(f.id,"architecture"):homeOf(f)):home();
  }
- return "/";
+ return home();
 }
 function progOf(k){var m=/^\/([^/]+)\/([^/]+)$/.exec(k);return m?m[1]:null;}
 function navLink(href,text){var a=el("a","",text);a.href="#"+href;return a;}
@@ -1990,7 +2058,7 @@ function navLink(href,text){var a=el("a","",text);a.href="#"+href;return a;}
 // and left focus on <body>, so each navigation forced a Tab-from-the-top.
 function buildNav(){
  var progs=document.getElementById("nav-programs"),views=document.getElementById("nav-views"),i,j;
- progs.appendChild(navLink("/",STR.routePortfolio));
+ if(VIEWS["/"])progs.appendChild(navLink("/",STR.routePortfolio));
  for(i=0;i<ROOM.programs.length;i++)progs.appendChild(navLink(homeOf(ROOM.programs[i]),ROOM.programs[i].id));
  progs.appendChild(navLink("/options",STR.routeOptions));
  // One set of view tabs, re-pointed at whichever programme is open. They are present from the
@@ -2006,7 +2074,7 @@ function buildNav(){
  views.addEventListener("focusin",function(e){e.target.scrollIntoView({block:"nearest",inline:"nearest"});});
  var mobileProgram=document.getElementById("mobile-program"),mobileView=document.getElementById("mobile-view"),o;
  mobileProgram.setAttribute("aria-label",STR.navMain);mobileView.setAttribute("aria-label",STR.navProgram);
- o=el("option","",STR.routePortfolio);o.value="/";mobileProgram.appendChild(o);
+ if(VIEWS["/"]){o=el("option","",STR.routePortfolio);o.value="/";mobileProgram.appendChild(o);}
  for(i=0;i<ROOM.programs.length;i++){o=el("option","",ROOM.programs[i].id);o.value=ROOM.programs[i].id;mobileProgram.appendChild(o);}
  o=el("option","",STR.routeOptions);o.value="/options";mobileProgram.appendChild(o);
  for(i=0;i<LENS_SPEC.length;i++){o=el("option","",lensLabel(LENS_SPEC[i].id));o.value=LENS_SPEC[i].id;mobileView.appendChild(o);}
@@ -2060,7 +2128,9 @@ function onHash(){show(normalize(location.hash));}
 function applyTheme(){
  var saved=null,t;
  try{saved=localStorage.getItem("forma-room-theme");}catch(e){}
- t=saved==="light"||saved==="dark"?saved:(ROOM&&ROOM.meta&&ROOM.meta.theme==="dark"?"dark":"light");
+ var scheme=skinScheme();
+ if(scheme){document.documentElement.setAttribute("data-skin",ROOM.meta.skin);t=scheme;}
+ else t=saved==="light"||saved==="dark"?saved:(ROOM&&ROOM.meta&&ROOM.meta.theme==="dark"?"dark":"light");
  document.documentElement.setAttribute("data-theme",t);themeButton(t);
 }
 function themeButton(t){var b=document.getElementById("theme-toggle"),n=t==="dark"?STR.themeLight:STR.themeDark;b.textContent=n;b.setAttribute("aria-label",n);b.setAttribute("aria-pressed",t==="light"?"true":"false");}

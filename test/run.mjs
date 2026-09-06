@@ -4880,6 +4880,49 @@ const diffPaths = (a, b, at = "") => {
     die(
       "room history: CLOSED without closedAt entered the series instead of being named unplaceable",
     );
+  // Blocked has two sources and the row says which: alpha #2 carries the declared label AND an open
+  // cross-repo blocker on a native edge; the counts split, and the item names both (I7, never fused).
+  const alphaSummary = ROOM.portfolio.programs.find((p) => p.id === "alpha"),
+    alphaBlocked = ROOM.portfolio.blocked.find(
+      (b) => b.program === "alpha" && b.n === 2,
+    );
+  if (
+    !alphaSummary ||
+    alphaSummary.blocked !== 1 ||
+    alphaSummary.blockedByLabel !== 1 ||
+    alphaSummary.blockedByDependency !== 1
+  )
+    die(
+      "room: alpha blocked sources not split, got " +
+        JSON.stringify(
+          alphaSummary && [
+            alphaSummary.blocked,
+            alphaSummary.blockedByLabel,
+            alphaSummary.blockedByDependency,
+          ],
+        ),
+    );
+  if (
+    !alphaBlocked ||
+    JSON.stringify(alphaBlocked.blockedBy) !==
+      JSON.stringify({
+        labels: ["needs-human"],
+        blockers: [{ repo: "acme/platform", number: 90, source: "native" }],
+      })
+  )
+    die(
+      "room: the blocked row does not say which label and which blocker: " +
+        JSON.stringify(alphaBlocked && alphaBlocked.blockedBy),
+    );
+  if (
+    !betaSummary ||
+    betaSummary.blockedByLabel !== null ||
+    betaSummary.blockedByDependency !== null
+  )
+    die(
+      "room: beta unknown blocked sources collapsed to numbers: " +
+        JSON.stringify(betaSummary),
+    );
 
   const presentable = (file) =>
     spawnSync(
@@ -5534,6 +5577,121 @@ const diffPaths = (a, b, at = "") => {
       );
   }
 
+  // One programme has no portfolio to roll up: the front door is that programme's first published
+  // lens, the aggregate view is not mounted, and the pre-tab anchors land on the same door. Two
+  // programmes keep the briefing as front door (ADR-0007). The routing is lifted out of the shipped
+  // template and driven directly, the same trick this suite uses for the viewer's other functions.
+  {
+    const grab = (re, what) => {
+      const m = re.exec(shell)
+      if (!m) die('room: ' + what + ' not found in the shell — the routing moved')
+      return m[0]
+    }
+    const keyFn = grab(/function key\(p,t\)\{[^\n]*\n/, 'key()')
+    const lensesOfFn = grab(/function lensesOf\(program\)\{[\s\S]*?\n\}/, 'lensesOf()')
+    const homeOfFn = grab(/function homeOf\(program\)\{[^\n]*\n/, 'homeOf()')
+    const homeFn = grab(/function home\(\)\{[^\n]*\n/, 'home()')
+    const normFn = grab(/function normalize\(h\)\{[\s\S]*?\n\}/, 'normalize()')
+    const legacy = grab(/var LEGACY=\{[^\n]*\n/, 'the legacy hash table')
+    const legacyTab = grab(/var LEGACY_TAB=\{[^\n]*\n/, 'the legacy tab table')
+    const regFn = grab(/function registerAll\(\)\{[\s\S]*?\n\}/, 'registerAll()')
+    const navFn = grab(/function buildNav\(\)\{[\s\S]*?\n\}/, 'buildNav()')
+    if (!/if\(ROOM\.programs\.length!==1\)\{mount\("\/"\)/.test(regFn)) die('room: the portfolio view is mounted for a single programme, so print and routing meet an empty aggregate')
+    const route = new Function('ROOM', 'VIEWS', 'LENS_SPEC', `${legacy}${legacyTab}
+      function byId(id){var i;for(i=0;i<ROOM.programs.length;i++)if(ROOM.programs[i].id===id)return ROOM.programs[i];return null;}
+      ${keyFn}${lensesOfFn}${homeOfFn}${homeFn}${normFn} return normalize`)
+    const spec = ['verdict', 'plan', 'architecture', 'traceability', 'operations', 'provenance'].map((id) => ({ id }))
+    const lenses = { verdict: true, plan: true, architecture: false, traceability: false, operations: false, provenance: false }
+    const one = { programs: [{ id: 'alpha', derived: { lenses } }] }
+    const two = { programs: [{ id: 'alpha', derived: { lenses } }, { id: 'beta', derived: { lenses } }] }
+    const oneViews = { '/alpha/verdict': 1, '/alpha/plan': 1, '/options': 1 }
+    const twoViews = { '/': 1, '/alpha/verdict': 1, '/beta/verdict': 1, '/options': 1 }
+    const n1 = route(one, oneViews, spec), n2 = route(two, twoViews, spec)
+    for (const h of ['', '#', '#/', '#now', '#/nope', '#/alpha/auto', '#/alpha/wbs', '#/alpha/exec']) {
+      const want = h === '#/alpha/auto' ? '/alpha/plan' : '/alpha/verdict'
+      if (n1(h) !== want) die('room: with one programme ' + JSON.stringify(h) + ' must open ' + want + ', got ' + n1(h))
+    }
+    if (n1('#/options') !== '/options') die('room: with one programme the Options view must stay reachable')
+    for (const h of ['', '#/', '#now', '#/nope']) if (n2(h) !== '/') die('room: with two programmes ' + JSON.stringify(h) + ' must open the briefing, got ' + n2(h))
+    if (n2('#/beta/verdict') !== '/beta/verdict') die('room: with two programmes a programme route must resolve as itself')
+
+    // Exercise the navigation builder: a programme link must target the first lens that is
+    // actually published. The old `/exec` link rendered only because normalize() repaired it
+    // after navigation, leaving the address and aria-current state wrong.
+    const node = () => ({ children: [], appendChild(child) { this.children.push(child); }, addEventListener() {}, setAttribute(name, value) { this[name] = value; } })
+    const documentStub = { getElementById(id) { return this[id] || (this[id] = node()) } }
+    const navLink = (href, text) => ({ href: '#' + href, textContent: text, setAttribute(name, value) { this[name] = value; } })
+    const fakeEl = (tag, className, text) => Object.assign(node(), { tagName: tag.toUpperCase(), className, textContent: text || '' })
+    const build = new Function('ROOM', 'VIEWS', 'LENS_SPEC', 'STR', 'key', 'lensesOf', 'homeOf', 'lensLabel', 'navLink', 'el', 'document', `${navFn}; return buildNav`)
+    const buildNav = build(one, { '/alpha/verdict': 1, '/options': 1 }, spec, { routePortfolio: 'Portfolio', routeOptions: 'Options' },
+      (p, t) => '/' + p + '/' + t, (program) => Object.keys(program.derived.lenses).filter((id) => program.derived.lenses[id]),
+      (program) => '/alpha/verdict', (id) => id, navLink, fakeEl, documentStub)
+    buildNav()
+    const programmeLink = documentStub['nav-programs'].children.find((link) => link.textContent === 'alpha')
+    if (!programmeLink || programmeLink.href !== '#/alpha/verdict') die('room: programme navigation linked to ' + (programmeLink && programmeLink.href) + ', expected #/alpha/verdict')
+  }
+
+  // A skin is one token block chosen in the manifest: every id the viewer knows has a palette block
+  // the palette audit measures and a value the schema accepts — a skin that is not measured, or one
+  // the manifest cannot name, is a look nobody gated.
+  {
+    const skinIds = [...(/var SKINS=\{([^}]*)\}/.exec(shell) || ['', ''])[1].matchAll(/([a-z-]+):"(light|dark)"/g)].map((m) => m[1])
+    if (!skinIds.length) die('room: SKINS not found in the shell — the skin contract moved')
+    const paletteSrc = readFileSync(join(HERE, '..', 'scripts/palette.mjs'), 'utf-8')
+    const roomSchemaJson = readJson(roomSchema)
+    const schemaSkins = roomSchemaJson.properties.skin && roomSchemaJson.properties.skin.enum
+    for (const id of skinIds) {
+      if (shell.indexOf('html[data-skin="' + id + '"]{') < 0) die('room: skin ' + id + ' has no token block in the shell')
+      if (paletteSrc.indexOf("selector: 'html[data-skin=\"" + id + "\"]{'") < 0) die('room: skin ' + id + ' is not registered in scripts/palette.mjs, so its palette is not measured')
+      if (!schemaSkins || !schemaSkins.includes(id)) die('room: skin ' + id + ' is not a value forma.room.schema.json accepts')
+    }
+    if (!/html\[data-skin\] #theme-toggle\{display:none\}/.test(shell)) die('room: the theme toggle stays visible under a skin that fixes its own scheme')
+    const skinned = readJson(manifest); skinned.skin = skinIds[0]
+    const skinnedPath = join(R, 'manifest.skin.json'); writeFileSync(skinnedPath, JSON.stringify(skinned))
+    const skinnedOut = join(R, 'room.skin.html')
+    r = run(['room', '--manifest', skinnedPath, '--out', skinnedOut]); if (r.status !== 0) die('room: skinned render exit ' + r.status, r)
+    const skinnedRoom = JSON.parse(/window\.__ROOM__ = ([\s\S]*?);\s*<\/script>/.exec(readFileSync(skinnedOut, 'utf-8'))[1])
+    if (skinnedRoom.meta.skin !== skinIds[0]) die('room: manifest.skin did not reach ROOM.meta.skin')
+    if (ROOM.meta.skin !== null) die('room: a manifest without a skin must compose with meta.skin null, got ' + JSON.stringify(ROOM.meta.skin))
+  }
+
+  // "Why this batch" comes from the brief, not from a curated blocks file: a note anchored to the
+  // block's milestone or to one of its issues rides on that block; anything else does not. It is
+  // attached in deriveBlocks so the viewer's plan lens never reads derived.brief (I20).
+  {
+    const narrSnap = { ghRepo: 'acme/alpha', issues: [
+      { n: 7, state: 'OPEN', title: 'seven', ms: 'M1', labels: [] },
+      { n: 8, state: 'OPEN', title: 'eight', ms: 'M1', labels: [] },
+    ] }
+    const narrQueue = { clusters: [{ key: 'feat', issues: [7, 8] }] }
+    const narrBrief = { notes: [
+      { id: 'ms', kind: 'note', text: 'milestone note', about: { milestone: 'M1' } },
+      { id: 'iss', kind: 'note', text: 'issue note', about: { issue: 7 } },
+      { id: 'other', kind: 'note', text: 'elsewhere', about: { milestone: 'M2' } },
+      { id: 'path', kind: 'note', text: 'a path', about: { path: 'README.md' } },
+    ] }
+    const [narrBlock] = deriveBlocks(narrSnap, narrQueue, { edges: [] }, {}, narrBrief)
+    const got = narrBlock.notes.map((c) => c.id)
+    if (JSON.stringify(got) !== JSON.stringify(['ms', 'iss'])) die('room: block narrative picked ' + JSON.stringify(got) + ', wanted the milestone note and the issue note only')
+    if (deriveBlocks(narrSnap, narrQueue, { edges: [] }, {}, null)[0].notes.length !== 0) die('room: a programme without a brief must yield no block narrative')
+    if (!/STR\.blockWhy/.test(shell)) die('room: the block narrative heading string is not read by the template')
+  }
+
+  // A room over programmes that have no architecture map is gated from a directory with no model:
+  // `--room` makes the C4 half not applicable — said out loud — and the room half still runs in full
+  // (the tamper tests below prove it bites). Without `--room`, a missing model is still the failure.
+  const noModelDir = join(R, 'no-model'); mkdirSync(noModelDir, { recursive: true })
+  r = run(['check', '--repo', noModelDir, '--room', roomHtml, '--manifest', manifest])
+  if (r.status !== 0 || !/no model at .*C4 assertions not applicable/.test(r.stdout || '')) die('room: check --room from a model-less directory must gate the room only and say so\n' + (r.stdout || '') + (r.stderr || ''))
+  const tamperedNoModel = join(R, 'tampered-nomodel.html'); tamper(roomHtml, tamperedNoModel, '"openCount":2', '"openCount":7')
+  r = run(['check', '--repo', noModelDir, '--room', tamperedNoModel, '--manifest', manifest])
+  if (r.status === 0) die('room: check --room without a model accepted a hand-altered aggregate')
+  r = run(['check', '--repo', noModelDir])
+  if (r.status === 0 || !/model missing \(no SKIP\)/.test(r.stderr || '')) die('room: check without --room must still fail on a missing model')
+
+  console.log('  ok room — the briefing composes deterministically, both gates fire, and both refuse a hand-altered aggregate')
+  console.log('  ok rtm — requirements trace to issues, and check names each of the four holes at its source line')
+  console.log('  ok views — history from one snapshot, checkpoints with measured completion, a canon within budget, and a programme deliberately left out')
   console.log(
     "  ok room — the briefing composes deterministically, both gates fire, and both refuse a hand-altered aggregate",
   );
@@ -6254,7 +6412,8 @@ const diffPaths = (a, b, at = "") => {
   }
   const filter = viewerFn("filteredList"),
     queue = viewerFn("renderQueue"),
-    kanban = viewerFn("renderKanban");
+    kanban = viewerFn("renderKanban"),
+    item = viewerFn("queueItem");
   if (
     !/item\.search/.test(filter) ||
     !/input\.addEventListener\("input",draw\)/.test(filter)
@@ -6262,15 +6421,26 @@ const diffPaths = (a, b, at = "") => {
     die(
       "room-search: the bounded shared list filter no longer searches on input",
     );
+  // One block renderer for the archive and for every panel that shows a block: the auto/manual
+  // command boundary lives in exactly one place.
   if (
     !/filteredList\(lane\.body,items/.test(queue) ||
+    !/queueItem\(program,entry\.block\)/.test(queue) ||
     !/block\.auto&&block\.cmd\?commandLine\(block\.cmd\):el\("span","state-chip",STR\.human\)/.test(
-      queue,
+      item,
     )
   )
     die(
       "room-queue: blocks lost search or the exact auto/manual command boundary",
     );
+  // The brief's own words about a batch ride on the block, and are rendered as claims — anchor,
+  // staleness and refusal path intact — not retyped as prose.
+  if (
+    !/notes=block\.notes\|\|\[\]/.test(item) ||
+    !/STR\.blockWhy/.test(item) ||
+    !/briefClaimRow\(program,notes\[j\]\)/.test(item)
+  )
+    die("room-queue: the block narrative from the brief is not rendered on the block");
   if (
     !/input\.type="search"/.test(kanban) ||
     !/source\.filter/.test(kanban) ||
@@ -8788,14 +8958,19 @@ const diffPaths = (a, b, at = "") => {
                                    registerAll(); return mounted; };`;
     const mountAll = new Function(stub)();
     const withLenses = (id, lenses) => ({id: id, derived: {lenses: lenses}});
+    // One programme has no portfolio to roll up, so the aggregate route is not mounted at all
+    // (map ticket #90); with two it returns as the front door.
     const bare = mountAll([withLenses("bare", {portfolio: true, verdict: true, plan: false, architecture: false, traceability: false, operations: false, provenance: false})]);
-    if (bare.join() !== "view--,view--bare-verdict,view--options")
+    if (bare.join() !== "view--bare-verdict,view--options")
       die("lenses: a programme whose artifacts publish one lens must mount one route, got " + bare.join(" "));
     const full = mountAll([withLenses("full", Object.fromEntries(ids.map((id) => [id, true])))]);
-    if (full.length !== 8)
-      die("lenses: a programme publishing every lens must mount six routes plus portfolio and options, got " + full.join(" "));
+    if (full.length !== 7)
+      die("lenses: a programme publishing every lens must mount six routes plus options, got " + full.join(" "));
     if (full.some((id) => id === "view--full-portfolio"))
       die("lenses: the portfolio is the entry route, never a per-programme one");
+    const pair = mountAll([withLenses("one", Object.fromEntries(ids.map((id) => [id, true]))), withLenses("two", Object.fromEntries(ids.map((id) => [id, true])))]);
+    if (pair[0] !== "view--" || pair.length !== 14)
+      die("lenses: with two programmes the briefing is the front door and every lens mounts, got " + pair.join(" "));
   }
 
   // The stress fixture is the only artifact the DOM, paging, mobile and print measurements run
