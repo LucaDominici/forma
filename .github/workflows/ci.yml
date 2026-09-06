@@ -26,6 +26,12 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm run lint
+      # The shared schema contract with arbiter (I20). Only forma's half runs here — there is no
+      # arbiter checkout in this job — so the gate verifies the schemas forma OWNS still hash to
+      # the pin, and says out loud that it skipped the cross-checkout half. arbiter's CI runs the
+      # mirror. Also invoked by `npm test` below; kept explicit so a contract break is named in
+      # its own step rather than buried in the suite.
+      - run: node scripts/check-arbiter-contract.mjs
       # The colour rule is a gate, not a preference: npm test runs scripts/palette.mjs --check first.
       - run: npm test
       # dogfood: the product's own gate, on the product. The committed model is deployed to Pages

@@ -1,0 +1,22 @@
+{
+  "_doc": "The shared schema contract between arbiter (ontology owner) and forma (derivation and lens layer). Each entry names the repo that OWNS a schema, the path it lives at inside that repo, its sha256, and the repos that VENDOR a pinned copy. Both repos carry a byte-identical copy of this file and each gates its own half: arbiter runs scripts/check-forma-contract.mjs, forma runs scripts/check-arbiter-contract.mjs. A schema edited without re-pinning turns the owning repo red immediately; a stale vendored copy turns the consuming repo red. Neither repo may unilaterally change a shared shape and stay green.",
+  "contractVersion": "1.0.0",
+  "schemas": [
+    {
+      "id": "c4-model",
+      "owner": "forma",
+      "ownerPath": "lib/schema/c4-model.schema.json",
+      "sha256": "4b99b746a690b6cf9091477739925806eb211e61e9cd43af7b8b4c236e8c247a",
+      "consumers": ["arbiter"],
+      "why": "forma defined the stack-agnostic C4 graph first and generates it; arbiter adopts that shape rather than inventing a second C4 standard, and vendors a pinned copy so its own generators and gates can validate a model without depending on forma at runtime."
+    },
+    {
+      "id": "id-registry",
+      "owner": "arbiter",
+      "ownerPath": "schemas/id-registry.schema.json",
+      "sha256": "134e1d579b6b8018a69e64b56f4422d24340417b811caacbcc388252a210a40d",
+      "consumers": [],
+      "why": "arbiter owns the identifier ontology. forma will vendor this when its provenance lens renders scheme-aware citations; listed now with no consumers so the pin exists before the dependency does."
+    }
+  ]
+}

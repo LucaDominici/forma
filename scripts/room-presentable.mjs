@@ -17,6 +17,7 @@ import { execFileSync } from 'node:child_process'
 import { join, dirname, isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { daysBetween } from '../lib/roomderive.mjs'
+import { DERIVED_KEYS, LENSES, derivedLenses, ownershipViolations } from '../lib/lenses.mjs'
 import { validateEvidence } from '../lib/audit.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -39,6 +40,8 @@ const manifest = (() => { try { return JSON.parse(readFileSync(MANIFEST, 'utf-8'
 const repoFor = new Map((manifest.programs || []).map((p) => [p.id, manifestPath(p.repo)]))
 
 const programs = ROOM.programs || []
+const badPublication = []
+let publishedCount = 0
 const orphanPills = [], badEvidence = [], badFindings = [], badDocumentEvidence = [], fakedCompletion = [], orphanOpen = [], staleSnapshots = []
 const badBriefEvidence = [], colouredUnheld = [], unheldDecisions = []
 let briefClaimCount = 0
@@ -47,13 +50,26 @@ let verdictCount = 0, findingCount = 0, documentFindingCount = 0, openCount = 0
 // Publication-level UI contracts. Browser tests own measured layout and DOM counts; these checks
 // make it impossible to publish a composed artifact that silently restores the discarded routes,
 // eager rendering, an unbounded issue page, or the inaccessible mobile navigation.
-const tabsSource = (/var TABS=([\s\S]*?);\s*var BUILD=/.exec(html) || [])[1] || ''
-const officialViews = [...tabsSource.matchAll(/\["([^"]+)",function/g)].map((m) => m[1])
-const officialIa = JSON.stringify(officialViews) === JSON.stringify(['exec', 'tech', 'map', 'wbs', 'docs'])
+// The IA is no longer a hard-coded list compared against another hard-coded list. It is the table
+// in lib/lenses.mjs, injected into the artifact — so what this grades is that the artifact carries
+// the table it claims, that every derived surface has exactly one home lens (I20), and, per
+// programme, that a lens is mounted when and only when its backing artifacts exist (I7).
+const injected = (() => {
+  const m = /window\.__LENSES__ = (\[[\s\S]*?\]);/.exec(html)
+  try { return m ? JSON.parse(m[1]) : null } catch { return null }
+})()
+const declaredIds = LENSES.map((lens) => lens.id)
+const injectedIa = Boolean(injected) && JSON.stringify(injected.map((lens) => lens.id)) === JSON.stringify(declaredIds)
+const oneHome = ownershipViolations(html, DERIVED_KEYS)
 const pageSize = Number((/var ISSUE_PAGE_SIZE=(\d+)/.exec(html) || [])[1])
 const boundedDom = pageSize > 0 && pageSize <= 50 && /function pagedList\(/.test(html) && /function ensureView\(/.test(html) && !/function buildAll\(/.test(html)
 const mobileNav = /id="mobile-program"/.test(html) && /id="mobile-view"/.test(html) && /@media\(max-width:600px\)/.test(html)
 const boundedPrint = /\.screen-list,\.workflow\{display:none!important\}/.test(html) && !/details:not\(\[open\]\)/.test(html)
+// The shell is viewport-locked, so an unbounded answer tier does not overflow — it STARVES the
+// evidence row to zero and lays six panels out below a page that cannot scroll. Measured at
+// 1440x900, 1280x800 and 1920x1080 before this cap existed. A layout property, checked here as a
+// source contract because this gate has no browser; the measurement lives in the commit that set it.
+const boundedAnswer = /\.answer\{[^}]*max-height:\d+vh[^}]*overflow:auto/.test(html)
 const documentGateVisible = /var documentPanel=documentGatePanel\(program\);if\(documentPanel\)ev\.appendChild\(documentPanel\)/.test(html)
 
 for (const program of programs) {
@@ -120,6 +136,18 @@ for (const program of programs) {
     for (const c of brief.decisions || []) if (c.state !== 'holds') unheldDecisions.push(`${program.id} ${c.id} (${c.state})`)
   }
 
+  // 4c) the lens partition, per programme: what the briefing published must equal what a fresh
+  // derivation over the same artifacts says it may publish. A route mounted for a lens with nothing
+  // behind it is the reserved empty panel I7 forbids and UX finding F1 measured; a lens withheld
+  // while its artifacts exist is a question silently dropped.
+  const claimed = derived.lenses || {}
+  const recomputed = derivedLenses(program)
+  for (const lens of LENSES) {
+    if (claimed[lens.id] === true) publishedCount++
+    if (claimed[lens.id] === recomputed[lens.id]) continue
+    badPublication.push(`${program.id} ${lens.id}: published ${String(claimed[lens.id])}, artifacts say ${String(recomputed[lens.id])}`)
+  }
+
   // 5) this programme's gh snapshot is not stale past the manifest's own threshold.
   const ageDays = daysBetween(snapshot.fetchedAt, manifest.today)
   const staleAfterDays = manifest.staleAfterDays || 14
@@ -148,7 +176,7 @@ const predicates = [
   ['every health verdict carries resolvable evidence', badEvidence.length === 0, badEvidence.length ? badEvidence.slice(0, 5).join('; ') : `${verdictCount} verdict(s), 0 unresolvable`],
   ['every finding row carries resolvable evidence', badFindings.length === 0, badFindings.length ? badFindings.join(', ') : `${findingCount} finding(s), 0 unresolvable`],
   ['every document-gate row carries resolvable evidence', badDocumentEvidence.length === 0, badDocumentEvidence.length ? badDocumentEvidence.join(', ') : `${documentFindingCount} row(s), 0 unresolvable`],
-  ['document-gate evidence is rendered in the Docs view', documentGateVisible, documentGateVisible ? 'shared documentGatePanel mounted' : 'panel missing from Docs'],
+  ['document-gate evidence is rendered in the provenance lens', documentGateVisible, documentGateVisible ? 'shared documentGatePanel mounted' : 'panel missing from the provenance lens'],
   ['no aggregate is presented as `completion`', fakedCompletion.length === 0, fakedCompletion.length ? fakedCompletion.join(', ') : 'closureRate only'],
   ['every brief claim carries resolvable evidence', badBriefEvidence.length === 0, badBriefEvidence.length ? badBriefEvidence.slice(0, 5).join('; ') : `${briefClaimCount} claim(s), 0 unresolvable`],
   ['no brief claim is coloured without a fresh hostile hold', colouredUnheld.length === 0, colouredUnheld.length ? colouredUnheld.join(', ') : `${briefClaimCount} claim(s), colour only on holds`],
@@ -156,10 +184,13 @@ const predicates = [
   ['no gh snapshot is stale', staleSnapshots.length === 0, staleSnapshots.length ? staleSnapshots.join('; ') : `today ${manifest.today}, limit ${staleAfterDays}d`],
   ['re-generating from the same manifest is byte-deterministic', deterministic, determinismNote],
   ['every open issue is covered (Kanban or queue), none orphaned', orphanOpen.length === 0, orphanOpen.length ? `orphaned: ${orphanOpen.join(', ')}` : `${openCount} open, 0 orphaned`],
-  ['the programme IA is exactly five evidence views', officialIa, officialViews.length ? officialViews.join(', ') : 'TABS contract missing'],
+  ['the artifact carries the declared lens table, not a copy of it', injectedIa, injected ? injected.map((lens) => lens.id).join(', ') : 'the __LENSES__ seam is missing or unparseable'],
+  ['every derived surface has exactly one home lens (I20)', oneHome.length === 0, oneHome.length ? oneHome.slice(0, 4).join('; ') : `${DERIVED_KEYS.length} surfaces, ${declaredIds.length} homes, no surface twice`],
+  ['every published lens has backing artifacts, and every absent one has none', badPublication.length === 0, badPublication.length ? badPublication.join('; ') : `${publishedCount} lens(es) published across ${programs.length} programme(s)`],
   ['issue DOM is lazy and page-bounded', boundedDom, Number.isFinite(pageSize) ? `${pageSize} issue rows per page` : 'pagination contract missing'],
   ['mobile navigation has native programme and view controls', mobileNav, mobileNav ? 'two labelled selects at the 600px breakpoint' : 'mobile controls missing'],
   ['print does not expand interactive issue archives', boundedPrint, boundedPrint ? 'interactive lists summarized on paper' : 'unbounded print path detected'],
+  ['the answer tier cannot starve the evidence tier', boundedAnswer, boundedAnswer ? 'answer capped and scrollable inside the locked shell' : 'the answer row is unbounded — evidence can be laid out below an unscrollable fold'],
 ]
 
 let ok = true

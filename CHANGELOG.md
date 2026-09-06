@@ -6,6 +6,188 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **The traceability and operations lenses have content.** Both were declared in wave 7 and had
+  nothing behind them. arbiter now emits two projections — `arbiter-use-cases-v1` and
+  `arbiter-runbooks-v1` — and the manifest's `arbiter` block reads them as independent opt-ins
+  beside `milestones`. Traceability renders use cases, each with its actor, the features it rests
+  on, and the tabletop scenarios that walk it; operations renders runbook coverage with the
+  **uncovered list**, not a count, because a number cannot tell an operator which failure has no
+  procedure behind it. `exercisedBy` is arbiter's measurement and is passed through untouched:
+  forma derives what it can see and never recomputes a join a gate already proved.
+- Two derivations the projections cannot state alone, because both are questions about the set:
+  a use case **no scenario walks** (arbiter's gate is silent unless the row claimed `exercised`),
+  and a runbook that **handles nothing**.
+
+### Fixed
+- `arbiter.milestones` was **required**, so a project with runbooks and no codified roadmap could
+  not declare them — contradicting the opt-in-by-presence contract every key in that block
+  documents. Replaced with `minProperties: 1`.
+- A filtered list printed **two contradictory paragraphs**: `pagedList`'s "the printed briefing
+  carries the count, not the archive" directly above the twelve records `filteredList` expands
+  onto paper. Latent since `filteredList` was written — forma's own briefing had no filtered list
+  with rows until the use-case panel arrived, so nothing had ever printed it.
+
+### Changed
+- **The Control Room is six lenses, not five views.** ADR-0008 named a portfolio and six lenses,
+  one question each, and said the partition "is only real if it is enforced". It is now **I20**:
+  `lib/lenses.mjs` declares each lens, its question, the derived surfaces it owns and the artifacts
+  that publish it; the composer injects that table as `window.__LENSES__` and the viewer mounts what
+  it finds, so a route cannot exist in one place and not the other. The viewer is partitioned by
+  `/*lens:<id>*/` markers and `ownershipViolations()` measures every `derived.<surface>` read back
+  out of the shipped file — declared and measured must agree in both directions. Enforced by
+  `npm test` (four tamper tests, plus the routing itself lifted and run) and by
+  `scripts/room-presentable.mjs` over the composed artifact.
+- **A lens is published only where its backing artifacts exist** — absent, never a reserved empty
+  panel (I7). `derived.lenses` is computed in `roomderive.mjs`, so `forma check` re-derives
+  publication like every other aggregate and refuses a briefing whose routing was hand-edited. This
+  closes UX finding **F1**: on a programme with everything closed, no model and no requirements
+  source, four of the six routes do not exist rather than rendering three zeros and "No data
+  available.". Charts of nothing are gone with them — a series needs two points to be a series.
+- Every address the five-view IA published still resolves: `exec`, `tech`, `map`, `wbs`, `docs` and
+  the retired `auto`/`kanban` redirect to the lens that inherited the question.
+- The inclusion drawer reports what each programme can **answer** instead of six hand-maintained
+  "has this file" flags that restated half of the publication predicates and drifted from them.
+
+### Fixed
+- **The 52vh cap made the verdict lens differently broken, and only a screenshot showed it.** With
+  `auto` rows inside the capped answer tier, the grid absorbed the cap by crushing every panel body
+  to 7–25px and painting the lead over the Risks header — `scrollHeight` equalled `clientHeight`,
+  nothing scrolled, and every DOM assertion stayed green. Rows are `max-content` now, so the tier
+  overflows and scrolls; the evidence grid gets a 180px row floor so eight panels can no longer
+  share 290px; the cap is released with the rest of the shell below the 760px floor (on a phone it
+  had painted 1,400px of brief rows over the KPIs) and in print; a row head on a phone gives the
+  title its own line instead of a 0px column 672px tall; the traceability matrix body scrolls, so
+  R-6..R-9 are reachable; and the capability ledger no longer prints "0 capabilities · 0 skipped ·
+  0 duplicates" under an Unknown chip (I6). Verified in a headless browser at 1440×900, 1280×800,
+  1920×1080 and 390×844, light and dark, and in print — a full visual matrix over every lens found
+  it, after three rounds of code review had not.
+- **Six panels of the verdict lens were unreachable on every desktop window.** The shell is
+  viewport-locked, so an answer tier sized `auto` does not overflow — it STARVES the evidence row
+  to zero height and lays its panels out below a page that cannot scroll, with no scrollbar and no
+  affordance. Measured headless at 1440×900, 1280×800 and 1920×1080: the answer took 868–967px and
+  the whole findings archive, all four headline numbers and three charts were invisible; readable
+  only at 2560×1440 and below the 760px breakpoint where the shell releases. The tier is capped and
+  scrollable now — a short answer still sizes to its content — and zero panels sit below the fold at
+  any of the four sizes. The contract is gated in `npm test` and in `room-presentable`.
+- **Every list item in every embedded document rendered blank.** The markdown renderer took the
+  wrong capture group — the indent for a bullet, the number for an ordered item — so 104 items
+  across forma's own canon were empty `<li>` or a bare digit, in the lens whose entire payload is
+  that canon. `GLOBAL_INVARIANTS.md` alone lost 57. The tests counted `<li>` elements and never
+  read one, which is exactly how it survived; they read them now.
+- **The blocked row showed a verdict's reason with its evidence blanked.** Hop 2 pointed the mark
+  and the reason at the verdict lens's index and left `evidence` on the portfolio's copy — and the
+  portfolio filters stale verdicts out while the index keeps them. A stale-but-real verdict
+  rendered its reason and "Evidence: None" three lines apart, from two sources that disagree: the
+  same defect moved, not closed. The index carries all three now.
+- **What the adversarial pass found in the partition itself**, hop 1 of ADR-0008's closure: the
+  verdict index was a pass-through, so `derived.health` still had a home in every lens that draws
+  an issue pill — the very laundering the rule names. The verdict lens now *interprets* the overlay
+  once (staleness beats the verdict) and publishes the finished mark and reason. Alongside it:
+  comments are stripped before measuring (a comment could satisfy a declaration nothing honoured);
+  a `derived` token must be spelled `derived.<key>` or be the `&&` guard, so an alias, a
+  destructure, an optional chain, a computed key and `p["derived"]` are each refused by name;
+  the "nothing above the partition" check is anchored rather than an existence test, and moved to
+  template scope where a composed briefing's head cannot confuse it; `DERIVED_KEYS` is compared
+  against a live `deriveAll` call, so a new derivation cannot land homeless by being forgotten in
+  two places at once; and the missing-region tamper test removes **every** marker for its lens —
+  removing one of two left the region present and the test passing for a different reason.
+  I20's wording in `GLOBAL_INVARIANTS.md` now states exactly what the mechanism holds, and names
+  what it does not cover.
+- **The provenance lens dropped the document gate** whenever a programme had a gate but no readable
+  document — an include matching only untracked files. The predicate publishes on either, the
+  builder returned early on the reader's emptiness, and every invariant row, typed claim, freshness
+  signal and input error went off-screen behind a route that still mounted.
+- **The 2,500-issue stress fixture was not migrated**, so it composed a briefing with no programme
+  route and no nav tabs at all — every DOM, paging, mobile and print measurement taken over it
+  would have been measuring an empty shell. It now declares its lenses and fills the `__LENSES__`
+  seam from the same table.
+- **`chartNodes` ("work landed per C4 node") was dropped in the restructure and nobody noticed**,
+  because it reads the portfolio summary rather than a derived surface and I20 measures only the
+  latter. Restored in the architecture lens, whose question it answers.
+- One absence policy in the plan lens where absence is knowable. The critical path now vanishes
+  when there is no schedule, like its two siblings. The milestone panel does NOT, and the first
+  version of this line claimed otherwise: `forma verify` records `milestonesComplete: false` on
+  every snapshot it writes, because milestones are read off issue payloads and one with no issues
+  is not observable. So "this programme has no milestones" is a thing forma cannot know, and it is
+  disclosed as unknown rather than rendered as absence (I6). What was removed is the measured-empty
+  arm, which was unreachable, and the locale string it kept alive.
+- The operations lens published a green "Present" chip over a panel that had marked itself Unknown,
+  and put three tiers into a two-row template so its evidence fell outside the scroll container.
+- The portfolio's Moving list captured the loop's programme by reference: from page two onward
+  every pill linked the wrong repository and read "not audited" out of the wrong snapshot.
+- The unused-string guard matched by substring, so `STR.drift` read as live inside
+  `STR.driftNoMilestone` — a key added in the same change masking one it had orphaned. Word-boundary
+  now; `drift` and `criticalPathNone` removed.
+- One definition of `hasMap` reaches both the publication predicate and the viewer, so the
+  architecture lens cannot mount over a model the frame cannot draw.
+- Three surfaces the partition found with **no home at all**: `criticalPath`, `milestonePath` and
+  `milestoneReconciliation` were derived in waves 3 and 6, gated by `forma check`, and rendered
+  nowhere. All three now render in the `plan` lens, each printing its duration model beside its
+  number.
+- Duplicated renderings the five-view IA carried, each now single-homed: commit drift (`map` and
+  `tech`), the KPI strip's requirement coverage (`exec` and `wbs`), unlinked sweeps (`tech`, three
+  hundred lines from the picture they qualify), findings (`tech`, two routes from the brief they
+  contradict), and the capability ledger and history series (portfolio **and** `exec`).
+- `deriveCapabilities` carries its own `dependenciesComplete` flag. The ledger had to reach into
+  `derived.dependencies` to tell "nothing blocks this" from "we cannot see what blocks this"
+  (I6/I7) — a second surface read from a third lens.
+- `stripGateInputs` in `lib/roomdocs.mjs`: `room` and `check` each carried their own copy of the
+  rule for what the viewer is handed, which is exactly the drift `roomload.mjs` exists to prevent.
+
+### Removed
+- `taborder.json` — a tab-order capture from a browser run against an IA that no longer exists,
+  referenced by nothing.
+
+### Added
+- `deriveMilestonePath` and `deriveMilestoneReconciliation` in `lib/roomderive.mjs` — forma now
+  derives from **arbiter's** plan, not just its own issue graph. arbiter owns `MILESTONES.yml` and
+  emits an `arbiter-milestones-v1` projection (`check-milestones.mjs --emit`); forma consumes it
+  because it has zero dependencies and cannot parse YAML, and because deriving beats restating.
+  Declared per programme as `arbiter: { milestones }`, opt-in by presence, resolved against the
+  **programme's** checkout like RTM docs.
+  - The milestone path is reported **beside** the issue critical path and never merged into it:
+    `estimate_days` is a figure a human wrote down, the issue duration is a declared heuristic, and
+    one number carrying both would read as more than it is. Each names its own `durationModel`.
+  - A milestone with no estimate is **named** in `unestimated`, and its presence sets
+    `isLowerBound`, so the total never passes as a forecast.
+  - Reconciliation compares what the SSOT **claims** a milestone contains against what GitHub
+    actually holds (each issue's `ms`), reporting drift **both ways** — including an issue filed
+    under the wrong milestone, which a title-only join can never see. Agreement is silence.
+  - The projection is read with a **version check, not shape validation**: re-validating arbiter's
+    own output here would make forma hold a second opinion about it, which is what the pinned
+    schema contract exists to prevent. Absent and malformed stay distinguishable — the first is
+    silence, the second an error.
+  - Wired into `deriveAll` and loaded through `roomload` so composer and gate read the identical
+    file by the identical rule; tamper-proven end to end, with the fixture declaring a real
+    projection so the comparison is not vacuous.
+- `deriveCriticalPath` in `lib/roomderive.mjs` — CPM over the issue-blocking DAG with the full
+  six-field float model (early/late start, early/late finish, total and free float, `isCritical`).
+  "What is on the critical path" and "how far can this slip before the finish moves" are different
+  questions and a `blocked` boolean answers neither. Durations are a **named** heuristic, never an
+  estimate forma invented: an open issue counts one day, a closed one zero because it cannot extend
+  the remaining path, and the model is published as `durationModel` so no reader mistakes it for a
+  measurement. Dependency cycles are reported and excluded rather than silently scheduled, and an
+  edge leaving the snapshot is counted in `excludedForeign` rather than dropped in silence. Returns
+  `null` when the snapshot does not support dependency edges — "cannot answer" is not "no critical
+  path" (I6/I7). Wired into `deriveAll`, so `check` recomputes it and refuses a tampered schedule;
+  the tamper test asserts the rejection **names** the aggregate rather than merely exiting non-zero.
+  When arbiter's `MILESTONES.yml` reaches forma, its real `estimate_days` replace the heuristic and
+  the milestone DAG merges into this same computation.
+- `lib/schema/CONTRACT.json` and `scripts/check-arbiter-contract.mjs` pin every schema shared with
+  arbiter (owner, path, sha256, vendoring consumers). Both repositories hold a byte-identical copy
+  and gate their own half, so a shared shape cannot change on one side and stay green (I19). The
+  cross-checkout half skips out loud when no sibling checkout is present.
+- `docs/adr/0008-lifecycle-ontology-and-six-lenses.md` — arbiter owns the lifecycle ontology, forma
+  derives and renders it as portfolio plus six lenses, each answering one question. Supersedes the
+  five-view publication predicate of ADR-0007.
+- I19 in `docs/GLOBAL_INVARIANTS.md`, with the tamper test that proves it non-vacuous.
+
+### Fixed
+- `scripts/lint.mjs` named its files by hand and had drifted to checking no script at all — palette,
+  presentable, room-presentable, check-clean and gen-doc-index were syntax-unverified. It now walks
+  `lib/` and `scripts/`.
+
 ## [1.0.0] - 2026-08-17
 
 The Control Room contract is now exercised across five real GitHub programmes and frozen for 1.0.

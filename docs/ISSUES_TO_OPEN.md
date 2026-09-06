@@ -138,6 +138,120 @@ reconciled by `room update` with zero hand-edits and zero counter-verification c
 R5-1 done (a second+ repo has driven the pipeline), all mandatory gates seen to fail and pass → freeze
 schema, tag, npm.
 
+## Found by the lens partition (I20), 2026-09-04
+
+**L-1 · `derivePortfolio` recomputes three aggregates the programme already derived** *(absorbed into L-3)*
+`area:room kind:debt` — Why: the portfolio summary calls `deriveMilestones`, `coverageOf` and
+`deriveCommitDrift` again, per programme, over inputs `deriveAll` has already reduced. One surface,
+two computations, two chances to disagree — duplication one level BELOW what I20 measures, which
+governs `program.derived` only. It is also the one path by which a lens could read a derived
+surface it does not own (`summary.commitDrift` was read on `tech` until this wave deleted the row).
+DoD: `derivePortfolio` consumes `program.derived` instead of recomputing; `forma check` re-derives
+the portfolio as it already re-derives `deriveAll`; I20's scope note in `GLOBAL_INVARIANTS.md` is
+narrowed or removed accordingly.
+
+**L-2 · F2 stands: two sparse views are still mostly void**
+`area:viewer kind:debt` — Why: UX finding F2 measured ~40% void on every screen and 83% on
+`/options`. Measured again after the lens partition, headless at 1440×900: the portfolio and the
+six lenses now run 60–91% ink, but `/options` is still 25% and a sparse `operations` will be no
+better. The obvious fix — `align-items:start` on the evidence grid so a panel is as tall as what it
+has to say — was tried and **reverted**: it turned `verdict` and `provenance` from per-panel
+scrolling into a 3.5× page scroll, which trades one defect for a worse one. The remaining void sits
+BELOW the last panel, where no alignment rule reaches; closing it means a different layout for
+sparse views, which is a design decision and not a CSS tweak. DoD: a measured target (say ≥60% ink
+on every published route at 1440×900) and a layout that reaches it without turning any dense lens
+into a long scroll.
+
+**L-3 · `ROOM.portfolio` is a second derived surface, outside I20**
+`area:room kind:debt` — Why: I20 measures `program.derived` reads. The portfolio summary is a
+separate cross-programme structure that (a) recomputes `milestones`, `linkCoverage` and
+`commitDrift`, (b) copies health verdicts, reasons and evidence into `blocked[].item`, rendered by
+`blockedRow` in the shared region, and (c) carries `workPerNode` and `workPerNodeOpen`, of which
+only the first has a renderer. Any surface can therefore be given a second home by teaching
+`derivePortfolio` to copy it and rendering `summary.x` — zero violations reported. DoD: either a
+second ownership axis over `ROOM.portfolio.<key>` with the same declared/measured rule, or
+`derivePortfolio` consumes `program.derived` and the summary stops being a place things can hide.
+Supersedes and absorbs L-1.
+
+**L-4 · `deriveBlocks` discloses no dependency completeness, and two dependency fields render nowhere**
+`area:room kind:debt` — Why: `criticalPath` names its excluded foreign edges and the capability
+ledger carries `dependenciesComplete`, but `deriveBlocks` returns `{n,t,ms,cmd,auto,why,iss,note}`
+with nothing saying whether the dependency snapshot was complete — so a block list computed from a
+partial graph reads exactly like one computed from a whole graph (I6). Separately,
+`dependencies.candidates` (unconfirmed prose-derived edges) and `dependencies.staleConfirmations`
+are computed on every run, gated by `forma check`, and read by nothing: the "derived, gated,
+rendered nowhere" defect one level below I20's granularity. DoD: blocks carry their own
+completeness flag; the two fields either reach a lens or are removed.
+
+**L-5 · The printed briefing carries no Queue and no Kanban**
+`area:viewer kind:debt` — Why: `.screen-list,.workflow{display:none!important}` hides the whole
+`<details>`, summary included, so paper shows no trace that either exists. Predates the lens IA
+(both were already disclosures inside a view), but the restructure is the moment it became visible:
+`criticalPathPanel` renders through `pagedList` and prints as "N records are available in the
+interactive briefing" while its sibling `milestonePathPanel` prints in full, two adjacent panels
+answering the same question with opposite print behaviour. DoD: one print policy for bounded
+evidence, and a check that measures printed CONTENT rather than the presence of a selector.
+
+**L-6 · A redirect does not rewrite the address**
+`area:viewer kind:debt` — Why: `normalize` resolves a legacy or unpublished route to a real one but
+leaves `location.hash` as typed, so copying the URL propagates an address that resolves elsewhere.
+DoD: the shell replaces the hash after a redirect without re-entering the router.
+
+**L-7 · `test/fixtures/golden/viafera-control-room-golden.html` is a pre-lens artifact nothing reads**
+`area:test kind:debt` — Why: a composed briefing from the five-view IA, with no `__LENSES__` seam
+and no `lenses` block, referenced by no test. DoD: revived as the acceptance fixture ADR-0008 wave 4
+intended, or removed.
+
+## Found by a four-persona walk over the six lenses, 2026-09-04
+
+A product review, not a code review: the briefing was composed, driven headlessly at five viewport
+sizes and read as a stakeholder, a tech lead, an auditor and a new joiner. Two defects it found are
+fixed in the same commit as this list — the answer tier starving the evidence tier (six panels
+below an unscrollable fold at every desktop size), and every list item in every embedded document
+rendering blank. The rest are filed.
+
+**P-1 · The portfolio cannot answer its own question**
+`area:room kind:feat` — Why: "Which programme needs me now?" is answered by the blocking-rule count
+and nothing else. `ROOM.portfolio.programs[]` carries no verdict, health, brief or findings signal,
+and `lenses.mjs` gives the portfolio `owns: []`. A programme with a contradicted claim, three
+Problem findings and a stale architecture snapshot reads as "0 things need you". DoD: one line per
+programme carrying its verdict chip and worst severity, ordered worst-first.
+
+**P-2 · The same subject is graded twice, with contradictory verdicts, on two lenses**
+`area:room kind:bug` — Why: verdict's "Invariants" panel grades I2 `MECCANIZZATO` while
+provenance's document gate grades the same I2 "Watch — enforcement remains unproven". Two lenses,
+one subject, opposite answers. Operations shows the CI run green while verdict's thesis is that the
+same run proves nothing. I20 cannot see either: one reads `derived.brief`, the other
+`derived.documentGate` — the same FACT under different derived keys, which is the duplication the
+rule was built for, surviving underneath it. DoD: one home per subject, or an explicit
+cross-reference where two lenses must both mention it.
+
+**P-3 · Panel-level absence, and a scroll policy**
+`area:viewer kind:debt` — Why: I7 is applied at lens granularity and survives at panel granularity —
+traceability publishes a capability ledger reading "0 capabilities · no capability source is
+declared", verdict publishes a chart rendering the words "No data available.". Separately, measured
+at 1440x900: the C4 map iframe shows 336 of 420px, the document gate 195 of 1808, the embedded PRD
+195 of 2517. DoD: the same absent-not-empty rule one level down, and a scroll policy that does not
+show an 8% slice of a document.
+
+**P-4 · The seven questions exist only as tooltips**
+`area:viewer kind:feat` — Why: `window.__LENSES__` carries each lens's question and the rendered DOM
+contains none of them; a reader sees compressed tab labels ("The system" — a noun, not a question)
+and, in print, nothing. The architectural premise is invisible to the reader it was built for.
+
+**P-5 · Mechanism names in reader labels**
+`area:viewer kind:bug` — Why: `altro` (hard-coded at `lib/roomderive.mjs:181`, never passed through
+the locale table, unlike the other bucket keys), `MECCANIZZATO`/`DOCUMENTATO`, `azione`, `issue`;
+and backticks rendered literally in invariant row titles. An English briefing with Italian
+mechanism keys in it.
+
+**P-6 · Smaller truths**
+`area:viewer kind:bug` — the findings panel labels 9 rows "5 finding(s) whose evidence moved";
+portfolio Moving shows issue numbers with no titles while the same issues carry titles on the plan
+lens; the portfolio says "Blocking rule not declared" and "Every programme declares its blocking
+rule" on the same screen with two programmes; the architecture lens shows three dates and two
+version numbers; an unpublished lens redirects but leaves the wrong address in the bar (see L-6).
+
 ## Carried debt (open regardless of release)
 
 D-1 shipped-file count unenforced · D-2 `docmap` prefix false-alive · D-3 every view in the DOM at load

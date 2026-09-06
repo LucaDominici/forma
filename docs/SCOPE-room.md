@@ -65,8 +65,10 @@ not render.
 - `forma verify` gains a second output, `c4-issues.json`, additive and atomic with the existing
   model write.
 - `forma room` composes one briefing in reading order — the verdict, what waits on you, what moves,
-  what does not add up — with five views per programme nested under it (`exec`, `tech`, `map`,
-  `wbs`, `docs`) and an `options` view, all in one file, addressed by hash route. Eight flat tabs
+  what does not add up — with six lenses per programme nested under it (`verdict`, `plan`,
+  `architecture`, `traceability`, `operations`, `provenance`), each answering one question and each
+  published only where its backing artifacts exist, plus an `options` view, all in one file,
+  addressed by hash route. Eight flat tabs
   (`exec`, `holo`, `c4`, `wbs`, `auto`, `kan`, `seg`, `tec`) were this document's original plan;
   they were built, measured across three programmes and rejected by
   [ADR-0005](adr/0005-portfolio-briefing-over-per-repo-dashboard.md), and
