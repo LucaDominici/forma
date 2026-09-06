@@ -49,7 +49,7 @@ let verdictCount = 0, findingCount = 0, documentFindingCount = 0, openCount = 0
 // eager rendering, an unbounded issue page, or the inaccessible mobile navigation.
 const tabsSource = (/var TABS=([\s\S]*?);\s*var BUILD=/.exec(html) || [])[1] || ''
 const officialViews = [...tabsSource.matchAll(/\["([^"]+)",function/g)].map((m) => m[1])
-const officialIa = JSON.stringify(officialViews) === JSON.stringify(['exec', 'tech', 'map', 'wbs', 'docs'])
+const officialIa = JSON.stringify(officialViews) === JSON.stringify(['exec', 'ship', 'map', 'plan', 'tech', 'docs'])
 const pageSize = Number((/var ISSUE_PAGE_SIZE=(\d+)/.exec(html) || [])[1])
 const boundedDom = pageSize > 0 && pageSize <= 50 && /function pagedList\(/.test(html) && /function ensureView\(/.test(html) && !/function buildAll\(/.test(html)
 const mobileNav = /id="mobile-program"/.test(html) && /id="mobile-view"/.test(html) && /@media\(max-width:600px\)/.test(html)
@@ -160,7 +160,7 @@ const predicates = [
   ['re-generating from the same manifest is byte-deterministic', deterministic, determinismNote],
   ['every open issue is covered (Kanban or queue), none orphaned', orphanOpen.length === 0, orphanOpen.length ? `orphaned: ${orphanOpen.join(', ')}` : `${openCount} open, 0 orphaned`],
   ['a single programme opens on its Executive, not on an aggregate over itself', singleHome, singleHome ? (programs.length === 1 ? 'one programme: front door is its Executive' : `${programs.length} programmes: the briefing stays the front door`) : 'home()/registerAll() contract missing'],
-  ['the programme IA is exactly five evidence views', officialIa, officialViews.length ? officialViews.join(', ') : 'TABS contract missing'],
+  ['the programme IA is the six-view story in reading order', officialIa, officialViews.length ? officialViews.join(', ') : 'TABS contract missing'],
   ['issue DOM is lazy and page-bounded', boundedDom, Number.isFinite(pageSize) ? `${pageSize} issue rows per page` : 'pagination contract missing'],
   ['mobile navigation has native programme and view controls', mobileNav, mobileNav ? 'two labelled selects at the 600px breakpoint' : 'mobile controls missing'],
   ['print does not expand interactive issue archives', boundedPrint, boundedPrint ? 'interactive lists summarized on paper' : 'unbounded print path detected'],

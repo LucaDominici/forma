@@ -33,11 +33,12 @@
   "filterNone": "No matching records.",
   "routePortfolio": "Portfolio",
   "routeExec": "Where it stands",
+  "routeShip": "What to ship",
   "routeTech": "What needs a human",
   "routeQueue": "Prioritised queue",
   "routeKanban": "Work states",
   "routeMap": "The map",
-  "routeWbs": "The work",
+  "routePlan": "The plan",
   "routeDocs": "Documents",
   "routeOptions": "What is in this briefing",
   "programme": "Programme",
@@ -336,5 +337,11 @@
   "blockedByHeading": "Blocked by",
   "blockedByLabel": "label {label}",
   "edgeNative": "native edge",
-  "edgeProse": "prose, confirmed"
+  "edgeProse": "prose, confirmed",
+  "shipHeadline": "{n} work blocks are ready: {auto} launchable now, {manual} waiting on a human.",
+  "shipLede": "Cut from the {open} open issues by milestone and dependency — never by a guess",
+  "shipEmpty": "Nothing is cut into work blocks in this snapshot.",
+  "shipNoWhy": "No plain-words why yet — the next update ritual writes it into the brief.",
+  "shipNoMilestone": "No milestone declared",
+  "planHeadline": "{n} milestones carry the plan — {openMs} still have open work."
 }

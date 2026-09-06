@@ -86,6 +86,10 @@ a:hover{color:var(--accent)}
 .mobile-nav select{min-width:0;width:100%;height:44px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 28px 0 10px}
 
 main{min-height:0;padding:var(--pad);overflow:hidden}
+/* Two tiers, and neither may starve the other. Measured on the viafera room at 1400x900 (the
+   density pass of 2026-08-19): `.answer` grew to 2089px inside the 900px shell and `.evidence`
+   — the KPIs and all four charts — was painted into a 0px container. The answer is bounded and
+   scrolls; the evidence keeps at least its share. */
 .view{display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:var(--gap);height:100%;min-height:0}
 .view[data-single]{grid-template-rows:auto minmax(0,1fr)}
 
@@ -100,7 +104,9 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
    re-checks it. Every other dashboard asks to be believed; this one says how to check it. */
 .prov{margin:1px 0 6px;color:var(--muted);font-size:10.5px;font-family:var(--mono);
  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 0 auto}
-.panel-body{min-height:0;overflow:auto;flex:1 1 auto;scrollbar-width:thin}
+/* The tier scrolls, not every panel: six inner scrollers at 0.05 of their content is a wall of
+   scrollbars; one scroller per tier leaves the first rows of every panel on the screen. */
+.panel-body{min-height:0;overflow:visible;flex:1 1 auto;scrollbar-width:thin}
 .panel-body>p{max-width:72ch}
 .answer-lead{grid-column:1/-1;padding:14px 0 12px}
 .answer-lead .lede{max-width:70ch}
@@ -109,9 +115,9 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
 .empty-state p{margin:0 0 8px;color:var(--muted)}
 .empty-state .next{color:var(--ink)}
 
-.answer{display:grid;gap:var(--gap);grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+.answer{display:grid;gap:var(--gap);min-height:0;max-height:58vh;overflow:auto;scrollbar-width:thin;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:min-content;align-content:start}
 .evidence{display:grid;gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin;
- grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(0,auto);align-content:start}
+ grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:min-content;align-content:start}
 .span2{grid-column:span 2}
 .full{grid-column:1/-1}
 @media(min-width:1500px){
@@ -134,7 +140,7 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
  main{overflow:visible;height:auto}
  .bar{position:sticky;top:0;z-index:20;background:var(--bg)}
  .view{height:auto;display:block}
- .answer,.evidence{overflow:visible;grid-auto-rows:auto}
+ .answer,.evidence{overflow:visible;grid-auto-rows:auto;max-height:none}
  .panel{margin-bottom:var(--gap)}
  .panel-body{overflow:visible;max-height:none}
 }
@@ -204,7 +210,7 @@ details[open]>summary:after{content:"\2212"}
 .list-filter{display:flex;gap:8px;margin:2px 0 8px}
 .list-filter input{width:100%;min-height:44px;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);font:inherit;font-size:16px}
 .view-state{margin:0 0 6px;display:flex;justify-content:flex-end}
-.cap-ledger .panel-body{max-height:260px}
+.cap-ledger .panel-body{max-height:260px;overflow:auto}
 .links{display:flex;gap:6px;flex-wrap:wrap}
 .kanban-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin}
 .kanban-issue{padding:6px 0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;min-width:0}
@@ -214,6 +220,7 @@ details[open]>summary:after{content:"\2212"}
 .queue-item .issue-pill{display:flex;font-weight:600;margin-bottom:4px}
 .queue-command{display:flex;align-items:center;gap:6px;min-width:0}
 .queue-command code{min-width:0;overflow:auto;white-space:nowrap;flex:1 1 auto}
+.ship-why{margin:2px 0 6px;max-width:80ch;font-size:13px}
 @media(max-width:1199px){.queue-board{grid-template-columns:minmax(0,1fr)}}
 .workflow{border-top:1px solid var(--line)}
 .workflow>summary{min-height:44px;display:flex;align-items:center;font-weight:650}
@@ -349,7 +356,7 @@ th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--bg)
  .view[hidden]{display:block!important}
  .view{break-after:page}
  .view:last-child{break-after:auto}
- .answer,.evidence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:10pt}
+ .answer,.evidence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:10pt;max-height:none}
  .answer-lead,.full,.span2{grid-column:1/-1}
  .kanban-board,.queue-board{grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
  .panel{break-inside:avoid;border-top:1px solid #999;margin-bottom:10pt}
@@ -708,7 +715,7 @@ function pagedList(target,items,render){
  prev.type="button";next.type="button";
  function draw(){
   var start=page*ISSUE_PAGE_SIZE,end=Math.min(items.length,start+ISSUE_PAGE_SIZE),i;
-  wrap.textContent="";for(i=start;i<end;i++)wrap.appendChild(render(items[i]));
+  wrap.textContent="";for(i=start;i<end;i++)wrap.appendChild(render(items[i],i));
   state.textContent=fmt(STR.pageStatus,{from:items.length?start+1:0,to:end,total:items.length});
   prev.disabled=page===0;next.disabled=page>=total-1;focusScrollers(target);
  }
@@ -1097,13 +1104,10 @@ function viewExec(view,program,summary){
  }
  var strip=briefStatusStrip(program);if(strip)lead.appendChild(strip);
  answer.appendChild(lead);
- var bp=briefPanels(program),bi;for(bi=0;bi<bp.length;bi++)answer.appendChild(bp[bi]);
- answer.appendChild(capabilityPanel([program]));
- answer.appendChild(changedPanel([program]));
- view.appendChild(answer);
-
- var ev=el("div","evidence");
- var kp=panel(STR.kpiHeading,STR.provDerived,"span2"),list=el("dl","kpis");
+ // The numbers and the milestone bars sit under the sentence, above the fold — the reference puts
+ // four tiles and seven bars on its first screen, and a reader who opens this cold looks for them
+ // before reading a risk. The remaining charts stay in the evidence tier below.
+ var kp=panel(STR.kpiHeading,STR.provDerived),list=el("dl","kpis");
  kpi(list,STR.kpiOpen,k.openCount);kpi(list,STR.kpiBlocked,blockedClaim.known?blockedClaim.value:null,blockedClaim.known?null:STR.ruleUnknown);kpi(list,STR.kpiNoMilestone,k.noMilestoneCount);
  kpi(list,STR.kpiLinked,k.linkCoveragePct==null?null:k.linkCoveragePct+"%",k.linkCoveragePct==null?STR.notMeasured:STR.kpiLinkedNote);
  kpi(list,STR.kpiRequirements,rtm&&rtm.coverage.pct!=null?rtm.coverage.pct+"%":null,rtm?fmt(STR.planCoverageNote,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements,withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly}):STR.notMeasured);
@@ -1112,10 +1116,16 @@ function viewExec(view,program,summary){
  // paid for this once (a note it called "come leggere i conteggi"); the lesson is kept here as one
  // line under the numbers, built from what each KPI actually counts.
  kp.body.appendChild(el("p","muted kpi-read",fmt(STR.kpiHowToRead,{total:program.issuesSnapshot.issues.length,today:ROOM.meta.today,rule:blockedClaim.known?STR.kpiHowToReadRuleDeclared:STR.ruleUnknown})));
- ev.appendChild(kp);
+ answer.appendChild(kp);
+ answer.appendChild(chartMilestones(summary,program));
+ var bp=briefPanels(program),bi;for(bi=0;bi<bp.length;bi++)answer.appendChild(bp[bi]);
+ answer.appendChild(capabilityPanel([program]));
+ answer.appendChild(changedPanel([program]));
+ view.appendChild(answer);
+
+ var ev=el("div","evidence");
  if(history)ev.appendChild(chartHistory(history,program));
  else{var hp=panel(STR.historyChart,STR.provDerived,"span2");hp.body.appendChild(el("p","muted",STR.historyMissing));ev.appendChild(hp);}
- ev.appendChild(chartMilestones(summary,program));
  ev.appendChild(chartPriority(summary,program));
  ev.appendChild(chartLanding(summary,program));
  if(summary.hasMap)ev.appendChild(chartNodes(summary,program));
@@ -1183,7 +1193,6 @@ var i,j;
 
  var ev=el("div","evidence");
  ev.appendChild(rowsPanel(panel(STR.techBlocked,blockedClaim.known?fmt(STR.provBlockedSources,{n:mine.length,labels:summary.blockedByLabel,deps:summary.blockedByDependency}):STR.provBlockedUnknown,"span2"),mine,blockedRow,blockedClaim.known?STR.noBlockedHere:STR.ruleUnknown));
- ev.appendChild(signalsPanel(program));
 
  var findings=(program.derived.findings&&program.derived.findings.findings)||(program.findings&&program.findings.findings)||[];
  var fp=panel(STR.techFindings,STR.provAudit);
@@ -1200,6 +1209,9 @@ var i,j;
   if(f.trace)pair(dl,STR.techAudit,f.trace);
   d.appendChild(dl);return d;
  },STR.techNoFindings));
+ // Findings before signals: a finding is a thing to act on, a signal is a thing to know; the
+ // findings sat below the evidence fold while the signals did not (density pass, 2026-08-19).
+ ev.appendChild(signalsPanel(program));
 
  var hp=panel(STR.techHonesty,STR.provHonesty),cd=summary.commitDrift;
  function kv(k,v){var r=el("div","kv");r.appendChild(el("span","",k));r.appendChild(v&&v.nodeType?v:el("span","",v));hp.body.appendChild(r);}
@@ -1214,10 +1226,11 @@ var i,j;
  kv(STR.snapshots,snapshotAge(age,dt));
  ev.appendChild(hp);
 
- // The two projections used to be full routes. They are supporting evidence for the same human
- // decision, so they now disclose here and build only when opened.
- ev.appendChild(workflow(program,STR.routeQueue,function(target){renderQueue(target,program);}));
- ev.appendChild(workflow(program,STR.routeKanban,function(target){renderKanban(target,program);}));
+ // The queue lives on the Ship page now; the board stays here as the evidence of work states.
+ var board=workflow(program,STR.routeKanban,function(target){renderKanban(target,program);});ev.appendChild(board);
+ // The board opens on arrival — assigned after the listener is attached, so the lazy fill runs —
+ // and the print rule hides `.workflow` regardless of its open state.
+ board.open=true;
  view.appendChild(ev);
 }
 
@@ -1261,20 +1274,28 @@ function renderQueue(target,program){
  for(i=0;i<blocks.length;i++){var block=blocks[i],notes=blockNotes(program,block);items.push({block:block,notes:notes,search:[block.t,block.ms,JSON.stringify(block.note),JSON.stringify(block.why)].concat(block.iss.map(function(issue){return "#"+issue[0]+" "+issue[1];}),notes.map(function(c){return c.text;})).join(" ")});}
  if(items.length){
   var lane=panel(STR.routeQueue,fmt(STR.blockCount,{n:items.length}));markState(lane,"present");
-  filteredList(lane.body,items,function(entry){
-   var block=entry.block,item=el("div","queue-item"),head=el("div","row-meta"),links=el("div","links"),j;
-   head.appendChild(el("span","chip",block.t));if(block.ms)head.appendChild(el("span","chip",block.ms));head.appendChild(el("span","ref",fmt(STR.blockIssues,{n:block.iss.length})));item.appendChild(head);
-   for(j=0;j<block.iss.length;j++){links.appendChild(pill(program,block.iss[j][0],"#"+block.iss[j][0]+" "+short(block.iss[j][1],64)));links.appendChild(document.createTextNode(" "));}item.appendChild(links);
-   if(block.note&&block.note.labelled.length)item.appendChild(el("div","muted",fmt(STR.blockDeclaredLabels,{issues:block.note.labelled.map(function(n){return "#"+n;}).join(", ")})));
-   if(block.note&&block.note.external.length)item.appendChild(el("div","muted",fmt(STR.blockExternal,{issues:block.note.external.map(function(n){return "#"+n;}).join(", ")})));
-   for(j=0;j<Math.min(block.why.length,EDGE_LIST_MAX);j++)item.appendChild(el("div","muted",fmt(STR.blockDependency,{from:block.why[j].from.repo+"#"+block.why[j].from.number,to:block.why[j].to.repo+"#"+block.why[j].to.number})));
-   if(block.why.length>EDGE_LIST_MAX)item.appendChild(el("div","muted",fmt(STR.moreEdges,{n:block.why.length-EDGE_LIST_MAX})));
-   if(entry.notes.length){item.appendChild(el("div","prov",STR.blockWhy));for(j=0;j<entry.notes.length;j++)item.appendChild(briefClaimRow(program,entry.notes[j]));}
-   item.appendChild(block.auto&&block.cmd?commandLine(block.cmd):el("span","state-chip",STR.human));return item;
-  });
+  filteredList(lane.body,items,function(entry){return queueItem(program,entry.block,entry.notes);});
   board.appendChild(lane);
  }else{var emptyLane=panel(STR.routeQueue,STR.queueComplete);markState(emptyLane,"empty",STR.noMoving);board.appendChild(emptyLane);}
  target.appendChild(board);
+}
+function queueItem(program,block,notes,wordsFirst){
+ var item=el("div","queue-item"),head=el("div","row-meta"),links=el("div","links"),j;
+ head.appendChild(el("span","chip",block.t));if(block.ms)head.appendChild(el("span","chip",block.ms));head.appendChild(el("span","ref",fmt(STR.blockIssues,{n:block.iss.length})));item.appendChild(head);
+ // wordsFirst is the Ship page: the reader decides from a sentence, not from issue titles. The
+ // sentence is the brief note for this block — written by the agent, gated, counter-verified —
+ // and when no one has written it yet, the page says so instead of leaving a silent gap.
+ if(wordsFirst){
+  if(notes.length)for(j=0;j<notes.length;j++){var w=el("p","ship-why");w.appendChild(briefMark(notes[j]));w.appendChild(document.createTextNode(" "+notes[j].text));item.appendChild(w);}
+  else item.appendChild(el("p","muted",STR.shipNoWhy));
+ }
+ for(j=0;j<block.iss.length;j++){links.appendChild(pill(program,block.iss[j][0],"#"+block.iss[j][0]+" "+short(block.iss[j][1],64)));links.appendChild(document.createTextNode(" "));}item.appendChild(links);
+ if(block.note&&block.note.labelled.length)item.appendChild(el("div","muted",fmt(STR.blockDeclaredLabels,{issues:block.note.labelled.map(function(n){return "#"+n;}).join(", ")})));
+ if(block.note&&block.note.external.length)item.appendChild(el("div","muted",fmt(STR.blockExternal,{issues:block.note.external.map(function(n){return "#"+n;}).join(", ")})));
+ for(j=0;j<Math.min(block.why.length,EDGE_LIST_MAX);j++)item.appendChild(el("div","muted",fmt(STR.blockDependency,{from:block.why[j].from.repo+"#"+block.why[j].from.number,to:block.why[j].to.repo+"#"+block.why[j].to.number})));
+ if(block.why.length>EDGE_LIST_MAX)item.appendChild(el("div","muted",fmt(STR.moreEdges,{n:block.why.length-EDGE_LIST_MAX})));
+ if(!wordsFirst&&notes.length){item.appendChild(el("div","prov",STR.blockWhy));for(j=0;j<notes.length;j++)item.appendChild(briefClaimRow(program,notes[j]));}
+ item.appendChild(block.auto&&block.cmd?commandLine(block.cmd):el("span","state-chip",STR.human));return item;
 }
 // "Why this batch" is not a curated blocks file (SCOPE-room §4): it is whatever the brief already
 // says about this block's milestone or one of its issues — a typed `note` claim with the same
@@ -1352,35 +1373,75 @@ function viewMap(view,program){
  view.appendChild(ev);
 }
 
-function milestoneRow(program,issues,m){
- var d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),body=el("div"),numbers=[],i;
+function milestoneRow(program,issues,m,openByDefault){
+ var d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),body=el("div"),numbers=[],titles={},i;
  meta.appendChild(el("span","chip",fmt(STR.milestoneSummary,{open:m.open,closed:m.closed})));
  if(m.due)meta.appendChild(el("span","muted",m.due));
  s.appendChild(el("span","ref",m.closureRate==null?"—":m.closureRate+"%"));s.appendChild(meta);s.appendChild(el("span","row-title",m.title));d.appendChild(s);d.appendChild(body);
- for(i=0;i<issues.length;i++)if(issues[i].ms===m.title)numbers.push(issues[i].n);
- d.addEventListener("toggle",function(){if(d.open&&!d.getAttribute("data-filled")){d.setAttribute("data-filled","true");if(numbers.length)pagedList(body,numbers,function(n){var row=el("div","links");row.appendChild(pill(program,n));return row;});else body.appendChild(el("p","muted",STR.milestoneNoIssues));}});return d;
+ for(i=0;i<issues.length;i++)if(issues[i].ms===m.title){numbers.push(issues[i].n);titles[issues[i].n]=issues[i].title;}
+ // A pill in a milestone carries the issue's title — "#116" alone is a lookup, "#116 UMBRELLA S2 …"
+ // is a row. The fill stays lazy (it runs in the toggle handler), so a row opened by default is
+ // opened by assignment AFTER the listener is attached: `<details open>` in markup fires no toggle
+ // and would open empty.
+ d.addEventListener("toggle",function(){if(d.open&&!d.getAttribute("data-filled")){d.setAttribute("data-filled","true");if(numbers.length)pagedList(body,numbers,function(n){var row=el("div","links");row.appendChild(pill(program,n,"#"+n+" "+short(titles[n]||"",58)));return row;});else body.appendChild(el("p","muted",STR.milestoneNoIssues));}});
+ if(openByDefault)d.open=true;
+ return d;
 }
 function milestonePanel(program){
  var items=program.derived.milestones||[],collection=program.issuesSnapshot.collection||{},complete=collection.milestonesComplete!==false;
  var p=panel(STR.milestones,fmt(STR.milestoneProv,{n:items.length}),"full"),issues=program.issuesSnapshot.issues||[];
  if(!complete)markState(p,"unknown",STR.milestoneIncomplete);
  else markState(p,items.length?"present":"empty",items.length?null:STR.milestoneEmpty);
- if(items.length)pagedList(p.body,items,function(m){return milestoneRow(program,issues,m);});
+ // The two busiest milestones open on arrival (the reference pre-expands two); the rest disclose.
+ var opened=0;
+ if(items.length)pagedList(p.body,items,function(m){var o=opened<2&&m.open>0;if(o)opened++;return milestoneRow(program,issues,m,o);});
  return p;
 }
 
-function viewWbs(view,program){
- var rtm=program.derived.rtm,i,j;
- markView(view,rtm?"present":"unknown");
+/* WHAT TO SHIP. The queue as a decision surface: blocks grouped under their milestone, the
+   plain-words "why this batch" first, then the issues wearing their health, then the command
+   ready to copy. The archive with search stays at the bottom; the board lives in Tech. */
+function viewShip(view,program,summary){
+ var blocks=program.derived.blocks||[],i,auto=0;
+ for(i=0;i<blocks.length;i++)if(blocks[i].auto&&blocks[i].cmd)auto++;
+ markView(view,blocks.length?"present":"empty");
+ var answer=el("div","answer"),lead=el("section","panel answer-lead");
+ lead.appendChild(el("p","thesis",blocks.length?fmt(STR.shipHeadline,{n:blocks.length,auto:auto,manual:blocks.length-auto}):STR.shipEmpty));
+ lead.appendChild(el("p","lede",fmt(STR.shipLede,{open:summary.open})+" · "+snapshotProv(program)));
+ answer.appendChild(lead);
+ view.appendChild(answer);
+ var ev=el("div","evidence");
+ // Group under the milestone: the reader ships a train, not a cluster key. Blocks with no
+ // milestone close the list under their own honest heading.
+ var order=[],groups={};
+ for(i=0;i<blocks.length;i++){var g=blocks[i].ms||"";if(!groups[g]){groups[g]=[];order.push(g);}groups[g].push(blocks[i]);}
+ order.sort(function(a,b){return a===""?1:b===""?-1:0;});
+ for(i=0;i<order.length;i++){
+  var name=order[i],list=groups[name],gp=panel(name||STR.shipNoMilestone,fmt(STR.blockCount,{n:list.length}),"span2"),j;
+  markState(gp,"present");
+  for(j=0;j<list.length;j++)gp.body.appendChild(queueItem(program,list[j],blockNotes(program,list[j]),true));
+  ev.appendChild(gp);
+ }
+ ev.appendChild(workflow(program,STR.routeQueue,function(target){renderQueue(target,program);}));
+ view.appendChild(ev);
+}
+
+/* THE PLAN. Milestones first — the reader asks "where is this going" before "is the matrix
+   complete" — then the traceability matrix and its four holes underneath as the proof layer. */
+function viewPlan(view,program){
+ var rtm=program.derived.rtm,ms=program.derived.milestones||[],i,j,openMs=0;
+ for(i=0;i<ms.length;i++)if(ms[i].open>0)openMs++;
+ markView(view,(ms.length||rtm)?"present":"unknown");
  if(!rtm){
   view.setAttribute("data-single","");
-  var missing=el("div","evidence"),missingPanel=panel(STR.routeWbs,STR.provRtm,"full");
+  var missing=el("div","evidence"),missingPanel=panel(STR.routePlan,STR.provRtm,"full");
   missing.appendChild(milestonePanel(program));emptyState(missingPanel,STR.wbsMissing,STR.wbsNext);missing.appendChild(missingPanel);view.appendChild(missing);return;
  }
  var answer=el("div","answer"),lead=el("section","panel answer-lead");
- lead.appendChild(el("p","thesis",rtm?fmt(STR.wbsHeadline,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements}):STR.wbsMissing));
- lead.appendChild(el("p","lede",rtm?fmt(STR.wbsSplit,{withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly}):""));
+ lead.appendChild(el("p","thesis",fmt(STR.planHeadline,{n:ms.length,openMs:openMs})));
+ lead.appendChild(el("p","lede",fmt(STR.wbsHeadline,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements})+" · "+fmt(STR.wbsSplit,{withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly})));
  answer.appendChild(lead);
+ answer.appendChild(milestonePanel(program));
 
  var holes=[],hp=panel(STR.wbsHoles,STR.provRtm,"span2");
  if(rtm){
@@ -1404,7 +1465,6 @@ function viewWbs(view,program){
  view.appendChild(answer);
 
  var ev=el("div","evidence");
- ev.appendChild(milestonePanel(program));
  var mp=panel(STR.wbsMatrix,STR.provRtm,"span2");
  if(rtm){
   var wrap=el("div","tablewrap"),tb=el("table","matrix"),th=el("thead"),htr=el("tr"),tbody=el("tbody");
@@ -1584,10 +1644,14 @@ function toggle(id,enabled){
 
 /* --------------------------------- routing -------------------------------- */
 var VIEWS={},VIEW_SPEC={},ORDER=[],PRINT_FILL=[];
-var TABS=[["exec",function(){return STR.routeExec;}],["tech",function(){return STR.routeTech;}],
-          ["map",function(){return STR.routeMap;}],["wbs",function(){return STR.routeWbs;}],
-          ["docs",function(){return STR.routeDocs;}]];
-var BUILD={exec:viewExec,tech:viewTech,map:viewMap,wbs:viewWbs,docs:viewDocs};
+/* The views are a story told in reading order: where we stand, what to ship next, what the thing
+   IS, where it is going, what is under the hood, and the paper it stands on. A reader in an
+   executive meeting stops after the first two; the team lives in the middle; nobody has to know
+   which tab an answer hides behind, because the order is the narrative. */
+var TABS=[["exec",function(){return STR.routeExec;}],["ship",function(){return STR.routeShip;}],
+          ["map",function(){return STR.routeMap;}],["plan",function(){return STR.routePlan;}],
+          ["tech",function(){return STR.routeTech;}],["docs",function(){return STR.routeDocs;}]];
+var BUILD={exec:viewExec,ship:viewShip,map:viewMap,plan:viewPlan,tech:viewTech,docs:viewDocs};
 function key(p,t){return p?"/"+p+"/"+t:"/"+t;}
 function mount(k){
  var v=el("section","view");v.id="view-"+k.replace(/[^a-z0-9]+/gi,"-");v.hidden=true;
@@ -1649,8 +1713,8 @@ function normalize(h){
  var raw=String(h||"").replace(/^#/,"");
  if(!raw)return home();
  if(raw.charAt(0)==="/"){
-  var old=/^\/([^/]+)\/(auto|kanban)$/.exec(raw);
-  if(old&&byId(old[1]))return key(old[1],"tech");
+  var old=/^\/([^/]+)\/(auto|kanban|wbs)$/.exec(raw);
+  if(old&&byId(old[1]))return key(old[1],old[2]==="auto"?"ship":old[2]==="kanban"?"tech":"plan");
   return VIEWS[raw]?raw:home();
  }
  if(LEGACY.hasOwnProperty(raw)){
