@@ -1,0 +1,54 @@
+{
+  "schema": "arbiter-milestones-v1",
+  "milestones": [
+    {
+      "id": "MS-01",
+      "title": "Lifecycle ontology wired — arbiter defines, forma renders",
+      "depends_on": [],
+      "horizon": "now",
+      "status": "active",
+      "estimate_days": 30,
+      "due": "2026-10-31",
+      "members": {
+        "issues": [
+          2480,
+          2500,
+          2501,
+          2504,
+          2506,
+          2507
+        ],
+        "label": "programme/lifecycle-ontology"
+      }
+    },
+    {
+      "id": "MS-02",
+      "title": "Anti-context-rot enforcers E1-E7",
+      "depends_on": [
+        "MS-01"
+      ],
+      "horizon": "next",
+      "status": "planned",
+      "members": {
+        "issues": [
+          1943
+        ]
+      }
+    },
+    {
+      "id": "MS-03",
+      "title": "Public launch v0.1",
+      "depends_on": [
+        "MS-02"
+      ],
+      "horizon": "later",
+      "status": "planned",
+      "members": {
+        "issues": [
+          1491,
+          1770
+        ]
+      }
+    }
+  ]
+}

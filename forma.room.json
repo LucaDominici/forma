@@ -105,7 +105,7 @@
               "include": [
                 "bin/forma.mjs",
                 "lib/*.mjs",
-                "scripts/lint.mjs",
+                "scripts/*.mjs",
                 "test/run.mjs"
               ]
             },

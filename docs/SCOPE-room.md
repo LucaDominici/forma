@@ -65,17 +65,19 @@ not render.
 - `forma verify` gains a second output, `c4-issues.json`, additive and atomic with the existing
   model write.
 - `forma room` composes one briefing in reading order — the verdict, what waits on you, what moves,
-  what does not add up — with six views per programme nested under it as a story in reading order
-  (`exec`, `ship`, `map`, `plan`, `tech`, `docs`) and an `options` view, all in one file, addressed
-  by hash route. Eight flat tabs (`exec`, `holo`, `c4`, `wbs`, `auto`, `kan`, `seg`, `tec`) were
-  this document's original plan; they were built, measured across three programmes and rejected by
-  [ADR-0005](adr/0005-portfolio-briefing-over-per-repo-dashboard.md);
+  what does not add up — with six lenses per programme nested under it (`verdict`, `plan`,
+  `architecture`, `traceability`, `operations`, `provenance`), each answering one question and each
+  published only where its backing artifacts exist, plus an `options` view, all in one file,
+  addressed by hash route. Eight flat tabs
+  (`exec`, `holo`, `c4`, `wbs`, `auto`, `kan`, `seg`, `tec`) were this document's original plan;
+  they were built, measured across three programmes and rejected by
+  [ADR-0005](adr/0005-portfolio-briefing-over-per-repo-dashboard.md), and
   [ADR-0007](adr/0007-views-nested-under-the-briefing.md) records why views came back one level
   down rather than in place of the briefing, and
-  [ADR-0008](adr/0008-the-briefing-tells-a-story.md) why the queue returned as the words-first
-  `ship` page and the milestones as `plan`, measured against the owner's reading of the viafera
-  room. The Kanban board remains lazy, bounded evidence inside `tech`; legacy `/auto`, `/kanban`
-  and `/wbs` hashes redirect to `ship`, `tech` and `plan`.
+  [ADR-0008](adr/0008-lifecycle-ontology-and-six-lenses.md) why the five views became six lenses,
+  each answering one question. The queue and the Kanban board remain lazy, bounded evidence inside
+  the `plan` lens; every address the five-view IA published stays valid, and legacy `/auto`,
+  `/kanban` and `/wbs` hashes redirect to `plan`, `plan` and `traceability`.
 - `forma scan` writes the programme list from a directory of checkouts, merging rather than
   replacing: `enabled: false` and every hand-curated field survive a re-run, and `today` is never
   invented.

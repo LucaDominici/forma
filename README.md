@@ -211,18 +211,24 @@ incomplete. The last update regenerates every plan, applies fill and counter res
 time, and only then recomposes; `room-presentable` refuses to publish a decision nobody held. Forma
 never launches an agent itself (D-08 / I2), and `today` never moves on its own (I12).
 
-One file. A briefing in reading order at `#/`, five views per programme under it, and an options
-view saying what is included and why:
+One file. A briefing in reading order at `#/`, and under it six lenses per programme, each
+answering exactly one question (ADR-0008). A lens is published only where its backing artifacts
+exist: on a programme with no architecture model and no requirements source those routes do not
+exist, rather than rendering panels that say "No data available." (I7, I20).
 
-| Route | What it answers |
+| Route | The one question it answers |
 |---|---|
-| `#/` | The verdict, what waits on you, what moves, what does not add up |
-| `#/<prog>/exec` | Where it stands: the brief (thesis, risks, decide now, invariants — coloured only under a hostile hold), coverage of the plan, where we were, milestones |
-| `#/<prog>/tech` | What needs a human: blocked work, audit verdicts, findings, and bounded lazy Queue/Kanban evidence |
-| `#/<prog>/map` | The architecture, plus checkpoints carrying **measured** completion |
-| `#/<prog>/wbs` | Requirement → design → verification → issues, with the holes named |
-| `#/<prog>/docs` | The canon in full; everything else listed with a link |
-| `#/options` | What is in this briefing. With `--serve`, checkboxes that write the manifest |
+| `#/` | Which programme needs me now? |
+| `#/<prog>/verdict` | Can we trust this programme's claims today? — the brief (thesis, risks, decide now, invariants, coloured only under a hostile hold), findings, and what the briefing cannot see |
+| `#/<prog>/plan` | What happens when, and what blocks the date? — milestones, the critical path with its six-field float model, drift against GitHub, and bounded lazy Queue/Kanban evidence |
+| `#/<prog>/architecture` | What is the system, and how complete is our picture? — the map, checkpoints carrying **measured** completion, and the commits no issue claims |
+| `#/<prog>/traceability` | Is what we promised built, and proven? — requirement → design → verification → issues, with the holes named, and the capability ledger |
+| `#/<prog>/operations` | Can we run it, and survive it failing? — what the repository reports about its own workflows and releases |
+| `#/<prog>/provenance` | Why is it this way, on whose authority? — the canon in full, the document gate, everything else listed with a link |
+| `#/options` | What is in this briefing, and which lens each programme can answer. With `--serve`, checkboxes that write the manifest |
+
+Every address the earlier five-view IA published stays valid: `exec`, `tech`, `map`, `wbs`, `docs`
+and the retired `auto`/`kanban` all redirect to the lens that inherited the question.
 
 Printing gives you every official view, but summarizes interactive issue archives instead of
 expanding thousands of historical rows. Screen and print cost therefore scale with views and
