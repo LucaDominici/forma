@@ -40,6 +40,7 @@ import {
 import { loadDocs } from "../lib/roomdocs.mjs";
 import { deriveRtm } from "../lib/rtm.mjs";
 import { componentsFor } from "../lib/cluster.mjs";
+import { canonicalPath } from "../lib/roomload.mjs";
 import { lensDrift } from "./fixtures/control-room-stress/make.mjs";
 import {
   DERIVED_KEYS,
@@ -2194,6 +2195,7 @@ const diffPaths = (a, b, at = "") => {
   )
     die("WP-A5: room update still reports the map-less programme as skipped");
   const roomBeforeFailedUpdate = readFileSync(maplessRoom, "utf-8");
+  const issuesBeforeFailedUpdate = readFileSync(maplessIssues, "utf-8");
   r = run([
     "room",
     "update",
@@ -2206,9 +2208,26 @@ const diffPaths = (a, b, at = "") => {
   ]);
   if (
     r.status === 0 ||
-    readFileSync(maplessRoom, "utf-8") !== roomBeforeFailedUpdate
+    readFileSync(maplessRoom, "utf-8") !== roomBeforeFailedUpdate ||
+    readFileSync(maplessIssues, "utf-8") !== issuesBeforeFailedUpdate
   )
-    die("WP-A5: room update published after verify failed", r);
+    die("WP-A5: failed verify changed a published room or input snapshot", r);
+
+  // Recovery: two active programmes may not publish to one snapshot, overlay or output, including
+  // aliases. The guard must fail before --skip-verify can compose or alter any target.
+  const collisionManifest = join(mapless, "collision.room.json"), collisionRoom = join(mapless, "collision.html");
+  writeFileSync(collisionRoom, "previous collision artifact\n");
+  writeFileSync(collisionManifest, JSON.stringify({
+    today: "2026-08-17",
+    programs: [
+      { id: "first", ghRepo: "acme/thing", repo: ".", issues: "issues.json" },
+      { id: "second", ghRepo: "acme/thing", repo: ".", issues: "issues.json" },
+    ],
+  }, null, 2) + "\n");
+  const collisionBefore = readFileSync(collisionRoom, "utf-8");
+  r = run(["room", "update", "--manifest", collisionManifest, "--out", collisionRoom, "--skip-verify"]);
+  if (r.status === 0 || !/write target collision/.test(r.stderr || "") || readFileSync(collisionRoom, "utf-8") !== collisionBefore)
+    die("production recovery: duplicate write target was not rejected before publication", r);
   console.log(
     "  ok verify — WP-A5 closed→done with dated evidence, open untouched, idempotent, gh failure leaves the model intact",
   );
@@ -8998,7 +9017,114 @@ const diffPaths = (a, b, at = "") => {
       die("lenses: with nothing declared the architecture lens must stay absent");
   }
 
-  console.log("  ok lenses — one home per derived surface, publication measured from backing artifacts, routing mounts only what publishes");
+ console.log("  ok lenses — one home per derived surface, publication measured from backing artifacts, routing mounts only what publishes");
+}
+
+// Transactional room update: every writer stays staged until the whole portfolio and its composed
+// briefing are valid. A staged read must still retain logical provenance for brief history and
+// model evidence handed to a counter-verifier after staging disappears.
+{
+  const recovery = join(tmp, "room-update-recovery"),
+    alpha = join(recovery, "alpha"),
+    beta = join(recovery, "beta"),
+    manifest = join(recovery, "forma.room.json"),
+    room = join(recovery, "room.html");
+  cpSync(FIX("room/alpha"), alpha, { recursive: true });
+  cpSync(FIX("room/alpha"), beta, { recursive: true });
+  writeFileSync(join(alpha, "brief.json"), '{"claims":[]}\n');
+  writeFileSync(join(beta, "brief.json"), '{"claims":[]}\n');
+  const git = (args) =>
+    execFileSync("git", ["-C", alpha, ...args], {
+      encoding: "utf-8",
+      env: { ...process.env, GIT_AUTHOR_NAME: "Forma", GIT_AUTHOR_EMAIL: "forma@example.test", GIT_COMMITTER_NAME: "Forma", GIT_COMMITTER_EMAIL: "forma@example.test" },
+    }).trim();
+  git(["init", "-q"]);
+  git(["add", "."]);
+  git(["commit", "-q", "-m", "brief before update"]);
+  const previous = git(["rev-parse", "HEAD"]);
+  const programs = ["alpha", "beta"].map((id) => ({
+    id,
+    ghRepo: "acme/alpha",
+    repo: id,
+    issues: `${id}/issues.json`,
+    health: `${id}/health.json`,
+    findings: `${id}/findings.json`,
+    brief: { path: `${id}/brief.json`, ...(id === "alpha" ? { previous } : {}) },
+    auditPlan: `${id}/plan.json`,
+    auditFill: `${id}/fill.json`,
+  }));
+  writeFileSync(manifest, JSON.stringify({ today: "2026-08-10", programs }, null, 2));
+  const auditPlan = (id) =>
+    run([
+      "audit", "--repo", join(recovery, id), "--issues", join(recovery, id, "issues.json"),
+      "--health", join(recovery, id, "health.json"), "--findings", join(recovery, id, "findings.json"),
+      "--brief", join(recovery, id, "brief.json"), "--today", "2026-08-10", "--blocked-labels", "[]",
+      "--plan", join(recovery, id, "plan.json"),
+    ]);
+  if (auditPlan("alpha").status !== 0 || auditPlan("beta").status !== 0)
+    die("recovery: could not make audit plans");
+  const thesis = {
+    id: "thesis", kind: "thesis", text: "The staged brief is the composed brief.",
+    about: { path: "src/core/engine.js" }, evidence: [{ type: "path", ref: "src/core/engine.js" }],
+  };
+  writeFileSync(join(alpha, "fill.json"), JSON.stringify({ planHash: readJson(join(alpha, "plan.json")).planHash, verdicts: [], findings: [], brief: { claims: [thesis] } }));
+  writeFileSync(join(beta, "fill.json"), JSON.stringify({ planHash: "stale", verdicts: [], findings: [] }));
+  const beforeAbort = readFileSync(join(alpha, "brief.json"), "utf-8");
+  let r = run(["room", "update", "--manifest", manifest, "--out", room, "--skip-verify", "--fill"]);
+  if (r.status === 0 || readFileSync(join(alpha, "brief.json"), "utf-8") !== beforeAbort)
+    die("recovery: a later programme failure leaked an earlier staged brief", r);
+  writeFileSync(join(beta, "fill.json"), JSON.stringify({ planHash: readJson(join(beta, "plan.json")).planHash, verdicts: [], findings: [] }));
+  r = run(["room", "update", "--manifest", manifest, "--out", room, "--skip-verify", "--fill"]);
+  if (r.status !== 0 || !readFileSync(room, "utf-8").includes(thesis.text))
+    die("recovery: successful update did not compose the staged brief", r);
+  const rendered = JSON.parse(/window\.__ROOM__ = ([\s\S]*?);\s*<\/script>/.exec(readFileSync(room, "utf-8"))[1]).programs.find((p) => p.id === "alpha");
+  if (!rendered.derived.briefDelta || !rendered.derived.briefDelta.resolvable || !rendered.derived.briefDelta.added.some((claim) => claim.id === "thesis"))
+    die("recovery: staged brief lost its logical previous-path provenance");
+
+  const stagedModel = join(recovery, "model.forma-room.tmp"),
+    logicalPlan = join(recovery, "logical-plan.json"), stagedPlan = join(recovery, "staged-plan.json"),
+    self = join(HERE, "..");
+  copyFileSync(join(self, "docs/architecture/c4-model.json"), stagedModel);
+  const auditArgs = ["audit", "--repo", self, "--issues", join(self, "docs/architecture/c4-issues.json"), "--health", join(self, "docs/architecture/c4-health.json"), "--findings", join(self, "docs/architecture/c4-findings.json"), "--topology", join(self, "docs/architecture/c4-topology.json"), "--today", "2026-08-17", "--blocked-labels", "[]"];
+  if (run([...auditArgs, "--model", join(self, "docs/architecture/c4-model.json"), "--plan", logicalPlan]).status !== 0 ||
+      run([...auditArgs, "--model", stagedModel, "--model-ref", join(self, "docs/architecture/c4-model.json"), "--plan", stagedPlan]).status !== 0)
+    die("recovery: could not make logical and staged model plans");
+  if (readJson(logicalPlan).planHash !== readJson(stagedPlan).planHash || readFileSync(stagedPlan, "utf-8").includes("model.forma-room.tmp"))
+    die("recovery: staged model leaked into counter-plan evidence or hash");
+
+  const cold = join(recovery, "cold"), coldManifest = join(recovery, "cold.json"), coldRoom = join(recovery, "cold.html");
+  cpSync(FIX("room/alpha"), cold, { recursive: true });
+  rmSync(join(cold, "health.json"));
+  rmSync(join(cold, "findings.json"));
+  mkdirSync(join(cold, "docs/architecture"), { recursive: true });
+  writeFileSync(join(cold, "docs/architecture/c4-brief.json"), '{"claims":[]}\n');
+  writeFileSync(coldManifest, JSON.stringify({ today: "2026-08-10", programs: [{ id: "cold", ghRepo: "acme/alpha", repo: "cold", issues: "cold/issues.json", health: "cold/health.json", findings: "cold/findings.json", auditPlan: "cold/plan.json", auditFill: "cold/fill.json" }] }));
+  r = run(["audit", "--repo", cold, "--issues", join(cold, "issues.json"), "--health", join(cold, "health.json"), "--findings", join(cold, "findings.json"), "--today", "2026-08-10", "--blocked-labels", "[]", "--plan", join(cold, "plan.json")]);
+  writeFileSync(join(cold, "fill.json"), JSON.stringify({ planHash: readJson(join(cold, "plan.json")).planHash, verdicts: [], findings: [] }));
+  r = run(["room", "update", "--manifest", coldManifest, "--out", coldRoom, "--skip-verify", "--fill"]);
+  if (r.status !== 0 || !existsSync(join(cold, "health.json")) || !existsSync(join(cold, "findings.json")))
+    die("recovery: first audit could not create declared absent overlays", r);
+  const coldRendered = JSON.parse(/window\.__ROOM__ = ([\s\S]*?);\s*<\/script>/.exec(readFileSync(coldRoom, "utf-8"))[1]).programs[0];
+  if (coldRendered.brief !== null)
+    die("recovery: an undeclared default brief leaked into the composed room");
+  console.log("  ok recovery — staged facts roll back together, compose retains logical provenance, and absent overlays bootstrap");
+}
+
+// Production recovery: aliased output paths must collide before any verifier can write, and the
+// package guard must cover the current 41-file runtime surface.
+{
+  const target = join(tmp, "allowlist-target.json"), alias = join(tmp, "allowlist-alias.json");
+  writeFileSync(target, "{}\n"); symlinkSync(target, alias);
+  if (canonicalPath(target) !== canonicalPath(alias)) die("release: canonicalPath missed a symlink alias");
+  const guard = spawnSync(process.execPath, [join(HERE, "..", "scripts", "check-clean.mjs")], { encoding: "utf-8" });
+  if (guard.status !== 0 || !/41 reviewed runtime files, clean/.test(guard.stderr || "")) die("release: current 41-file runtime allowlist is not clean", guard);
+  const packed = spawnSync("npm", ["pack", "--dry-run", "--json"], { cwd: join(HERE, ".."), encoding: "utf-8" });
+  const packJson = (packed.stdout || "").slice((packed.stdout || "").indexOf("[\n"));
+  let packMeta;
+  try { packMeta = JSON.parse(packJson)[0]; } catch { packMeta = null; }
+  if (packed.status !== 0 || !packMeta || packMeta.entryCount !== 41 || !packMeta.files.some(({ path }) => path === "lib/roomupdate.mjs"))
+    die("release: npm pack effective file set is not the reviewed 41-file runtime surface", packed);
+  console.log("  ok production-recovery — symlink aliases canonicalize and the reviewed 41-file runtime allowlist is enforced");
 }
 
 console.log(
