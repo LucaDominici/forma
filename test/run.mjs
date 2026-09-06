@@ -5596,8 +5596,6 @@ const diffPaths = (a, b, at = "") => {
     const legacyTab = grab(/var LEGACY_TAB=\{[^\n]*\n/, 'the legacy tab table')
     const regFn = grab(/function registerAll\(\)\{[\s\S]*?\n\}/, 'registerAll()')
     const navFn = grab(/function buildNav\(\)\{[\s\S]*?\n\}/, 'buildNav()')
-    if (!/navLink\(homeOf\(ROOM\.programs\[i\]\),ROOM\.programs\[i\]\.id\)/.test(navFn))
-      die('room: programme navigation must link to each programme\'s first published lens')
     if (!/if\(ROOM\.programs\.length!==1\)\{mount\("\/"\)/.test(regFn)) die('room: the portfolio view is mounted for a single programme, so print and routing meet an empty aggregate')
     const route = new Function('ROOM', 'VIEWS', 'LENS_SPEC', `${legacy}${legacyTab}
       function byId(id){var i;for(i=0;i<ROOM.programs.length;i++)if(ROOM.programs[i].id===id)return ROOM.programs[i];return null;}
@@ -5616,6 +5614,21 @@ const diffPaths = (a, b, at = "") => {
     if (n1('#/options') !== '/options') die('room: with one programme the Options view must stay reachable')
     for (const h of ['', '#/', '#now', '#/nope']) if (n2(h) !== '/') die('room: with two programmes ' + JSON.stringify(h) + ' must open the briefing, got ' + n2(h))
     if (n2('#/beta/verdict') !== '/beta/verdict') die('room: with two programmes a programme route must resolve as itself')
+
+    // Exercise the navigation builder: a programme link must target the first lens that is
+    // actually published. The old `/exec` link rendered only because normalize() repaired it
+    // after navigation, leaving the address and aria-current state wrong.
+    const node = () => ({ children: [], appendChild(child) { this.children.push(child); }, addEventListener() {}, setAttribute(name, value) { this[name] = value; } })
+    const documentStub = { getElementById(id) { return this[id] || (this[id] = node()) } }
+    const navLink = (href, text) => ({ href: '#' + href, textContent: text, setAttribute(name, value) { this[name] = value; } })
+    const fakeEl = (tag, className, text) => Object.assign(node(), { tagName: tag.toUpperCase(), className, textContent: text || '' })
+    const build = new Function('ROOM', 'VIEWS', 'LENS_SPEC', 'STR', 'key', 'lensesOf', 'homeOf', 'lensLabel', 'navLink', 'el', 'document', `${navFn}; return buildNav`)
+    const buildNav = build(one, { '/alpha/verdict': 1, '/options': 1 }, spec, { routePortfolio: 'Portfolio', routeOptions: 'Options' },
+      (p, t) => '/' + p + '/' + t, (program) => Object.keys(program.derived.lenses).filter((id) => program.derived.lenses[id]),
+      (program) => '/alpha/verdict', (id) => id, navLink, fakeEl, documentStub)
+    buildNav()
+    const programmeLink = documentStub['nav-programs'].children.find((link) => link.textContent === 'alpha')
+    if (!programmeLink || programmeLink.href !== '#/alpha/verdict') die('room: programme navigation linked to ' + (programmeLink && programmeLink.href) + ', expected #/alpha/verdict')
   }
 
   // A skin is one token block chosen in the manifest: every id the viewer knows has a palette block
