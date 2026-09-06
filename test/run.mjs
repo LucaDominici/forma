@@ -40,6 +40,7 @@ import {
 import { loadDocs } from "../lib/roomdocs.mjs";
 import { deriveRtm } from "../lib/rtm.mjs";
 import { componentsFor } from "../lib/cluster.mjs";
+import { canonicalPath } from "../lib/roomload.mjs";
 import { lensDrift } from "./fixtures/control-room-stress/make.mjs";
 import {
   DERIVED_KEYS,
@@ -2194,6 +2195,7 @@ const diffPaths = (a, b, at = "") => {
   )
     die("WP-A5: room update still reports the map-less programme as skipped");
   const roomBeforeFailedUpdate = readFileSync(maplessRoom, "utf-8");
+  const issuesBeforeFailedUpdate = readFileSync(maplessIssues, "utf-8");
   r = run([
     "room",
     "update",
@@ -2206,9 +2208,26 @@ const diffPaths = (a, b, at = "") => {
   ]);
   if (
     r.status === 0 ||
-    readFileSync(maplessRoom, "utf-8") !== roomBeforeFailedUpdate
+    readFileSync(maplessRoom, "utf-8") !== roomBeforeFailedUpdate ||
+    readFileSync(maplessIssues, "utf-8") !== issuesBeforeFailedUpdate
   )
-    die("WP-A5: room update published after verify failed", r);
+    die("WP-A5: failed verify changed a published room or input snapshot", r);
+
+  // Recovery: two active programmes may not publish to one snapshot, overlay or output, including
+  // aliases. The guard must fail before --skip-verify can compose or alter any target.
+  const collisionManifest = join(mapless, "collision.room.json"), collisionRoom = join(mapless, "collision.html");
+  writeFileSync(collisionRoom, "previous collision artifact\n");
+  writeFileSync(collisionManifest, JSON.stringify({
+    today: "2026-08-17",
+    programs: [
+      { id: "first", ghRepo: "acme/thing", repo: ".", issues: "issues.json" },
+      { id: "second", ghRepo: "acme/thing", repo: ".", issues: "issues.json" },
+    ],
+  }, null, 2) + "\n");
+  const collisionBefore = readFileSync(collisionRoom, "utf-8");
+  r = run(["room", "update", "--manifest", collisionManifest, "--out", collisionRoom, "--skip-verify"]);
+  if (r.status === 0 || !/write target collision/.test(r.stderr || "") || readFileSync(collisionRoom, "utf-8") !== collisionBefore)
+    die("production recovery: duplicate write target was not rejected before publication", r);
   console.log(
     "  ok verify — WP-A5 closed→done with dated evidence, open untouched, idempotent, gh failure leaves the model intact",
   );
@@ -8998,7 +9017,24 @@ const diffPaths = (a, b, at = "") => {
       die("lenses: with nothing declared the architecture lens must stay absent");
   }
 
-  console.log("  ok lenses — one home per derived surface, publication measured from backing artifacts, routing mounts only what publishes");
+ console.log("  ok lenses — one home per derived surface, publication measured from backing artifacts, routing mounts only what publishes");
+}
+
+// Production recovery: aliased output paths must collide before any verifier can write, and the
+// package guard must cover the current 41-file runtime surface.
+{
+  const target = join(tmp, "allowlist-target.json"), alias = join(tmp, "allowlist-alias.json");
+  writeFileSync(target, "{}\n"); symlinkSync(target, alias);
+  if (canonicalPath(target) !== canonicalPath(alias)) die("release: canonicalPath missed a symlink alias");
+  const guard = spawnSync(process.execPath, [join(HERE, "..", "scripts", "check-clean.mjs")], { encoding: "utf-8" });
+  if (guard.status !== 0 || !/41 reviewed runtime files, clean/.test(guard.stderr || "")) die("release: current 41-file runtime allowlist is not clean", guard);
+  const packed = spawnSync("npm", ["pack", "--dry-run", "--json"], { cwd: join(HERE, ".."), encoding: "utf-8" });
+  const packJson = (packed.stdout || "").slice((packed.stdout || "").indexOf("[\n"));
+  let packMeta;
+  try { packMeta = JSON.parse(packJson)[0]; } catch { packMeta = null; }
+  if (packed.status !== 0 || !packMeta || packMeta.entryCount !== 41 || !packMeta.files.some(({ path }) => path === "lib/roomupdate.mjs"))
+    die("release: npm pack effective file set is not the reviewed 41-file runtime surface", packed);
+  console.log("  ok production-recovery — symlink aliases canonicalize and the reviewed 41-file runtime allowlist is enforced");
 }
 
 console.log(
