@@ -2073,10 +2073,10 @@ const diffPaths = (a, b, at = '') => {
       function byId(id){var i;for(i=0;i<ROOM.programs.length;i++)if(ROOM.programs[i].id===id)return ROOM.programs[i];return null;}
       ${keyFn[0]}${homeFn[0]}${normFn[0]} return normalize`)
     const one = { programs: [{ id: 'alpha' }] }, two = { programs: [{ id: 'alpha' }, { id: 'beta' }] }
-    const oneViews = { '/alpha/exec': 1, '/alpha/tech': 1, '/options': 1 }, twoViews = { '/': 1, '/alpha/exec': 1, '/beta/exec': 1, '/options': 1 }
+    const oneViews = { '/alpha/exec': 1, '/alpha/ship': 1, '/alpha/plan': 1, '/alpha/tech': 1, '/options': 1 }, twoViews = { '/': 1, '/alpha/exec': 1, '/beta/exec': 1, '/options': 1 }
     const n1 = route(one, oneViews), n2 = route(two, twoViews)
-    for (const h of ['', '#', '#/', '#now', '#/nope', '#/alpha/auto']) {
-      const want = h === '#/alpha/auto' ? '/alpha/tech' : '/alpha/exec'
+    for (const h of ['', '#', '#/', '#now', '#/nope', '#/alpha/auto', '#/alpha/wbs']) {
+      const want = h === '#/alpha/auto' ? '/alpha/ship' : h === '#/alpha/wbs' ? '/alpha/plan' : '/alpha/exec'
       if (n1(h) !== want) die('room: with one programme ' + JSON.stringify(h) + ' must open ' + want + ', got ' + n1(h))
     }
     if (n1('#/options') !== '/options') die('room: with one programme the Options view must stay reachable')
@@ -2417,16 +2417,17 @@ const diffPaths = (a, b, at = '') => {
   console.log(`  ok strings — ${Object.keys(en).length} keys at en/it parity, every one read by the template`)
 }
 
-// Queue and Kanban are supporting technical evidence, not two undocumented top-level products.
-// They stay complete through lazy, bounded disclosure inside Tech; legacy hashes remain valid.
+// The views are a story in reading order: where we stand, what to ship, what it is, where it is
+// going, what is under the hood, the paper. Queue detail is bounded disclosure inside Ship; the
+// board inside Tech; legacy hashes remain valid.
 {
   const template = readFileSync(join(HERE, '..', 'lib/viewer/control-room.html'), 'utf-8')
   const viewerFn = (name) => (new RegExp('function ' + name + '\\([^]*?\\n}\\n').exec(template) || [])[0] || ''
   const tabsSource = (/var TABS=([\s\S]*?);\s*var BUILD=/.exec(template) || [])[1] || ''
   const tabs = [...tabsSource.matchAll(/\["([^"]+)",function/g)].map((m) => m[1])
-  if (tabs.join() !== 'exec,tech,map,wbs,docs') die('room-ia: programme views drifted from the five-view contract: ' + tabs)
+  if (tabs.join() !== 'exec,ship,map,plan,tech,docs') die('room-ia: programme views drifted from the six-view story: ' + tabs)
   if (/var BUILD=\{[^}]*\b(?:auto|kanban):/.test(template)) die('room-ia: removed queue/Kanban routes still exist in BUILD')
-  if (!/\^\\\/\(\[\^\/\]\+\)\\\/\(auto\|kanban\)\$/.test(template) || !/return key\(old\[1\],"tech"\)/.test(template)) die('room-ia: legacy /auto and /kanban hashes do not redirect to Tech')
+  if (!/\(auto\|kanban\|wbs\)\$/.test(template) || !/old\[2\]==="auto"\?"ship":old\[2\]==="kanban"\?"tech":"plan"/.test(template)) die('room-ia: legacy /auto, /kanban and /wbs hashes do not redirect to their new views')
   if (!/function workflow\(/.test(template) || !/d\.open&&!d\.getAttribute\("data-filled"\)/.test(template)) die('room-tech: supporting workflows are not lazy')
   const pageSize = Number((/var ISSUE_PAGE_SIZE=(\d+)/.exec(template) || [])[1])
   if (!(pageSize > 0 && pageSize <= 40) || !/function pagedList\(/.test(template)) die('room-dom: issue rendering has no bounded pager')
@@ -2439,13 +2440,15 @@ const diffPaths = (a, b, at = '') => {
   // One block renderer for the archive and for the "next block" panel on the Tech screen: the
   // auto/manual command boundary lives in exactly one place.
   if (!/filteredList\(lane\.body,items/.test(queue) || !/queueItem\(program,entry\.block,entry\.notes\)/.test(queue) || !/block\.auto&&block\.cmd\?commandLine\(block\.cmd\):el\("span","state-chip",STR\.human\)/.test(queueItem)) die('room-queue: blocks lost search or the exact auto/manual command boundary')
-  if (!/queueItem\(program,blocks\[0\],blockNotes\(program,blocks\[0\]\)\)/.test(viewerFn('viewTech'))) die('room-tech: the head of the queue is no longer on the Tech screen')
+  // Ship renders every block words-first (the plain-language why leads); the archive keeps search.
+  if (!/queueItem\(program,list\[j\],blockNotes\(program,list\[j\]\),true\)/.test(viewerFn('viewShip'))) die('room-ship: blocks are not rendered words-first on the Ship page')
+  if (!/if\(wordsFirst\)\{/.test(viewerFn('queueItem')) || !/STR\.shipNoWhy/.test(viewerFn('queueItem'))) die('room-ship: a block with no plain-words why does not say so')
   if (!/input\.type="search"/.test(kanban) || !/source\.filter/.test(kanban) || !/names\.concat\(\[\["chiuse"/.test(kanban)) die('room-kanban: search or the CLOSED archive lane is missing')
   const tech = viewerFn('viewTech')
   if (!/names\[i\]\[0\]!=="aspettano-umano"\|\|program\.derived\.kanbanHumanDeclared/.test(tech) || !/key!=="aspettano-umano"\|\|program\.derived\.kanbanHumanDeclared/.test(kanban)) die('room-kanban: an undeclared human-label rule is rendered as a measured empty bucket')
-  const milestones = viewerFn('milestonePanel'), wbs = viewerFn('viewWbs')
+  const milestones = viewerFn('milestonePanel'), wbs = viewerFn('viewPlan')
   if (!/milestonesComplete/.test(milestones) || !/markState\(p,"unknown",STR\.milestoneIncomplete\)/.test(milestones)) die('room-milestones: an issue-derived milestone panel does not disclose incomplete collection')
-  if (!/milestonePanel\(program\)/.test(wbs)) die('room-milestones: milestone evidence is not nested under the existing WBS view')
+  if (!/milestonePanel\(program\)/.test(wbs)) die('room-milestones: milestone evidence is not nested under the Plan view')
   if (!/documentGatePanel\(program\)/.test(viewerFn('viewDocs'))) die('room-docs: the document gate is not nested under the existing Docs view')
   const documentPanel = viewerFn('documentGatePanel')
   if (!/chips\(f\.matched\)/.test(documentPanel) || !/gate\.claims\|\|\[\]/.test(documentPanel)) die('room-docs: the document gate panel hides measured wiring or typed claims')
@@ -2458,7 +2461,7 @@ const diffPaths = (a, b, at = '') => {
   if (!/\.prov\{overflow:visible;text-overflow:clip;white-space:normal/.test(template)) die('room-mobile: provenance is truncated without a disclosure')
   const composer = readFileSync(join(HERE, '..', 'lib/room.mjs'), 'utf-8')
   if (!/theme: manifest\.theme \|\| 'light'/.test(composer)) die('room-theme: a fresh client briefing does not default to light')
-  console.log('  ok room-workflow — five-view IA, searchable blocks/Kanban, honest milestones, bounded lazy evidence, mobile and print contracts')
+  console.log('  ok room-workflow — six-view story IA, words-first Ship blocks, honest milestones, bounded lazy evidence, mobile and print contracts')
 }
 
 // The shipped Claude adapter is executable guidance, not brochure copy: its init→update sequence

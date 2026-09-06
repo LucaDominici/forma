@@ -220,6 +220,7 @@ details[open]>summary:after{content:"\2212"}
 .queue-item .issue-pill{display:flex;font-weight:600;margin-bottom:4px}
 .queue-command{display:flex;align-items:center;gap:6px;min-width:0}
 .queue-command code{min-width:0;overflow:auto;white-space:nowrap;flex:1 1 auto}
+.ship-why{margin:2px 0 6px;max-width:80ch;font-size:13px}
 @media(max-width:1199px){.queue-board{grid-template-columns:minmax(0,1fr)}}
 .workflow{border-top:1px solid var(--line)}
 .workflow>summary{min-height:44px;display:flex;align-items:center;font-weight:650}
@@ -1192,11 +1193,6 @@ var i,j;
 
  var ev=el("div","evidence");
  ev.appendChild(rowsPanel(panel(STR.techBlocked,blockedClaim.known?fmt(STR.provBlockedSources,{n:mine.length,labels:summary.blockedByLabel,deps:summary.blockedByDependency}):STR.provBlockedUnknown,"span2"),mine,blockedRow,blockedClaim.known?STR.noBlockedHere:STR.ruleUnknown));
- // The head of the queue is on the screen, with its command: the reference shows four commands on
- // its first screen and this view showed none (density pass, 2026-08-19). The full queue and the
- // board stay as archives that build only when opened.
- var blocks=program.derived.blocks||[];
- if(blocks.length){var nx=panel(STR.queueNext,fmt(STR.blockCount,{n:blocks.length}),"span2");markState(nx,"present");nx.body.appendChild(queueItem(program,blocks[0],blockNotes(program,blocks[0])));ev.appendChild(nx);}
 
  var findings=(program.derived.findings&&program.derived.findings.findings)||(program.findings&&program.findings.findings)||[];
  var fp=panel(STR.techFindings,STR.provAudit);
@@ -1230,7 +1226,7 @@ var i,j;
  kv(STR.snapshots,snapshotAge(age,dt));
  ev.appendChild(hp);
 
- ev.appendChild(workflow(program,STR.routeQueue,function(target){renderQueue(target,program);}));
+ // The queue lives on the Ship page now; the board stays here as the evidence of work states.
  var board=workflow(program,STR.routeKanban,function(target){renderKanban(target,program);});ev.appendChild(board);
  // The board opens on arrival — assigned after the listener is attached, so the lazy fill runs —
  // and the print rule hides `.workflow` regardless of its open state.
@@ -1283,15 +1279,22 @@ function renderQueue(target,program){
  }else{var emptyLane=panel(STR.routeQueue,STR.queueComplete);markState(emptyLane,"empty",STR.noMoving);board.appendChild(emptyLane);}
  target.appendChild(board);
 }
-function queueItem(program,block,notes){
+function queueItem(program,block,notes,wordsFirst){
  var item=el("div","queue-item"),head=el("div","row-meta"),links=el("div","links"),j;
  head.appendChild(el("span","chip",block.t));if(block.ms)head.appendChild(el("span","chip",block.ms));head.appendChild(el("span","ref",fmt(STR.blockIssues,{n:block.iss.length})));item.appendChild(head);
+ // wordsFirst is the Ship page: the reader decides from a sentence, not from issue titles. The
+ // sentence is the brief note for this block — written by the agent, gated, counter-verified —
+ // and when no one has written it yet, the page says so instead of leaving a silent gap.
+ if(wordsFirst){
+  if(notes.length)for(j=0;j<notes.length;j++){var w=el("p","ship-why");w.appendChild(briefMark(notes[j]));w.appendChild(document.createTextNode(" "+notes[j].text));item.appendChild(w);}
+  else item.appendChild(el("p","muted",STR.shipNoWhy));
+ }
  for(j=0;j<block.iss.length;j++){links.appendChild(pill(program,block.iss[j][0],"#"+block.iss[j][0]+" "+short(block.iss[j][1],64)));links.appendChild(document.createTextNode(" "));}item.appendChild(links);
  if(block.note&&block.note.labelled.length)item.appendChild(el("div","muted",fmt(STR.blockDeclaredLabels,{issues:block.note.labelled.map(function(n){return "#"+n;}).join(", ")})));
  if(block.note&&block.note.external.length)item.appendChild(el("div","muted",fmt(STR.blockExternal,{issues:block.note.external.map(function(n){return "#"+n;}).join(", ")})));
  for(j=0;j<Math.min(block.why.length,EDGE_LIST_MAX);j++)item.appendChild(el("div","muted",fmt(STR.blockDependency,{from:block.why[j].from.repo+"#"+block.why[j].from.number,to:block.why[j].to.repo+"#"+block.why[j].to.number})));
  if(block.why.length>EDGE_LIST_MAX)item.appendChild(el("div","muted",fmt(STR.moreEdges,{n:block.why.length-EDGE_LIST_MAX})));
- if(notes.length){item.appendChild(el("div","prov",STR.blockWhy));for(j=0;j<notes.length;j++)item.appendChild(briefClaimRow(program,notes[j]));}
+ if(!wordsFirst&&notes.length){item.appendChild(el("div","prov",STR.blockWhy));for(j=0;j<notes.length;j++)item.appendChild(briefClaimRow(program,notes[j]));}
  item.appendChild(block.auto&&block.cmd?commandLine(block.cmd):el("span","state-chip",STR.human));return item;
 }
 // "Why this batch" is not a curated blocks file (SCOPE-room §4): it is whatever the brief already
@@ -1395,18 +1398,50 @@ function milestonePanel(program){
  return p;
 }
 
-function viewWbs(view,program){
- var rtm=program.derived.rtm,i,j;
- markView(view,rtm?"present":"unknown");
+/* WHAT TO SHIP. The queue as a decision surface: blocks grouped under their milestone, the
+   plain-words "why this batch" first, then the issues wearing their health, then the command
+   ready to copy. The archive with search stays at the bottom; the board lives in Tech. */
+function viewShip(view,program,summary){
+ var blocks=program.derived.blocks||[],i,auto=0;
+ for(i=0;i<blocks.length;i++)if(blocks[i].auto&&blocks[i].cmd)auto++;
+ markView(view,blocks.length?"present":"empty");
+ var answer=el("div","answer"),lead=el("section","panel answer-lead");
+ lead.appendChild(el("p","thesis",blocks.length?fmt(STR.shipHeadline,{n:blocks.length,auto:auto,manual:blocks.length-auto}):STR.shipEmpty));
+ lead.appendChild(el("p","lede",fmt(STR.shipLede,{open:summary.open})+" · "+snapshotProv(program)));
+ answer.appendChild(lead);
+ view.appendChild(answer);
+ var ev=el("div","evidence");
+ // Group under the milestone: the reader ships a train, not a cluster key. Blocks with no
+ // milestone close the list under their own honest heading.
+ var order=[],groups={};
+ for(i=0;i<blocks.length;i++){var g=blocks[i].ms||"";if(!groups[g]){groups[g]=[];order.push(g);}groups[g].push(blocks[i]);}
+ order.sort(function(a,b){return a===""?1:b===""?-1:0;});
+ for(i=0;i<order.length;i++){
+  var name=order[i],list=groups[name],gp=panel(name||STR.shipNoMilestone,fmt(STR.blockCount,{n:list.length}),"span2"),j;
+  markState(gp,"present");
+  for(j=0;j<list.length;j++)gp.body.appendChild(queueItem(program,list[j],blockNotes(program,list[j]),true));
+  ev.appendChild(gp);
+ }
+ ev.appendChild(workflow(program,STR.routeQueue,function(target){renderQueue(target,program);}));
+ view.appendChild(ev);
+}
+
+/* THE PLAN. Milestones first — the reader asks "where is this going" before "is the matrix
+   complete" — then the traceability matrix and its four holes underneath as the proof layer. */
+function viewPlan(view,program){
+ var rtm=program.derived.rtm,ms=program.derived.milestones||[],i,j,openMs=0;
+ for(i=0;i<ms.length;i++)if(ms[i].open>0)openMs++;
+ markView(view,(ms.length||rtm)?"present":"unknown");
  if(!rtm){
   view.setAttribute("data-single","");
-  var missing=el("div","evidence"),missingPanel=panel(STR.routeWbs,STR.provRtm,"full");
+  var missing=el("div","evidence"),missingPanel=panel(STR.routePlan,STR.provRtm,"full");
   missing.appendChild(milestonePanel(program));emptyState(missingPanel,STR.wbsMissing,STR.wbsNext);missing.appendChild(missingPanel);view.appendChild(missing);return;
  }
  var answer=el("div","answer"),lead=el("section","panel answer-lead");
- lead.appendChild(el("p","thesis",rtm?fmt(STR.wbsHeadline,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements}):STR.wbsMissing));
- lead.appendChild(el("p","lede",rtm?fmt(STR.wbsSplit,{withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly}):""));
+ lead.appendChild(el("p","thesis",fmt(STR.planHeadline,{n:ms.length,openMs:openMs})));
+ lead.appendChild(el("p","lede",fmt(STR.wbsHeadline,{accounted:rtm.coverage.accounted,requirements:rtm.coverage.requirements})+" · "+fmt(STR.wbsSplit,{withIssues:rtm.coverage.withIssues,verifiedOnly:rtm.coverage.verifiedOnly})));
  answer.appendChild(lead);
+ answer.appendChild(milestonePanel(program));
 
  var holes=[],hp=panel(STR.wbsHoles,STR.provRtm,"span2");
  if(rtm){
@@ -1430,7 +1465,6 @@ function viewWbs(view,program){
  view.appendChild(answer);
 
  var ev=el("div","evidence");
- ev.appendChild(milestonePanel(program));
  var mp=panel(STR.wbsMatrix,STR.provRtm,"span2");
  if(rtm){
   var wrap=el("div","tablewrap"),tb=el("table","matrix"),th=el("thead"),htr=el("tr"),tbody=el("tbody");
@@ -1610,10 +1644,14 @@ function toggle(id,enabled){
 
 /* --------------------------------- routing -------------------------------- */
 var VIEWS={},VIEW_SPEC={},ORDER=[],PRINT_FILL=[];
-var TABS=[["exec",function(){return STR.routeExec;}],["tech",function(){return STR.routeTech;}],
-          ["map",function(){return STR.routeMap;}],["wbs",function(){return STR.routeWbs;}],
-          ["docs",function(){return STR.routeDocs;}]];
-var BUILD={exec:viewExec,tech:viewTech,map:viewMap,wbs:viewWbs,docs:viewDocs};
+/* The views are a story told in reading order: where we stand, what to ship next, what the thing
+   IS, where it is going, what is under the hood, and the paper it stands on. A reader in an
+   executive meeting stops after the first two; the team lives in the middle; nobody has to know
+   which tab an answer hides behind, because the order is the narrative. */
+var TABS=[["exec",function(){return STR.routeExec;}],["ship",function(){return STR.routeShip;}],
+          ["map",function(){return STR.routeMap;}],["plan",function(){return STR.routePlan;}],
+          ["tech",function(){return STR.routeTech;}],["docs",function(){return STR.routeDocs;}]];
+var BUILD={exec:viewExec,ship:viewShip,map:viewMap,plan:viewPlan,tech:viewTech,docs:viewDocs};
 function key(p,t){return p?"/"+p+"/"+t:"/"+t;}
 function mount(k){
  var v=el("section","view");v.id="view-"+k.replace(/[^a-z0-9]+/gi,"-");v.hidden=true;
@@ -1675,8 +1713,8 @@ function normalize(h){
  var raw=String(h||"").replace(/^#/,"");
  if(!raw)return home();
  if(raw.charAt(0)==="/"){
-  var old=/^\/([^/]+)\/(auto|kanban)$/.exec(raw);
-  if(old&&byId(old[1]))return key(old[1],"tech");
+  var old=/^\/([^/]+)\/(auto|kanban|wbs)$/.exec(raw);
+  if(old&&byId(old[1]))return key(old[1],old[2]==="auto"?"ship":old[2]==="kanban"?"tech":"plan");
   return VIEWS[raw]?raw:home();
  }
  if(LEGACY.hasOwnProperty(raw)){

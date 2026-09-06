@@ -291,6 +291,7 @@ var STRINGS={
   lvlNames:{context:"Context",container:"Container",component:"Components",leaf:"Leaves"},
   detClose:"[x] close", detDrill:"Drill into this node", detFunc:"What it does", detNow:"Current state (facts)", detCheckpoint:"At this checkpoint", detChange:"Change from previous",
   detTgt:"Target state (project)", detSrc:"Verification source", detIssue:"Issue",
+  detNotes:"Notable details", detRefs:"References", detWhere:"Where it runs",
   detTarget:"TARGET",
   rosterSearch:"filter…", rosterCount:"members", rosterEmpty:"no match", aggProgress:"progress",
   stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology", stampProjection:"projection:", staticSrc:"(static source)",
@@ -315,6 +316,7 @@ var STRINGS={
   lvlNames:{context:"Contesto",container:"Container",component:"Componenti",leaf:"Foglie"},
   detClose:"[x] chiudi", detDrill:"Entra in questo nodo", detFunc:"Cosa fa", detNow:"Stato attuale (fatti)", detCheckpoint:"A questo checkpoint", detChange:"Modifica dal precedente",
   detTgt:"Stato finito (progetto)", detSrc:"Fonte verifica", detIssue:"Issue",
+  detNotes:"Dettagli notevoli", detRefs:"Riferimenti", detWhere:"Dove gira",
   detTarget:"TARGET",
   rosterSearch:"filtra…", rosterCount:"elementi", rosterEmpty:"nessun risultato", aggProgress:"avanzamento",
   stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology", stampProjection:"proiezione:", staticSrc:"(fonte statica)",
@@ -850,6 +852,13 @@ function showDetail(n){
   +((function(){var r=rollStatus(n,childrenOf);return r?'<div class="row"><span class="lbl">'+esc(STR.detRoll)+'</span><span class="now">'+esc(STR.rollPart.replace("{n}",r.ruled).replace("{t}",r.total))+'</span></div>':'';})())
   +(coverText(n)?'<div class="row"><span class="lbl">'+esc(STR.detCover)+'</span><span class="now">'+esc(coverText(n))+'</span></div>':'')
   +((n.issues&&n.issues.length)?'<div class="row"><span class="lbl">'+esc(STR.detIssue)+'</span><span class="now">'+esc(n.issues.join(", "))+'</span></div>':'')
+  // The dimensions the map earns beyond the graph: where the node RUNS (space), what is worth
+  // knowing about how it works (notable details, algorithms), and what it stands on (references —
+  // papers, ADRs, external docs). All curated, all in node.meta, all optional; a URL renders as a
+  // link, anything else as text. Time is already here as the checkpoint timeline.
+  +((n.meta&&n.meta.where)?'<div class="row"><span class="lbl">'+esc(STR.detWhere)+'</span><span class="now">'+esc(String(n.meta.where))+'</span></div>':'')
+  +((n.meta&&Array.isArray(n.meta.notes)&&n.meta.notes.length)?'<div class="row"><span class="lbl">'+esc(STR.detNotes)+'</span><span class="func">'+n.meta.notes.map(function(t){return esc(String(t));}).join("<br>")+'</span></div>':'')
+  +((n.meta&&Array.isArray(n.meta.refs)&&n.meta.refs.length)?'<div class="row"><span class="lbl">'+esc(STR.detRefs)+'</span><span class="src">'+n.meta.refs.map(function(r){var label=esc(String((r&&r.label)||(r&&r.url)||r));return (r&&r.url&&/^https:\/\//.test(String(r.url)))?'<a href="'+esc(String(r.url))+'" target="_blank" rel="noopener noreferrer">'+label+'</a>':label;}).join(" · ")+'</span></div>':'')
   +(hasKids(n.id)?'<button type="button" class="detaildrill" id="ddrill">'+esc(STR.detDrill)+'</button>':'');
  $("detail").style.display="block";
  var dc=$("dc");if(dc)dc.addEventListener("click",function(){$("detail").style.display="none";});
