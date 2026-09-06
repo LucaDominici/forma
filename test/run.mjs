@@ -2103,6 +2103,25 @@ const diffPaths = (a, b, at = '') => {
     if (ROOM.meta.skin !== null) die('room: a manifest without a skin must compose with meta.skin null, got ' + JSON.stringify(ROOM.meta.skin))
   }
 
+  // "Why this batch" comes from the brief, not from a curated blocks file: a note anchored to the
+  // block's milestone or to one of its issues is shown on that block; anything else is not.
+  {
+    const fn = /function blockNotes\(program,block\)\{[\s\S]*?\n\}/.exec(shell)
+    if (!fn) die('room: blockNotes() not found in the shell — the block narrative moved')
+    const blockNotes = new Function(fn[0] + '; return blockNotes')()
+    const notes = [
+      { id: 'ms', kind: 'note', text: 'milestone note', about: { milestone: 'M1' } },
+      { id: 'iss', kind: 'note', text: 'issue note', about: { issue: 7 } },
+      { id: 'other', kind: 'note', text: 'elsewhere', about: { milestone: 'M2' } },
+      { id: 'path', kind: 'note', text: 'a path', about: { path: 'README.md' } },
+    ]
+    const program = { derived: { brief: { notes } } }
+    const got = blockNotes(program, { ms: 'M1', iss: [[7, 'seven'], [8, 'eight']] }).map((c) => c.id)
+    if (JSON.stringify(got) !== JSON.stringify(['ms', 'iss'])) die('room: block narrative picked ' + JSON.stringify(got) + ', wanted the milestone note and the issue note only')
+    if (blockNotes({ derived: {} }, { ms: 'M1', iss: [] }).length !== 0) die('room: a programme without a brief must yield no block narrative')
+    if (!/STR\.blockWhy/.test(shell)) die('room: the block narrative heading string is not read by the template')
+  }
+
   console.log('  ok room — the briefing composes deterministically, both gates fire, and both refuse a hand-altered aggregate')
   console.log('  ok rtm — requirements trace to issues, and check names each of the four holes at its source line')
   console.log('  ok views — history from one snapshot, checkpoints with measured completion, a canon within budget, and a programme deliberately left out')

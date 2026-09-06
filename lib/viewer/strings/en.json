@@ -330,5 +330,6 @@
   "briefDeltaChanged": "Rewritten",
   "briefDeltaReverdicted": "Verdict changed",
   "kpiHowToRead": "How to read: Open counts every open issue in the {today} snapshot of {total}; Waiting on a human counts only open issues carrying a declared blocking label ({rule}); linked-to-code and requirements use their own denominators — all issues, and the requirements matrix — so the percentages are not comparable with each other.",
-  "kpiHowToReadRuleDeclared": "rule declared, never inferred"
+  "kpiHowToReadRuleDeclared": "rule declared, never inferred",
+  "blockWhy": "Why this batch — as written in the brief, anchored and expiring like every other claim"
 }
