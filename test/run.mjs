@@ -2911,10 +2911,11 @@ const diffPaths = (a, b, at = "") => {
       "schema freeze: compatible 1.x must load and unsupported major 2 must fail",
     );
   r = run(["--version"]);
-  if (r.status !== 0 || r.stdout.trim() !== "1.0.0")
-    die("release: CLI version is not frozen at 1.0.0", r);
+  const packageVersion = readJson(join(HERE, "..", "package.json")).version;
+  if (r.status !== 0 || r.stdout.trim() !== packageVersion)
+    die(`release: CLI version does not match package.json (${packageVersion})`, r);
   console.log(
-    "  ok schema — 1.x contract frozen; incompatible major rejected; package 1.0.0",
+    `  ok schema — 1.x contract frozen; incompatible major rejected; package ${packageVersion}`,
   );
 }
 
