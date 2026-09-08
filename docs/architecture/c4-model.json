@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-09-04T17:07:50.526Z",
+  "generatedAt": "2026-09-08T20:58:09.658Z",
   "source": {
     "repo": "forma",
-    "commit": "61801b557deee69f9261c1a05467c4a86783069c",
-    "branch": "claude/project-lifecycle-visualization-ml5kld",
+    "commit": "25179cf8d3c662dbe5b56d9dc1671a13683e7b68",
+    "branch": "fix/layout-floor-53",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -273,7 +273,7 @@
         {
           "type": "glob",
           "ref": "scripts",
-          "count": 7
+          "count": 8
         }
       ],
       "category": "container",
@@ -598,7 +598,7 @@
       "category": "lib",
       "status2": "unknown",
       "target": "",
-      "func": "forma room — compose one portfolio manifest into one self-contained Control Room HTML. Read-only over every input; no network here: issue snapshots must already exist (forma verify). Usage: node lib/room.mjs --manifest <path [--out <path]",
+      "func": "forma room — compose one portfolio manifest into one self-contained Control Room HTML. Read-only over every input; no network here: issue snapshots must already exist (forma verify). Usage: node lib/room.mjs --manifest <path [--out <path] [",
       "descSource": "docstring"
     },
     {
@@ -845,7 +845,7 @@
       "category": "scripts",
       "status2": "unknown",
       "target": "",
-      "func": "prepack guard: refuse to publish if a stray/editor artifact lurks in shipped dirs.",
+      "func": "prepack guard: refuse to publish if the reviewed runtime allowlist changes or carries residue.",
       "descSource": "docstring"
     },
     {
@@ -922,6 +922,25 @@
       "status2": "unknown",
       "target": "",
       "func": "presentable.mjs — the acceptance instrument for docs/SCOPE.md. forma check answers \"is the model still true to the code?\". This answers a different and narrower question: \"would this model survive being projected in front of a stakeholder?\"",
+      "descSource": "docstring"
+    },
+    {
+      "id": "scripts__room_layout_mjs",
+      "level": "leaf",
+      "parent": "scripts",
+      "kind": "leaf",
+      "name": "room-layout",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "scripts/room-layout.mjs"
+        }
+      ],
+      "category": "scripts",
+      "status2": "unknown",
+      "target": "",
+      "func": "Browser acceptance for D10. Routes come from the composed artifact, not a copied route list.",
       "descSource": "docstring"
     },
     {

@@ -48,15 +48,38 @@ jobs:
           node bin/forma.mjs room --manifest forma.room.json --out "$RUNNER_TEMP/room.html"
           node bin/forma.mjs check --room "$RUNNER_TEMP/room.html"
           node scripts/room-presentable.mjs --room "$RUNNER_TEMP/room.html" --manifest forma.room.json
+  layout:
+    # D10 is a browser measurement, kept out of package.json and the runtime dependency tree.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version: 22 }
+      - name: Compose every current briefing route
+        run: node bin/forma.mjs room --manifest forma.room.json --out "$RUNNER_TEMP/room.html"
+      - name: Enforce the layout floor in Chrome
+        run: node scripts/room-layout.mjs "$RUNNER_TEMP/room.html"
+      - name: Prove the browser probe rejects overflow
+        run: |
+          set +e
+          node scripts/room-layout.mjs "$RUNNER_TEMP/room.html" --negative
+          RESULT=$?
+          set -e
+          if [ "$RESULT" -ne 1 ]; then
+            echo "::error::layout probe did not reject every forced overflow"
+            exit 1
+          fi
   ci-required:
     # fail-closed aggregate: one required status check that gates the whole matrix, so branch
     # protection lists a single context instead of one per matrix node version.
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [test]
+    needs: [test, layout]
     if: always()
     steps:
-      - env: { TEST: "${{ needs.test.result }}" }
+      - env: { TEST: "${{ needs.test.result }}", LAYOUT: "${{ needs.layout.result }}" }
         run: |
-          echo "test result: $TEST"
-          [ "$TEST" = success ] || { echo "::error::ci test job did not succeed"; exit 1; }
+          echo "test result: $TEST, layout result: $LAYOUT"
+          [ "$TEST" = success ] && [ "$LAYOUT" = success ] || { echo "::error::ci prerequisite did not succeed"; exit 1; }

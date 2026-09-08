@@ -6909,8 +6909,9 @@ const diffPaths = (a, b, at = "") => {
   );
   if (/LucaDominici\/arbiter|ARBITER_TOKEN|\.arbiter-gates/.test(ci))
     die("ci-public: required CI still depends on private arbiter access");
-  if (!/needs:\s*\[test\]/.test(ci))
-    die("ci-public: ci-required is not reduced to the self-contained test job");
+  if (!/needs:\s*\[test,\s*layout\]/.test(ci) ||
+      !/\[ "\$TEST" = success \] && \[ "\$LAYOUT" = success \]/.test(ci))
+    die("ci-public: ci-required does not fail closed over the self-contained test and layout jobs");
   console.log(
     "  ok ci-public — required CI has no private repository or credential dependency",
   );
