@@ -6829,6 +6829,8 @@ const diffPaths = (a, b, at = "") => {
     );
   if (!/crumbLevel\+"-L"/.test(holo))
     die("room-c4-drill: the embedded hologram does not expose its C4 level");
+  if (!/matchMedia\("\(max-width:600px\)"\)\.addEventListener\("change",function\(\)\{draw\(false\);\}\)/.test(holo))
+    die("room-c4-drill: crossing the mobile breakpoint does not redraw readable map dimensions");
   if (!/\| D-07 \|[^\n]*embedded hologram[^\n]*sufficient/i.test(decisions))
     die("room-c4-drill: the delegated owner decision is not recorded");
   console.log(
