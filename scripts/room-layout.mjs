@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Browser acceptance for D10. Routes come from the composed artifact, not a copied route list.
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { tmpdir } from 'node:os'
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 
 const room = process.argv[2]
 const negative = process.argv[3] === '--negative'
@@ -70,17 +70,24 @@ try {
   await command('Page.enable')
   await command('Runtime.enable')
   const path = resolve(room)
-  await command('Page.navigate', { url: `file://${path}?layout=routes#/` })
+  // The viewer keeps VIEWS private. Alias its real object in a disposable copy so this probe
+  // still enumerates the canonical routes rather than the active programme's navigation links.
+  const marker = 'var VIEWS={},VIEW_SPEC={},PRINT_FILL=[];'
+  const source = readFileSync(path, 'utf8')
+  if (!source.includes(marker)) throw new Error('briefing VIEWS seam not found')
+  const instrumented = join(profile, 'room.html')
+  writeFileSync(instrumented, source.replace(marker, 'var VIEWS=window.__LAYOUT_VIEWS__={},VIEW_SPEC={},PRINT_FILL=[];'))
+  await command('Page.navigate', { url: `file://${instrumented}?layout=routes#/` })
   await ready()
-  const routes = await evaluate("Array.from(new Set(Array.from(document.querySelectorAll('#nav-programs a,#nav-views a')).map((a) => a.getAttribute('href').slice(1)))).sort()")
+  const routes = await evaluate('Object.keys(window.__LAYOUT_VIEWS__).sort()')
   if (!Array.isArray(routes) || !routes.length) throw new Error('the composed briefing exposed no routes')
   for (const [width, height] of [[3440, 1440], [1920, 900]]) {
     for (const route of routes) {
       await command('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false })
-      await command('Page.navigate', { url: `file://${path}?layout=${width}x${height}#` + route })
+      await command('Page.navigate', { url: `file://${instrumented}?layout=${width}x${height}#` + route })
       await ready()
       if (negative) await evaluate('document.documentElement.style.minHeight=(innerHeight+1)+"px"')
-      const measured = await evaluate(`(function(){var active=${JSON.stringify(route)}==='/options'?document.querySelector('#nav-programs a[href="#/options"][aria-current="true"]'):document.querySelector('#nav-views a[aria-current="page"]');return {innerHeight:innerHeight,scrollHeight:document.documentElement.scrollHeight,activeRoute:active&&active.getAttribute('href').slice(1)};})()`)
+      const measured = await evaluate(`(function(){var route=${JSON.stringify(route)},active=(route==='/'||route==='/options')?document.querySelector('#nav-programs a[href="#'+route+'"][aria-current="true"]'):document.querySelector('#nav-views a[aria-current="page"]');return {innerHeight:innerHeight,scrollHeight:document.documentElement.scrollHeight,activeRoute:active&&active.getAttribute('href').slice(1)};})()`)
       const overflow = measured.scrollHeight > measured.innerHeight
       result.routes.push({ route, width, height, ...measured, overflow })
       if (measured.activeRoute !== route) result.failures.push(`${route} at ${width}x${height}: rendered ${measured.activeRoute || 'no active route'}`)
