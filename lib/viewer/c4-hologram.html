@@ -922,6 +922,8 @@ function drillTo(id,focusFirst){if(!hasKids(id))return;$("detail").style.display
 
 function wire(){
  var stage=$("stage");
+ // Reapply readable SVG dimensions when crossing the mobile breakpoint, not on every pixel resize.
+ window.matchMedia("(max-width:600px)").addEventListener("change",function(){draw(false);});
  stage.addEventListener("mousedown",function(ev){
   if(ev.target.getAttribute&&ev.target.getAttribute("data-drill"))return; // [+] is a click→drill, not a drag grip
   var g=ev.target;while(g&&g!==stage&&!(g.getAttribute&&g.getAttribute("data-id")))g=g.parentNode;
