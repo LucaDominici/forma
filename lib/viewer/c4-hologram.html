@@ -51,6 +51,11 @@ select#skin option{background:#08202e;color:var(--nm)}
 #stamp{font-size:9.5px;color:var(--ter2);margin-bottom:6px}
 #stage{position:relative;width:100%;height:74vh;min-height:520px;border:1px solid var(--stageborder);border-radius:12px;background:var(--stagebg);overflow:hidden}
 svg{width:100%;height:100%;display:block}
+#maptable{margin-top:12px;border:1px solid var(--stageborder);border-radius:10px;overflow:auto;background:var(--stagebg)}
+#maptable table{width:100%;border-collapse:collapse;font-size:10px;text-align:left}
+#maptable caption{padding:10px 12px;text-align:left;color:var(--nm);font-weight:700}
+#maptable th,#maptable td{padding:7px 10px;border-top:1px solid var(--stageborder);vertical-align:top}
+#maptable th{color:var(--ter);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase}
 .nd{cursor:grab}
 .nd.grabbing{cursor:grabbing}
 .nd rect{fill:var(--nodebg);stroke-width:1.5;transition:filter .2s}
@@ -233,6 +238,7 @@ html[data-skin^="blueprint"] .nd.delta rect,html[data-skin^="blueprint"] .edge.d
    <button id="btgt" type="button"></button></span>
    <button id="brf" type="button"></button>
    <button id="blbl" type="button"></button>
+   <button id="btable" type="button" aria-controls="maptable" aria-expanded="false"></button>
    <button id="brl" type="button"></button>
    <span class="menuwrap">
     <button id="pexp" type="button" aria-haspopup="true" aria-expanded="false"></button>
@@ -253,6 +259,7 @@ html[data-skin^="blueprint"] .nd.delta rect,html[data-skin^="blueprint"] .edge.d
  <div id="crumb"></div>
  <div id="stamp"></div>
  <div id="stage"><div id="etip"></div><div id="err" style="display:none"></div></div>
+ <div id="maptable" hidden></div>
  <div id="legend">
   <span><i style="background:#2fe08a"></i><span id="lg-done"></span></span>
   <!-- Same colour, hollow: a green derived from a repo document saying it is finished is not the
@@ -279,6 +286,7 @@ var STRINGS={
   back:"← BACK", now:"CURRENT STATE", tgt:"TARGET STATE", reverify:"RE-VERIFY",
   labels:"LABELS", labelsTitle:"arrow labels (auto-off above 14 arrows)",
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"re-arrange",
+  showTable:"SHOW TABLE", showMap:"SHOW MAP", mapFor:"Architecture map for {title}", mapTable:"Architecture map text equivalent", mapNodes:"Nodes", mapRelationships:"Relationships", node:"Node", category:"Category", status:"Status", evidencePath:"Evidence path", from:"From", to:"To", relationship:"Relationship", unknown:"Unknown",
   printExport:"PRINT / EXPORT", exportSvg:"Export SVG", exportPng:"Export PNG", exportLayout:"Export layout JSON", print:"Print",
   legDone:"DONE (proven)", legDecl:"DONE (declared)", legProg:"IN PROGRESS", legNext:"NEXT", legPlan:"PLAN ONLY", legProb:"PROBLEM",
   legUnk:"UNKNOWN (no curated state)", stUnk:"?",
@@ -304,6 +312,7 @@ var STRINGS={
   back:"← BACK", now:"STATO ATTUALE", tgt:"STATO FINITO", reverify:"RE-VERIFICA",
   labels:"ETICHETTE", labelsTitle:"etichette sugli archi (spente sopra i 14 archi)",
   resetLayout:"RESET LAYOUT", resetLayoutTitle:"ridisponi",
+  showTable:"MOSTRA TABELLA", showMap:"MOSTRA MAPPA", mapFor:"Mappa architetturale per {title}", mapTable:"Equivalente testuale della mappa architetturale", mapNodes:"Nodi", mapRelationships:"Relazioni", node:"Nodo", category:"Categoria", status:"Stato", evidencePath:"Percorso della prova", from:"Da", to:"A", relationship:"Relazione", unknown:"Sconosciuto",
   printExport:"STAMPA / ESPORTA", exportSvg:"Esporta SVG", exportPng:"Esporta PNG", exportLayout:"Esporta layout JSON", print:"Stampa",
   legDone:"FATTO (provato)", legDecl:"FATTO (dichiarato)", legProg:"IN CORSO", legNext:"PROSSIMO", legPlan:"SOLO PROGETTO", legProb:"PROBLEMA",
   legUnk:"IGNOTO (stato non curato)", stUnk:"?",
@@ -666,7 +675,7 @@ function draw(animate){
  var vbk=keyOf();
  if(drag&&VBOX[vbk]){vx=VBOX[vbk][0];vy=VBOX[vbk][1];vw=VBOX[vbk][2];vh=VBOX[vbk][3];}
  else VBOX[vbk]=[vx,vy,vw,vh];
- var s='<svg viewBox="'+vx.toFixed(1)+' '+vy.toFixed(1)+' '+vw.toFixed(1)+' '+vh.toFixed(1)+'" preserveAspectRatio="xMidYMid meet" class="'+(mode==="target"?"mode-t ":"")+(edges.length>LABEL_AUTO_MAX?"dense":"")+'">'
+ var mapName=((M.meta&&M.meta.title)||(M.source&&M.source.repo)||STR.unknown),s='<svg role="group" aria-label="'+esc(STR.mapFor.replace("{title}",mapName))+'" viewBox="'+vx.toFixed(1)+' '+vy.toFixed(1)+' '+vw.toFixed(1)+' '+vh.toFixed(1)+'" preserveAspectRatio="xMidYMid meet" class="'+(mode==="target"?"mode-t ":"")+(edges.length>LABEL_AUTO_MAX?"dense":"")+'">'
   +'<defs><marker id="ar" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edge")+'"/></marker>'
   +'<marker id="arp" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="'+cssv("--edgeplan")+'"/></marker></defs>';
  for(j=0;j<geo.length;j++){
@@ -720,6 +729,7 @@ function draw(animate){
  var st2=$("stage");
  var etip=$("etip"),err=$("err"); // preserve the live overlays across redraw/re-verify
  st2.innerHTML=s;if(etip)st2.appendChild(etip);if(err)st2.appendChild(err);
+ renderMapTable(kids,edges);
  var liveSvg=st2.querySelector("svg");
  if(liveSvg&&window.matchMedia&&window.matchMedia("(max-width:600px)").matches){liveSvg.style.width=Math.ceil(vw)+"px";liveSvg.style.height=Math.ceil(vh)+"px";}
  st2.classList.toggle("anim",animate!==false);
@@ -827,6 +837,16 @@ function edgePath(a,b){
  return {d:"M"+x1+","+y1+" Q"+cx+","+cy+" "+x2+","+y2, mx:(x1+2*cx+x2)/4, my:(y1+2*cy+y2)/4};
 }
 function levelName(l){return (STR.lvlNames&&STR.lvlNames[l])||l||"—";}
+function evidencePath(n){var ev=(n&&n.evidence)||[];for(var i=0;i<ev.length;i++)if(ev[i]&&ev[i].type==="path"&&ev[i].ref)return ev[i].ref;return STR.unknown;}
+function mapEndpoint(id){var n=CATNODES[id]||node(id);return n?n.name+" ("+id+")":id;}
+function mapStatus(n){var roll=(n.__catalog||mode==="target")?null:rollStatus(n,childrenOf),status=(roll?roll.status2:(n.status2||n.status||STR.unknown)),badge=n.__catalog?String(n.count):(mode==="target"?STR.detTarget:badgeOf(n,roll));return status+" · "+badge;}
+function renderMapTable(nodes,edges){
+ var out='<table><caption>'+esc(STR.mapTable+' · '+STR.mapNodes)+'</caption><thead><tr><th scope="col">'+esc(STR.node)+'</th><th scope="col">'+esc(STR.category)+'</th><th scope="col">'+esc(STR.status)+'</th><th scope="col">'+esc(STR.evidencePath)+'</th></tr></thead><tbody>',i,n,e;
+ for(i=0;i<nodes.length;i++){n=nodes[i];out+='<tr><td>'+esc(n.name)+'</td><td>'+esc(n.category||n.kind||STR.unknown)+'</td><td>'+esc(mapStatus(n))+'</td><td>'+esc(evidencePath(n))+'</td></tr>';}
+ out+='</tbody></table><table><caption>'+esc(STR.mapRelationships)+'</caption><thead><tr><th scope="col">'+esc(STR.from)+'</th><th scope="col">'+esc(STR.to)+'</th><th scope="col">'+esc(STR.relationship)+'</th></tr></thead><tbody>';
+ for(i=0;i<edges.length;i++){e=edges[i];out+='<tr><td>'+esc(mapEndpoint(e.from))+'</td><td>'+esc(mapEndpoint(e.to))+'</td><td>'+esc(e.label||STR.unknown)+'</td></tr>';}
+ $("maptable").innerHTML=out+'</tbody></table>';
+}
 function cssv(v){try{return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||"#2b6e8a";}catch(e){return "#2b6e8a";}}
 function detailState(n,timeline){
  // Function prose says what a box is. It is not also a checkpoint state: unchanged timeline nodes
@@ -976,6 +996,7 @@ function wire(){
    .catch(function(){stamp(STR.staticSrc);});
  });
  $("blbl").addEventListener("click",function(){LABELS=!($("blbl").className==="on");draw(false);});
+ $("btable").addEventListener("click",function(){var table=$("maptable"),show=table.hidden;table.hidden=!show;$("stage").hidden=show;$("btable").textContent=show?STR.showMap:STR.showTable;$("btable").setAttribute("aria-expanded",show?"true":"false");});
  $("brl").addEventListener("click",function(){delete POS[keyOf()];draw(true);});
  $("skin").innerHTML=SKINS.map(function(s){return '<option value="'+s[0]+'">'+s[1]+'</option>';}).join("");
  $("skin").addEventListener("change",function(e){setSkin(e.target.value);});
@@ -987,6 +1008,7 @@ function applyStrings(){
  set("subhelp",STR.subhelp);set("back",STR.back);set("bnow",STR.now);set("btgt",STR.tgt);
  set("brf",STR.reverify);set("brl",STR.resetLayout);var brl=$("brl");if(brl)brl.title=STR.resetLayoutTitle;
  set("blbl",STR.labels);var bl=$("blbl");if(bl)bl.title=STR.labelsTitle;
+ set("btable",STR.showTable);
  set("pexp",STR.printExport);set("pexpSvg",STR.exportSvg);set("pexpPng",STR.exportPng);
  set("pexpLayout",STR.exportLayout);set("pexpPrint",STR.print);
  set("lg-done",STR.legDone);set("lg-decl",STR.legDecl);set("lg-prog",STR.legProg);set("lg-next",STR.legNext);
