@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a runbook that **handles nothing**.
 
 ### Fixed
+- Kanban now mounts only the selected status's bounded issue page and preserves that selection
+  through filtering, so deferred disclosure cannot leave multiple 40-row pages mounted (#113).
 - `arbiter.milestones` was **required**, so a project with runbooks and no codified roadmap could
   not declare them — contradicting the opt-in-by-presence contract every key in that block
   documents. Replaced with `minProperties: 1`.
