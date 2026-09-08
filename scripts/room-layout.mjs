@@ -7,11 +7,9 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 const room = process.argv[2]
-const mode = process.argv[3] || ''
-const negative = mode === '--negative'
-const diagnostic = mode === '--diagnose'
-if (!room || (mode && !negative && !diagnostic)) {
-  console.error('usage: node scripts/room-layout.mjs <control-room.html> [--negative|--diagnose]')
+const negative = process.argv[3] === '--negative'
+if (!room || (process.argv[3] && !negative)) {
+  console.error('usage: node scripts/room-layout.mjs <control-room.html> [--negative]')
   process.exit(2)
 }
 
@@ -27,8 +25,8 @@ browser.once('exit', (code, signal) => { browserExit = `exit ${code == null ? 'n
 browser.once('error', (error) => { browserError = error.message })
 browser.stderr.on('data', (chunk) => { browserStderr = (browserStderr + chunk).slice(-4096) })
 const started = Date.now()
-const startup = { executable: chrome, pid: browser.pid || null, startedAt: new Date(started).toISOString(), timeoutMs: diagnostic ? 30000 : 4000 }
-const result = { mode: diagnostic ? 'diagnostic' : (negative ? 'negative' : 'acceptance'), chrome: null, startup, routes: [], failures: [] }
+const startup = { executable: chrome, pid: browser.pid || null, startedAt: new Date(started).toISOString(), timeoutMs: 30000 }
+const result = { mode: negative ? 'negative' : 'acceptance', chrome: null, startup, routes: [], failures: [] }
 
 const command = (method, params = {}) => new Promise((resolveCommand, rejectCommand) => {
   const id = nextId++
@@ -72,23 +70,22 @@ const version = async () => {
 try {
   const info = await version()
   result.chrome = info.Browser
-  if (!diagnostic) {
-    const target = await (await fetch(`http://127.0.0.1:${info.port}/json/new?about:blank`, { method: 'PUT' })).json()
-    socket = new WebSocket(target.webSocketDebuggerUrl)
-    await new Promise((resolveSocket, rejectSocket) => {
-      socket.addEventListener('open', resolveSocket, { once: true })
-      socket.addEventListener('error', rejectSocket, { once: true })
-    })
-    socket.addEventListener('message', (event) => {
-      const message = JSON.parse(event.data)
-      const request = pending.get(message.id)
-      if (!request) return
-      pending.delete(message.id)
-      message.error ? request.reject(new Error(message.error.message)) : request.resolve(message.result)
-    })
-    await command('Page.enable')
-    await command('Runtime.enable')
-    const path = resolve(room)
+  const target = await (await fetch(`http://127.0.0.1:${info.port}/json/new?about:blank`, { method: 'PUT' })).json()
+  socket = new WebSocket(target.webSocketDebuggerUrl)
+  await new Promise((resolveSocket, rejectSocket) => {
+    socket.addEventListener('open', resolveSocket, { once: true })
+    socket.addEventListener('error', rejectSocket, { once: true })
+  })
+  socket.addEventListener('message', (event) => {
+    const message = JSON.parse(event.data)
+    const request = pending.get(message.id)
+    if (!request) return
+    pending.delete(message.id)
+    message.error ? request.reject(new Error(message.error.message)) : request.resolve(message.result)
+  })
+  await command('Page.enable')
+  await command('Runtime.enable')
+  const path = resolve(room)
   // The viewer keeps VIEWS private. Alias its real object in a disposable copy so this probe
   // still enumerates the canonical routes rather than the active programme's navigation links.
   const marker = 'var VIEWS={},VIEW_SPEC={},PRINT_FILL=[];'
@@ -100,7 +97,7 @@ try {
   await ready()
   const routes = await evaluate('Object.keys(window.__LAYOUT_VIEWS__).sort()')
   if (!Array.isArray(routes) || !routes.length) throw new Error('the composed briefing exposed no routes')
-    for (const [width, height] of [[3440, 1440], [1920, 900]]) {
+  for (const [width, height] of [[3440, 1440], [1920, 900]]) {
     for (const route of routes) {
       await command('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false })
       await command('Page.navigate', { url: `file://${instrumented}?layout=${width}x${height}#` + route })
@@ -111,8 +108,7 @@ try {
       result.routes.push({ route, width, height, ...measured, overflow })
       if (measured.activeRoute !== route) result.failures.push(`${route} at ${width}x${height}: rendered ${measured.activeRoute || 'no active route'}`)
       if (negative ? !overflow : overflow) result.failures.push(`${route} at ${width}x${height}: scrollHeight ${measured.scrollHeight}, innerHeight ${measured.innerHeight}`)
-    }
-    }
+  }
   }
 } catch (error) {
   startup.error = error.message || String(error)
@@ -127,4 +123,4 @@ try {
   rmSync(profile, { recursive: true, force: true })
 }
 console.log(JSON.stringify(result, null, 2))
-process.exit(diagnostic ? (result.failures.length ? 1 : 0) : (negative ? (result.failures.length ? 2 : 1) : (result.failures.length ? 1 : 0)))
+process.exit(negative ? (result.failures.length ? 2 : 1) : (result.failures.length ? 1 : 0))
