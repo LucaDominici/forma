@@ -29,15 +29,23 @@
     {
       "n": 53,
       "verdict": "warn",
-      "why": "Debt D-8 in docs/technical-debt.md: the layout floor is measured, not gated; no test in test/run.mjs asserts a viewport floor.",
+      "why": "The candidate implements the browser layout gate and its negative control; merge and acceptance remain pending, and #53 remains open.",
       "evidence": [
         {
+          "type": "issue",
+          "ref": "53"
+        },
+        {
           "type": "path",
-          "ref": "docs/technical-debt.md:30"
+          "ref": "docs/technical-debt.md:33"
+        },
+        {
+          "type": "path",
+          "ref": ".github/workflows/ci.yml:51"
         }
       ],
       "auditedAt": "2026-08-18",
-      "evidenceHash": "493c7392bd7a4f7f9d33aeafab8b5e914be6db6b7628351ff108f0d970a42cf8"
+      "evidenceHash": "12a146cb39c7e1d6f0ebb580180b68e265ae5f47fea0efa744b5bbee636c00d9"
     },
     {
       "n": 54,
@@ -56,7 +64,7 @@
   "dependencyConfirmations": [],
   "lastApply": {
     "at": "2026-08-18",
-    "accepted": 1,
+    "accepted": 2,
     "rejected": []
   }
 }

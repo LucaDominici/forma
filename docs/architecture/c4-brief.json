@@ -142,35 +142,6 @@
       }
     },
     {
-      "id": "decide-layout-floor",
-      "kind": "decide",
-      "text": "Decide whether the layout floor (#53) stays a measured number (debt D-8) or gets the browser step in the docs job that #53 names as the only thing that would close it.",
-      "about": {
-        "issue": 53
-      },
-      "evidence": [
-        {
-          "type": "issue",
-          "ref": "53"
-        },
-        {
-          "type": "path",
-          "ref": "docs/technical-debt.md:30"
-        }
-      ],
-      "writtenAt": "2026-08-18",
-      "evidenceHash": "26fde9574214340247c14f5f387231d41acb0bcbbb290d0ccfe3f301448d6d04",
-      "verified": {
-        "verdict": "holds",
-        "reason": "#53 is OPEN and docs/technical-debt.md:30 records D-8 \"The layout floor is measured, not gated\" with a browser CI step as its payback while #53 names that step as the only closer and explicitly rejects the CSS regex, so the choice is live and stated correctly — but .github/workflows/ holds only ci.yml (jobs test, ci-required), pages.yml and release.yml, none of which is a `docs` job or checks out a second repository, so the host #53 assumes for that step does not exist today.",
-        "evidence": {
-          "type": "path",
-          "ref": "docs/technical-debt.md:30"
-        },
-        "at": "2026-08-18"
-      }
-    },
-    {
       "id": "inv-I2",
       "kind": "invariant",
       "text": "I2 — only verify touches the network: the test suite refuses an audit engine that grows a runner (unknown option --run).",
