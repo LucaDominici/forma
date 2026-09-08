@@ -1529,18 +1529,19 @@ function renderKanban(target,program){
  var total=program.issuesSnapshot.issues.length,lane=panel(STR.routeKanban,fmt(STR.kanbanCount,{n:total}));markState(lane,total?"present":"empty");
  var filter=el("div","list-filter"),input=document.createElement("input"),lanes=el("div","stack"),activeLane=null;input.type="search";input.maxLength=120;input.placeholder=STR.filterPlaceholder;input.setAttribute("aria-label",STR.filterLabel);filter.appendChild(input);lane.body.appendChild(filter);lane.body.appendChild(lanes);
  function showLane(d){var rows=d.rows,known=d.known;d.body.textContent="";if(rows.length)pagedList(d.body,rows,function(n){var item=el("div","kanban-issue");item.appendChild(pill(program,n,"#"+n+(issues[n]?" "+short(issues[n].title,58):"")));return item;});else d.body.appendChild(el("p","muted",input.value.trim()?STR.filterNone:(known?(d.key==="aspettano-umano"?STR.bucketHumanEmpty:STR.bucketEmpty):STR.ruleUnknown)));}
+ function activateLane(d){if(activeLane&&activeLane!==d){activeLane.open=false;activeLane.body.textContent="";}activeLane=d;showLane(d);}
  function draw(){
-  var q=input.value.toLowerCase().trim(),all=names.concat([["chiuse",STR.bucketChiuse]]),was=activeLane&&activeLane.key,j;
+  var q=input.value.toLowerCase().trim(),all=names.concat([["chiuse",STR.bucketChiuse]]),was=activeLane&&activeLane.key,chosen=null,j;
   activeLane=null;
   lanes.textContent="";
   for(j=0;j<all.length;j++){
    var key=all[j][0],labelText=all[j][1],source=buckets[key]||[],rows=source.filter(function(n){return !q||("#"+n+" "+(issues[n]&&issues[n].title||"")+" "+labelText).toLowerCase().indexOf(q)!==-1;}),d=el("details","kanban-lane"),s=el("summary","row-head"),body=el("div");
    var known=key!=="aspettano-umano"||program.derived.kanbanHumanDeclared;d.key=key;d.rows=rows;d.body=body;d.known=known;s.appendChild(el("span","ref",labelText));s.appendChild(el("span","state-chip",known?(source.length?STR.statePresent:STR.stateEmpty):STR.stateUnknown));s.appendChild(el("span","tally",known?rows.length:"—"));d.appendChild(s);
-   d.addEventListener("toggle",function(){var d=this;if(d.open){if(activeLane&&activeLane!==d){activeLane.open=false;activeLane.body.textContent="";}activeLane=d;showLane(d);}});
+   d.addEventListener("toggle",function(){var d=this;if(d.open)activateLane(d);});
    d.appendChild(body);lanes.appendChild(d);
-   if(key===was||(!activeLane&&rows.length)){activeLane=d;d.open=true;}
+   if(key===was||(!chosen&&rows.length))chosen=d;
   }
-  if(activeLane)showLane(activeLane);
+  if(chosen){activeLane=chosen;chosen.open=true;showLane(chosen);}
  }
  input.addEventListener("input",draw);draw();board.appendChild(lane);
  target.appendChild(board);

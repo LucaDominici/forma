@@ -42,6 +42,7 @@ import { deriveRtm } from "../lib/rtm.mjs";
 import { componentsFor } from "../lib/cluster.mjs";
 import { canonicalPath } from "../lib/roomload.mjs";
 import { lensDrift } from "./fixtures/control-room-stress/make.mjs";
+import { makeKanbanFixture } from "./fixtures/control-room-stress/kanban.mjs";
 import {
   DERIVED_KEYS,
   LENSES,
@@ -6466,11 +6467,55 @@ const diffPaths = (a, b, at = "") => {
     !/names\.concat\(\[\["chiuse"/.test(kanban)
   )
     die("room-kanban: search or the CLOSED archive lane is missing");
-  if (
-    !/var activeLane=null/.test(kanban) ||
-    !/if\(activeLane&&activeLane!==d\)\{activeLane\.open=false;activeLane\.body\.textContent="";\}/.test(kanban)
-  )
-    die("room-kanban: opening one status must unmount the previous issue page without dropping its lane");
+  const makeKanban = new Function(
+    "el", "panel", "markState", "fmt", "STR", "pagedList", "short", "pill", "document",
+    kanban + ";return renderKanban;",
+  );
+  const kanbanFixture = makeKanbanFixture();
+  makeKanban(
+    kanbanFixture.helpers.el,
+    kanbanFixture.helpers.panel,
+    kanbanFixture.helpers.markState,
+    kanbanFixture.helpers.fmt,
+    kanbanFixture.helpers.STR,
+    kanbanFixture.helpers.pagedList,
+    kanbanFixture.helpers.short,
+    kanbanFixture.helpers.pill,
+    kanbanFixture.helpers.document,
+  )(kanbanFixture.target, kanbanFixture.program);
+  kanbanFixture.flush();
+  const assertKanbanPage = (key, expectedRows) => {
+    const lanes = kanbanFixture.lanes(), active = lanes.filter((d) => d.open);
+    const pages = kanbanFixture.pages();
+    if (active.length !== 1 || active[0].key !== key || pages.length !== (expectedRows ? 1 : 0))
+      die("room-kanban: lane switch must retain exactly one selected lane and page (expected " + key + ", active " + active.map((d) => d.key).join(",") + ", states " + lanes.map((d) => d.key + ":" + d.open).join(",") + ", pages " + pages.length + ")");
+    if (pages[0] && pages[0].children.length > 40)
+      die("room-kanban: a lane mounted more than the 40-row issue page");
+  };
+  for (const lane of kanbanFixture.lanes()) {
+    lane.open = true;
+    lane.dispatch("toggle");
+    kanbanFixture.flush();
+    assertKanbanPage(lane.key, lane.rows.length);
+  }
+  const zeroLane = kanbanFixture.lanes().find((d) => d.key === "premessa-falsa");
+  zeroLane.open = true;
+  zeroLane.dispatch("toggle");
+  kanbanFixture.flush();
+  const kanbanInput = kanbanFixture.input();
+  kanbanInput.value = "Stress issue 61";
+  kanbanInput.dispatch("input");
+  kanbanFixture.flush();
+  assertKanbanPage("premessa-falsa", 0);
+  const closedLane = kanbanFixture.lanes().find((d) => d.key === "chiuse");
+  closedLane.open = true;
+  closedLane.dispatch("toggle");
+  kanbanFixture.flush();
+  assertKanbanPage("chiuse", closedLane.rows.length);
+  kanbanInput.value = "Stress issue";
+  kanbanInput.dispatch("input");
+  kanbanFixture.flush();
+  assertKanbanPage("chiuse", closedLane.rows.length);
   const tech = viewerFn("viewPlan");
   if (
     !/names\[i\]\[0\]!=="aspettano-umano"\|\|program\.derived\.kanbanHumanDeclared/.test(
