@@ -4,6 +4,24 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/LucaDominici/forma/compare/v1.0.0...v1.1.0) (2026-09-08)
+
+
+### Features
+
+* **room:** control room rework — dependencies, repo signals, capability ledger, document gate ([#86](https://github.com/LucaDominici/forma/issues/86)) ([f3565fc](https://github.com/LucaDominici/forma/commit/f3565fcb9ac16111738e0a0b0886c106603133d4))
+* **room:** integrate skins and density with six lenses ([#105](https://github.com/LucaDominici/forma/issues/105)) ([df82219](https://github.com/LucaDominici/forma/commit/df8221979d07a4402a53cb29af6cb7be90397399))
+
+
+### Bug Fixes
+
+* **ci:** gate Control Room layout floor ([#53](https://github.com/LucaDominici/forma/issues/53)) ([#115](https://github.com/LucaDominici/forma/issues/115)) ([3891f52](https://github.com/LucaDominici/forma/commit/3891f52d5eca47b3b35a7859d8324fb8730efabb))
+* close Forma production loop ([#83](https://github.com/LucaDominici/forma/issues/83)) ([8275057](https://github.com/LucaDominici/forma/commit/8275057eadd2415bc1d6e5132ad0c8542a60c53e))
+* **release:** derive version assertion from package manifest ([#112](https://github.com/LucaDominici/forma/issues/112)) ([49e94a7](https://github.com/LucaDominici/forma/commit/49e94a7bef39ee9720f603a0daaab4fec65e85f9))
+* **room:** keep kanban to one selected issue page ([#114](https://github.com/LucaDominici/forma/issues/114)) ([25179cf](https://github.com/LucaDominici/forma/commit/25179cf8d3c662dbe5b56d9dc1671a13683e7b68))
+* **room:** recover production updates without leaking staged state ([#109](https://github.com/LucaDominici/forma/issues/109)) ([9dd0ee8](https://github.com/LucaDominici/forma/commit/9dd0ee89d648086c43e55bbd88782d7f72d5ca7f))
+* **viewer:** add accessible map table ([#50](https://github.com/LucaDominici/forma/issues/50)) ([#116](https://github.com/LucaDominici/forma/issues/116)) ([bcc30df](https://github.com/LucaDominici/forma/commit/bcc30dfb83b8a4a17ec826daf3bbdf6aa465630f))
+
 ## [Unreleased]
 
 ### Added
