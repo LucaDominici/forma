@@ -6836,6 +6836,26 @@ const diffPaths = (a, b, at = "") => {
   );
 }
 
+// The public C4 viewer must keep a semantic twin for its visual map (#50). Browser acceptance
+// drives this actual iframe; this native contract keeps its table toggle, labelled SVG and required
+// columns from silently disappearing between browser runs.
+{
+  const holo = readFileSync(
+    join(HERE, "..", "lib/viewer/c4-hologram.html"),
+    "utf-8",
+  );
+  if (!/id="btable"/.test(holo) || !/id="maptable"/.test(holo))
+    die("map-a11y: the rendered C4 map has no Show table control and target");
+  if (!/<svg[^>]*role="group"[^>]*aria-label=/.test(holo))
+    die("map-a11y: the rendered SVG root is not a descriptively named group");
+  if (!/\$\("stage"\)\.hidden=show/.test(holo) || !/<th scope="col">/.test(holo))
+    die("map-a11y: table mode does not replace the map or lacks column headers");
+  for (const key of ["mapNodes", "mapRelationships", "node", "category", "status", "evidencePath", "from", "to", "relationship"])
+    if (!new RegExp("\\b" + key + ":").test(holo))
+      die("map-a11y: text equivalent omits its " + key + " column");
+  console.log("  ok map-a11y — public map contract keeps its table columns and named SVG root");
+}
+
 // The dogfood. A traceability convention that cannot read the document THIS repository writes is a
 // convention for other people's repositories. docs/PRD.md §6 is a real table, edited by hand for
 // prose reasons, and the parser has to find it without being told anything but the id pattern.
