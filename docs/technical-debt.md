@@ -1,6 +1,6 @@
 ---
 title: 'Technical debt register'
-doc_version: '1.0.1'
+doc_version: '1.0.2'
 status: active
 last_review: '2026-08-17'
 owner: 'Luca Dominici'
@@ -27,7 +27,13 @@ trigger fires. A debt with no trigger is a design decision, not debt.
 | D-4 | **The RTM `issues` column is maintained by hand.** A design row names the issues that implement it. | It cannot rot silently — `forma check` fails on a dangling or missing reference — but it can tire, and tiring is how a discipline gets abandoned. | The column stops being updated in practice, i.e. the gate starts being worked around rather than satisfied. | `forma rtm --plan`, emitting rows for untraced open work in the same plan-then-apply shape `enrich` and `audit` already use. Named as a consequence in [ADR-0006](adr/0006-traceability-as-a-derivation-not-an-overlay.md). |
 | D-5 | **`coverageOf` reports 0% for an empty population.** `linked/total` with `total === 0` yields `0`, not `null`. | A repository with no issues at all reads "0% linked", which claims a measurement over an empty set — the exact shape I6 forbids elsewhere. | Any programme legitimately reaching the briefing with zero issues. | One line in `lib/link.mjs`, plus updating whatever compares the value. Left alone so far because it is pre-existing and no measured programme hits it. |
 | D-6 | **The demo model cannot regenerate itself.** `docs/demo/c4-model.json` is a snapshot committed from a local run against a private repository. | Nothing automated notices if it goes stale; the README says so out loud. | The demo misrepresents `haben` badly enough to mislead. | Either make the source repository reachable from CI, or replace the demo target with a public one. Both are real work, not a code change. |
-| D-8 | **The layout floor is measured, not gated.** D10 states that no route may overflow at 3440×1440 or 1920×900, and every claim in it comes from Playwright against the built artifact — run by hand, not by a job. The colour rule next to it *is* a gate. | A layout regression can merge. The one that made a half-height ultrawide release into a single 3381px column merged and was caught by a re-audit, not by CI. | Any second layout regression reaching `main`. | A browser CI step kept outside the runtime dependency tree. Deliberately **not** a CSS-text regex in `npm test`: a pattern that cannot fail for the right reason is worse than a written manual step. |
+
+## Resolved
+
+- **D-8 (closed by #53).** The layout floor is now browser-gated outside the runtime dependency
+  tree: CI composes the briefing, discovers its published routes, and rejects
+  `scrollHeight > innerHeight` at 3440×1440 and 1920×900. The gate also proves its own forced
+  overflow control rejects every measured route.
 
 ## What is *not* debt
 

@@ -1,6 +1,6 @@
 ---
 title: 'Design'
-doc_version: '1.1.0'
+doc_version: '1.1.1'
 status: active
 last_review: '2026-08-10'
 owner: 'Luca Dominici'
@@ -192,12 +192,9 @@ with a 2096px document.
 briefing say different things on different screens, and a briefing that omits without saying so is
 the artifact this product exists to replace.
 
-- **Not enforced.** Every number above was measured in a real browser against the built artifact,
-  by hand. There is no job that repeats it, so a layout regression can merge — one did, and a
-  re-audit caught it rather than CI. The honest field here is empty, and the debt is
-  [D-8](technical-debt.md). A regex over CSS text in `npm test` would close the field without
-  closing the hole: a pattern that cannot fail for the right reason is worse than a written manual
-  step, because it reads as green.
+- **Enforced by:** the Chrome layout step in [ci.yml](../.github/workflows/ci.yml), which composes
+  the briefing, discovers its published routes, and fails on `scrollHeight > innerHeight` at both
+  declared viewports. Its forced-overflow control must fail for the job to pass.
 - **Would be red when:** any route overflows the viewport at 3440×1440 or 1920×900.
 
 ## D7. Determinism over freshness

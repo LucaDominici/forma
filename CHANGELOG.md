@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a runbook that **handles nothing**.
 
 ### Fixed
+- The Control Room layout gate now measures every canonical route, including lenses published by
+  programmes that are not initially selected (#53).
 - Kanban now mounts only the selected status's bounded issue page and preserves that selection
   through filtering, so deferred disclosure cannot leave multiple 40-row pages mounted (#113).
 - `arbiter.milestones` was **required**, so a project with runbooks and no codified roadmap could
