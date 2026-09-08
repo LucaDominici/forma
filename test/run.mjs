@@ -6466,6 +6466,11 @@ const diffPaths = (a, b, at = "") => {
     !/names\.concat\(\[\["chiuse"/.test(kanban)
   )
     die("room-kanban: search or the CLOSED archive lane is missing");
+  if (
+    !/var activeLane=null/.test(kanban) ||
+    !/if\(activeLane&&activeLane!==d\)\{activeLane\.open=false;activeLane\.body\.textContent="";\}/.test(kanban)
+  )
+    die("room-kanban: opening one status must unmount the previous issue page without dropping its lane");
   const tech = viewerFn("viewPlan");
   if (
     !/names\[i\]\[0\]!=="aspettano-umano"\|\|program\.derived\.kanbanHumanDeclared/.test(
