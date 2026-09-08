@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Browser acceptance for D10. Routes come from the composed artifact, not a copied route list.
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import { tmpdir } from 'node:os'
@@ -13,14 +13,17 @@ if (!room || (process.argv[3] && !negative)) {
   process.exit(2)
 }
 
-const port = 19000 + (process.pid % 1000)
 const profile = mkdtempSync(resolve(tmpdir(), 'forma-room-layout-'))
 const chrome = process.env.CHROME || 'google-chrome'
-const browser = spawn(chrome, ['--headless=new', '--no-sandbox', '--disable-gpu', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore', detached: true })
+const browser = spawn(chrome, ['--headless=new', '--no-sandbox', '--disable-gpu', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'], detached: true })
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms))
 let socket
 let nextId = 1
 const pending = new Map()
+let browserExit = null, browserError = null, browserStderr = ''
+browser.once('exit', (code, signal) => { browserExit = `exit ${code == null ? 'null' : code}${signal ? ` (${signal})` : ''}` })
+browser.once('error', (error) => { browserError = error.message })
+browser.stderr.on('data', (chunk) => { browserStderr = (browserStderr + chunk).slice(-4096) })
 
 const command = (method, params = {}) => new Promise((resolveCommand, rejectCommand) => {
   const id = nextId++
@@ -41,20 +44,26 @@ const ready = async () => {
 }
 const version = async () => {
   for (let i = 0; i < 80; i++) {
+    if (browserError || browserExit) break
     try {
+      const portFile = join(profile, 'DevToolsActivePort')
+      if (!existsSync(portFile)) { await sleep(50); continue }
+      const port = Number(readFileSync(portFile, 'utf8').split(/\r?\n/, 1)[0])
+      if (!Number.isInteger(port) || port < 1) throw new Error(`invalid DevToolsActivePort ${JSON.stringify(String(port))}`)
       const response = await fetch(`http://127.0.0.1:${port}/json/version`)
-      if (response.ok) return response.json()
+      if (response.ok) return { ...(await response.json()), port }
     } catch {}
     await sleep(50)
   }
-  throw new Error('Chrome CDP did not become ready')
+  const detail = [browserError, browserExit, browserStderr.trim()].filter(Boolean).join('; ')
+  throw new Error(`Chrome CDP did not become ready${detail ? `: ${detail}` : ''}`)
 }
 
 const result = { mode: negative ? 'negative' : 'acceptance', chrome: null, routes: [], failures: [] }
 try {
   const info = await version()
   result.chrome = info.Browser
-  const target = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, { method: 'PUT' })).json()
+  const target = await (await fetch(`http://127.0.0.1:${info.port}/json/new?about:blank`, { method: 'PUT' })).json()
   socket = new WebSocket(target.webSocketDebuggerUrl)
   await new Promise((resolveSocket, rejectSocket) => {
     socket.addEventListener('open', resolveSocket, { once: true })
