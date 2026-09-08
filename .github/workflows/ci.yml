@@ -59,6 +59,14 @@ jobs:
         with: { node-version: 22 }
       - name: Compose every current briefing route
         run: node bin/forma.mjs room --manifest forma.room.json --out "$RUNNER_TEMP/room.html"
+      - name: Diagnose Chrome CDP startup (non-gating)
+        continue-on-error: true
+        run: |
+          date --iso-8601=seconds
+          command -v google-chrome
+          google-chrome --version
+          ps -eo pid,ppid,etime,args | grep -E '[g]oogle-chrome|[c]hrome' || true
+          node scripts/room-layout.mjs "$RUNNER_TEMP/room.html" --diagnose
       - name: Enforce the layout floor in Chrome
         run: node scripts/room-layout.mjs "$RUNNER_TEMP/room.html"
       - name: Prove the browser probe rejects overflow
