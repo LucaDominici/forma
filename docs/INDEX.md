@@ -15,7 +15,7 @@
 | [Global invariants](GLOBAL_INVARIANTS.md) | global-invariants | active | kind/invariant |
 | [Glossary](GLOSSARY.md) | glossary | active | kind/reference |
 | [Governance](GOVERNANCE.md) | governance | active | kind/governance |
-| [Issues to open](ISSUES_TO_OPEN.md) | issues-to-open | active | kind/planning |
+| [Issues to open](ISSUES_TO_OPEN.md) | issues-to-open | archived | kind/planning |
 | [Post-mortem — the Control Room branch](POSTMORTEM-control-room.md) | postmortem-control-room | active | kind/analysis |
 | [Forma — product requirements](PRD.md) | prd | active | kind/ssot |
 | [Forma documentation](README.md) | docs-map | active | kind/reference |
