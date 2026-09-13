@@ -1198,6 +1198,7 @@ function briefVerdictChip(claim){
  else if(claim.state==="stale"){text=fmt(STR.briefStale,{reason:staleReasonText(claim.staleReason)});}
  else if(claim.state==="contradicted"){text=STR.briefContradicted;tip=claim.verified.reason;}
  else if(claim.state==="unsupported"){text=STR.briefUnsupported;tip=claim.verified.reason;}
+ else if(claim.state==="self-held"){text=fmt(STR.briefSelfHeld,{date:claim.verified.at});tip=claim.verified.reason;}
  else text=STR.briefUnverified;
  chip.textContent=text;if(tip)chip.setAttribute("data-tip",tip);chip.setAttribute("aria-label",text+(tip?" — "+tip:""));return chip;
 }
@@ -1240,7 +1241,7 @@ function verdictMarkOf(program,n){var marks=VERDICT_MARKS[program.id];return (ma
 function briefStatusStrip(program){
  var b=program.derived.brief,f=program.derived.findings,strip=el("p","brief-strip"),parts=[];
  if(!b)return null;
- parts.push(fmt(STR.briefCounts,{n:b.counts.total,holds:b.counts.holds,contradicted:b.counts.contradicted,unsupported:b.counts.unsupported,unverified:b.counts.unverified,stale:b.counts.stale}));
+ parts.push(fmt(STR.briefCounts,{n:b.counts.total,holds:b.counts.holds,contradicted:b.counts.contradicted,unsupported:b.counts.unsupported,unverified:b.counts.unverified,selfHeld:b.counts.selfHeld,stale:b.counts.stale}));
  if(f&&f.lastApply)parts.push(fmt(STR.briefLastApply,{date:f.lastApply.at,accepted:f.lastApply.accepted,rejected:f.lastApply.rejected.length}));
  strip.appendChild(el("span","",parts.join(" · ")));
  strip.appendChild(el("span","state-chip"+(b.ready?" on":""),b.ready?STR.briefReady:STR.briefNotReady));

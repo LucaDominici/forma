@@ -82,7 +82,10 @@ Rules Forma enforces — write to them, do not test them:
    hostile verdict — the verifier held a different sentence.
 
 ## 4. Apply — and read what Forma refused
-`npx forma-arch audit --repo . --today YYYY-MM-DD --stale-after-days N --brief docs/architecture/c4-brief.json --apply docs/architecture/audit-fill.json --audit-plan docs/architecture/audit-plan.json`
+`npx forma-arch audit --repo . --today YYYY-MM-DD --stale-after-days N --brief docs/architecture/c4-brief.json --apply docs/architecture/audit-fill.json --audit-plan docs/architecture/audit-plan.json --engine <your engine id, e.g. claude|codex>`
+`--engine` stamps `author.engine` on every claim this apply writes or rewrites — always pass your
+own identity, since a claim with no `author.engine` can never be coloured later (#123: colour needs
+a DIFFERENT engine on both sides, and an unrecorded engine never counts as different).
 Forma applies item by item and names every refusal in `docs/architecture/c4-health.json` →
 `lastApply.rejected` (and on stderr). **Read them.** Fix the fill and re-apply, or accept the refusal:
 the number of refused claims is shown on the dashboard, and that is fine — it is the honest number.
@@ -99,7 +102,9 @@ claims are grey and become findings. Claims the verifier does not answer stay "n
 never colour them yourself.
 
 ## 6. Recompose and gate
-`npx forma-arch room update --manifest forma.room.json --skip-verify --fill --counter`
+`npx forma-arch room update --manifest forma.room.json --skip-verify --fill --counter --author-engine <the engine that wrote the brief> --verifier-engine <the engine that ran forma-counterverify>`
+`--author-engine`/`--verifier-engine` must name two DIFFERENT engines, or every hold this step
+grants renders as "self-held", never coloured (#123).
 then `npx forma-arch check --room <the html>` and `node scripts/room-presentable.mjs --room <the html> --manifest forma.room.json`.
 `room-presentable` refuses to publish a brief with a decision nobody held. If it refuses, do not publish:
 fix the fill or get the verifier to answer.

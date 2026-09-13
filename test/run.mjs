@@ -8119,7 +8119,7 @@ const diffPaths = (a, b, at = "") => {
       evidence: [{ type: "milestone", ref: "v1" }],
     },
   ]);
-  r = run([...briefArgs, "--apply", fill, "--audit-plan", plan]);
+  r = run([...briefArgs, "--apply", fill, "--audit-plan", plan, "--engine", "claude"]);
   if (r.status !== 0) die("brief: cap apply exit " + r.status, r);
   if (
     readJson(brief).claims.filter((c) => c.kind === "thesis").length !== 1 ||
@@ -8474,7 +8474,7 @@ const diffPaths = (a, b, at = "") => {
     delta.added.map((c) => c.id).join() !== "inv-1" ||
     delta.removed.map((c) => c.id).join() !== "decide-1" ||
     delta.changed.map((c) => c.id).join() !== "risk-1" ||
-    delta.unchanged !== 1
+    delta.unchanged !== 2
   )
     die("brief delta: wrong diff: " + JSON.stringify(delta));
   const badRef = deriveBriefDelta(gitBrief, "0".repeat(40), v2);
