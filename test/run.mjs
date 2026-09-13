@@ -6727,6 +6727,23 @@ const diffPaths = (a, b, at = "") => {
   const composer = readFileSync(join(HERE, "..", "lib/room.mjs"), "utf-8");
   if (!/theme: manifest\.theme \|\| 'light'/.test(composer))
     die("room-theme: a fresh client briefing does not default to light");
+  // #120 AC5/density P2: `.queue-command` only ever exists inside the Queue workflow, which used
+  // to sit collapsed and last in the plan lens's evidence tier — burying every command below the
+  // fold at 1440. The queue is now the one workflow that opens (and fills) eagerly, and mounts
+  // first in that tier, ahead of the blocked-issues panel.
+  const viewPlan = viewerFn("viewPlan");
+  if (
+    !/workflow\(program,STR\.routeQueue,function\(target\)\{renderQueue\(target,program\);\},true\)/.test(
+      viewPlan,
+    )
+  )
+    die("room-density: the queue workflow no longer opens eagerly");
+  const queueMount = viewPlan.indexOf("STR.routeQueue"),
+    blockedMount = viewPlan.indexOf("STR.techBlocked");
+  if (queueMount === -1 || blockedMount === -1 || queueMount > blockedMount)
+    die(
+      "room-density: the queue must mount ahead of the blocked panel to reach the first screen",
+    );
   console.log(
     "  ok room-workflow — lens routing from the injected table, searchable blocks/Kanban, honest milestones, bounded lazy evidence, mobile and print contracts",
   );

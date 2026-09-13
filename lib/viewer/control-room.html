@@ -1437,6 +1437,11 @@ function viewPlan(view,program,summary){
  view.appendChild(answer);
 
  var ev=el("div","evidence");
+ // The queue is the one route holding `.queue-command` (#120 AC5/density P2) and mounts first,
+ // open, so at least one command reaches the first screen instead of every route sinking below
+ // five panels of schedule evidence. Kanban is exploratory by contrast (many issues, no single
+ // "do this" affordance) and stays lazy/collapsed below it.
+ ev.appendChild(workflow(program,STR.routeQueue,function(target){renderQueue(target,program);},true));
  ev.appendChild(rowsPanel(panel(STR.techBlocked,blockedClaim.known?fmt(STR.provBlockedSources,{n:mine.length,labels:summary.blockedByLabel,deps:summary.blockedByDependency}):STR.provBlockedUnknown,"span2"),mine,blockedRow,blockedClaim.known?STR.noBlockedHere:STR.ruleUnknown));
  // One absence policy across the four schedule panels: a panel with nothing behind it is ABSENT,
  // not reserved (I7). Two of these used to vanish and two used to render "Unknown"/"Empty" chips
@@ -1446,9 +1451,6 @@ function viewPlan(view,program,summary){
  var drift=reconciliationPanel(program);if(drift)ev.appendChild(drift);
  var msPanel=milestonePanel(program);if(msPanel)ev.appendChild(msPanel);
  if((program.derived.milestones||[]).length)ev.appendChild(chartMilestones(summary,program));
- // The two projections used to be full routes. They are supporting evidence for the same human
- // decision, so they disclose here and build only when opened.
- ev.appendChild(workflow(program,STR.routeQueue,function(target){renderQueue(target,program);}));
  ev.appendChild(workflow(program,STR.routeKanban,function(target){renderKanban(target,program);}));
  view.appendChild(ev);
 }
@@ -1527,10 +1529,16 @@ function reconciliationPanel(program){
  return p;
 }
 
-function workflow(program,title,fill){
+function workflow(program,title,fill,openNow){
  var d=el("details","workflow span2"),s=el("summary","",title),body=el("div","workflow-body");
  d.appendChild(s);d.appendChild(body);
  d.addEventListener("toggle",function(){if(d.open&&!d.getAttribute("data-filled")){d.setAttribute("data-filled","true");fill(body);}focusScrollers(d);});
+ // Density (#120 AC5): the queue is the only route with a `.queue-command` — collapsed-by-default
+ // buried every command below the fold. Opening (and filling) it eagerly here, at construction,
+ // is the one instance that needs a first screen; the toggle listener above still lazy-fills every
+ // other disclosure (e.g. Kanban), so this stays the exception, not a reversal of the lazy-evidence
+ // contract.
+ if(openNow){d.open=true;d.setAttribute("data-filled","true");fill(body);}
  return d;
 }
 function renderKanban(target,program){
