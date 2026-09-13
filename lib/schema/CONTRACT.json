@@ -14,7 +14,7 @@
       "id": "id-registry",
       "owner": "arbiter",
       "ownerPath": "schemas/id-registry.schema.json",
-      "sha256": "134e1d579b6b8018a69e64b56f4422d24340417b811caacbcc388252a210a40d",
+      "sha256": "f53b7797a5f99afa6ee980b87f2acc2235b0548cf12321e58f7cca7f8f72c122",
       "consumers": [],
       "why": "arbiter owns the identifier ontology. forma will vendor this when its provenance lens renders scheme-aware citations; listed now with no consumers so the pin exists before the dependency does."
     }
