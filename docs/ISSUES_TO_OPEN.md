@@ -1,14 +1,20 @@
 ---
 title: 'Issues to open'
-doc_version: '1.0.0'
-status: active
-last_review: '2026-08-17'
+doc_version: '1.1.0'
+status: archived
+last_review: '2026-09-12'
 owner: 'Luca Dominici'
 canonical_id: 'issues-to-open'
 tags: ['audience/dev', 'kind/planning']
 related: ['ROADMAP.md', 'docs/POSTMORTEM-control-room.md', 'docs/technical-debt.md']
 ---
 # Issues to open
+
+> **Archived 2026-09-12.** Every item below was filed as
+> [#52](https://github.com/LucaDominici/forma/issues/52) and
+> [#55–#76](https://github.com/LucaDominici/forma/issues?q=is%3Aissue+is%3Aclosed+closed%3A2026-08-17), all closed
+> 2026-08-17 as shipped in [#77](https://github.com/LucaDominici/forma/pull/77) / v1.0.0.
+> The issue tracker is the live backlog; this file is kept as the record of how it was derived.
 
 Ready-to-open backlog, grouped by the [roadmap](ROADMAP.md) releases. Each item is titled as it would
 be filed, with **why**, a falsifiable **DoD**, and labels. Anchored to the branch's own technical
