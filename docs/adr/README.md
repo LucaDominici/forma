@@ -22,3 +22,4 @@ that links back to it. Newest last.
 | [0005](0005-portfolio-briefing-over-per-repo-dashboard.md) | A portfolio briefing, not a per-repository dashboard | Accepted |
 | [0006](0006-traceability-as-a-derivation-not-an-overlay.md) | Traceability derived from the documents, not curated into a file | Accepted |
 | [0007](0007-views-nested-under-the-briefing.md) | Views nested under the briefing, not instead of it | Accepted |
+| [0009](0009-engine-identity-on-brief-claims.md) | Engine identity on brief claims, so cross-engine holds are enforceable | Accepted |
