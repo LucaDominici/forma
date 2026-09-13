@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0](https://github.com/LucaDominici/forma/compare/v1.1.0...v1.2.0) (2026-09-13)
+
+
+### Features
+
+* **room:** executive parity with the reference ([#120](https://github.com/LucaDominici/forma/issues/120)) ([#121](https://github.com/LucaDominici/forma/issues/121)) ([407011b](https://github.com/LucaDominici/forma/commit/407011b44e57f850831e77054e75c02e99f46590))
+
 ## [1.1.0](https://github.com/LucaDominici/forma/compare/v1.0.0...v1.1.0) (2026-09-08)
 
 
