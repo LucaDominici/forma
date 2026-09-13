@@ -7143,6 +7143,43 @@ const diffPaths = (a, b, at = "") => {
   );
 }
 
+// F5 (2026-09-14 visual verification): forma's own self-model must not go stale in the tree —
+// the `forma` node's curated version has to track the published package, and the historical "not
+// built" prose for the Control Room (shipped in #120/#121) may not survive a regen.
+{
+  const pkg = JSON.parse(
+    readFileSync(join(HERE, "..", "package.json"), "utf-8"),
+  );
+  const status = JSON.parse(
+    readFileSync(
+      join(HERE, "..", "docs/architecture/c4-status.json"),
+      "utf-8",
+    ),
+  );
+  const model = JSON.parse(
+    readFileSync(join(HERE, "..", "docs/architecture/c4-model.json"), "utf-8"),
+  );
+  if (status.nodes.forma.statusWord !== "v" + pkg.version)
+    die(
+      `self-model-fresh: c4-status.json claims ${status.nodes.forma.statusWord}, package.json is v${pkg.version}`,
+    );
+  if (/not built/i.test(status.nodes.boards.current))
+    die(
+      "self-model-fresh: the boards node still claims the Control Room is not built (#120/#121 shipped it)",
+    );
+  const formaNode = model.nodes.find((n) => n.id === "forma");
+  if (formaNode.statusWord !== "v" + pkg.version)
+    die(
+      "self-model-fresh: gen did not re-decorate the committed model from the edited status overlay",
+    );
+  let r = run(["check"]);
+  if (r.status !== 0)
+    die("self-model-fresh: forma check must pass on its own regenerated model", r);
+  console.log(
+    "  ok self-model-fresh — forma's self-model version and Control Room status track the shipped package",
+  );
+}
+
 // The audit channel is the producer for both evidence overlays: plan offline, let an agent fill
 // the JSON contract, then validate everything before either file is replaced (#65).
 {
