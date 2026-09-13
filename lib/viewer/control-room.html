@@ -618,15 +618,22 @@ function chartLoad(programs){
  },"span2");
 }
 /*lens:plan*/
+function milestoneStateLabel(state){return state==="closed"?STR.milestoneStateClosed:state==="empty"?STR.milestoneStateEmpty:STR.milestoneStateOpen;}
 function chartMilestones(s,program){
- var d=s.milestones||[],rows=d.map(function(m){return [m.title,m.due||STR.none,m.open,m.closed,m.closureRate==null?STR.none:m.closureRate+"%"];});
- var p=chart(STR.milestoneChart,snapshotProv(program),[STR.milestone,STR.due,STR.open,STR.closed,STR.closure],rows,function(svg,w,h){
+ // #120 AC2: ordered by the due-date constraint already (deriveMilestones), state per milestone
+ // added as its own column — chiuse/aperte comes from the open/closed bar itself.
+ var d=s.milestones||[],rows=d.map(function(m){return [m.title,m.due||STR.none,m.open,m.closed,m.closureRate==null?STR.none:m.closureRate+"%",milestoneStateLabel(m.state)];});
+ var p=chart(STR.milestoneChart,snapshotProv(program),[STR.milestone,STR.due,STR.open,STR.closed,STR.closure,STR.milestoneState],rows,function(svg,w,h){
   barsH(svg,w,h,d.map(function(m){
    return {name:m.title,total:m.open+m.closed,parts:[{v:m.closed,cls:"mark-series2"},{v:m.open,cls:"mark-accent"}],
            tip:fmt(STR.tipMilestone,{name:m.title,open:m.open,closed:m.closed})};
   }),{gutter:200});
  });
- if(program.issuesSnapshot.collection.milestonesComplete===false)markState(p,"unknown",STR.milestoneIncomplete);return p;
+ if(program.issuesSnapshot.collection.milestonesComplete===false)markState(p,"unknown",STR.milestoneIncomplete);
+ // Read from the milestones surface itself (already shared by verdict+plan), never from
+ // derived.kpis — that surface's home lens is verdict alone (I20).
+ if(d.length&&d.every(function(m){return !m.due;}))p.body.appendChild(el("p","muted",STR.milestoneNoDueDates));
+ return p;
 }
 /*lens:shared*/
 function chartHistory(history,program){
@@ -1272,6 +1279,10 @@ function viewVerdict(view,program,summary){
  var kp=panel(STR.kpiHeading,STR.provDerived),list=el("dl","kpis");
  kpi(list,STR.kpiOpen,k.openCount);kpi(list,STR.kpiBlocked,blockedClaim.known?blockedClaim.value:null,blockedClaim.known?null:STR.ruleUnknown);kpi(list,STR.kpiNoMilestone,k.noMilestoneCount);
  kpi(list,STR.kpiLinked,k.linkCoveragePct==null?null:k.linkCoveragePct+"%",k.linkCoveragePct==null?STR.notMeasured:STR.kpiLinkedNote);
+ // #120 AC1: "with problems" (fresh non-ok health verdicts) and "live resources/deploys" (workflow
+ // runs that actually completed), each with its own stated denominator — never a bare count.
+ kpi(list,STR.kpiProblems,k.withProblemsTotal==null?null:k.withProblemsCount,k.withProblemsTotal==null?STR.notMeasured:fmt(STR.kpiProblemsNote,{n:k.withProblemsCount,total:k.withProblemsTotal}));
+ kpi(list,STR.kpiLive,k.liveResourcesTotal==null?null:k.liveResourcesCount,k.liveResourcesTotal==null?STR.notMeasured:fmt(STR.kpiLiveNote,{n:k.liveResourcesCount,total:k.liveResourcesTotal}));
  // Requirement coverage used to sit here too, and again as the traceability headline. One number,
  // two homes, two chances to disagree — it is the traceability lens's answer, not this lens's (I20).
  kp.body.appendChild(list);
