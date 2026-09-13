@@ -7294,6 +7294,7 @@ const diffPaths = (a, b, at = "") => {
     validateCounterResults,
     classifyVerdictStaleness,
     classifyVerification,
+    applyBrief,
     hashEvidence,
     resolveEvidencePath,
     validateEvidence,
@@ -7390,6 +7391,37 @@ const diffPaths = (a, b, at = "") => {
   // Legacy brief: neither side ever recorded an engine. Must not crash and must not colour.
   if (classifyVerification(engineClaim(null, true), { today: "2026-08-10" }) === "holds")
     die("engine: a legacy claim with no engine data anywhere was coloured");
+
+  // R1: provenance reuse on an unchanged fill must compare EVERY claim semantic, not just
+  // text/evidence/about. A same-engine rewrite that only changes severity/class/ifBroken/
+  // staleAfterDays must NOT keep an earlier cross-engine author/verifier pair — that would let a
+  // same-engine edit stay coloured under a hold that no longer describes what the claim now says.
+  const semEvidence = [{ type: "issue", ref: "1" }];
+  const semEvidenceHash = hashEvidence(repo, semEvidence, issueSnapshot, "brief sem-1");
+  const semExisting = {
+    claims: [
+      {
+        id: "sem-1", kind: "risk", severity: "warn", text: "Same sentence, different severity.",
+        about: { issue: 1 }, evidence: semEvidence,
+        writtenAt: "2026-08-01", evidenceHash: semEvidenceHash,
+        author: { engine: "claude" },
+        verified: { verdict: "holds", reason: "held before the rewrite", evidence: semEvidence[0], at: "2026-08-01", engine: "codex" },
+      },
+    ],
+  };
+  const semApplied = applyBrief(
+    repo, semExisting,
+    [{ id: "sem-1", kind: "risk", severity: "bad", text: "Same sentence, different severity.", about: { issue: 1 }, evidence: semEvidence }],
+    issueSnapshot,
+    { today: "2026-08-10", engine: "claude" },
+  ).brief.claims.find((c) => c.id === "sem-1");
+  if (semApplied.verified)
+    die(
+      "engine: a same-text rewrite that changed severity kept its earlier (cross-engine) verification: " +
+        JSON.stringify(semApplied),
+    );
+  if (!semApplied.author || semApplied.author.engine !== "claude")
+    die("engine: a genuine rewrite did not get a fresh author stamp: " + JSON.stringify(semApplied.author));
   const staleVerdict = { auditedAt: "2026-08-10", evidenceHash };
   const unchangedIssue = { updatedAt: "2026-08-10T23:59:59Z", closedAt: null };
   const classify = (issue, today, currentHash = evidenceHash) =>
@@ -8606,6 +8638,67 @@ const diffPaths = (a, b, at = "") => {
     die("audit update: missing counter result did not fail loud", r);
   if (readFileSync(health, "utf-8") !== beforeMissingResult)
     die("audit update: missing result changed health");
+
+  // R2 (#123 follow-up): `room update --fill`/`--counter` spawn `audit.mjs --apply` as
+  // subprocesses; --author-engine/--verifier-engine must reach them, or a scheduled reapply
+  // silently stamps no engine at all and every prior hold becomes self-held on the next run.
+  r = run([...briefArgs, "--plan", plan]);
+  if (r.status !== 0) die("engine fwd: re-plan exit " + r.status, r);
+  claimsFill([
+    {
+      id: "engine-fwd",
+      kind: "note",
+      text: "Exercises room update --fill/--counter engine forwarding.",
+      about: { issue: 1 },
+      evidence: [{ type: "issue", ref: "1" }],
+    },
+  ]);
+  const fwdManifest = readJson(briefManifest);
+  fwdManifest.programs[0].auditPlan = plan;
+  fwdManifest.programs[0].auditFill = fill;
+  writeFileSync(briefManifest, JSON.stringify(fwdManifest, null, 2) + "\n");
+  r = run([
+    "room", "update", "--manifest", briefManifest, "--out", briefRoom,
+    "--skip-verify", "--fill", "--author-engine", "fwd-writer",
+  ]);
+  if (r.status !== 0) die("engine fwd: room update --fill exit " + r.status, r);
+  const fwdClaim = readJson(brief).claims.find((c) => c.id === "engine-fwd");
+  if (!fwdClaim || !fwdClaim.author || fwdClaim.author.engine !== "fwd-writer")
+    die(
+      "engine fwd: room update --fill did not forward --author-engine to audit --apply: " +
+        JSON.stringify(fwdClaim),
+    );
+  r = run([...briefArgs, "--plan", plan]);
+  if (r.status !== 0) die("engine fwd: counter re-plan exit " + r.status, r);
+  const fwdCounter = {
+    planHash: readJson(plan).planHash,
+    results: readJson(plan)
+      .claims.filter((c) => c.kind === "brief-claim" && c.id === "brief:engine-fwd")
+      .map((c) => ({
+        claimId: c.id,
+        verdict: "holds",
+        reason: "forwarding check",
+        evidence: { type: "file", ref: "src/core/engine.js" },
+      })),
+  };
+  writeFileSync(counter, JSON.stringify(fwdCounter));
+  fwdManifest.programs[0].counterResults = counter;
+  writeFileSync(briefManifest, JSON.stringify(fwdManifest, null, 2) + "\n");
+  r = run([
+    "room", "update", "--manifest", briefManifest, "--out", briefRoom,
+    "--skip-verify", "--counter", "--verifier-engine", "fwd-verifier",
+  ]);
+  if (r.status !== 0) die("engine fwd: room update --counter exit " + r.status, r);
+  const fwdVerified = readJson(brief).claims.find(
+    (c) => c.id === "engine-fwd",
+  ).verified;
+  if (!fwdVerified || fwdVerified.engine !== "fwd-verifier")
+    die(
+      "engine fwd: room update --counter did not forward --verifier-engine to audit --apply: " +
+        JSON.stringify(fwdVerified),
+    );
+  writeFileSync(brief, goodBrief);
+
   console.log(
     "  ok audit — deterministic offline plan; item-by-item apply that names every refusal in lastApply; findings and keyed signal/milestone evidence expire",
   );
