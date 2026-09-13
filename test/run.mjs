@@ -33,6 +33,7 @@ import {
   deriveHistory,
   deriveKanban,
   deriveKpis,
+  deriveMilestones,
   deriveQueue,
   deriveUseCases,
   deriveRunbooks,
@@ -4178,6 +4179,134 @@ const diffPaths = (a, b, at = "") => {
   )
     die(
       "room labels: absent blockedBy was treated as an implicit needs-human rule",
+    );
+
+  // #120 AC1 — "with problems" and "live resources/deploys" KPIs: derived joins over the health
+  // overlay and the workflow signals already in the snapshot, never a new fetch. Undeclared health
+  // (4th arg omitted) stays null/unknown (I6/I7); a declared-but-empty overlay counts as a measured
+  // zero, which is why `[]` and `undefined` must read differently below.
+  const problemSnapshot = {
+    fetchedAt: "2026-08-10T00:00:00Z",
+    milestones: [],
+    issues: [
+      { n: 1, state: "OPEN", labels: [], ms: null },
+      { n: 2, state: "OPEN", labels: [], ms: null },
+    ],
+    signals: {
+      workflows: {
+        ci: { state: "present", conclusion: "success" },
+        nightly: { state: "present", conclusion: "failure" },
+      },
+    },
+  };
+  const problemManifest = { today: "2026-08-10" };
+  const noHealthKpis = deriveKpis(
+    problemSnapshot,
+    null,
+    problemManifest,
+    undefined,
+  );
+  if (
+    noHealthKpis.withProblemsCount !== null ||
+    noHealthKpis.withProblemsTotal !== null
+  )
+    die(
+      "room kpis: an undeclared health overlay must read unmeasured, not zero: " +
+        JSON.stringify(noHealthKpis),
+    );
+  const healthKpis = deriveKpis(problemSnapshot, null, problemManifest, [
+    { n: 1, verdict: "bad", stale: false },
+    { n: 2, verdict: "ok", stale: false },
+  ]);
+  if (healthKpis.withProblemsCount !== 1 || healthKpis.withProblemsTotal !== 2)
+    die(
+      "room kpis: withProblems did not count fresh non-ok verdicts over fresh verdicts total: " +
+        JSON.stringify(healthKpis),
+    );
+  const staleHealthKpis = deriveKpis(problemSnapshot, null, problemManifest, [
+    { n: 1, verdict: "bad", stale: true },
+    { n: 2, verdict: "ok", stale: false },
+  ]);
+  if (
+    staleHealthKpis.withProblemsCount !== 0 ||
+    staleHealthKpis.withProblemsTotal !== 1
+  )
+    die(
+      "room kpis: a stale verdict lost its colour but still counted as a live problem: " +
+        JSON.stringify(staleHealthKpis),
+    );
+  if (
+    healthKpis.liveResourcesCount !== 1 ||
+    healthKpis.liveResourcesTotal !== 2
+  )
+    die(
+      "room kpis: liveResources did not count completed-workflow conclusions over declared runs: " +
+        JSON.stringify(healthKpis),
+    );
+  const noWorkflowKpis = deriveKpis(
+    { ...problemSnapshot, signals: { workflows: {} } },
+    null,
+    problemManifest,
+    [],
+  );
+  if (
+    noWorkflowKpis.liveResourcesCount !== null ||
+    noWorkflowKpis.liveResourcesTotal !== null
+  )
+    die(
+      "room kpis: no workflow runs at all must read unmeasured, not zero: " +
+        JSON.stringify(noWorkflowKpis),
+    );
+
+  // #120 AC2 — milestones carry a `state` (closed when nothing is open), sort by the due-date
+  // constraint (ascending, undated last, title as tiebreak), and the KPI line names it when NO
+  // milestone in the snapshot carries a due date at all — the exact shape of the viafera snapshot.
+  const milestoneSnapshot = {
+    fetchedAt: "2026-08-10T00:00:00Z",
+    milestones: [
+      { title: "b-undated", due: null, open: 2, closed: 1 },
+      { title: "a-dated", due: "2026-09-01", open: 0, closed: 3 },
+      { title: "c-undated", due: null, open: 0, closed: 0 },
+    ],
+    issues: [],
+  };
+  const orderedMilestones = deriveMilestones(milestoneSnapshot);
+  if (
+    orderedMilestones.map((m) => m.title).join(",") !==
+    "a-dated,b-undated,c-undated"
+  )
+    die(
+      "room milestones: due-date constraint order was not applied (dated first, then title): " +
+        orderedMilestones.map((m) => m.title).join(","),
+    );
+  if (
+    orderedMilestones[0].state !== "closed" ||
+    orderedMilestones[1].state !== "open" ||
+    orderedMilestones[2].state !== "empty"
+  )
+    die(
+      "room milestones: per-milestone state (closed/open/empty) was not derived: " +
+        JSON.stringify(orderedMilestones.map((m) => [m.title, m.state])),
+    );
+  if (
+    deriveKpis(milestoneSnapshot, null, problemManifest).noMilestoneDueDates !==
+    false
+  )
+    die(
+      "room kpis: noMilestoneDueDates fired even though one milestone carries a due date",
+    );
+  const allUndated = {
+    ...milestoneSnapshot,
+    milestones: milestoneSnapshot.milestones.map((m) => ({
+      ...m,
+      due: null,
+    })),
+  };
+  if (
+    deriveKpis(allUndated, null, problemManifest).noMilestoneDueDates !== true
+  )
+    die(
+      "room kpis: noMilestoneDueDates did not fire when every milestone lacks a due date",
     );
 
   // Endpoint identity is repo + number. An unrelated repository's #1 must not attach itself to
