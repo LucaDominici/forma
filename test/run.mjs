@@ -6744,6 +6744,27 @@ const diffPaths = (a, b, at = "") => {
     die(
       "room-density: the queue must mount ahead of the blocked panel to reach the first screen",
     );
+  // #120 AC5 visual: `minmax(180px,auto)` never grew past its own floor for a flex panel with
+  // `overflow:visible` content (confirmed empirically, not just read from the CSS) — every
+  // `.evidence` row rendered at exactly 180px regardless of content, so a tall finding painted
+  // over the panel below it rather than growing its own row. The floor now lives on the panel
+  // (`min-height`, which a grid/flex item does honour for track sizing), and the row track uses
+  // plain `max-content`, which this worktree confirmed grows correctly.
+  if (/\.evidence\{[^}]*grid-auto-rows:minmax\(180px,auto\)/.test(template))
+    die("room-density: .evidence's row track floor is back on the broken minmax(fixed,auto) form");
+  if (!/grid-auto-rows:max-content;align-content:start;align-items:start\}\n\.evidence>\.panel\{min-height:180px\}/.test(template))
+    die("room-density: the evidence row floor no longer lives on the panel itself");
+  // A right-anchored SVG label grows LEFT from its anchor; a fixed 6.4px/char truncation budget
+  // could still render wider than its own gutter and clip the leftmost glyph off-canvas (the
+  // milestone chart's row names, confirmed at ~3px past the panel's own left edge). `nameLabel`
+  // re-measures with `getComputedTextLength()` and keeps shrinking until it actually fits, and
+  // discloses the untruncated name as a native tooltip once it has to.
+  if (!/function nameLabel\(svg,x,y,full,maxWidth\)/.test(template))
+    die("room-density: the milestone chart's row-name labels lost their fit-and-disclose guard");
+  if (!/getComputedTextLength/.test(template))
+    die("room-density: label truncation is not verified against its own rendered width");
+  if (!/nameLabel\(svg,gutter-7,y\+3\.5,it\.name,gutter-4\)/.test(template))
+    die("room-density: barsH row names no longer use the measured-fit label");
   console.log(
     "  ok room-workflow — lens routing from the injected table, searchable blocks/Kanban, honest milestones, bounded lazy evidence, mobile and print contracts",
   );

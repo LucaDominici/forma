@@ -97,7 +97,10 @@ try {
   await ready()
   const routes = await evaluate('Object.keys(window.__LAYOUT_VIEWS__).sort()')
   if (!Array.isArray(routes) || !routes.length) throw new Error('the composed briefing exposed no routes')
-  for (const [width, height] of [[3440, 1440], [1920, 900]]) {
+  // 1440x900 added for #120 AC5: the reported panel-overlap and label-clip defects were found on a
+  // 1440-wide screenshot and are narrower-gutter-dependent (they did not reproduce as clearly at
+  // the wider two).
+  for (const [width, height] of [[3440, 1440], [1920, 900], [1440, 900]]) {
     for (const route of routes) {
       await command('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false })
       await command('Page.navigate', { url: `file://${instrumented}?layout=${width}x${height}#` + route })
@@ -105,9 +108,59 @@ try {
       if (negative) await evaluate('document.documentElement.style.minHeight=(innerHeight+1)+"px"')
       const measured = await evaluate(`(function(){var route=${JSON.stringify(route)},active=(route==='/'||route==='/options')?document.querySelector('#nav-programs a[href="#'+route+'"][aria-current="true"]'):document.querySelector('#nav-views a[aria-current="page"]');return {innerHeight:innerHeight,scrollHeight:document.documentElement.scrollHeight,activeRoute:active&&active.getAttribute('href').slice(1)};})()`)
       const overflow = measured.scrollHeight > measured.innerHeight
-      result.routes.push({ route, width, height, ...measured, overflow })
+      // #120 AC5: two classes of defect a scrollHeight/route assertion cannot see, both found only
+      // by a screenshot — a panel whose own row track did not grow to its content painting over the
+      // sibling panel below it (z-overlap), and a right-anchored SVG label whose truncation budget
+      // still rendered wider than its gutter, clipping the leftmost glyph off-canvas. Both are
+      // geometry, not markup, so this stays a browser check rather than a static one.
+      const visual = await evaluate(`(function(){
+        // A panel inside an overflow:auto tier (.answer, .evidence) can be laid out well past its
+        // own tier's visible box without ever being painted there — the tier clips it. Comparing
+        // raw getBoundingClientRect() across tiers flags that as a false "overlap"; intersect each
+        // panel's box with every overflow-constrained ancestor first, so only the portion a user
+        // could actually see is compared.
+        function visibleRect(el){
+          var r=el.getBoundingClientRect(),vt=r.top,vb=r.bottom,vl=r.left,vr=r.right,node=el.parentElement;
+          while(node){
+            var cs=getComputedStyle(node);
+            if(/(auto|hidden|scroll)/.test(cs.overflowX)||/(auto|hidden|scroll)/.test(cs.overflowY)){
+              var cr=node.getBoundingClientRect();
+              vt=Math.max(vt,cr.top);vb=Math.min(vb,cr.bottom);vl=Math.max(vl,cr.left);vr=Math.min(vr,cr.right);
+            }
+            node=node.parentElement;
+          }
+          return {top:vt,bottom:vb,left:vl,right:vr,visible:vb>vt+0.5&&vr>vl+0.5};
+        }
+        var rects=Array.from(document.querySelectorAll('.panel')).map(visibleRect);
+        var overlaps=[];
+        for(var i=0;i<rects.length;i++)for(var j=i+1;j<rects.length;j++){
+          var a=rects[i],b=rects[j];
+          if(!a.visible||!b.visible)continue;
+          if(a.left<b.right-0.5&&b.left<a.right-0.5&&a.top<b.bottom-0.5&&b.top<a.bottom-0.5)overlaps.push(i+'-'+j);
+        }
+        // Left-clip: compare a leaf text node's own rect against its nearest containing .panel.
+        // Tolerance is 2px, not 0 — an SVG glyph's ink can render slightly past its own advance
+        // width (font hinting/antialiasing), a ~1.3px artefact confirmed present on both sides of
+        // this fix and on unrelated labels; the reported defect (a truncation budget that let a
+        // milestone name render wider than its own gutter) measured ~2.9-3px, comfortably above
+        // that floor.
+        var clipped=[];
+        document.querySelectorAll('.panel *').forEach(function(node){
+          if(node.tagName==='TITLE')return;
+          var text=(node.textContent||'').trim();
+          if(!text||(node.querySelector&&node.querySelector('*')))return;
+          var panel=node.closest('.panel');if(!panel)return;
+          var pr=panel.getBoundingClientRect(),r=node.getBoundingClientRect();
+          if(r.width===0||r.height===0)return;
+          if(pr.left-r.left>2)clipped.push(text.slice(0,40));
+        });
+        return {overlapCount:overlaps.length,overlaps:overlaps.slice(0,5),clippedCount:clipped.length,clipped:clipped.slice(0,5)};
+      })()`)
+      result.routes.push({ route, width, height, ...measured, overflow, panelOverlapCount: visual.overlapCount, leftClippedCount: visual.clippedCount })
       if (measured.activeRoute !== route) result.failures.push(`${route} at ${width}x${height}: rendered ${measured.activeRoute || 'no active route'}`)
       if (negative ? !overflow : overflow) result.failures.push(`${route} at ${width}x${height}: scrollHeight ${measured.scrollHeight}, innerHeight ${measured.innerHeight}`)
+      if (visual.overlapCount) result.failures.push(`${route} at ${width}x${height}: ${visual.overlapCount} panel(s) overlap a sibling panel's rect (${visual.overlaps.join(', ')})`)
+      if (visual.clippedCount) result.failures.push(`${route} at ${width}x${height}: ${visual.clippedCount} element(s) clipped at their panel's left edge (${JSON.stringify(visual.clipped)})`)
   }
   }
 } catch (error) {
