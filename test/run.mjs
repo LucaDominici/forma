@@ -33,6 +33,7 @@ import {
   deriveHistory,
   deriveKanban,
   deriveKpis,
+  deriveMilestones,
   deriveQueue,
   deriveUseCases,
   deriveRunbooks,
@@ -4180,6 +4181,134 @@ const diffPaths = (a, b, at = "") => {
       "room labels: absent blockedBy was treated as an implicit needs-human rule",
     );
 
+  // #120 AC1 — "with problems" and "live resources/deploys" KPIs: derived joins over the health
+  // overlay and the workflow signals already in the snapshot, never a new fetch. Undeclared health
+  // (4th arg omitted) stays null/unknown (I6/I7); a declared-but-empty overlay counts as a measured
+  // zero, which is why `[]` and `undefined` must read differently below.
+  const problemSnapshot = {
+    fetchedAt: "2026-08-10T00:00:00Z",
+    milestones: [],
+    issues: [
+      { n: 1, state: "OPEN", labels: [], ms: null },
+      { n: 2, state: "OPEN", labels: [], ms: null },
+    ],
+    signals: {
+      workflows: {
+        ci: { state: "present", conclusion: "success" },
+        nightly: { state: "present", conclusion: "failure" },
+      },
+    },
+  };
+  const problemManifest = { today: "2026-08-10" };
+  const noHealthKpis = deriveKpis(
+    problemSnapshot,
+    null,
+    problemManifest,
+    undefined,
+  );
+  if (
+    noHealthKpis.withProblemsCount !== null ||
+    noHealthKpis.withProblemsTotal !== null
+  )
+    die(
+      "room kpis: an undeclared health overlay must read unmeasured, not zero: " +
+        JSON.stringify(noHealthKpis),
+    );
+  const healthKpis = deriveKpis(problemSnapshot, null, problemManifest, [
+    { n: 1, verdict: "bad", stale: false },
+    { n: 2, verdict: "ok", stale: false },
+  ]);
+  if (healthKpis.withProblemsCount !== 1 || healthKpis.withProblemsTotal !== 2)
+    die(
+      "room kpis: withProblems did not count fresh non-ok verdicts over fresh verdicts total: " +
+        JSON.stringify(healthKpis),
+    );
+  const staleHealthKpis = deriveKpis(problemSnapshot, null, problemManifest, [
+    { n: 1, verdict: "bad", stale: true },
+    { n: 2, verdict: "ok", stale: false },
+  ]);
+  if (
+    staleHealthKpis.withProblemsCount !== 0 ||
+    staleHealthKpis.withProblemsTotal !== 1
+  )
+    die(
+      "room kpis: a stale verdict lost its colour but still counted as a live problem: " +
+        JSON.stringify(staleHealthKpis),
+    );
+  if (
+    healthKpis.liveResourcesCount !== 1 ||
+    healthKpis.liveResourcesTotal !== 2
+  )
+    die(
+      "room kpis: liveResources did not count completed-workflow conclusions over declared runs: " +
+        JSON.stringify(healthKpis),
+    );
+  const noWorkflowKpis = deriveKpis(
+    { ...problemSnapshot, signals: { workflows: {} } },
+    null,
+    problemManifest,
+    [],
+  );
+  if (
+    noWorkflowKpis.liveResourcesCount !== null ||
+    noWorkflowKpis.liveResourcesTotal !== null
+  )
+    die(
+      "room kpis: no workflow runs at all must read unmeasured, not zero: " +
+        JSON.stringify(noWorkflowKpis),
+    );
+
+  // #120 AC2 — milestones carry a `state` (closed when nothing is open), sort by the due-date
+  // constraint (ascending, undated last, title as tiebreak), and the KPI line names it when NO
+  // milestone in the snapshot carries a due date at all — the exact shape of the viafera snapshot.
+  const milestoneSnapshot = {
+    fetchedAt: "2026-08-10T00:00:00Z",
+    milestones: [
+      { title: "b-undated", due: null, open: 2, closed: 1 },
+      { title: "a-dated", due: "2026-09-01", open: 0, closed: 3 },
+      { title: "c-undated", due: null, open: 0, closed: 0 },
+    ],
+    issues: [],
+  };
+  const orderedMilestones = deriveMilestones(milestoneSnapshot);
+  if (
+    orderedMilestones.map((m) => m.title).join(",") !==
+    "a-dated,b-undated,c-undated"
+  )
+    die(
+      "room milestones: due-date constraint order was not applied (dated first, then title): " +
+        orderedMilestones.map((m) => m.title).join(","),
+    );
+  if (
+    orderedMilestones[0].state !== "closed" ||
+    orderedMilestones[1].state !== "open" ||
+    orderedMilestones[2].state !== "empty"
+  )
+    die(
+      "room milestones: per-milestone state (closed/open/empty) was not derived: " +
+        JSON.stringify(orderedMilestones.map((m) => [m.title, m.state])),
+    );
+  if (
+    deriveKpis(milestoneSnapshot, null, problemManifest).noMilestoneDueDates !==
+    false
+  )
+    die(
+      "room kpis: noMilestoneDueDates fired even though one milestone carries a due date",
+    );
+  const allUndated = {
+    ...milestoneSnapshot,
+    milestones: milestoneSnapshot.milestones.map((m) => ({
+      ...m,
+      due: null,
+    })),
+  };
+  if (
+    deriveKpis(allUndated, null, problemManifest).noMilestoneDueDates !== true
+  )
+    die(
+      "room kpis: noMilestoneDueDates did not fire when every milestone lacks a due date",
+    );
+
   // Endpoint identity is repo + number. An unrelated repository's #1 must not attach itself to
   // alpha #1 merely because both counters happen to match — neither the capability nor its work
   // block may inherit that foreign dependency.
@@ -6598,6 +6727,60 @@ const diffPaths = (a, b, at = "") => {
   const composer = readFileSync(join(HERE, "..", "lib/room.mjs"), "utf-8");
   if (!/theme: manifest\.theme \|\| 'light'/.test(composer))
     die("room-theme: a fresh client briefing does not default to light");
+  // #120 AC5/density P2: `.queue-command` only ever exists inside the Queue workflow, which used
+  // to sit collapsed and last in the plan lens's evidence tier — burying every command below the
+  // fold at 1440. The queue is now the one workflow that opens (and fills) eagerly, and mounts
+  // first in that tier, ahead of the blocked-issues panel.
+  const viewPlan = viewerFn("viewPlan");
+  if (
+    !/workflow\(program,STR\.routeQueue,function\(target\)\{renderQueue\(target,program\);\},true\)/.test(
+      viewPlan,
+    )
+  )
+    die("room-density: the queue workflow no longer opens eagerly");
+  const queueMount = viewPlan.indexOf("STR.routeQueue"),
+    blockedMount = viewPlan.indexOf("STR.techBlocked");
+  if (queueMount === -1 || blockedMount === -1 || queueMount > blockedMount)
+    die(
+      "room-density: the queue must mount ahead of the blocked panel to reach the first screen",
+    );
+  // #120 AC5 visual: `minmax(180px,auto)` never grew past its own floor for a flex panel with
+  // `overflow:visible` content (confirmed empirically, not just read from the CSS) — every
+  // `.evidence` row rendered at exactly 180px regardless of content, so a tall finding painted
+  // over the panel below it rather than growing its own row. The row track uses plain
+  // `max-content`, which this worktree confirmed grows correctly to each row's tallest panel.
+  if (/\.evidence\{[^}]*grid-auto-rows:minmax\(180px,auto\)/.test(template))
+    die("room-density: .evidence's row track floor is back on the broken minmax(fixed,auto) form");
+  if (!/grid-auto-rows:max-content;align-content:start;align-items:start\}/.test(template))
+    die("room-density: the evidence row track lost its content-based sizing");
+  // #120 AC5 (second pass): a per-panel `min-height:180px` floor "fixed" the overlap above but
+  // wasted ~150px on every near-empty text panel ("Waiting on a decision", one pill) — pushing the
+  // panels after it past the fold. The floor belongs to the chart's own drawing area
+  // (`.chart-viz`, which already carried it, `.chart{min-height:0}` resets the PANEL itself), not
+  // to every evidence panel; a chart-viz floor cannot cause the row-track defect above (that was
+  // the row track ignoring content height, not a panel being short) and `room-layout.mjs`'s
+  // overlap/left-clip checks confirm this empty-handed.
+  if (/\.evidence>\.panel\{min-height:\d+px\}/.test(template))
+    die("room-density: the evidence panel floor is back — it starves the panels after a short one");
+  if (!/\.chart-viz\{flex:1 1 auto;min-height:180px/.test(template))
+    die("room-density: the chart's own drawing-area floor is gone");
+  // A right-anchored SVG label grows LEFT from its anchor; a fixed 6.4px/char truncation budget
+  // could still render wider than its own gutter and clip the leftmost glyph off-canvas (the
+  // milestone chart's row names, confirmed at ~3px past the panel's own left edge). `nameLabel`
+  // re-measures with `getComputedTextLength()` and keeps shrinking until it actually fits, and
+  // discloses the untruncated name as a native tooltip once it has to.
+  if (!/function nameLabel\(svg,x,y,full,maxWidth\)/.test(template))
+    die("room-density: the milestone chart's row-name labels lost their fit-and-disclose guard");
+  if (!/getComputedTextLength/.test(template))
+    die("room-density: label truncation is not verified against its own rendered width");
+  if (!/nameLabel\(svg,gutter-7,y\+3\.5,it\.name,gutter-4\)/.test(template))
+    die("room-density: barsH row names no longer use the measured-fit label");
+  // #120 AC5: a height cap on the queue panel was tried and reverted — capping it traded the
+  // queue's own (honestly measured) visible pills for space that landed on the same 180px-per-panel
+  // floor this pass removed, a net loss (see HANDOFF.md). Sizing the evidence tier to content
+  // instead makes the cap unnecessary: the queue keeps `panel()`'s plain, uncapped call.
+  if (/"cap-queue"/.test(template))
+    die("room-density: a reverted queue-panel height cap is still referenced");
   console.log(
     "  ok room-workflow — lens routing from the injected table, searchable blocks/Kanban, honest milestones, bounded lazy evidence, mobile and print contracts",
   );
