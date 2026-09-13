@@ -6747,13 +6747,23 @@ const diffPaths = (a, b, at = "") => {
   // #120 AC5 visual: `minmax(180px,auto)` never grew past its own floor for a flex panel with
   // `overflow:visible` content (confirmed empirically, not just read from the CSS) — every
   // `.evidence` row rendered at exactly 180px regardless of content, so a tall finding painted
-  // over the panel below it rather than growing its own row. The floor now lives on the panel
-  // (`min-height`, which a grid/flex item does honour for track sizing), and the row track uses
-  // plain `max-content`, which this worktree confirmed grows correctly.
+  // over the panel below it rather than growing its own row. The row track uses plain
+  // `max-content`, which this worktree confirmed grows correctly to each row's tallest panel.
   if (/\.evidence\{[^}]*grid-auto-rows:minmax\(180px,auto\)/.test(template))
     die("room-density: .evidence's row track floor is back on the broken minmax(fixed,auto) form");
-  if (!/grid-auto-rows:max-content;align-content:start;align-items:start\}\n\.evidence>\.panel\{min-height:180px\}/.test(template))
-    die("room-density: the evidence row floor no longer lives on the panel itself");
+  if (!/grid-auto-rows:max-content;align-content:start;align-items:start\}/.test(template))
+    die("room-density: the evidence row track lost its content-based sizing");
+  // #120 AC5 (second pass): a per-panel `min-height:180px` floor "fixed" the overlap above but
+  // wasted ~150px on every near-empty text panel ("Waiting on a decision", one pill) — pushing the
+  // panels after it past the fold. The floor belongs to the chart's own drawing area
+  // (`.chart-viz`, which already carried it, `.chart{min-height:0}` resets the PANEL itself), not
+  // to every evidence panel; a chart-viz floor cannot cause the row-track defect above (that was
+  // the row track ignoring content height, not a panel being short) and `room-layout.mjs`'s
+  // overlap/left-clip checks confirm this empty-handed.
+  if (/\.evidence>\.panel\{min-height:\d+px\}/.test(template))
+    die("room-density: the evidence panel floor is back — it starves the panels after a short one");
+  if (!/\.chart-viz\{flex:1 1 auto;min-height:180px/.test(template))
+    die("room-density: the chart's own drawing-area floor is gone");
   // A right-anchored SVG label grows LEFT from its anchor; a fixed 6.4px/char truncation budget
   // could still render wider than its own gutter and clip the leftmost glyph off-canvas (the
   // milestone chart's row names, confirmed at ~3px past the panel's own left edge). `nameLabel`
@@ -6765,15 +6775,12 @@ const diffPaths = (a, b, at = "") => {
     die("room-density: label truncation is not verified against its own rendered width");
   if (!/nameLabel\(svg,gutter-7,y\+3\.5,it\.name,gutter-4\)/.test(template))
     die("room-density: barsH row names no longer use the measured-fit label");
-  // #120 AC5: rendering the queue at its own honest height (the visual overlap fix above) pushed
-  // every panel below it past the fold, undoing the P2 fix that mounted it there. Capped the same
-  // way `.cap-ledger` already caps a long, non-paginated archive — the panel's own body scrolls
-  // (nothing is paginated out of the DOM), and the existing `focusScrollers` sweep makes it a
-  // keyboard-reachable region once it actually overflows (no separate wiring needed here).
-  if (!/\.cap-queue \.panel-body\{max-height:\d+px;overflow:auto\}/.test(template))
-    die("room-density: the queue panel lost its height cap");
-  if (!/panel\(STR\.routeQueue,fmt\(STR\.blockCount,\{n:items\.length\}\),"cap-queue"\)/.test(template))
-    die("room-density: renderQueue no longer applies the queue's height-cap class");
+  // #120 AC5: a height cap on the queue panel was tried and reverted — capping it traded the
+  // queue's own (honestly measured) visible pills for space that landed on the same 180px-per-panel
+  // floor this pass removed, a net loss (see HANDOFF.md). Sizing the evidence tier to content
+  // instead makes the cap unnecessary: the queue keeps `panel()`'s plain, uncapped call.
+  if (/"cap-queue"/.test(template))
+    die("room-density: a reverted queue-panel height cap is still referenced");
   console.log(
     "  ok room-workflow — lens routing from the injected table, searchable blocks/Kanban, honest milestones, bounded lazy evidence, mobile and print contracts",
   );

@@ -131,20 +131,24 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
         grid-auto-rows:max-content;min-height:0;max-height:52vh;overflow:auto;scrollbar-width:thin;scrollbar-gutter:stable}
 /* A floor per row. `minmax(0,auto)` let the locked shell hand eight panels 290px between them —
    the findings archive in an 8px box, a chart as a 7px sliver, two of nine requirements below a
-   scroll that did not exist. 180px is the chart's own minimum; below it a panel is a heading. The
-   tier already scrolls, and with a floor it has something to scroll.
+   scroll that did not exist. The tier already scrolls, and with a floor it has something to scroll.
    #120 AC5: `minmax(180px,auto)` on the ROW TRACK does not grow past its own 180px floor for a
    `display:flex` panel whose body is `overflow:visible` — confirmed empirically (a bare
    `grid-auto-rows:max-content` grows correctly; wrapping the same max function in `minmax()` does
    not). Every row rendered at exactly 180px regardless of content, so a tall finding's text simply
    painted over the panel below rather than growing its own row — invisible to every DOM assertion,
-   visible only in a screenshot. The floor now lives on the panel itself (`min-height`, which a
-   flex/grid item DOES honour for track sizing), and the row track uses plain `max-content`, which
-   this worktree confirmed grows to the tallest panel in the row. `align-items:start` keeps a
-   short panel from being stretched to its tall row-mate's height. */
+   visible only in a screenshot. The row track uses plain `max-content` now, which this worktree
+   confirmed grows to the tallest panel in the row; `align-items:start` keeps a short panel from
+   being stretched to its tall row-mate's height. The 180px floor itself moved OFF every panel and
+   onto `.chart-viz` alone (below, unchanged from before this fix): a chart needs a guaranteed
+   drawing area before its own JS measures `clientWidth`/`clientHeight`, but a near-empty text panel
+   ("Waiting on a decision", one pill) does not — floored at the panel level, it wasted ~150px next
+   to nothing to hold; sized to content, the panel that follows the queue reaches the first screen
+   without that unrelated space between them (#120 AC5). No overlap/left-clip regression: those are
+   caused by the row track ignoring content height entirely (the `minmax()` defect above), not by a
+   short panel — `scripts/room-layout.mjs`'s overlap/clip checks confirm this empty-handed. */
 .evidence{display:grid;gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin;scrollbar-gutter:stable;
  grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:max-content;align-content:start;align-items:start}
-.evidence>.panel{min-height:180px}
 .span2{grid-column:span 2}
 .full{grid-column:1/-1}
 @media(min-width:1500px){
@@ -154,7 +158,6 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
  :root{--pad:22px;--gap:20px}
  .answer,.evidence{grid-template-columns:repeat(4,minmax(0,1fr))}
  body{font-size:15px}
- .evidence>.panel{min-height:220px}
  .chart-viz{min-height:220px}
 }
 /* Below the floor the shell is released rather than crushed: the page scrolls.
@@ -174,7 +177,6 @@ main{min-height:0;padding:var(--pad);overflow:hidden}
  .answer{max-height:none}
  .panel{margin-bottom:var(--gap)}
  .panel-body{overflow:visible;max-height:none}
- .cap-queue .panel-body{max-height:none;overflow:visible}
 }
 /* Only a NARROW release collapses to one column. Folding the column rule into the query above
    meant a wide, short window — an ultrawide snapped to half height — released into a single
@@ -248,13 +250,6 @@ details[open]>summary:after{content:"\2212"}
 .kanban-issue{padding:6px 0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;min-width:0}
 .kanban-issue .issue-pill{display:flex;line-height:1.35}
 .queue-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--gap);min-height:0;overflow:auto;scrollbar-width:thin;align-content:start}
-/* #120 AC5: the queue mounts first and open (density P2) so at least one command reaches the first
-   screen — but rendering all N blocks at their own honest height (#120 AC5 visual fix) pushed every
-   panel below it past the fold, undoing the very P2 fix that put it there. Capped the same way
-   `.cap-ledger` already caps a long, non-paginated archive: the panel's OWN body scrolls (header
-   and filter stay put), nothing is paginated out of the DOM, and `focusScrollers` (called on every
-   render/resize) makes this a keyboard-reachable scroll region the moment it actually overflows. */
-.cap-queue .panel-body{max-height:360px;overflow:auto}
 .queue-item{min-width:0;padding:7px 0;border-bottom:1px solid var(--line)}
 .queue-item .issue-pill{display:flex;font-weight:600;margin-bottom:4px}
 .queue-command{display:flex;align-items:center;gap:6px;min-width:0}
@@ -1613,11 +1608,7 @@ function renderQueue(target,program){
  var blocks=program.derived.blocks||[],board=el("div","queue-board"),i,items=[];
  for(i=0;i<blocks.length;i++){var block=blocks[i],notes=block.notes||[];items.push({block:block,search:[block.t,block.ms,JSON.stringify(block.note),JSON.stringify(block.why)].concat(block.iss.map(function(issue){return "#"+issue[0]+" "+issue[1];}),notes.map(function(c){return c.text;})).join(" ")});}
  if(items.length){
-  // #120 AC5: capped ("cap-queue", same mechanism as "cap-ledger") so the panels after it reach
-  // the first screen too (density P2). `panel()` already gives this body `aria-labelledby` (the
-  // "Prioritised queue" heading), and `focusScrollers` (run on every render/resize) already adds
-  // `tabindex` to any `.panel-body` once it actually overflows — both apply here unchanged.
-  var lane=panel(STR.routeQueue,fmt(STR.blockCount,{n:items.length}),"cap-queue");markState(lane,"present");
+  var lane=panel(STR.routeQueue,fmt(STR.blockCount,{n:items.length}));markState(lane,"present");
   filteredList(lane.body,items,function(entry){return queueItem(program,entry.block);});
   board.appendChild(lane);
  }else{var emptyLane=panel(STR.routeQueue,STR.queueComplete);markState(emptyLane,"empty",STR.noMoving);board.appendChild(emptyLane);}
