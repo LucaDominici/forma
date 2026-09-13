@@ -7293,6 +7293,7 @@ const diffPaths = (a, b, at = "") => {
     counterPlan,
     validateCounterResults,
     classifyVerdictStaleness,
+    classifyVerification,
     hashEvidence,
     resolveEvidencePath,
     validateEvidence,
@@ -7370,6 +7371,25 @@ const diffPaths = (a, b, at = "") => {
     die(
       "audit evidence: path:line hashes are not deterministic and anchor-sensitive",
     );
+  // Engine identity (#123): colour is granted on a fresh `holds` only when the verifier is a
+  // DIFFERENT engine than the one that authored the claim; same engine or an unknown engine on
+  // either side is recorded but rendered "self-held", never a crash.
+  const engineClaim = (author, verified) => ({
+    writtenAt: "2026-08-10",
+    ...(author ? { author: { engine: author } } : {}),
+    ...(verified ? { verified: { verdict: "holds", reason: "r", evidence: { type: "path", ref: "x" }, at: "2026-08-10", ...(verified === true ? {} : { engine: verified }) } } : {}),
+  });
+  if (classifyVerification(engineClaim("claude", "codex"), { today: "2026-08-10" }) !== "holds")
+    die("engine: a cross-engine hold was not coloured");
+  if (classifyVerification(engineClaim("claude", "claude"), { today: "2026-08-10" }) === "holds")
+    die("engine: a same-engine hold was coloured");
+  if (classifyVerification(engineClaim("claude", true), { today: "2026-08-10" }) === "holds")
+    die("engine: a verdict with no engine at all was coloured");
+  if (classifyVerification(engineClaim(null, "codex"), { today: "2026-08-10" }) === "holds")
+    die("engine: an unknown-author claim was coloured on someone else's hold");
+  // Legacy brief: neither side ever recorded an engine. Must not crash and must not colour.
+  if (classifyVerification(engineClaim(null, true), { today: "2026-08-10" }) === "holds")
+    die("engine: a legacy claim with no engine data anywhere was coloured");
   const staleVerdict = { auditedAt: "2026-08-10", evidenceHash };
   const unchangedIssue = { updatedAt: "2026-08-10T23:59:59Z", closedAt: null };
   const classify = (issue, today, currentHash = evidenceHash) =>
@@ -8005,6 +8025,14 @@ const diffPaths = (a, b, at = "") => {
       writtenAt: "2020-01-01",
     },
     {
+      id: "self-authored",
+      kind: "note",
+      text: "Tries to declare its own author engine.",
+      about: { issue: 1 },
+      evidence: [{ type: "issue", ref: "1" }],
+      author: { engine: "codex" },
+    },
+    {
       id: "nowhere",
       kind: "note",
       text: "Subject not in snapshot.",
@@ -8012,7 +8040,7 @@ const diffPaths = (a, b, at = "") => {
       evidence: [{ type: "issue", ref: "1" }],
     },
   ]);
-  r = run([...briefArgs, "--apply", fill, "--audit-plan", plan]);
+  r = run([...briefArgs, "--apply", fill, "--audit-plan", plan, "--engine", "claude"]);
   if (r.status !== 0) die("brief: apply exit " + r.status, r);
   const written = readJson(brief),
     writtenIds = written.claims
@@ -8021,13 +8049,25 @@ const diffPaths = (a, b, at = "") => {
       .join();
   if (writtenIds !== "decide-1,inv-1,risk-1,thesis")
     die("brief: accepted set is wrong: " + writtenIds);
+  if (
+    written.claims.some(
+      (c) => !c.author || c.author.engine !== "claude",
+    )
+  )
+    die(
+      "brief: --engine did not stamp author.engine on newly written claims: " +
+        JSON.stringify(written.claims.map((c) => [c.id, c.author])),
+    );
   const briefApply = readJson(health).lastApply;
   const refusedIds = briefApply.rejected
     .filter((x) => x.kind === "brief")
     .map((x) => x.ref)
     .sort()
     .join();
-  if (refusedIds !== "inv-bad,nowhere,risk-immortal,risk-readme,stamped")
+  if (
+    refusedIds !==
+    "inv-bad,nowhere,risk-immortal,risk-readme,self-authored,stamped"
+  )
     die(
       "brief: refusals are not named in lastApply: " +
         JSON.stringify(briefApply),
@@ -8039,6 +8079,11 @@ const diffPaths = (a, b, at = "") => {
     !briefApply.rejected.some(
       (x) =>
         x.ref === "stamped" &&
+        /provenance is controlled by forma/.test(x.reason),
+    ) ||
+    !briefApply.rejected.some(
+      (x) =>
+        x.ref === "self-authored" &&
         /provenance is controlled by forma/.test(x.reason),
     )
   )
@@ -8137,12 +8182,17 @@ const diffPaths = (a, b, at = "") => {
     ],
   };
   writeFileSync(counter, JSON.stringify(briefCounter));
-  r = run([...briefArgs, "--apply", counter, "--counter-plan", plan]);
+  r = run([...briefArgs, "--apply", counter, "--counter-plan", plan, "--engine", "codex"]);
   if (r.status !== 0) die("brief: counter apply exit " + r.status, r);
   const verifiedBrief = readJson(brief);
   const vThesis = verifiedBrief.claims.find((c) => c.id === "thesis"),
     vRisk = verifiedBrief.claims.find((c) => c.id === "risk-1"),
     vInv = verifiedBrief.claims.find((c) => c.id === "inv-1");
+  if (vThesis.verified.engine !== "codex")
+    die(
+      "brief: --engine did not stamp verified.engine on the counter apply: " +
+        JSON.stringify(vThesis.verified),
+    );
   if (
     !vThesis.verified ||
     vThesis.verified.verdict !== "holds" ||
@@ -8201,6 +8251,55 @@ const diffPaths = (a, b, at = "") => {
           counts: derivedBrief.counts,
         }),
     );
+  // Same-engine hold: an author and a verifier that are the SAME engine (or an unrecorded one)
+  // must not colour the claim, even though forma's own freshness math would otherwise grant it.
+  r = run([...briefArgs, "--plan", plan]);
+  if (r.status !== 0) die("brief: self-held re-plan exit " + r.status, r);
+  claimsFill([
+    {
+      id: "risk-self",
+      kind: "risk",
+      severity: "warn",
+      text: "A risk authored and (self-)verified by the same engine.",
+      about: { issue: 1 },
+      evidence: [{ type: "issue", ref: "1" }],
+    },
+  ]);
+  r = run([...briefArgs, "--apply", fill, "--audit-plan", plan, "--engine", "claude"]);
+  if (r.status !== 0) die("brief: self-held claim apply exit " + r.status, r);
+  if (readJson(brief).claims.find((c) => c.id === "risk-self").author.engine !== "claude")
+    die("brief: risk-self was not stamped with its authoring engine");
+  r = run([...briefArgs, "--plan", plan]);
+  if (r.status !== 0) die("brief: self-held counter re-plan exit " + r.status, r);
+  const selfCounter = {
+    planHash: readJson(plan).planHash,
+    results: readJson(plan)
+      .claims.filter((c) => c.kind === "brief-claim" && c.id === "brief:risk-self")
+      .map((c) => ({
+        claimId: c.id,
+        verdict: "holds",
+        reason: "Same engine checking its own claim.",
+        evidence: { type: "file", ref: "src/core/engine.js" },
+      })),
+  };
+  writeFileSync(counter, JSON.stringify(selfCounter));
+  r = run([...briefArgs, "--apply", counter, "--counter-plan", plan, "--engine", "claude"]);
+  if (r.status !== 0) die("brief: self-held counter apply exit " + r.status, r);
+  const selfBrief = readJson(brief);
+  const riskSelf = selfBrief.claims.find((c) => c.id === "risk-self");
+  if (riskSelf.verified.engine !== "claude" || riskSelf.verified.verdict !== "holds")
+    die("brief: self-held verdict was not recorded: " + JSON.stringify(riskSelf.verified));
+  const selfDerived = deriveBrief(repo, readJson(issues), selfBrief, {
+    today: "2026-08-10",
+    staleAfterDays: 14,
+  });
+  const selfState = selfDerived.claims.find((c) => c.id === "risk-self");
+  if (selfState.state === "holds" || selfState.coloured)
+    die(
+      "brief: a same-engine hold was recorded but still rendered as coloured: " +
+        JSON.stringify(selfState),
+    );
+
   const movedIssues = readJson(issues);
   movedIssues.issues.find((it) => it.n === 2).updatedAt =
     "2026-08-11T00:00:00Z";
@@ -8297,7 +8396,7 @@ const diffPaths = (a, b, at = "") => {
   ).programs[0];
   if (
     !briefSeam.derived.brief ||
-    briefSeam.derived.brief.claims.length !== 4 ||
+    briefSeam.derived.brief.claims.length !== 5 ||
     briefSeam.derived.brief.thesis.state !== "unverified"
   )
     die("brief: composed room does not carry the derived brief");
