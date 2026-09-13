@@ -6765,6 +6765,15 @@ const diffPaths = (a, b, at = "") => {
     die("room-density: label truncation is not verified against its own rendered width");
   if (!/nameLabel\(svg,gutter-7,y\+3\.5,it\.name,gutter-4\)/.test(template))
     die("room-density: barsH row names no longer use the measured-fit label");
+  // #120 AC5: rendering the queue at its own honest height (the visual overlap fix above) pushed
+  // every panel below it past the fold, undoing the P2 fix that mounted it there. Capped the same
+  // way `.cap-ledger` already caps a long, non-paginated archive — the panel's own body scrolls
+  // (nothing is paginated out of the DOM), and the existing `focusScrollers` sweep makes it a
+  // keyboard-reachable region once it actually overflows (no separate wiring needed here).
+  if (!/\.cap-queue \.panel-body\{max-height:\d+px;overflow:auto\}/.test(template))
+    die("room-density: the queue panel lost its height cap");
+  if (!/panel\(STR\.routeQueue,fmt\(STR\.blockCount,\{n:items\.length\}\),"cap-queue"\)/.test(template))
+    die("room-density: renderQueue no longer applies the queue's height-cap class");
   console.log(
     "  ok room-workflow — lens routing from the injected table, searchable blocks/Kanban, honest milestones, bounded lazy evidence, mobile and print contracts",
   );

@@ -156,11 +156,40 @@ try {
         });
         return {overlapCount:overlaps.length,overlaps:overlaps.slice(0,5),clippedCount:clipped.length,clipped:clipped.slice(0,5)};
       })()`)
-      result.routes.push({ route, width, height, ...measured, overflow, panelOverlapCount: visual.overlapCount, leftClippedCount: visual.clippedCount })
+      // #120 AC5 (density P2): a clip-aware count of `.issue-pill`/`.queue-command` actually
+      // visible above the fold on the plan lens (the queue's one home, I20) — recorded as data on
+      // every route/width for audit, but only GATED at 1440x900 on the plan route, and only on
+      // "at least one command reaches the first screen" (the half of P2 this fix can hold without
+      // starving every other panel below the queue). `.evidence>.panel`'s 180px-per-panel floor
+      // means ≥20 pills is not reachable by a queue cap alone — that is an evidence-tier density
+      // decision, not a layout-floor regression, so it is not gated here (see HANDOFF.md).
+      const density = /\/plan$/.test(route) ? await evaluate(`(function(){
+        function visibleRect(el){
+          var r=el.getBoundingClientRect(),vt=r.top,vb=r.bottom,vl=r.left,vr=r.right,node=el.parentElement;
+          while(node){
+            var cs=getComputedStyle(node);
+            if(/(auto|hidden|scroll)/.test(cs.overflowY)||/(auto|hidden|scroll)/.test(cs.overflowX)){
+              var cr=node.getBoundingClientRect();
+              vt=Math.max(vt,cr.top);vb=Math.min(vb,cr.bottom);vl=Math.max(vl,cr.left);vr=Math.min(vr,cr.right);
+            }
+            node=node.parentElement;
+          }
+          return {top:vt,bottom:vb,left:vl,right:vr};
+        }
+        function aboveFold(sel){
+          return Array.from(document.querySelectorAll(sel)).filter(function(el){
+            var r=visibleRect(el);
+            return r.bottom>r.top+0.5&&r.right>r.left+0.5&&r.top>=0&&r.top<innerHeight;
+          }).length;
+        }
+        return {pillsAboveFold:aboveFold('.issue-pill'),commandsAboveFold:aboveFold('.queue-command')};
+      })()`) : null
+      result.routes.push({ route, width, height, ...measured, overflow, panelOverlapCount: visual.overlapCount, leftClippedCount: visual.clippedCount, ...(density ? { pillsAboveFold: density.pillsAboveFold, commandsAboveFold: density.commandsAboveFold } : {}) })
       if (measured.activeRoute !== route) result.failures.push(`${route} at ${width}x${height}: rendered ${measured.activeRoute || 'no active route'}`)
       if (negative ? !overflow : overflow) result.failures.push(`${route} at ${width}x${height}: scrollHeight ${measured.scrollHeight}, innerHeight ${measured.innerHeight}`)
       if (visual.overlapCount) result.failures.push(`${route} at ${width}x${height}: ${visual.overlapCount} panel(s) overlap a sibling panel's rect (${visual.overlaps.join(', ')})`)
       if (visual.clippedCount) result.failures.push(`${route} at ${width}x${height}: ${visual.clippedCount} element(s) clipped at their panel's left edge (${JSON.stringify(visual.clipped)})`)
+      if (density && width === 1440 && height === 900 && density.commandsAboveFold < 1) result.failures.push(`${route} at ${width}x${height}: 0 .queue-command visible above the fold (density P2's command half)`)
   }
   }
 } catch (error) {
