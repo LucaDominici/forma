@@ -1,8 +1,8 @@
 ---
 title: 'Forma'
-doc_version: '1.0.1'
+doc_version: '1.0.2'
 status: active
-last_review: '2026-08-17'
+last_review: '2026-09-14'
 owner: 'Luca Dominici'
 canonical_id: 'readme'
 tags: ['audience/dev', 'kind/reference']

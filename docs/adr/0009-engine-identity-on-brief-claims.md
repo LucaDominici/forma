@@ -10,7 +10,7 @@ related: ['docs/adr/README.md']
 ---
 # ADR-0009: Engine identity on brief claims, so cross-engine holds are enforceable
 
-- **Status:** Accepted (2026-09-14)
+- **Status:** Accepted (2026-09-14); amended 2026-09-14 by #131 (`--fill` and `--counter` run as two separate `room update` calls, one engine flag each)
 - **Amends:** the colour rule stated by `lib/schema/c4-brief.schema.json` and `lib/audit.mjs`
   (`classifyVerification`) since the brief shipped; no prior ADR recorded that rule, so this one is
   the first to state it explicitly.
