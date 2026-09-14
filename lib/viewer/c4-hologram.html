@@ -230,6 +230,16 @@ html[data-skin^="blueprint"] .nd.pulse rect{animation:none}
 html[data-skin^="blueprint"] button.on{text-shadow:none}
 html[data-skin^="blueprint"] .nd.delta rect,html[data-skin^="blueprint"] .edge.delta{filter:none}
 @media(max-width:600px){#stage{overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}}
+/* F4: D-07 keeps the map at a readable natural size on mobile rather than shrinking it to fit —
+   #stage already panned (overflow:auto above), but a thin dark-on-dark scrollbar and no hint left
+   that pan undiscoverable, so a box past the fold read as "cut off" rather than "scroll for more".
+   Make the pan itself visible instead of changing the zoom the ratified decision fixed. */
+#stage::-webkit-scrollbar{height:10px;width:10px}
+#stage::-webkit-scrollbar-thumb{background:var(--cyan);border-radius:5px}
+#stage::-webkit-scrollbar-track{background:var(--stagebg)}
+#stage{scrollbar-width:thin;scrollbar-color:var(--cyan) var(--stagebg)}
+#panhint{font-size:12px;color:var(--sec);margin:6px 0 0}
+#panhint[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -266,6 +276,7 @@ html[data-skin^="blueprint"] .nd.delta rect,html[data-skin^="blueprint"] .edge.d
  <div id="crumb"></div>
  <div id="stamp"></div>
  <div id="stage"><div id="etip"></div><div id="err" style="display:none"></div></div>
+ <div id="panhint" class="hint" hidden></div>
  <div id="maptable" hidden></div>
  <div id="legend">
   <span><i style="background:#2fe08a"></i><span id="lg-done"></span></span>
@@ -310,7 +321,7 @@ var STRINGS={
   detNotes:"Notable details", detRefs:"References", detWhere:"Where it runs",
   detTarget:"TARGET",
   rosterSearch:"filter…", rosterCount:"members", rosterEmpty:"no match", aggProgress:"progress",
-  skip:"Skip to map",
+  skip:"Skip to map", panHint:"⇆ this map is wider than the screen — scroll to see the rest",
   stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology", stampProjection:"projection:", staticSrc:"(static source)", stampVersion:"version:",
   errEmpty:"Model unreachable or empty.",
   errNotFound:"Model not found (./c4-model.json). Open via `forma serve` or inject window.__C4_MODEL__.",
@@ -337,7 +348,7 @@ var STRINGS={
   detNotes:"Dettagli notevoli", detRefs:"Riferimenti", detWhere:"Dove gira",
   detTarget:"TARGET",
   rosterSearch:"filtra…", rosterCount:"elementi", rosterEmpty:"nessun risultato", aggProgress:"avanzamento",
-  skip:"Vai alla mappa",
+  skip:"Vai alla mappa", panHint:"⇆ la mappa è più larga dello schermo — scorri per vedere il resto",
   stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology", stampProjection:"proiezione:", staticSrc:"(fonte statica)", stampVersion:"versione:",
   errEmpty:"Modello non raggiungibile o vuoto.",
   errNotFound:"Modello non trovato (./c4-model.json). Apri via `forma serve` o inietta window.__C4_MODEL__.",
@@ -743,6 +754,9 @@ function draw(animate){
  var liveSvg=st2.querySelector("svg");
  if(liveSvg&&window.matchMedia&&window.matchMedia("(max-width:600px)").matches){liveSvg.style.width=Math.ceil(vw)+"px";liveSvg.style.height=Math.ceil(vh)+"px";}
  st2.classList.toggle("anim",animate!==false);
+ // F4: the readable-scale map pans instead of shrinking (D-07); say so when there is
+ // something to pan to, instead of leaving a box past the fold looking simply cut off.
+ var ph=$("panhint");if(ph)ph.hidden=st2.scrollWidth<=st2.clientWidth+1;
  // breadcrumb
  var chain=[],c=pid;while(c){var nn=node(c);chain.unshift(nn);c=nn?nn.parent:null;}
  var lvlKey=pid?(kids[0]&&kids[0].level):"context",levels=M.levels||[],li=levels.indexOf(lvlKey),ki;
@@ -1038,7 +1052,7 @@ function wire(){
 // ---- i18n: apply every static UI string from STR ----
 function applyStrings(){
  function set(id,txt){var e=$(id);if(e)e.textContent=txt;}
- set("skip",STR.skip);
+ set("skip",STR.skip);set("panhint",STR.panHint);
  set("subhelp",STR.subhelp);set("back",STR.back);set("bnow",STR.now);set("btgt",STR.tgt);
  set("brf",STR.reverify);set("brl",STR.resetLayout);var brl=$("brl");if(brl)brl.title=STR.resetLayoutTitle;
  set("blbl",STR.labels);var bl=$("blbl");if(bl)bl.title=STR.labelsTitle;

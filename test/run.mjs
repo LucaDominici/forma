@@ -2972,6 +2972,26 @@ const diffPaths = (a, b, at = "") => {
   console.log("  ok f14-single-leaf — a single dead-end leaf opens its detail instead of a one-box level");
 }
 
+// F4 (2026-09-14 visual verification): D-07 keeps the mobile map at readable natural size rather
+// than shrinking to fit (pinned by room-c4-drill above), so a box past the fold is reachable by
+// pan, not gone — but nothing told the reader that. #panhint must exist, carry real copy in both
+// locales, and be driven by actual overflow rather than always shown.
+{
+  const html = readFileSync(
+    join(HERE, "..", "lib", "viewer", "c4-hologram.html"),
+    "utf-8",
+  );
+  if (!/<div id="panhint" class="hint" hidden><\/div>/.test(html))
+    die("F4: #panhint was not found (starts hidden)");
+  if (!/ph\.hidden=st2\.scrollWidth<=st2\.clientWidth\+1/.test(html))
+    die("F4: panhint visibility is not driven by actual horizontal overflow");
+  const lit = (html.match(/\nvar STRINGS=\{[\s\S]*?\n\};/) || [])[0];
+  const S = new Function(lit.replace(/;$/, "") + "; return STRINGS")();
+  if (!S.en.panHint || !S.it.panHint)
+    die("F4: panHint copy missing from one locale");
+  console.log("  ok f4-pan-hint — mobile pan affordance follows real overflow, both locales carry copy");
+}
+
 // 11) schema contract: `lib/schema/c4-model.schema.json` is the declared contract, so both writers
 // of the model must be held to it. Driven through the CLI on purpose — the assertion is that the
 // COMMANDS reject a non-conforming model, not that some helper returns an array.
