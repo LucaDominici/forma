@@ -686,8 +686,9 @@ function chartHistory(history,program){
   label(svg,x0,h-4,d[0].at,"start");label(svg,x0+pw,h-4,d[d.length-1].at,"end");
  },"span2");if(history&&history.unplaceable)p.body.appendChild(el("p","muted",fmt(STR.historyUnplaceable,{n:history.unplaceable})));return p;
 }
+function landingEntry(id){var i;for(i=0;i<ROOM.portfolio.landing.length;i++)if(ROOM.portfolio.landing[i].program===id)return ROOM.portfolio.landing[i];return null;}
 function chartLanding(s,program){
- var found=null,i;for(i=0;i<ROOM.portfolio.landing.length;i++)if(ROOM.portfolio.landing[i].program===s.id)found=ROOM.portfolio.landing[i];
+ var found=landingEntry(s.id);
  // null means the git history behind it is unreadable — unmeasured, not the same "No data" an
  // empty-but-measured series would show (I6).
  if(found&&found.months===null)return chart(STR.landingChart,STR.notMeasured,[STR.month,STR.landed,STR.cumulative],[],function(svg,w,h){empty(svg,w,h,STR.notMeasured);});
@@ -1340,7 +1341,10 @@ function viewVerdict(view,program,summary){
  // needs something to distribute. Neither is reserved when it has nothing to draw (I7).
  if(history&&(history.points||[]).length>1)ev.appendChild(chartHistory(history,program));
  if(summary.open)ev.appendChild(chartPriority(summary,program));
- if(summary.closed)ev.appendChild(chartLanding(summary,program));
+ // Mount even with 0 closed when the git history is unreadable — the chart is how "not measured"
+ // reaches the screen; a programme with no closures yet is not the same as one nobody could check.
+ var landing=landingEntry(summary.id);
+ if(summary.closed||(landing&&landing.months===null))ev.appendChild(chartLanding(summary,program));
  view.appendChild(ev);
 }
 
