@@ -204,9 +204,8 @@ leaves `location.hash` as typed, so copying the URL propagates an address that r
 DoD: the shell replaces the hash after a redirect without re-entering the router.
 
 **L-7 · `test/fixtures/golden/viafera-control-room-golden.html` is a pre-lens artifact nothing reads**
-`area:test kind:debt` — Why: a composed briefing from the five-view IA, with no `__LENSES__` seam
-and no `lenses` block, referenced by no test. DoD: revived as the acceptance fixture ADR-0008 wave 4
-intended, or removed.
+`area:test kind:debt` — Resolved: removed (with its companion `viafera-live-snapshot.json`, 2.1 MB
+together). Referenced by no test, script or workflow; confirmed by grep before deletion.
 
 ## Found by a four-persona walk over the six lenses, 2026-09-04
 

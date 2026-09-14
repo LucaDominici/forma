@@ -144,10 +144,11 @@ when all four are, not when #35 is.
 Named, so it stops being reopened:
 
 - **Every new engine capability** — no new language adapter, no new command, no new source kind.
-- **`PLAN.md` phase 3** (untracked draft at the repo root, dated today): removing `--from-docs`,
-  un-exporting `holesIn` / `BEGIN` / `END`, the dead `HERE` / `basename`, the `LAUNCH.md`
-  reference to a `GITHUB_ABOUT.md` that does not exist. All real, none visible to any user, none
-  of it changes whether Forma replaces a slide deck. Do them when someone trips over them.
+- **`PLAN.md` phase 3** (untracked draft at the repo root, dated today): the `LAUNCH.md` reference
+  to a `GITHUB_ABOUT.md` that does not exist. None of it changes whether Forma replaces a slide
+  deck. Do it when someone trips over it. (`--from-docs` and un-exporting `holesIn`/`BEGIN`/`END`/
+  `HERE` are done, in #136's S7 slice — they were dead code with zero references, confirmed by
+  grep, not visible-to-anyone cleanups worth gating on this boundary.)
 - **The `progress 100% 25/53` headline.** The denominator choice is argued in a comment at
   `lib/viewer/c4-hologram.html:236` and the render does show `25/53`. Decided. Not reopened.
 - **Promotion, social preview, launch copy.**
@@ -181,8 +182,8 @@ single day on 2026-07-26. The estimate is effort, not calendar.
    0.9.0 that closes this boundary?** **Now / fold.**
 3. **Does the boundary exclude every new engine capability — no new language, no new command?**
    **Yes / no.**
-4. **Do the dead-code and `--from-docs` cleanups stay outside, done only if someone trips over
-   them?** **Yes / no.**
+4. ~~**Do the dead-code and `--from-docs` cleanups stay outside, done only if someone trips over
+   them?**~~ Resolved: done in #136 (S7 slice), see §4 above.
 
 ## 7. After the boundary
 

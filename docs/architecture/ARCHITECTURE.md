@@ -106,7 +106,7 @@ flowchart TB
 
 ### Level 3: engine modules
 
-The 18 top-level `lib/*.mjs` modules each have one primary responsibility:
+The 26 top-level `lib/*.mjs` modules each have one primary responsibility:
 
 | Module | Single responsibility |
 |---|---|
@@ -120,10 +120,18 @@ The 18 top-level `lib/*.mjs` modules each have one primary responsibility:
 | `gen.mjs` | Combine curated topology with live repository evidence and write the validated C4 model. |
 | `init.mjs` | Seed a best-effort topology and disclose source stacks it did not model. |
 | `lang.mjs` | Provide language-specific topology and edge facts, currently Go packages and imports. |
+| `lenses.mjs` | Declare the Control Room's lens partition and prove the viewer honours it (ADR-0008, I20). |
 | `link.mjs` | Derive issue to code ownership from commit subjects and touched files. |
 | `render.mjs` | Render the deterministic arc42 block shared by `doc` and `check`. |
+| `repofiles.mjs` | Read `git ls-files` once per repository per compose, memoised for every caller. |
 | `room.mjs` | Validate one portfolio manifest and compose one self-contained Control Room HTML file. |
 | `roomderive.mjs` | Compute all repository and portfolio Control Room aggregates for both writer and checker. |
+| `roomdocs.mjs` | Select the documents a briefing carries, bounded by a declared byte budget. |
+| `roominit.mjs` | Seed or update one `forma.room.json` programme entry from a repository. |
+| `roomload.mjs` | Resolve a manifest entry's concrete inputs, shared by the composer and the checker. |
+| `roomupdate.mjs` | Refresh a programme's live issue snapshot and recompose the Control Room. |
+| `rtm.mjs` | Derive the requirements traceability matrix from documents and issues already on hand. |
+| `scan.mjs` | Find the programmes under a directory and write them into a manifest; read-only over the repositories it discovers. |
 | `serve.mjs` | Serve architecture files and the fallback viewer locally with traversal protection. |
 | `taxonomy.mjs` | Detect label families by syntax and population without semantic inference. |
 | `validate.mjs` | Validate the shipped schema subset and materialize typed cumulative timelines. |
@@ -196,7 +204,7 @@ The boundary data is explicit:
 
 ## 7. Deployment view
 
-Forma is installed locally with `npx forma-arch` or as a development dependency. The npm package is selected by [`package.json:33-39`](../../package.json#L33-L39): `bin/forma.mjs`, all of `lib/`, `LICENSE`, `NOTICE`, `README.md`, and npm's package metadata ship. Repository docs, tests, scripts, fixtures, and GitHub workflows do not ship. A current `npm pack --dry-run --json` reports 30 package entries; this conflicts with the hard-coded 20-file statement in `AGENTS.md` and is recorded as debt in section 11.
+Forma is installed locally with `npx forma-arch` or as a development dependency. The npm package is selected by [`package.json:33-39`](../../package.json#L33-L39): `bin/forma.mjs`, all of `lib/`, `LICENSE`, `NOTICE`, `README.md`, and npm's package metadata ship. Repository docs, tests, scripts, fixtures, and GitHub workflows do not ship. `npm pack --dry-run --json` reports 42 package entries, matching the 42-entry allowlist [`scripts/check-clean.mjs`](../../scripts/check-clean.mjs) enforces at `prepack`; `AGENTS.md` states the same number.
 
 GitHub Pages is a separate static deployment. On pushes to `main`, it copies only `lib/viewer/c4-hologram.html` and the committed `docs/demo/c4-model.json`, runs the single-model presentation gate, and deploys `_site` ([`.github/workflows/pages.yml:38-52`](../../.github/workflows/pages.yml#L38-L52)). It does not regenerate the private-source demo and does not publish a Control Room.
 
@@ -241,17 +249,16 @@ Accepted ADRs are immutable. A changed decision requires a new ADR that supersed
 |---|---|---|
 | Every shipped JavaScript entry parses. | `npm run lint` | Passes on this branch; the command checks `bin/forma.mjs`, every top-level `lib/*.mjs`, `scripts/lint.mjs`, and `test/run.mjs` ([`scripts/lint.mjs:2-12`](../../scripts/lint.mjs#L2-L12)). |
 | Forma's committed model remains adherent to Forma's source. | `node bin/forma.mjs check` | Passes on this branch. CI runs the same command after lint and tests ([`.github/workflows/ci.yml:23-27`](../../.github/workflows/ci.yml#L23-L27)). |
-| Generation and contract behavior remain deterministic across fixtures. | `npm test` | The fixture blocks pass through the final external-corpus check, then the known `docmap-cap` defect fails the process. The suite is therefore not globally green. |
+| Generation and contract behavior remain deterministic across fixtures. | `npm test` | The suite is green end to end; the `docmap-cap` defect this row once named is gone (no such block exists in `test/run.mjs`). |
 | The public single-model demo is suitable for presentation. | `node scripts/presentable.mjs docs/demo/c4-model.json` | The test suite invokes this exact shipped artifact and requires exit 0 ([`test/run.mjs:1407-1411`](../../test/run.mjs#L1407-L1411)). |
 | A Control Room is adherent and keeps its briefing promises. | `forma check` followed by `node scripts/room-presentable.mjs ...` | The checker re-derives aggregates through `roomderive.mjs`; the publication gate checks evidence, issue coverage, freshness, closure-rate naming, and identical re-render bytes ([`scripts/room-presentable.mjs:93-109`](../../scripts/room-presentable.mjs#L93-L109)). |
-| The npm surface contains only intended runtime files and no editor residue. | `npm pack --dry-run --json` | The prepack guard passes, but the documented file count is stale; see section 11. |
+| The npm surface contains only intended runtime files and no editor residue. | `npm pack --dry-run --json` | The prepack guard enforces the reviewed 42-entry allowlist; see section 11. |
 | Releases use the declared version and token-free provenance. | Push a matching `v*` tag and require the `release` workflow to pass. | The workflow checks version equality, lint, tests, and OIDC publish before release. |
 
 ## 11. Risks and technical debt
 
-- **The test suite is not green on the available real corpus.** `npm test` currently fails at `docmap-cap`: four rows reported as DONE produce `status2=planned`, while the test expects `done`. The external-corpus assertion and failure point are at [`test/run.mjs:1421-1434`](../../test/run.mjs#L1421-L1434). This is pre-existing and was not changed by this documentation rewrite.
 - **Static line references rot, and did.** A since-deleted orientation document accumulated wrong line numbers and two false claims (the viewer at 746 lines when it is 1068; the model never validated against its schema, which [`lib/check.mjs`](../../lib/check.mjs) has done since the schema landed). It was removed on this branch in favour of [`GLOBAL_INVARIANTS.md`](../GLOBAL_INVARIANTS.md), which pairs each rule with an executable enforcement point. Line citations remain useful evidence at a reviewed commit; they are not a substitute for a check that runs.
-- **The shipped-file count is a prose invariant.** `AGENTS.md` says `npm pack --dry-run` must stay at 20 files ([`AGENTS.md:38-39`](../../AGENTS.md#L38-L39)); the current dry run reports 30 entries. `scripts/check-clean.mjs` checks only editor residue, not the count ([`scripts/check-clean.mjs:7-10`](../../scripts/check-clean.mjs#L7-L10)). The number needs a deliberate update or an executable assertion.
+- **The shipped-file count is now an executable assertion, resolved.** `scripts/check-clean.mjs` enforces a 42-entry allowlist at `prepack`, refusing to publish if the reviewed set changes; `AGENTS.md` and this document both state 42. This was open debt (a hard-coded count nothing checked); it is now enforced in code, not prose.
 - **Issue-to-code coverage is intentionally partial.** Git can link only issues cited by commits that touch modeled files. Sweeps are excluded and named. Unlinked work remains unknown; it must never be presented as zero.
 - **Offline freshness has a hard limit.** `check` can validate shape and reject an old snapshot relative to manifest `today`, but it cannot know whether GitHub changed after `fetchedAt`. Only a new `verify` can establish a newer fact base.
 - **Heuristic parsing has bounded precision.** Non-Go edges use name references; Go imports and source docstrings use regular expressions rather than language ASTs. This is acceptable for an explorer, not for compiler-grade analysis ([`lib/validate.mjs:1-13`](../../lib/validate.mjs#L1-L13), [ADR-0001](../adr/0001-zero-dependency-esm.md)).
