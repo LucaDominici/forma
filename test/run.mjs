@@ -14,6 +14,7 @@ import {
   renameSync,
   symlinkSync,
   chmodSync,
+  readdirSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -10552,6 +10553,32 @@ const diffPaths = (a, b, at = "") => {
   console.log("  ok drill-label — [+] DRILL is localized (en/it) and rendered through STR.drillLabel, not hardcoded");
 }
 
+// S7 doc drift — ARCHITECTURE.md's Level 3 module table must name every lib/*.mjs module, and its
+// stated count must match the real file count. This is a source-of-truth check on the table only
+// (sliced between the two known headings), not a whole-file grep, so a basename mentioned in prose
+// elsewhere does not pass this test falsely.
+{
+  const archPath = join(HERE, "..", "docs/architecture/ARCHITECTURE.md");
+  const arch = readFileSync(archPath, "utf-8");
+  const heading = "### Level 3: engine modules";
+  const start = arch.indexOf(heading);
+  if (start === -1) die("architecture-module-table: missing the '" + heading + "' heading");
+  const end = arch.indexOf("\n## ", start);
+  const section = arch.slice(start, end === -1 ? undefined : end);
+  const countMatch = section.match(/The (\d+) top-level `lib\/\*\.mjs` modules/);
+  if (!countMatch) die("architecture-module-table: missing the 'The N top-level lib/*.mjs modules' sentence");
+  const modules = readdirSync(join(HERE, "..", "lib"))
+    .filter((f) => f.endsWith(".mjs"))
+    .sort();
+  const missing = modules.filter((f) => !section.includes("`" + f + "`"));
+  if (missing.length) die("architecture-module-table: missing rows for " + missing.join(", "));
+  if (Number(countMatch[1]) !== modules.length)
+    die(
+      "architecture-module-table: stated count " + countMatch[1] + " does not match the actual " + modules.length + " lib/*.mjs modules",
+    );
+  console.log("  ok architecture-module-table — every lib/*.mjs module is in ARCHITECTURE.md's table, count matches");
+}
+
 console.log(
-  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, serve-cli, strict-flags, equals-flags, limit-strict, drill-label, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale, s2-fail-closed, s2-round1 all green.",
+  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, serve-cli, strict-flags, equals-flags, limit-strict, drill-label, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale, s2-fail-closed, s2-round1, architecture-module-table all green.",
 );
