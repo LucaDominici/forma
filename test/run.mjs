@@ -8973,6 +8973,74 @@ const diffPaths = (a, b, at = "") => {
     );
   writeFileSync(brief, goodBrief);
 
+  // Ritual repro (Codex review of #123): the documented ritual applies the fill directly
+  // (`audit --apply`, step 4), lets the verifier counter-verify the regenerated plan (step 5),
+  // then runs `room update --skip-verify --fill --counter` together (step 6). `--fill` inside
+  // `room update` always re-plans from the CURRENT state first — which is already post-fill —
+  // and then tries to re-apply the same fill against that fresh plan; the fill's planHash is
+  // the pre-fill one, so the combined call cannot complete as documented.
+  r = run([...briefArgs, "--plan", plan]);
+  if (r.status !== 0) die("ritual repro: initial plan exit " + r.status, r);
+  claimsFill([
+    {
+      id: "ritual-repro",
+      kind: "note",
+      text: "Exercises the documented fill-then-counter ritual order.",
+      about: { issue: 1 },
+      evidence: [{ type: "issue", ref: "1" }],
+    },
+  ]);
+  r = run([...briefArgs, "--apply", fill, "--audit-plan", plan, "--engine", "claude"]);
+  if (r.status !== 0) die("ritual repro: step 4 direct fill apply exit " + r.status, r);
+  r = run([...briefArgs, "--plan", plan]); // step 5: re-plan so the verifier sees the fresh brief claim
+  if (r.status !== 0) die("ritual repro: step 5 re-plan exit " + r.status, r);
+  const ritualCounter = {
+    planHash: readJson(plan).planHash,
+    results: readJson(plan)
+      .claims.filter(
+        (c) => c.kind === "brief-claim" && c.id === "brief:ritual-repro",
+      )
+      .map((c) => ({
+        claimId: c.id,
+        verdict: "holds",
+        reason: "ritual repro hold",
+        evidence: { type: "file", ref: "src/core/engine.js" },
+      })),
+  };
+  writeFileSync(counter, JSON.stringify(ritualCounter));
+  const ritualManifest = readJson(briefManifest);
+  ritualManifest.programs[0].auditPlan = plan;
+  ritualManifest.programs[0].auditFill = fill;
+  ritualManifest.programs[0].counterResults = counter;
+  writeFileSync(briefManifest, JSON.stringify(ritualManifest, null, 2) + "\n");
+  r = run([
+    "room",
+    "update",
+    "--manifest",
+    briefManifest,
+    "--out",
+    briefRoom,
+    "--skip-verify",
+    "--fill",
+    "--counter",
+    "--author-engine",
+    "claude",
+    "--verifier-engine",
+    "codex",
+  ]);
+  if (r.status === 0)
+    die(
+      "ritual repro: documented step 6 (--fill --counter together after a direct fill apply) unexpectedly succeeded",
+    );
+  if (!/planHash does not match/.test(r.stderr || ""))
+    die(
+      "ritual repro: step 6 failed for an unexpected reason: " +
+        r.status +
+        " " +
+        r.stderr,
+    );
+  writeFileSync(brief, goodBrief);
+
   console.log(
     "  ok audit — deterministic offline plan; item-by-item apply that names every refusal in lastApply; findings and keyed signal/milestone evidence expire",
   );
