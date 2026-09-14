@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0](https://github.com/LucaDominici/forma/compare/v1.2.0...v1.3.0) (2026-09-14)
+
+
+### Features
+
+* **audit:** record author and verifier engine so cross-engine holds are enforceable ([#123](https://github.com/LucaDominici/forma/issues/123)) ([#124](https://github.com/LucaDominici/forma/issues/124)) ([174bb63](https://github.com/LucaDominici/forma/commit/174bb631113ab8c919a856340e6465e73b73bf77))
+
+
+### Bug Fixes
+
+* **check:** fail closed on silent-default inputs ([#127](https://github.com/LucaDominici/forma/issues/127)) ([#130](https://github.com/LucaDominici/forma/issues/130)) ([1c528ad](https://github.com/LucaDominici/forma/commit/1c528adcf88fb2fb8ba768c3eea3a9cc706a8f1a))
+* **cli:** loopback-only forma serve, strict flags, tmpdir probe, DRILL i18n ([#136](https://github.com/LucaDominici/forma/issues/136) part 1) ([#137](https://github.com/LucaDominici/forma/issues/137)) ([896ac6c](https://github.com/LucaDominici/forma/commit/896ac6c7cecbe15e504c30b687b8fbd41eb7192d))
+* **room-update:** split the fill/counter ritual into two steps and refuse the combined call ([#131](https://github.com/LucaDominici/forma/issues/131)) ([#134](https://github.com/LucaDominici/forma/issues/134)) ([f81439e](https://github.com/LucaDominici/forma/commit/f81439ea2209384d50265577b3550ec87927baa4))
+* **room:** gate the portfolio aggregate and sort by code point, not locale ([#126](https://github.com/LucaDominici/forma/issues/126)) ([#129](https://github.com/LucaDominici/forma/issues/129)) ([9eab8a2](https://github.com/LucaDominici/forma/commit/9eab8a298cc391fcf4d54a44e85911c285b6ad16))
+* **room:** show unknown, not zero, when git history is unreadable ([#132](https://github.com/LucaDominici/forma/issues/132)) ([#139](https://github.com/LucaDominici/forma/issues/139)) ([2fbc011](https://github.com/LucaDominici/forma/commit/2fbc011fec76be457dc422443ae36daaddb9320c))
+* **viewer:** explorer visual verification fixes (F4 F5 F9 F10 F14 F20) ([#128](https://github.com/LucaDominici/forma/issues/128)) ([85a1796](https://github.com/LucaDominici/forma/commit/85a179694441f9f971c7fcca0c4aefa8b9662f33))
+
 ## [1.2.0](https://github.com/LucaDominici/forma/compare/v1.1.0...v1.2.0) (2026-09-13)
 
 
