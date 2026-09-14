@@ -10357,6 +10357,68 @@ const diffPaths = (a, b, at = "") => {
   console.log("  ok s2-round1-1 — portfolio linkCoverage stays null on an unreadable git history");
 }
 
+// #132: `link.error` gates coverage/linkCoverage already (S2/S2R1 above), but deriveCheckpoints and
+// the portfolio's workPerNode/blocked-nodes/landing still read the empty byIssue/datesByIssue maps
+// as if they were measured, presenting per-node work, landing and checkpoint completion as zero
+// instead of unknown (I6). Same not-a-checkout fixture as s2-fail-closed-3/s2-round1-1, root-proof.
+{
+  const noGit = join(tmp, "132-unreadable-history");
+  mkdirSync(noGit, { recursive: true });
+  const model = {
+    nodes: [{ id: "core", kind: "leaf", evidence: [] }],
+    timeline: { checkpoints: [{ id: "cp1", label: "CP1", patch: { nodes: { add: [{ node: { id: "core" } }] } } }] },
+  };
+  const topo = { leafSources: [] };
+  const issuesSnapshot = {
+    issues: [{ n: 1, state: "OPEN", labels: ["blocked"], ms: null, title: "x", createdAt: "2026-01-01", closedAt: null }],
+    milestones: [], fetchedAt: "2026-01-01", collection: {}, dependencies: { supported: false, edges: [] },
+  };
+  const deriveContext = {};
+  const derived = deriveAll(
+    {
+      repo: noGit, model, topo, issuesSnapshot,
+      health: { verdicts: [], dependencyConfirmations: [] }, findings: { findings: [] },
+      brief: null, briefPath: null, manifest: { today: "2026-01-01" },
+      gateInputs: null, arbiterMilestones: null, docs: null,
+    },
+    deriveContext,
+  );
+  if (!derived.link || !derived.link.error) die("132: a repo that is not a git checkout must set derived.link.error");
+
+  // deriveCheckpoints: the checkpoint's own nodes come from the timeline patch (known), but which
+  // issues reached them is unmeasured — null throughout, never a measured "0 of 0".
+  if (!derived.checkpoints || derived.checkpoints.length !== 1)
+    die("132: expected 1 checkpoint, got " + JSON.stringify(derived.checkpoints));
+  const cp = derived.checkpoints[0];
+  if (cp.nodes.join() !== "core")
+    die("132: checkpoint nodes come from the timeline patch and stay known, got " + JSON.stringify(cp.nodes));
+  if (cp.total !== null || cp.closed !== null || cp.pct !== null || cp.issues !== null)
+    die("132: an unreadable history must report the checkpoint's issues/closed/total/pct as null, not 0 — got " + JSON.stringify(cp));
+
+  const program = {
+    id: "p", ghRepo: "acme/p", repo: noGit, model, topo,
+    issuesSnapshot, derived, deriveContext,
+    blockedBy: { labels: ["blocked"] },
+  };
+  const portfolio = derivePortfolio({ today: "2026-01-01", programs: [program] });
+  const summary = portfolio.programs.find((p) => p.id === "p");
+  if (!summary || summary.workPerNode !== null || summary.workPerNodeOpen !== null)
+    die("132: workPerNode/workPerNodeOpen must be null (unmeasured) on an unreadable history, got " + JSON.stringify(summary && [summary.workPerNode, summary.workPerNodeOpen]));
+
+  const row = portfolio.blocked.find((b) => b.item.program === "p" && b.item.n === 1);
+  if (!row) die("132: expected issue #1 to be reported as blocked");
+  if (row.item.nodes !== null)
+    die("132: a blocked item's nodes must be null (unmeasured), not [] or a measured list, got " + JSON.stringify(row.item.nodes));
+  if (row.item.landingMeasured !== false)
+    die("132: a blocked item must say its landing is unmeasured on an unreadable history, got " + JSON.stringify(row.item.landingMeasured));
+
+  const landing = portfolio.landing.find((l) => l.program === "p");
+  if (!landing || landing.months !== null)
+    die("132: landing.months must be null (unmeasured) on an unreadable history, got " + JSON.stringify(landing && landing.months));
+
+  console.log("  ok 132-unknown-not-zero — checkpoints, workPerNode, blocked nodes and landing stay unmeasured on an unreadable git history");
+}
+
 // HIGH-2: an auth/permission error worded like GitHub's real "Resource not accessible by
 // integration" must NOT be read as "dependency fields unsupported" — only a field-specific
 // GraphQL error naming blockedBy/blocking may enable the no-dependencies fallback.
