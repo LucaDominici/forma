@@ -10419,6 +10419,163 @@ const diffPaths = (a, b, at = "") => {
   console.log("  ok 132-unknown-not-zero — checkpoints, workPerNode, blocked nodes and landing stay unmeasured on an unreadable git history");
 }
 
+// #132 round 1 (Codex review, HIGH): the landing chart only mounted when `summary.closed` was
+// nonzero, so an all-open programme with an unreadable git history never showed the honest null
+// this fix computes — the data said "not measured" but the screen said nothing. Composed through
+// the real `forma room` + `forma check --room` chain (not just deriveAll/derivePortfolio), and the
+// shipped viewer source is lifted and RUN against that exact data, so the assertion is on what a
+// reader would actually see, not just on the JSON the viewer reads. This test fails without the
+// `landingEntry`/mount-condition fix: the lifted `mountLanding` would leave `ev` empty.
+{
+  const repo = join(tmp, "132-room-unmeasured");
+  cpSync(FIX("mini"), repo, { recursive: true });
+  const topo = join(tmp, "132-room-topo.json"),
+    model = join(tmp, "132-room-model.json");
+  let r = run(["init", "--repo", repo, "--out", topo, "--force"]);
+  if (r.status !== 0) die("132 room: init exit " + r.status, r);
+  mkdirSync(join(repo, "docs"), { recursive: true });
+  writeFileSync(join(repo, "docs/DESIGN.md"), "# Design\n\nThe governed future for this repo.\n");
+  const seeded = readJson(topo);
+  seeded.timeline = {
+    source: "docs/DESIGN.md",
+    checkpoints: [
+      { id: "cp1", label: "CP1", patch: { nodes: { update: [{ id: "core", set: { status2: "in-progress" }, change: "x" }] } } },
+    ],
+  };
+  writeFileSync(topo, JSON.stringify(seeded, null, 2));
+  r = run(["gen", "--repo", repo, "--topology", topo, "--out", model]);
+  if (r.status !== 0) die("132 room: gen exit " + r.status, r);
+
+  const issues = join(tmp, "132-room-issues.json");
+  writeFileSync(
+    issues,
+    JSON.stringify({
+      fetchedAt: "2026-08-09T09:00:00Z", ghRepo: "acme/p", truncated: false,
+      collection: {
+        pagination: "gh api graphql --paginate --slurp", nativeEdges: 0, truncatedRelations: 0,
+        prose: { accepted: 0, discarded: 0, ambiguous: 0, bodyBytes: 0, maxBytesPerIssue: 65536 },
+        signalsUnknown: 1, staleVerdicts: 0, milestonesComplete: false,
+        milestonesReason: "Milestones are derived from issue payloads; milestones with zero issues are not observable.",
+        payloadBytes: 1,
+      },
+      dependencies: { supported: false, complete: false, edges: [] },
+      signals: { workflows: {}, release: { listState: "unknown", reason: "not declared" } },
+      milestones: [],
+      issues: [{ n: 1, title: "x", state: "OPEN", url: "https://github.com/acme/p/issues/1", labels: ["blocked"], updatedAt: "2026-08-09T09:00:00Z", dependenciesComplete: true, proseScanComplete: true, createdAt: "2026-08-01" }],
+    }),
+  );
+  const manifest = join(tmp, "132-room-manifest.json");
+  writeFileSync(
+    manifest,
+    JSON.stringify({ today: "2026-08-18", programs: [{ id: "p", ghRepo: "acme/p", repo, issues, model, topology: topo, blockedBy: { labels: ["blocked"] } }] }),
+  );
+  const roomOut = join(tmp, "132-room.html");
+  r = run(["room", "--manifest", manifest, "--out", roomOut]);
+  if (r.status !== 0) die("132 room: room exit " + r.status, r);
+  r = run(["check", "--room", roomOut, "--manifest", manifest]);
+  if (r.status !== 0) die("132 room: check --room must pass on this fixture (re-derivation parity)", r);
+
+  const roomJson = JSON.parse(/window\.__ROOM__ = ([\s\S]*?);\s*<\/script>/.exec(readFileSync(roomOut, "utf-8"))[1]);
+  const program = roomJson.programs.find((p) => p.id === "p");
+  if (!program.derived.link || !program.derived.link.error)
+    die("132 room: expected link.error on a repo that is not a git checkout");
+  const cp = program.derived.checkpoints && program.derived.checkpoints[0];
+  if (!cp || cp.total !== null)
+    die("132 room: expected the checkpoint's total to be null under an unreadable history, got " + JSON.stringify(cp));
+  const summary = roomJson.portfolio.programs.find((p) => p.id === "p");
+  if (summary.closed !== 0)
+    die("132 room: fixture must be all-open (closed===0) to exercise the mount bug, got " + JSON.stringify(summary));
+  if (summary.workPerNode !== null)
+    die("132 room: expected workPerNode null under an unreadable history");
+  const landing = roomJson.portfolio.landing.find((l) => l.program === "p");
+  if (!landing || landing.months !== null)
+    die("132 room: expected landing.months null under an unreadable history");
+
+  const html = readFileSync(join(HERE, "..", "lib/viewer/control-room.html"), "utf-8");
+  const lift = (name) => {
+    const m = html.match(new RegExp("function " + name + "\\([^]*?\\n}\\n"));
+    if (!m) die("132 room: " + name + " not liftable — it must be measurable");
+    return m[0];
+  };
+  const mountMatch = /var landing=landingEntry\(summary\.id\);\s*\n\s*if\(summary\.closed\|\|\(landing&&landing\.months===null\)\)ev\.appendChild\(chartLanding\(summary,program\)\);/.exec(html);
+  if (!mountMatch) die("132 room: the landing chart's mount condition was not found verbatim in the viewer — did the HIGH fix regress?");
+  const cpBlockMatch = /var cps=program\.derived\.checkpoints,cp=panel\(STR\.timeline,STR\.provCheckpoints\);[\s\S]*?ev\.appendChild\(cp\);/.exec(html);
+  if (!cpBlockMatch) die("132 room: the checkpoints panel block was not found verbatim in the viewer — did viewArchitecture change shape?");
+
+  // A deliberately small DOM seam, same idea as test/fixtures/control-room-stress/kanban.mjs, wide
+  // enough to run panel()/chart()'s table-twin construction without a browser.
+  class Node {
+    constructor(tag) { this.tagName = String(tag || "").toUpperCase(); this.className = ""; this.children = []; this.attributes = {}; this._text = ""; this.id = ""; this.hidden = false; }
+    appendChild(n) { this.children.push(n); return n; }
+    insertBefore(n) { this.children.unshift(n); return n; }
+    removeChild(n) { this.children = this.children.filter((c) => c !== n); return n; }
+    set textContent(v) { this._text = String(v); this.children = []; }
+    get textContent() { return this.children.length ? this.children.map((c) => (c.textContent != null ? c.textContent : "")).join("") : this._text; }
+    setAttribute(k, v) { this.attributes[k] = String(v); }
+    getAttribute(k) { return this.attributes[k]; }
+    addEventListener() {}
+    get classList() { const self = this; return { add(c) { self.className = (self.className ? self.className + " " : "") + c; } }; }
+    cloneNode() { return this._clone ? this._clone() : new Node(this.tagName); }
+  }
+  const findAll = (node, pred, out = []) => { for (const c of node.children || []) { if (pred(c)) out.push(c); findAll(c, pred, out); } return out; };
+  Node.prototype.querySelector = function (sel) {
+    if (sel === "caption") return findAll(this, (n) => n.tagName === "CAPTION")[0] || null;
+    if (sel === "tbody") return findAll(this, (n) => n.tagName === "TBODY")[0] || null;
+    if (sel === "thead tr") { const thead = findAll(this, (n) => n.tagName === "THEAD")[0]; return thead ? findAll(thead, (n) => n.tagName === "TR")[0] || null : null; }
+    return null;
+  };
+  const buildTemplateContent = () => {
+    const table = new Node("table"), caption = new Node("caption"), thead = new Node("thead"), tr = new Node("tr"), tbody = new Node("tbody");
+    thead.appendChild(tr); table.appendChild(caption); table.appendChild(thead); table.appendChild(tbody);
+    table._clone = buildTemplateContent;
+    return table;
+  };
+  const doc = {
+    createElement: (t) => new Node(t),
+    createElementNS: (_ns, t) => new Node(t),
+    createTextNode: (t) => ({ tagName: "#text", textContent: String(t) }),
+    getElementById: (id) => (id === "table-template" ? { content: { firstChild: buildTemplateContent() } } : null),
+  };
+  const en = readJson(join(HERE, "..", "lib/viewer/strings/en.json"));
+
+  const src = [
+    "var seq=0;",
+    lift("fmt"), lift("el"), lift("setAttrs"), lift("svgEl"), lift("short"),
+    lift("chips"), lift("pair"), lift("panel"), lift("chart"), lift("empty"), lift("relayout"),
+    lift("landingEntry"), lift("chartLanding"), lift("chartNodes"),
+    "function mountLanding(summary,ev,program){\n" + mountMatch[0] + "\n}\n",
+    "function renderCheckpoints(program,ev){\n" + cpBlockMatch[0] + "\n}\n",
+    "return {chartLanding:chartLanding,chartNodes:chartNodes,mountLanding:mountLanding,renderCheckpoints:renderCheckpoints};",
+  ].join("\n");
+  const lifted = new Function("document", "STR", "ROOM", "NS", src)(doc, en, roomJson, "http://www.w3.org/2000/svg");
+
+  const evNode = new Node("div");
+  lifted.mountLanding(summary, evNode, program);
+  if (evNode.children.length !== 1)
+    die(
+      "132 room: the landing chart must mount even when summary.closed===0, as long as its months are unmeasured (HIGH review finding) — got " +
+        evNode.children.length + " mounted panel(s)",
+    );
+  const landingProv = findAll(evNode.children[0], (n) => n.className === "prov")[0];
+  if (!landingProv || landingProv.textContent !== en.notMeasured)
+    die('132 room: the mounted landing chart must read "' + en.notMeasured + '", got ' + JSON.stringify(landingProv && landingProv.textContent));
+
+  const nodesPanel = lifted.chartNodes(summary, program);
+  const nodesProv = findAll(nodesPanel, (n) => n.className === "prov")[0];
+  if (!nodesProv || nodesProv.textContent !== en.notMeasured)
+    die('132 room: the per-node work chart must read "' + en.notMeasured + '" when workPerNode is null, got ' + JSON.stringify(nodesProv && nodesProv.textContent));
+
+  const cpEv = new Node("div");
+  lifted.renderCheckpoints(program, cpEv);
+  const cpTexts = findAll(cpEv, () => true).map((n) => n.textContent).filter(Boolean);
+  if (!cpTexts.some((t) => t === en.notMeasured))
+    die('132 room: the checkpoints panel must read "' + en.notMeasured + '" for a checkpoint whose issue count is unmeasured, got ' + JSON.stringify(cpTexts));
+
+  console.log(
+    '  ok 132-room-unmeasured — a real `forma room`+`check --room` composition of an all-open, non-git programme renders "not measured" for landing, per-node work and checkpoints, not zero/blank',
+  );
+}
+
 // HIGH-2: an auth/permission error worded like GitHub's real "Resource not accessible by
 // integration" must NOT be read as "dependency fields unsupported" — only a field-specific
 // GraphQL error naming blockedBy/blocking may enable the no-dependencies fallback.
