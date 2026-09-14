@@ -16,8 +16,8 @@ channels, not only the data. Skipping a step is how the artefact starts lying ag
 ## 0. Fix the day once
 `today` is the determinism anchor and Forma never moves it. Set it at the start of the ritual and keep it
 for the whole run — every command below reads it from `forma.room.json`:
-`npx forma-arch room init --repo . --today YYYY-MM-DD` (or edit the manifest). Both `room update` calls
-below share it. Never pass a different `--today` mid-ritual.
+`npx forma-arch room init --repo . --today YYYY-MM-DD` (or edit the manifest). Every `room update` call
+below shares it. Never pass a different `--today` mid-ritual.
 
 ## 1. Measure live, never from memory
 - `git status -sb`, `git fetch`, and confirm you are on the branch the briefing speaks for.
@@ -82,29 +82,36 @@ Rules Forma enforces — write to them, do not test them:
    hostile verdict — the verifier held a different sentence.
 
 ## 4. Apply — and read what Forma refused
-`npx forma-arch audit --repo . --today YYYY-MM-DD --stale-after-days N --brief docs/architecture/c4-brief.json --apply docs/architecture/audit-fill.json --audit-plan docs/architecture/audit-plan.json --engine <your engine id, e.g. claude|codex>`
-`--engine` stamps `author.engine` on every claim this apply writes or rewrites — always pass your
-own identity, since a claim with no `author.engine` can never be coloured later (#123: colour needs
-a DIFFERENT engine on both sides, and an unrecorded engine never counts as different).
+`npx forma-arch room update --manifest forma.room.json --skip-verify --fill --author-engine <your engine id, e.g. claude|codex>`
+`--author-engine` stamps `author.engine` on every claim this apply writes or rewrites — always pass
+your own identity, since a claim with no `author.engine` can never be coloured later (#123: colour
+needs a DIFFERENT engine on both sides, and an unrecorded engine never counts as different).
 Forma applies item by item and names every refusal in `docs/architecture/c4-health.json` →
 `lastApply.rejected` (and on stderr). **Read them.** Fix the fill and re-apply, or accept the refusal:
 the number of refused claims is shown on the dashboard, and that is fine — it is the honest number.
-`--apply` refuses the whole fill only if the plan is stale (model, issues or health changed since
-`--plan`): re-plan, re-fill.
+`--fill` refuses the whole fill only if the plan is stale (model, issues or health changed since
+`--plan`): re-plan, re-fill. This step also recomposes the Control Room; the brief claims it just
+wrote are not yet coloured — that happens in step 6.
 
 ## 5. Hand the brief to the hostile verifier
-Every brief claim is now a counter-claim in the plan (`kind: brief-claim`). Run the counter-verifier —
-by default the **Codex** adapter (`adapters/codex/forma-counterverify`), deliberately a *different* engine
-than the one that wrote the brief — over `audit-plan.json` (re-plan first so it names the brief you just
-wrote). It returns `holds | contradicted | unsupported` per claim with an anchor; Forma lands the verdict
-ON the claim with its date. **A claim gets a colour only on a fresh `holds`.** Contradicted or unsupported
-claims are grey and become findings. Claims the verifier does not answer stay "not verified" — say so,
-never colour them yourself.
+Every brief claim is now a counter-claim in the plan. Re-plan (`npx forma-arch audit --repo . --today
+YYYY-MM-DD --stale-after-days N --brief docs/architecture/c4-brief.json --plan
+docs/architecture/audit-plan.json`) so the plan names the brief step 4 just wrote (`kind:
+brief-claim`), then run the counter-verifier — by default the **Codex** adapter
+(`adapters/codex/forma-counterverify`), deliberately a *different* engine than the one that wrote the
+brief — over that regenerated `audit-plan.json`. It returns `holds | contradicted | unsupported` per
+claim with an anchor; Forma lands the verdict ON the claim with its date. **A claim gets a colour
+only on a fresh `holds`.** Contradicted or unsupported claims are grey and become findings. Claims
+the verifier does not answer stay "not verified" — say so, never colour them yourself.
 
 ## 6. Recompose and gate
-`npx forma-arch room update --manifest forma.room.json --skip-verify --fill --counter --author-engine <the engine that wrote the brief> --verifier-engine <the engine that ran forma-counterverify>`
-`--author-engine`/`--verifier-engine` must name two DIFFERENT engines, or every hold this step
-grants renders as "self-held", never coloured (#123).
+`npx forma-arch room update --manifest forma.room.json --skip-verify --counter --verifier-engine <the engine that ran forma-counterverify>`
+`--fill` and `--counter` never run in the same `room update` call: `--fill` re-plans from the current
+state before applying, so a counter result written against the plan from step 5 would already be
+stale by the time a combined call re-plans again — `room update` rejects `--fill --counter` together
+by name instead of failing on a stale planHash. `--author-engine` (step 4) and `--verifier-engine`
+(this step) must name two DIFFERENT engines, or every hold this step grants renders as "self-held",
+never coloured (#123).
 then `npx forma-arch check --room <the html>` and `node scripts/room-presentable.mjs --room <the html> --manifest forma.room.json`.
 `room-presentable` refuses to publish a brief with a decision nobody held. If it refuses, do not publish:
 fix the fill or get the verifier to answer.
