@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawnSync, spawn } from "node:child_process";
 import {
   mkdtempSync,
   readFileSync,
@@ -6090,6 +6090,60 @@ const diffPaths = (a, b, at = "") => {
   );
 }
 
+// §one-cpm-cache — repofiles.mjs' trackedFiles() cache must not survive across composes (#133 S4
+// follow-up, Codex round 1 HIGH). `room --serve` recomposes on every GET in one long-lived process
+// (`compose(true)` in room.mjs); a process-lifetime cache made a file `git add`ed after the server
+// started invisible until restart, which is exactly the staleness `git ls-files` was memoised to
+// avoid causing three times over, now caused once but forever. Reuses the `room` fixture's `alpha`
+// checkout, already committed by the block above — this block only adds one more commit to it.
+{
+  const R = join(tmp, "room"),
+    alpha = join(R, "alpha"),
+    manifest = join(R, "manifest.json");
+  const child = spawn(
+    process.execPath,
+    [join(HERE, "..", "lib", "room.mjs"), "--manifest", manifest, "--port", "0", "--serve"],
+    { stdio: ["ignore", "pipe", "pipe"] },
+  );
+  let out = "";
+  const port = await new Promise((resolvePort, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error("one-cpm-cache: room --serve did not report a port in time: " + out)),
+      5000,
+    );
+    const onData = (chunk) => {
+      out += chunk.toString();
+      const m = /serving http:\/\/127\.0\.0\.1:(\d+)/.exec(out);
+      if (m) { clearTimeout(timer); child.stdout.off("data", onData); resolvePort(Number(m[1])); }
+    };
+    child.stdout.on("data", onData);
+    child.on("error", reject);
+  });
+  try {
+    // Added AFTER the server's first compose() at startup — a real mid-session edit, the same shape
+    // as a document landing between two Options-view reloads.
+    writeFileSync(
+      join(alpha, "docs/LIVE-ADD.md"),
+      "# Live-added\n\nCommitted after the server started (#133 S4 follow-up).\n",
+    );
+    const git = (args) => spawnSync("git", ["-C", alpha, ...args], { encoding: "utf-8" });
+    git(["add", "docs/LIVE-ADD.md"]);
+    const committed = git(["commit", "-q", "-m", "docs: live-add after serve start"]);
+    if (committed.status !== 0)
+      die("one-cpm-cache: could not commit the live-added doc", committed);
+    const html = await fetch(`http://127.0.0.1:${port}/`).then((r) => r.text());
+    if (!/LIVE-ADD\.md/.test(html))
+      die(
+        "one-cpm-cache: a doc git-added after the server started must appear on the very next compose, not require a restart",
+      );
+  } finally {
+    child.kill();
+  }
+  console.log(
+    "  ok one-cpm-cache — trackedFiles is reset at each compose(), not stuck for the life of the server",
+  );
+}
+
 // `forma scan` and `forma room --serve`: the two halves of "autodetect, with checkboxes". The
 // second exists because static HTML cannot write a file, and the first exists so the answer to
 // "which programmes are there" is not typed by hand. Both are graded on the same thing: a decision
@@ -9452,6 +9506,96 @@ const diffPaths = (a, b, at = "") => {
   );
 }
 
+// §one-cpm — the milestone comment promises code-point order (#133 S4). Both `nodes` and the
+// `criticalPath` tie-break must sort ids the way `codepointCompare` does, not the numeric `a - b`
+// the code inherited from the issue path (NaN on a string id, which V8's stable sort then leaves in
+// whatever order the traversal happened to visit).
+//
+// M10/M2/M1 in a straight chain does NOT expose the bug for `nodes`/`criticalPath`: these three
+// ASCII ids happen to compare the same under UTF-16 code-unit order as under `codepointCompare`, and
+// a chain has no tie to break either way. Both assertions below already hold today — kept as
+// characterization of the promised behaviour, not as the RED. The cyclic fixture that follows is the
+// one that actually fails today: `cycleGroups` reports the cycle in BFS-discovery order (M1, M2,
+// M10) instead of code-point order (M1, M10, M2), because its `.sort((a, b) => a - b)` is a no-op
+// on strings.
+{
+  const proj = (milestones) => ({ schema: "arbiter-milestones-v1", milestones });
+  const ms = (id, over = {}) => ({ id, title: `Milestone ${id}`, depends_on: [], horizon: "next", status: "planned", estimate_days: 1, ...over });
+
+  const chain = deriveMilestonePath(
+    proj([ms("M10", { depends_on: ["M2"] }), ms("M2", { depends_on: ["M1"] }), ms("M1")]),
+  );
+  const codepointOrder = ["M1", "M10", "M2"];
+  if (JSON.stringify(chain.nodes.map((n) => n.id)) !== JSON.stringify(codepointOrder))
+    die("one-cpm: milestone nodes must be ordered by codepointCompare, got " + JSON.stringify(chain.nodes.map((n) => n.id)));
+  if (JSON.stringify(chain.criticalPath) !== JSON.stringify(["M1", "M2", "M10"]))
+    die("one-cpm: milestone criticalPath must be predecessor-first in codepoint order, got " + JSON.stringify(chain.criticalPath));
+
+  // M1 -> M2 -> M10 -> M1: a 3-cycle. BFS from M1 (the codepoint-smallest) discovers M2 then M10,
+  // which is NOT codepoint order (M10 < M2). Today's numeric comparator leaves that discovery order
+  // untouched; the fix must re-sort the group by codepointCompare.
+  const cyclic = deriveMilestonePath(
+    proj([ms("M1", { depends_on: ["M10"] }), ms("M2", { depends_on: ["M1"] }), ms("M10", { depends_on: ["M2"] })]),
+  );
+  if (cyclic.cycles.length !== 1 || JSON.stringify(cyclic.cycles[0]) !== JSON.stringify(["M1", "M10", "M2"]))
+    die("one-cpm: a milestone cycle must be reported in codepoint order, got " + JSON.stringify(cyclic.cycles));
+
+  console.log("  ok one-cpm — milestone order and cycle tie-break follow codepointCompare, not a-b");
+}
+
+// §one-cpm-astral — criticalChain's tie-break must compare true Unicode scalar values, not UTF-16
+// code units (Codex round 1 MEDIUM, #133 S4). An astral id (U+10000, a surrogate PAIR starting with
+// the high surrogate U+D800) and a BMP private-use id (U+E000, one code unit) are the textbook case
+// codepoint-compare already carries a unit test for: U+D800 < U+E000 as code UNITS, so a naive
+// default sort puts the astral id first, but U+10000 > U+E000 as scalar values, so codepointCompare
+// puts the private-use id first. Two independent, equally-critical milestones (same estimate, no
+// dependency between them) are both heads with zero total float, so the chain's start is exactly
+// the tie `criticalChain`'s `heads.sort(cmp)[0]` has to break.
+{
+  const proj = (milestones) => ({ schema: "arbiter-milestones-v1", milestones });
+  const astral = "M" + String.fromCodePoint(0x10000);
+  const pua = "M" + String.fromCodePoint(0xe000);
+  if ([astral, pua].sort()[0] !== astral)
+    die("one-cpm-astral: fixture assumption broke — default UTF-16 sort no longer puts the astral id first");
+  if (codepointCompare(pua, astral) !== -1)
+    die("one-cpm-astral: fixture assumption broke — codepointCompare no longer ranks the private-use id first");
+
+  const tie = deriveMilestonePath(
+    proj([
+      { id: astral, title: "a", depends_on: [], horizon: "next", status: "planned", estimate_days: 5 },
+      { id: pua, title: "b", depends_on: [], horizon: "next", status: "planned", estimate_days: 5 },
+    ]),
+  );
+  if (JSON.stringify(tie.criticalPath) !== JSON.stringify([pua]))
+    die("one-cpm-astral: the tie-break must follow codepointCompare (private-use first), got " + JSON.stringify(tie.criticalPath));
+
+  console.log("  ok one-cpm-astral — criticalChain's tie-break is code-point order, not UTF-16 code-unit order");
+}
+
+// §one-cpm-characterization — the issue-DAG `criticalPath` output, captured on a diamond fixture
+// BEFORE the CPM core is shared with the milestone path (#133 S4). This is a characterization test:
+// it is expected to already be green, and its job is to fail loudly if the refactor changes so much
+// as a field order in an output `check.mjs` compares byte-for-byte against what `room` wrote.
+{
+  const edge = (from, to) => ({
+    from: { repo: "o/r", number: from, url: "u", state: "OPEN" },
+    to: { repo: "o/r", number: to, url: "u", state: "OPEN" },
+    source: "native",
+  });
+  const snap = (issues, edges, supported = true) => ({
+    issues: issues.map(([n, state]) => ({ n, state })),
+    dependencies: { supported, complete: true, edges },
+  });
+  const diamond = deriveCriticalPath(
+    { supported: true, edges: [edge(1, 2), edge(1, 3), edge(2, 4), edge(3, 4)] },
+    snap([[1, "OPEN"], [2, "OPEN"], [3, "CLOSED"], [4, "OPEN"]], []),
+  );
+  const expected = '{"durationModel":"open-issue-uniform-1d","projectDurationDays":3,"nodes":[{"n":1,"duration":1,"earlyStart":2,"earlyFinish":3,"lateStart":2,"lateFinish":3,"totalFloat":0,"freeFloat":0,"isCritical":true},{"n":2,"duration":1,"earlyStart":1,"earlyFinish":2,"lateStart":1,"lateFinish":2,"totalFloat":0,"freeFloat":0,"isCritical":true},{"n":3,"duration":0,"earlyStart":1,"earlyFinish":1,"lateStart":2,"lateFinish":2,"totalFloat":1,"freeFloat":1,"isCritical":false},{"n":4,"duration":1,"earlyStart":0,"earlyFinish":1,"lateStart":0,"lateFinish":1,"totalFloat":0,"freeFloat":0,"isCritical":true}],"criticalPath":[4,2,1],"cycles":[],"excludedForeign":[]}';
+  if (JSON.stringify(diamond) !== expected)
+    die("one-cpm-characterization: issue criticalPath output changed shape, got " + JSON.stringify(diamond));
+
+  console.log("  ok one-cpm-characterization — issue criticalPath output pinned before the CPM refactor");
+}
 
 // §ontology-lenses — use cases and runbook coverage, the two surfaces wave 8 gave a home (#2480).
 //
@@ -9932,20 +10076,20 @@ const diffPaths = (a, b, at = "") => {
 }
 
 // Production recovery: aliased output paths must collide before any verifier can write, and the
-// package guard must cover the current 41-file runtime surface.
+// package guard must cover the current 42-file runtime surface.
 {
   const target = join(tmp, "allowlist-target.json"), alias = join(tmp, "allowlist-alias.json");
   writeFileSync(target, "{}\n"); symlinkSync(target, alias);
   if (canonicalPath(target) !== canonicalPath(alias)) die("release: canonicalPath missed a symlink alias");
   const guard = spawnSync(process.execPath, [join(HERE, "..", "scripts", "check-clean.mjs")], { encoding: "utf-8" });
-  if (guard.status !== 0 || !/41 reviewed runtime files, clean/.test(guard.stderr || "")) die("release: current 41-file runtime allowlist is not clean", guard);
+  if (guard.status !== 0 || !/42 reviewed runtime files, clean/.test(guard.stderr || "")) die("release: current 42-file runtime allowlist is not clean", guard);
   const packed = spawnSync("npm", ["pack", "--dry-run", "--json"], { cwd: join(HERE, ".."), encoding: "utf-8" });
   const packJson = (packed.stdout || "").slice((packed.stdout || "").indexOf("[\n"));
   let packMeta;
   try { packMeta = JSON.parse(packJson)[0]; } catch { packMeta = null; }
-  if (packed.status !== 0 || !packMeta || packMeta.entryCount !== 41 || !packMeta.files.some(({ path }) => path === "lib/roomupdate.mjs"))
-    die("release: npm pack effective file set is not the reviewed 41-file runtime surface", packed);
-  console.log("  ok production-recovery — symlink aliases canonicalize and the reviewed 41-file runtime allowlist is enforced");
+  if (packed.status !== 0 || !packMeta || packMeta.entryCount !== 42 || !packMeta.files.some(({ path }) => path === "lib/roomupdate.mjs"))
+    die("release: npm pack effective file set is not the reviewed 42-file runtime surface", packed);
+  console.log("  ok production-recovery — symlink aliases canonicalize and the reviewed 42-file runtime allowlist is enforced");
 }
 
 // F2 unit pin: `codepointCompare` must order true Unicode SCALAR values, not UTF-16 code units.

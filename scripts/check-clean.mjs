@@ -21,6 +21,7 @@ lib/lang.mjs
 lib/lenses.mjs
 lib/link.mjs
 lib/render.mjs
+lib/repofiles.mjs
 lib/room.mjs
 lib/roomderive.mjs
 lib/roomdocs.mjs
