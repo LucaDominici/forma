@@ -10423,6 +10423,45 @@ const diffPaths = (a, b, at = "") => {
   console.log("  ok s2-round1-5 — minLength/maxLength count Unicode code points, not UTF-16 units");
 }
 
+// F13 — `forma serve` (the static doc viewer, distinct from `room --serve`) must bind loopback
+// only and answer a malformed URI with 400 instead of dying: `decodeURIComponent` throws on a lone
+// `%` escape and used to take the whole process down with it.
+{
+  const repo = join(tmp, "serve-cli");
+  mkdirSync(join(repo, "docs/architecture"), { recursive: true });
+  const child = spawn(
+    process.execPath,
+    [join(HERE, "..", "lib", "serve.mjs"), "--repo", repo, "--port", "0"],
+    { stdio: ["ignore", "pipe", "pipe"] },
+  );
+  let out = "";
+  const port = await new Promise((resolvePort, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error("serve-cli: forma serve did not report a port in time: " + out)),
+      3000,
+    );
+    const onData = (chunk) => {
+      out += chunk.toString();
+      const m = /http:\/\/127\.0\.0\.1:(\d+)/.exec(out);
+      if (m) { clearTimeout(timer); child.stdout.off("data", onData); resolvePort(Number(m[1])); }
+    };
+    child.stdout.on("data", onData);
+    child.on("error", reject);
+  });
+  if (/0\.0\.0\.0|::/.test(out))
+    die("serve-cli: forma serve bound something wider than loopback: " + out);
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/%E0`);
+    if (res.status !== 400)
+      die("serve-cli: a malformed URI must answer 400, got " + res.status);
+  } finally {
+    child.kill();
+  }
+  console.log(
+    "  ok serve-cli — forma serve binds loopback only and answers a malformed URI with 400 instead of crashing",
+  );
+}
+
 console.log(
-  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale, s2-fail-closed, s2-round1 all green.",
+  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, serve-cli, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale, s2-fail-closed, s2-round1 all green.",
 );
