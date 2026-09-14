@@ -5634,6 +5634,52 @@ const diffPaths = (a, b, at = "") => {
       r,
     );
 
+  // Codex round 1 (HIGH): a top-level JSON `null` model must not be treated the same as a
+  // read failure — it is a successfully parsed value that is certainly schema-invalid (the
+  // schema requires an object), and the loader must still run it through `validateModel` rather
+  // than silently skipping validation because the parsed value happens to be JS `null`.
+  writeFileSync(model, "null");
+  r = run([
+    "check",
+    "--model",
+    join(R, "no-such-model.json"),
+    "--room",
+    roomHtml,
+    "--manifest",
+    manifest,
+  ]);
+  writeFileSync(model, pristineModel);
+  if (r.status === 0 || !/c4-model\.schema\.json/.test(r.stderr || ""))
+    die(
+      "room: check --room accepted a top-level JSON null model instead of schema-validating it",
+      r,
+    );
+
+  // Codex round 1 (HIGH): a diagnostic that check --room has always continued past (a schema-
+  // invalid overlay, or a manifest/snapshot mismatch) must still let the rest of the gate run —
+  // in particular the re-derivation-parity comparison below it. Corrupt alpha's health overlay
+  // (schema-invalid, reported but not fatal) AND hand-alter the embedded Executive KPIs (only
+  // caught by the parity comparison that runs AFTER the overlay is loaded): both failures must
+  // appear together, proving the health-schema diagnostic did not short-circuit the run.
+  const alphaHealth = join(alpha, "health.json");
+  const pristineAlphaHealth = readFileSync(alphaHealth, "utf-8");
+  const brokenHealth = JSON.parse(pristineAlphaHealth);
+  brokenHealth._bogus = true;
+  writeFileSync(alphaHealth, JSON.stringify(brokenHealth, null, 2));
+  const tamperedKpi = join(R, "tampered-continuation.html");
+  tamper(roomHtml, tamperedKpi, '"openCount":2', '"openCount":7');
+  r = checkRoom(tamperedKpi);
+  writeFileSync(alphaHealth, pristineAlphaHealth);
+  if (
+    r.status === 0 ||
+    !/health overlay/.test(r.stderr || "") ||
+    !/Executive KPIs/.test(r.stderr || "")
+  )
+    die(
+      "room: check --room did not continue past a schema-invalid overlay to the later parity comparison",
+      r,
+    );
+
   // A manifest and an artifact that disagree about which programmes exist is drift, not a detail.
   const manifestGamma = join(R, "manifest-gamma.json");
   const mf = readJson(manifest);
