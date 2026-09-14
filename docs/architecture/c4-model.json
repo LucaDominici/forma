@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-09-13T23:56:09.774Z",
+  "generatedAt": "2026-09-14T01:07:41.347Z",
   "source": {
     "repo": "forma",
-    "commit": "28074cd4ae5d3ea0c16db59bacb96f26ff246e99",
-    "branch": "task/explorer-visual-fixes",
+    "commit": "3c6f6b1688c821c9f1f95cd755c6f2cb53207e83",
+    "branch": "task/s4-one-cpm",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -245,7 +245,7 @@
         {
           "type": "glob",
           "ref": "lib",
-          "count": 25
+          "count": 26
         }
       ],
       "category": "container",
@@ -580,6 +580,25 @@
       "status2": "unknown",
       "target": "",
       "func": "render.mjs — pure, side-effect-free renderers for the arc42 projection. Shared by forma doc (writer) and forma check (attach-mode freshness gate) so both render the governed block identically. NO writeFileSync / console / process at module ",
+      "descSource": "docstring"
+    },
+    {
+      "id": "lib__repofiles_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "repofiles",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/repofiles.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "repofiles.mjs — git ls-files, read once per repo per process (#133 S4). docmap.mjs, roomdocs.mjs and rtm.mjs each shelled out to git independently for the same answer; one forma room compose paid that cost three times over for a file list t",
       "descSource": "docstring"
     },
     {

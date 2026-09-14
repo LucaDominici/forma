@@ -9993,20 +9993,20 @@ const diffPaths = (a, b, at = "") => {
 }
 
 // Production recovery: aliased output paths must collide before any verifier can write, and the
-// package guard must cover the current 41-file runtime surface.
+// package guard must cover the current 42-file runtime surface.
 {
   const target = join(tmp, "allowlist-target.json"), alias = join(tmp, "allowlist-alias.json");
   writeFileSync(target, "{}\n"); symlinkSync(target, alias);
   if (canonicalPath(target) !== canonicalPath(alias)) die("release: canonicalPath missed a symlink alias");
   const guard = spawnSync(process.execPath, [join(HERE, "..", "scripts", "check-clean.mjs")], { encoding: "utf-8" });
-  if (guard.status !== 0 || !/41 reviewed runtime files, clean/.test(guard.stderr || "")) die("release: current 41-file runtime allowlist is not clean", guard);
+  if (guard.status !== 0 || !/42 reviewed runtime files, clean/.test(guard.stderr || "")) die("release: current 42-file runtime allowlist is not clean", guard);
   const packed = spawnSync("npm", ["pack", "--dry-run", "--json"], { cwd: join(HERE, ".."), encoding: "utf-8" });
   const packJson = (packed.stdout || "").slice((packed.stdout || "").indexOf("[\n"));
   let packMeta;
   try { packMeta = JSON.parse(packJson)[0]; } catch { packMeta = null; }
-  if (packed.status !== 0 || !packMeta || packMeta.entryCount !== 41 || !packMeta.files.some(({ path }) => path === "lib/roomupdate.mjs"))
-    die("release: npm pack effective file set is not the reviewed 41-file runtime surface", packed);
-  console.log("  ok production-recovery — symlink aliases canonicalize and the reviewed 41-file runtime allowlist is enforced");
+  if (packed.status !== 0 || !packMeta || packMeta.entryCount !== 42 || !packMeta.files.some(({ path }) => path === "lib/roomupdate.mjs"))
+    die("release: npm pack effective file set is not the reviewed 42-file runtime surface", packed);
+  console.log("  ok production-recovery — symlink aliases canonicalize and the reviewed 42-file runtime allowlist is enforced");
 }
 
 // F2 unit pin: `codepointCompare` must order true Unicode SCALAR values, not UTF-16 code units.
