@@ -10405,12 +10405,12 @@ const diffPaths = (a, b, at = "") => {
   if (!summary || summary.workPerNode !== null || summary.workPerNodeOpen !== null)
     die("132: workPerNode/workPerNodeOpen must be null (unmeasured) on an unreadable history, got " + JSON.stringify(summary && [summary.workPerNode, summary.workPerNodeOpen]));
 
-  const row = portfolio.blocked.find((b) => b.item.program === "p" && b.item.n === 1);
+  const row = portfolio.blocked.find((b) => b.program === "p" && b.n === 1);
   if (!row) die("132: expected issue #1 to be reported as blocked");
-  if (row.item.nodes !== null)
-    die("132: a blocked item's nodes must be null (unmeasured), not [] or a measured list, got " + JSON.stringify(row.item.nodes));
-  if (row.item.landingMeasured !== false)
-    die("132: a blocked item must say its landing is unmeasured on an unreadable history, got " + JSON.stringify(row.item.landingMeasured));
+  if (row.nodes !== null)
+    die("132: a blocked item's nodes must be null (unmeasured), not [] or a measured list, got " + JSON.stringify(row.nodes));
+  if (row.landingMeasured !== false)
+    die("132: a blocked item must say its landing is unmeasured on an unreadable history, got " + JSON.stringify(row.landingMeasured));
 
   const landing = portfolio.landing.find((l) => l.program === "p");
   if (!landing || landing.months !== null)

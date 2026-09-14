@@ -688,6 +688,9 @@ function chartHistory(history,program){
 }
 function chartLanding(s,program){
  var found=null,i;for(i=0;i<ROOM.portfolio.landing.length;i++)if(ROOM.portfolio.landing[i].program===s.id)found=ROOM.portfolio.landing[i];
+ // null means the git history behind it is unreadable — unmeasured, not the same "No data" an
+ // empty-but-measured series would show (I6).
+ if(found&&found.months===null)return chart(STR.landingChart,STR.notMeasured,[STR.month,STR.landed,STR.cumulative],[],function(svg,w,h){empty(svg,w,h,STR.notMeasured);});
  var d=found?found.months:[],rows=d.map(function(m){return [m.month,m.landed,m.cumulative];});
  return chart(STR.landingChart,STR.provGit,[STR.month,STR.landed,STR.cumulative],rows,function(svg,w,h){
   if(d.length<2){
@@ -737,6 +740,8 @@ function chartNodes(s,program){
  // (`lib__audit_mjs`). The id is a mechanism; the path is what the reader opens (F4).
  var pathOf={},i,nodes=program.model&&program.model.nodes||[];
  for(i=0;i<nodes.length;i++){var nd=nodes[i],ev=(nd.evidence||[]).filter(function(e){return e.type==="path";})[0];pathOf[nd.id]=ev?ev.ref:nd.name;}
+ // null means the git history behind the link is unreadable — unmeasured, not zero work per node.
+ if(!s.workPerNode)return chart(STR.nodeChart,STR.notMeasured,[STR.node,STR.count],[],function(svg,w,h){empty(svg,w,h,STR.notMeasured);});
  var all=[],k;for(k in s.workPerNode)if(s.workPerNode.hasOwnProperty(k))all.push([k,s.workPerNode[k]]);
  all.sort(function(a,b){return b[1]-a[1]||(a[0]<b[0]?-1:1);});
  // A row of zero-length bars is not information, it is noise that costs the rows that are. The
@@ -758,7 +763,9 @@ function chartNodes(s,program){
 function landingText(n){return n==null?STR.neverLanded:(n===1?STR.lastWorkDay:fmt(STR.lastWorkDays,{n:n}));}
 function blockedRow(b){
  var program=byId(b.program),d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),dl=el("dl","detail"),ev=el("span","chips"),j;
- var land=landingText(b.daysSinceLastLanding);
+ // landingMeasured===false means the git history behind it is unreadable — "never landed" is a
+ // claim about work nobody looked at, not the same gap (I6).
+ var land=b.landingMeasured===false?STR.notMeasured:landingText(b.daysSinceLastLanding);
  if(b.priority)meta.appendChild(el("span","chip",b.priority));
  // ONE source for an issue's verdict on screen: the index the verdict lens publishes, the same one
  // the pill draws from. The portfolio carries its own copy of verdict and why, and it FILTERS stale
@@ -783,7 +790,7 @@ function blockedRow(b){
  for(j=0;j<anchors.length;j++)ev.appendChild(el("span","chip",anchors[j].type+":"+anchors[j].ref));
  if(!ev.childNodes.length)ev.appendChild(el("span","muted",STR.none));
  pair(dl,STR.evidence,ev);
- pair(dl,STR.nodes,chips(b.nodes));pair(dl,STR.labels,chips(b.labels));
+ pair(dl,STR.nodes,b.nodes==null?el("span","muted",STR.notMeasured):chips(b.nodes));pair(dl,STR.labels,chips(b.labels));
  pair(dl,STR.milestone,b.ms||STR.none);
  pair(dl,STR.lastLanding,land+(b.lastLanded?" ("+b.lastLanded+")":""));
  if(program)pair(dl,STR.issue,pill(program,b.n));
@@ -1678,13 +1685,18 @@ function viewArchitecture(view,program,summary){
   for(i=0;i<cps.length;i++){
    var c=cps[i],d=el("details"),s=el("summary","row-head"),meta=el("span","row-meta"),dl=el("dl","detail");
    meta.appendChild(el("span","ref",c.pct==null?STR.notMeasured:c.pct+"%"));
-   meta.appendChild(el("span","muted",c.total?fmt(STR.checkpointIssues,{closed:c.closed,total:c.total}):STR.checkpointNoIssues));
+   // c.total null means the git history behind the link is unreadable — unmeasured, distinct from
+   // the real "0 of 0" a checkpoint no issue reaches reports when the link IS readable (I6).
+   meta.appendChild(el("span","muted",c.total==null?STR.notMeasured:(c.total?fmt(STR.checkpointIssues,{closed:c.closed,total:c.total}):STR.checkpointNoIssues)));
    s.appendChild(el("span","ref",c.id));s.appendChild(meta);s.appendChild(el("span","row-title",c.label));
    d.appendChild(s);
    pair(dl,STR.nodes,chips(c.nodes));
    var lk=el("span","links");
-   for(j=0;j<c.issues.length;j++)lk.appendChild(pill(program,c.issues[j]));
-   if(!c.issues.length)lk.appendChild(el("span","muted",STR.none));
+   if(c.issues==null)lk.appendChild(el("span","muted",STR.notMeasured));
+   else{
+    for(j=0;j<c.issues.length;j++)lk.appendChild(pill(program,c.issues[j]));
+    if(!c.issues.length)lk.appendChild(el("span","muted",STR.none));
+   }
    pair(dl,STR.issues,lk);
    d.appendChild(dl);wrap.appendChild(d);
   }
