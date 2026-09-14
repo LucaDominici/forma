@@ -1065,8 +1065,6 @@ const diffPaths = (a, b, at = "") => {
     "init",
     "--repo",
     REPO,
-    "--topology",
-    testsTopo,
     "--out",
     testsTopo,
     "--force",
