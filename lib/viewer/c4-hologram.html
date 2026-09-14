@@ -13,6 +13,10 @@
  --edge:#2b6e8a; --edgeplan:oklch(49.3% 0.056 233); --elbl:oklch(58.3% 0.081 229); --ddtxt:#7fb3c6; --now:#cfeefb; --tgt:#8fd8ec; --src:#4fbf8d;}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"SF Mono",Menlo,Consolas,ui-monospace,monospace;background:var(--bg);color:var(--nm);overflow-x:hidden}
+/* F9: same skip-link shape as the Control Room (lib/viewer/control-room.html) — off-screen until
+   focused, moves focus to the landmark rather than only scrolling the page there. */
+.skip{position:fixed;left:8px;top:6px;z-index:40;min-height:44px;padding:6px 10px;background:var(--stagebg);border:1px solid var(--cyan);color:var(--nm);transform:translateY(-160%)}
+.skip:focus{transform:none}
 #wrap{padding:14px 18px 26px;min-height:100vh;background:
  radial-gradient(ellipse at 50% -10%,var(--halo),transparent 55%),
  repeating-linear-gradient(0deg,transparent,transparent 39px,var(--grid) 40px),
@@ -48,7 +52,7 @@ select#skin option{background:#08202e;color:var(--nm)}
 #crumb b{color:var(--cyan)}
 #crumb a{color:#8fd8ec;cursor:pointer}
 #crumb a:hover{text-decoration:underline}
-#stamp{font-size:9.5px;color:var(--ter2);margin-bottom:6px}
+#stamp{font-size:12px;color:var(--ter2);margin-bottom:6px}
 #stage{position:relative;width:100%;height:74vh;min-height:520px;border:1px solid var(--stageborder);border-radius:12px;background:var(--stagebg);overflow:hidden}
 svg{width:100%;height:100%;display:block}
 #maptable{margin-top:12px;border:1px solid var(--stageborder);border-radius:10px;overflow:auto;background:var(--stagebg)}
@@ -155,7 +159,7 @@ svg.dense .edge.hot{opacity:1;stroke-width:2.6}
 }
 #etip{position:absolute;pointer-events:none;display:none;z-index:6;background:var(--detailbg);border:1px solid var(--border);
  color:var(--nm);font-size:10px;letter-spacing:.03em;padding:3px 8px;border-radius:5px;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,.45)}
-#legend{display:flex;gap:13px;font-size:9.5px;color:var(--sec);margin:10px 0 0;flex-wrap:wrap}
+#legend{display:flex;gap:13px;font-size:12px;color:var(--sec);margin:10px 0 0;flex-wrap:wrap}
 #legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;box-sizing:border-box}
 .hint{color:var(--ter2)}
 #detail{margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:13px;background:var(--detailbg);display:none}
@@ -182,6 +186,7 @@ svg.dense .edge.hot{opacity:1;stroke-width:2.6}
  background:transparent;border:1px solid var(--border);color:var(--nm)}
 #detail .roster{max-height:44vh;overflow-y:auto;border-top:1px solid var(--border)}
 #detail .roster:focus{outline:2px solid var(--cyan);outline-offset:2px}
+#detail:focus{outline:2px solid var(--cyan);outline-offset:2px}
 #detail .ritem{padding:7px 2px 7px 4px;border-bottom:1px solid rgba(30,74,94,.4);display:block}
 #detail .ritem .rn{color:var(--nm);font-size:11px;font-weight:700}
 #detail .ritem .rp{float:right;color:var(--sec);font-size:9px;letter-spacing:.08em}
@@ -225,9 +230,20 @@ html[data-skin^="blueprint"] .nd.pulse rect{animation:none}
 html[data-skin^="blueprint"] button.on{text-shadow:none}
 html[data-skin^="blueprint"] .nd.delta rect,html[data-skin^="blueprint"] .edge.delta{filter:none}
 @media(max-width:600px){#stage{overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}}
+/* F4: D-07 keeps the map at a readable natural size on mobile rather than shrinking it to fit —
+   #stage already panned (overflow:auto above), but a thin dark-on-dark scrollbar and no hint left
+   that pan undiscoverable, so a box past the fold read as "cut off" rather than "scroll for more".
+   Make the pan itself visible instead of changing the zoom the ratified decision fixed. */
+#stage::-webkit-scrollbar{height:10px;width:10px}
+#stage::-webkit-scrollbar-thumb{background:var(--cyan);border-radius:5px}
+#stage::-webkit-scrollbar-track{background:var(--stagebg)}
+#stage{scrollbar-width:thin;scrollbar-color:var(--cyan) var(--stagebg)}
+#panhint{font-size:12px;color:var(--sec);margin:6px 0 0}
+#panhint[hidden]{display:none}
 </style>
 </head>
 <body>
+<button class="skip" id="skip" type="button"></button>
 <div id="wrap">
  <div class="top">
   <div><h1 id="title">Forma · C4 Hologram</h1>
@@ -256,9 +272,11 @@ html[data-skin^="blueprint"] .nd.delta rect,html[data-skin^="blueprint"] .edge.d
   <div id="timeline-track"></div>
   <div id="checkpoint-summary"></div>
  </nav>
+ <main id="content" tabindex="-1">
  <div id="crumb"></div>
  <div id="stamp"></div>
  <div id="stage"><div id="etip"></div><div id="err" style="display:none"></div></div>
+ <div id="panhint" class="hint" hidden></div>
  <div id="maptable" hidden></div>
  <div id="legend">
   <span><i style="background:#2fe08a"></i><span id="lg-done"></span></span>
@@ -274,7 +292,8 @@ html[data-skin^="blueprint"] .nd.delta rect,html[data-skin^="blueprint"] .edge.d
   <span id="lg-checkpoint-wrap" style="display:none"><i style="border:1.5px solid #3ee7ff"></i><span id="lg-checkpoint"></span></span>
   <span class="hint" id="lg-hint"></span>
  </div>
- <div id="detail"></div>
+ <div id="detail" tabindex="-1"></div>
+ </main>
 </div>
 <script>
 (function(){
@@ -302,7 +321,8 @@ var STRINGS={
   detNotes:"Notable details", detRefs:"References", detWhere:"Where it runs",
   detTarget:"TARGET",
   rosterSearch:"filter…", rosterCount:"members", rosterEmpty:"no match", aggProgress:"progress",
-  stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology", stampProjection:"projection:", staticSrc:"(static source)",
+  skip:"Skip to map", panHint:"⇆ this map is wider than the screen — scroll to see the rest",
+  stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology", stampProjection:"projection:", staticSrc:"(static source)", stampVersion:"version:",
   errEmpty:"Model unreachable or empty.",
   errNotFound:"Model not found (./c4-model.json). Open via `forma serve` or inject window.__C4_MODEL__.",
   errUnavail:"Model unavailable.", errTimeline:"Invalid architecture timeline."
@@ -328,7 +348,8 @@ var STRINGS={
   detNotes:"Dettagli notevoli", detRefs:"Riferimenti", detWhere:"Dove gira",
   detTarget:"TARGET",
   rosterSearch:"filtra…", rosterCount:"elementi", rosterEmpty:"nessun risultato", aggProgress:"avanzamento",
-  stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology", stampProjection:"proiezione:", staticSrc:"(fonte statica)",
+  skip:"Vai alla mappa", panHint:"⇆ la mappa è più larga dello schermo — scorri per vedere il resto",
+  stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology", stampProjection:"proiezione:", staticSrc:"(fonte statica)", stampVersion:"versione:",
   errEmpty:"Modello non raggiungibile o vuoto.",
   errNotFound:"Modello non trovato (./c4-model.json). Apri via `forma serve` o inietta window.__C4_MODEL__.",
   errUnavail:"Modello non disponibile.", errTimeline:"Timeline architetturale non valida."
@@ -733,6 +754,9 @@ function draw(animate){
  var liveSvg=st2.querySelector("svg");
  if(liveSvg&&window.matchMedia&&window.matchMedia("(max-width:600px)").matches){liveSvg.style.width=Math.ceil(vw)+"px";liveSvg.style.height=Math.ceil(vh)+"px";}
  st2.classList.toggle("anim",animate!==false);
+ // F4: the readable-scale map pans instead of shrinking (D-07); say so when there is
+ // something to pan to, instead of leaving a box past the fold looking simply cut off.
+ updatePanHint();
  // breadcrumb
  var chain=[],c=pid;while(c){var nn=node(c);chain.unshift(nn);c=nn?nn.parent:null;}
  var lvlKey=pid?(kids[0]&&kids[0].level):"context",levels=M.levels||[],li=levels.indexOf(lvlKey),ki;
@@ -748,11 +772,15 @@ function draw(animate){
  // `childrenOf` is doing here. See tallyOf.
  var T=tallyOf(realKids,childrenOf);
  if(T.tot){
-  var DOT={done:"#2fe08a",prog:"#ffc74d",next:"#3ee7ff",plan:"#2d5a72",prob:"#ff5d5d",unk:"#7d8f99"},ord=["done","prog","next","plan","prob","unk"],agg="";
-  for(j=0;j<ord.length;j++)if(T.cnt[ord[j]])agg+='<i style="background:'+DOT[ord[j]]+'"></i>'+T.cnt[ord[j]];
+  var DOT={done:"#2fe08a",prog:"#ffc74d",next:"#3ee7ff",plan:"#2d5a72",prob:"#ff5d5d",unk:"#7d8f99"},ord=["done","prog","next","plan","prob","unk"],
+   DOTLABEL={done:STR.legDone,prog:STR.legProg,next:STR.legNext,plan:STR.legPlan,prob:STR.legProb,unk:STR.legUnk},agg="",aggLabel=[];
+  for(j=0;j<ord.length;j++)if(T.cnt[ord[j]]){agg+='<i style="background:'+DOT[ord[j]]+'" title="'+esc(DOTLABEL[ord[j]])+'"></i>'+T.cnt[ord[j]];aggLabel.push(T.cnt[ord[j]]+" "+DOTLABEL[ord[j]]);}
   // The coverage rides WITH the percentage, never without it. See tallyOf.
   if(T.ruled)agg+=' &nbsp;'+(T.mean!=null?esc(STR.aggProgress)+' <b>'+T.mean+'%</b> ':'')+T.ruled+'/'+T.tot;
-  cb='<span class="agg">'+agg+'</span>'+cb;
+  // A plain <span> has an implicit "generic" role, which axe's aria-prohibited-attr rule refuses
+  // a name on — generic has no name-from-author support. role="img" is the smallest semantic role
+  // that DOES support aria-label for a summary that is genuinely a picture-in-text (colour dots).
+  cb='<span class="agg" role="img" aria-label="'+esc(aggLabel.join(", "))+'">'+agg+'</span>'+cb;
  }
  if(BASE&&BASE.timeline){var cpLabel=CPID==="as-is"?STR.asIs:CPID;for(j=0;j<TSTATES.length;j++)if(TSTATES[j].id===CPID)cpLabel=TSTATES[j].label;
   cb='<b>'+esc(cpLabel)+'</b> &nbsp;·&nbsp; '+cb;}
@@ -840,13 +868,22 @@ function levelName(l){return (STR.lvlNames&&STR.lvlNames[l])||l||"—";}
 function evidencePath(n){var ev=(n&&n.evidence)||[];for(var i=0;i<ev.length;i++)if(ev[i]&&ev[i].type==="path"&&ev[i].ref)return ev[i].ref;return STR.unknown;}
 function mapEndpoint(id){var n=CATNODES[id]||node(id);return n?n.name+" ("+id+")":id;}
 function mapStatus(n){var roll=(n.__catalog||mode==="target")?null:rollStatus(n,childrenOf),status=(roll?roll.status2:(n.status2||n.status||STR.unknown)),badge=n.__catalog?String(n.count):(mode==="target"?STR.detTarget:badgeOf(n,roll));return status+" · "+badge;}
+// F5: a curated context level (people, systems, external boxes) carries no file evidence at all —
+// that is by design (docmap.mjs), not a gap to fill — so a column that is Unknown on every row is
+// noise, not information, and is dropped rather than printed as a wall of "Unknown".
+function hasEvidenceCol(nodes){var i;for(i=0;i<nodes.length;i++)if(evidencePath(nodes[i])!==STR.unknown)return true;return false;}
 function renderMapTable(nodes,edges){
- var out='<table><caption>'+esc(STR.mapTable+' · '+STR.mapNodes)+'</caption><thead><tr><th scope="col">'+esc(STR.node)+'</th><th scope="col">'+esc(STR.category)+'</th><th scope="col">'+esc(STR.status)+'</th><th scope="col">'+esc(STR.evidencePath)+'</th></tr></thead><tbody>',i,n,e;
- for(i=0;i<nodes.length;i++){n=nodes[i];out+='<tr><td>'+esc(n.name)+'</td><td>'+esc(n.category||n.kind||STR.unknown)+'</td><td>'+esc(mapStatus(n))+'</td><td>'+esc(evidencePath(n))+'</td></tr>';}
+ var evCol=hasEvidenceCol(nodes);
+ var out='<table><caption>'+esc(STR.mapTable+' · '+STR.mapNodes)+'</caption><thead><tr><th scope="col">'+esc(STR.node)+'</th><th scope="col">'+esc(STR.category)+'</th><th scope="col">'+esc(STR.status)+'</th>'+(evCol?'<th scope="col">'+esc(STR.evidencePath)+'</th>':'')+'</tr></thead><tbody>',i,n,e;
+ for(i=0;i<nodes.length;i++){n=nodes[i];out+='<tr><td>'+esc(n.name)+'</td><td>'+esc(n.category||n.kind||STR.unknown)+'</td><td>'+esc(mapStatus(n))+'</td>'+(evCol?'<td>'+esc(evidencePath(n))+'</td>':'')+'</tr>';}
  out+='</tbody></table><table><caption>'+esc(STR.mapRelationships)+'</caption><thead><tr><th scope="col">'+esc(STR.from)+'</th><th scope="col">'+esc(STR.to)+'</th><th scope="col">'+esc(STR.relationship)+'</th></tr></thead><tbody>';
  for(i=0;i<edges.length;i++){e=edges[i];out+='<tr><td>'+esc(mapEndpoint(e.from))+'</td><td>'+esc(mapEndpoint(e.to))+'</td><td>'+esc(e.label||STR.unknown)+'</td></tr>';}
  $("maptable").innerHTML=out+'</tbody></table>';
 }
+// F4 follow-up (Codex round 1): a window/container resize without a redraw (rotating a device,
+// resizing a desktop window without crossing the 600px breakpoint) left #panhint showing its last
+// verdict instead of the current one. Recomputed on demand from draw() AND on any #stage resize.
+function updatePanHint(){var st2=$("stage"),ph=$("panhint");if(st2&&ph)ph.hidden=st2.scrollWidth<=st2.clientWidth+1;}
 function cssv(v){try{return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||"#2b6e8a";}catch(e){return "#2b6e8a";}}
 function detailState(n,timeline){
  // Function prose says what a box is. It is not also a checkpoint state: unchanged timeline nodes
@@ -854,8 +891,26 @@ function detailState(n,timeline){
  return timeline?(n.current||""):(n.current||n.func||n.description||"");
 }
 
+// F10: opening the detail panel used to leave it wherever the layout put it — often below the
+// fold on a tall level — so a click that opened it looked like it did nothing. Scroll it into view
+// and move focus there, the same way drillTo() already moves focus for the deeper level.
+// Codex round 1 (LOW): a reader who asked their OS to stop motion still got an animated scroll —
+// the same WCAG 2.2.2 principle already honoured for the SVG's own entrance animation (see the
+// prefers-reduced-motion media query above) extends to this one, the only other motion the viewer
+// introduces on its own.
+function reducedMotion(){try{return window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;}catch(e){return false;}}
+var lastInvoker=null;
+function focusDetail(){var d=$("detail");if(!d)return;d.scrollIntoView({block:"nearest",behavior:reducedMotion()?"auto":"smooth"});d.focus();}
+// Codex round 1: closing the detail panel used to drop focus to <body>, losing the reader's place
+// in the map. Return it to whatever was focused when the panel opened (the node, or `[+] DRILL`),
+// falling back to the `<main>` landmark if that element is gone (e.g. a redraw replaced it).
+function closeDetail(){$("detail").style.display="none";
+ if(lastInvoker&&document.contains(lastInvoker)&&typeof lastInvoker.focus==="function")lastInvoker.focus();
+ else{var c=$("content");if(c)c.focus();}
+}
 function showDetail(n){
  if(n&&n.__catalog)return showRoster(n);
+ lastInvoker=document.activeElement;
  var timeline=!!(BASE&&BASE.timeline),src=srcOf(n),cur=detailState(n,timeline),showSrc=src&&String(cur).indexOf(src)<0;
  var change=timeline?nodeChange(n.id):null;
  $("detail").innerHTML='<button type="button" class="cl" id="dc">'+esc(STR.detClose)+'</button><h3>'+esc(n.name)+' <span class="cat">· '+esc(n.category||n.kind||"")+(n.tech?" · "+esc(n.tech):"")+'</span></h3>'
@@ -881,19 +936,22 @@ function showDetail(n){
   +((n.meta&&Array.isArray(n.meta.refs)&&n.meta.refs.length)?'<div class="row"><span class="lbl">'+esc(STR.detRefs)+'</span><span class="src">'+n.meta.refs.map(function(r){var label=esc(String((r&&r.label)||(r&&r.url)||r));return (r&&r.url&&/^https:\/\//.test(String(r.url)))?'<a href="'+esc(String(r.url))+'" target="_blank" rel="noopener noreferrer">'+label+'</a>':label;}).join(" · ")+'</span></div>':'')
   +(hasKids(n.id)?'<button type="button" class="detaildrill" id="ddrill">'+esc(STR.detDrill)+'</button>':'');
  $("detail").style.display="block";
- var dc=$("dc");if(dc)dc.addEventListener("click",function(){$("detail").style.display="none";});
+ focusDetail();
+ var dc=$("dc");if(dc)dc.addEventListener("click",closeDetail);
  var dd=$("ddrill");if(dd)dd.addEventListener("click",function(){drillTo(n.id,true);});
 }
 // FEATURE #4: LIST detail variant — searchable roster of a collapsed catalogue's members.
 // Each row keeps the per-leaf name + func/current description (the payoff must survive).
 function showRoster(cat){
+ lastInvoker=document.activeElement;
  var members=cat.members||[];
  var head='<button type="button" class="cl" id="dc">'+esc(STR.detClose)+'</button>'
   +'<h3>'+esc(cat.name)+' <span class="cat">· '+esc(cat.count+" "+STR.rosterCount)+'</span></h3>'
   +'<input class="rostersearch" id="rsq" type="text" placeholder="'+esc(STR.rosterSearch)+'" autocomplete="off">'
   +'<div class="roster" id="rlist" tabindex="0" role="list" aria-label="'+esc(cat.name+' · '+cat.count+' '+STR.rosterCount)+'"></div>';
  $("detail").innerHTML=head;$("detail").style.display="block";
- var dc=$("dc");if(dc)dc.addEventListener("click",function(){$("detail").style.display="none";});
+ focusDetail();
+ var dc=$("dc");if(dc)dc.addEventListener("click",closeDetail);
  function rowHtml(m){
   var d=m.current||m.func||"";
   var pct=m.completion!=null?(m.completion+"%"):(m.statusWord||"");
@@ -917,13 +975,29 @@ function svgPt(evt){var svg=$("stage").querySelector("svg");if(!svg||!svg.getScr
  var p=svg.createSVGPoint();p.x=evt.clientX;p.y=evt.clientY;try{return p.matrixTransform(svg.getScreenCTM().inverse());}catch(e){return null;}}
 function curPos(){return POS[keyOf()]?POS[keyOf()].pos:null;}
 function clamp(v,lo,hi){return v<lo?lo:v>hi?hi:v;}
-function drillTo(id,focusFirst){if(!hasKids(id))return;$("detail").style.display="none";stack.push(id);draw(true);
+// F14: a container whose only child is one dead-end leaf (no component layer, that leaf has no
+// children of its own) used to jump the level straight to "LEAVES" for a screen holding one box —
+// a level change that showed no more than the detail panel already would. Explain instead of
+// jumping: open that leaf's own detail rather than navigating to a one-box level.
+// Codex round 1: an empty CONTAINER (no leaves yet, e.g. a freshly scaffolded package) is not a
+// dead end the same way a real leaf is — it is a level that legitimately has zero children today
+// and may grow them; jumping past it into its own detail would hide that it is still a container.
+// Only a true `leaf` node with no children of its own counts as the explain-instead-of-drill case.
+function singleDeadEndChild(id){var kids=childrenOf(id);return (kids.length===1&&kids[0].level==="leaf"&&!hasKids(kids[0].id))?kids[0]:null;}
+function drillTo(id,focusFirst){if(!hasKids(id))return;
+ var only=singleDeadEndChild(id);
+ if(only){$("detail").style.display="none";showDetail(only);return;}
+ $("detail").style.display="none";stack.push(id);draw(true);
  if(focusFirst)setTimeout(function(){var first=$("stage").querySelector(".nd[tabindex]");if(first)first.focus();},0);}
 
 function wire(){
  var stage=$("stage");
  // Reapply readable SVG dimensions when crossing the mobile breakpoint, not on every pixel resize.
  window.matchMedia("(max-width:600px)").addEventListener("change",function(){draw(false);});
+ // A resize that does not cross that breakpoint (or a container resize inside an embed) still
+ // changes whether the map overflows; panhint must track it independently of draw().
+ if(typeof ResizeObserver!=="undefined")new ResizeObserver(updatePanHint).observe(stage);
+ else window.addEventListener("resize",updatePanHint);
  stage.addEventListener("mousedown",function(ev){
   if(ev.target.getAttribute&&ev.target.getAttribute("data-drill"))return; // [+] is a click→drill, not a drag grip
   var g=ev.target;while(g&&g!==stage&&!(g.getAttribute&&g.getAttribute("data-id")))g=g.parentNode;
@@ -983,6 +1057,7 @@ function wire(){
  });
  $("crumb").addEventListener("click",function(ev){if(ev.target.tagName==="A"){var d=+ev.target.getAttribute("data-d");
   stack=stack.slice(0,d+2);if(!stack.length)stack=[null];draw(true);}});
+ var skipBtn=$("skip");if(skipBtn)skipBtn.addEventListener("click",function(){$("content").focus();});
  $("back").addEventListener("click",function(){if(stack.length>1){stack.pop();draw(true);}});
  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&stack.length>1){stack.pop();draw(true);}});
  $("bnow").addEventListener("click",function(){mode="now";$("bnow").className="on";$("btgt").className="";draw(false);});
@@ -1007,6 +1082,7 @@ function wire(){
 // ---- i18n: apply every static UI string from STR ----
 function applyStrings(){
  function set(id,txt){var e=$(id);if(e)e.textContent=txt;}
+ set("skip",STR.skip);set("panhint",STR.panHint);
  set("subhelp",STR.subhelp);set("back",STR.back);set("bnow",STR.now);set("btgt",STR.tgt);
  set("brf",STR.reverify);set("brl",STR.resetLayout);var brl=$("brl");if(brl)brl.title=STR.resetLayoutTitle;
  set("blbl",STR.labels);var bl=$("blbl");if(bl)bl.title=STR.labelsTitle;
@@ -1127,10 +1203,15 @@ function moveTip(ev){var st=$("stage").getBoundingClientRect(),t=$("etip");
  var x=ev.clientX-st.left+12,y=ev.clientY-st.top+12;
  t.style.left=Math.min(x,st.width-t.offsetWidth-6)+"px";t.style.top=Math.min(y,st.height-t.offsetHeight-6)+"px";}
 
+// F5 (2026-09-14): the header showed a fact-base date but never the version of what it describes,
+// so a stale model looked as current as a fresh one. Not every model carries one — only the system
+// node's curated statusWord does — so this stays silent rather than inventing a number.
+function systemVersion(model){var ns=(model&&model.nodes)||[],i;for(i=0;i<ns.length;i++)if(ns[i].kind==="system"&&ns[i].statusWord)return ns[i].statusWord;return null;}
 // Fact-base line. `suffix` marks a RE-VERIFY that could not re-read the model (injected/offline).
 function stamp(suffix){
- var m=(M&&M.meta)||{};
+ var m=(M&&M.meta)||{},ver=systemVersion(M);
  $("stamp").textContent=STR.stampBase+" "+(m.verifiedAt||(M&&M.generatedAt)||(M&&M.source&&M.source.commit)||"—")
+  +(ver?" · "+STR.stampVersion+" "+ver:"")
   +" · "+STR.stampMethod+" "+(m.verifyMethod||STR.stampVerify)
   +(BASE&&BASE.timeline?" · "+STR.stampProjection+" "+BASE.timeline.source:"")+(suffix?" "+suffix:"");
 }

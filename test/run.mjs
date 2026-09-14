@@ -2858,6 +2858,188 @@ const diffPaths = (a, b, at = "") => {
   );
 }
 
+// F5 (2026-09-14 visual verification): the header must surface the model's own version when it
+// carries one, and the map's text table must not print an "Unknown" evidence column when every
+// context-level row is, by design, evidence-free (docmap.mjs — curated boxes carry no file path).
+{
+  const html = readFileSync(
+    join(HERE, "..", "lib", "viewer", "c4-hologram.html"),
+    "utf-8",
+  );
+  const versionSrc = (
+    html.match(/\nfunction systemVersion\(model\)\{[\s\S]*?\n\}/) || []
+  )[0];
+  if (!versionSrc) die("F5: systemVersion(model) was not found in the viewer");
+  const systemVersion = new Function(versionSrc + "; return systemVersion")();
+  if (systemVersion({ nodes: [{ kind: "system", statusWord: "v1.2.0" }] }) !== "v1.2.0")
+    die("F5: systemVersion did not read a curated system node's statusWord");
+  if (systemVersion({ nodes: [{ kind: "person", statusWord: "v1.2.0" }] }) !== null)
+    die("F5: systemVersion must not borrow a version from a non-system node");
+  if (systemVersion({ nodes: [] }) !== null)
+    die("F5: systemVersion must stay silent rather than invent a version");
+  if (!/STR\.stampVersion/.test(html))
+    die("F5: the fact-base stamp never reads the version string");
+
+  // hasEvidenceCol calls evidencePath, so extract the file region spanning both definitions.
+  const region = (html.match(/\nfunction evidencePath[\s\S]*?function hasEvidenceCol\(nodes\)\{[\s\S]*?\n\}/) || [])[0];
+  if (!region) die("F5: hasEvidenceCol(nodes) was not found in the viewer");
+  const built = new Function(
+    'var STR={unknown:"Unknown"};' + region + "; return {evidencePath:evidencePath,hasEvidenceCol:hasEvidenceCol}",
+  )();
+  const noEvidence = [{ id: "forma" }, { id: "dev" }];
+  const withEvidence = [{ id: "leaf", evidence: [{ type: "path", ref: "lib/x.mjs" }] }];
+  if (built.hasEvidenceCol(noEvidence))
+    die("F5: an all-Unknown evidence column must be hidden");
+  if (!built.hasEvidenceCol(withEvidence))
+    die("F5: a real evidence path must not be hidden");
+  console.log(
+    "  ok f5-header-table — the stamp surfaces a curated version and the map table drops an all-Unknown evidence column",
+  );
+}
+
+// F9 (2026-09-14 visual verification): a skip link and a `<main>` landmark, same shape as the
+// Control Room's own (lib/viewer/control-room.html: `.skip` button + `<main id="content">`).
+{
+  const html = readFileSync(
+    join(HERE, "..", "lib", "viewer", "c4-hologram.html"),
+    "utf-8",
+  );
+  if (!/<main id="content" tabindex="-1">/.test(html))
+    die("F9: no `<main>` landmark around the explorer's content");
+  if (!/<button class="skip" id="skip" type="button">/.test(html))
+    die("F9: no skip-link button");
+  if (!/skipBtn\.addEventListener\("click",function\(\)\{\$\("content"\)\.focus\(\);\}\)/.test(html))
+    die("F9: the skip link does not move focus to the `<main>` landmark");
+  console.log("  ok f9-landmarks — skip link moves focus into a `<main>` landmark");
+}
+
+// F10 (2026-09-14 visual verification): opening a node's detail must scroll it into view and move
+// focus there, not merely toggle `display` on a panel the layout left below the fold.
+{
+  const html = readFileSync(
+    join(HERE, "..", "lib", "viewer", "c4-hologram.html"),
+    "utf-8",
+  );
+  if (!/<div id="detail" tabindex="-1">/.test(html))
+    die("F10: #detail is not a focus target (no tabindex)");
+  const focusDetailSrc = (
+    html.match(/\nfunction focusDetail\(\)\{[\s\S]*?\n\}/) || []
+  )[0];
+  if (!focusDetailSrc || !/scrollIntoView/.test(focusDetailSrc) || !/\.focus\(\)/.test(focusDetailSrc))
+    die("F10: focusDetail() does not scroll the panel into view and focus it");
+  const showDetailBody = (html.match(/\nfunction showDetail\(n\)\{[\s\S]*?\n\}\n/) || [])[0];
+  const showRosterBody = (html.match(/\nfunction showRoster\(cat\)\{[\s\S]*?\n\}\n/) || [])[0];
+  if (!showDetailBody || !/focusDetail\(\)/.test(showDetailBody))
+    die("F10: showDetail() never calls focusDetail()");
+  if (!showRosterBody || !/focusDetail\(\)/.test(showRosterBody))
+    die("F10: showRoster() never calls focusDetail()");
+  console.log("  ok f10-detail-focus — opening a node's detail scrolls it into view and focuses it");
+}
+
+// F14 (2026-09-14 visual verification): a container whose only child is a single dead-end leaf (no
+// component layer, no children of its own) must not drill into a one-box "LEAVES" level — that
+// screen tells the reader nothing the detail panel doesn't already say. Show the detail instead.
+{
+  const html = readFileSync(
+    join(HERE, "..", "lib", "viewer", "c4-hologram.html"),
+    "utf-8",
+  );
+  const childrenOfSrc = (html.match(/\nfunction childrenOf\(pid\)\{[\s\S]*?\n\}/) || [])[0];
+  const hasKidsSrc = (html.match(/\nfunction hasKids\(id\)\{[\s\S]*?\n\}/) || [])[0];
+  const singleDeadEndSrc = (html.match(/\nfunction singleDeadEndChild\(id\)\{[\s\S]*?\n\}/) || [])[0];
+  if (!childrenOfSrc || !hasKidsSrc || !singleDeadEndSrc)
+    die("F14: childrenOf/hasKids/singleDeadEndChild were not all found in the viewer");
+  const region = childrenOfSrc + "\n" + hasKidsSrc + "\n" + singleDeadEndSrc;
+  const M = {
+    nodes: [
+      { id: "forma" },
+      { id: "cli", parent: "forma" },
+      { id: "cli-leaf", parent: "cli", level: "leaf" },
+      { id: "lib", parent: "forma" },
+      { id: "leaf1", parent: "lib", level: "leaf" },
+      { id: "leaf2", parent: "lib", level: "leaf" },
+      // Codex round 1: an empty CONTAINER is not a dead-end leaf — it may grow real children
+      // later, and treating it as one would hide that it is still a container level.
+      { id: "empty-pkg", parent: "forma" },
+      { id: "empty-pkg-child", parent: "empty-pkg", level: "container" },
+    ],
+  };
+  const withM = new Function(
+    "M=arguments[0];" + region + "; return {singleDeadEndChild:singleDeadEndChild}",
+  )(M);
+  if (!withM.singleDeadEndChild("cli") || withM.singleDeadEndChild("cli").id !== "cli-leaf")
+    die("F14: a container with one dead-end leaf child was not recognised");
+  if (withM.singleDeadEndChild("lib"))
+    die("F14: a container with two children must not be treated as a single dead end");
+  if (withM.singleDeadEndChild("empty-pkg"))
+    die("F14: a single NON-LEAF child (e.g. an empty container) must not be treated as a dead end");
+  if (!/if\(only\)\{\$\("detail"\)\.style\.display="none";showDetail\(only\);return;\}/.test(html))
+    die("F14: drillTo() does not open the single dead-end leaf's detail instead of navigating");
+  console.log("  ok f14-single-leaf — a single dead-end leaf opens its detail instead of a one-box level");
+}
+
+// F4 (2026-09-14 visual verification): D-07 keeps the mobile map at readable natural size rather
+// than shrinking to fit (pinned by room-c4-drill above), so a box past the fold is reachable by
+// pan, not gone — but nothing told the reader that. #panhint must exist, carry real copy in both
+// locales, and be driven by actual overflow rather than always shown.
+{
+  const html = readFileSync(
+    join(HERE, "..", "lib", "viewer", "c4-hologram.html"),
+    "utf-8",
+  );
+  if (!/<div id="panhint" class="hint" hidden><\/div>/.test(html))
+    die("F4: #panhint was not found (starts hidden)");
+  if (!/ph\.hidden=st2\.scrollWidth<=st2\.clientWidth\+1/.test(html))
+    die("F4: panhint visibility is not driven by actual horizontal overflow");
+  const lit = (html.match(/\nvar STRINGS=\{[\s\S]*?\n\};/) || [])[0];
+  const S = new Function(lit.replace(/;$/, "") + "; return STRINGS")();
+  if (!S.en.panHint || !S.it.panHint)
+    die("F4: panHint copy missing from one locale");
+  console.log("  ok f4-pan-hint — mobile pan affordance follows real overflow, both locales carry copy");
+}
+
+// Codex round 1 findings on the explorer slice, all fixed in one pass:
+// (1) panhint must recompute on ANY #stage resize, not only inside draw().
+// (2) the status-tally span needs a naming-capable role for its aria-label (axe: aria-prohibited-attr).
+// (3) already covered above — a single NON-leaf child must not count as a dead end.
+// (4) closing the detail panel must return focus to whatever invoked it.
+// (5) opening the detail panel must not animate the scroll under prefers-reduced-motion.
+{
+  const html = readFileSync(
+    join(HERE, "..", "lib", "viewer", "c4-hologram.html"),
+    "utf-8",
+  );
+  // (1) resize-driven recompute, independent of draw()
+  if (!/new ResizeObserver\(updatePanHint\)\.observe\(stage\)/.test(html))
+    die("Codex#1: no ResizeObserver recomputes panhint on a #stage resize");
+  if (!/function updatePanHint\(\)\{var st2=\$\("stage"\),ph=\$\("panhint"\);if\(st2&&ph\)ph\.hidden=st2\.scrollWidth<=st2\.clientWidth\+1;\}/.test(html))
+    die("Codex#1: updatePanHint() was not extracted as its own reusable function");
+  // (2) role="img" makes the aria-label on <span class="agg"> name-capable
+  if (!/<span class="agg" role="img" aria-label="/.test(html))
+    die('Codex#2: the tally span has an aria-label but no role that supports a name (axe: aria-prohibited-attr)');
+  // (4) focus returns to the invoker on close
+  const closeDetailSrc = (html.match(/\nfunction closeDetail\(\)\{[\s\S]*?\n\}/) || [])[0];
+  if (!closeDetailSrc) die("Codex#4: closeDetail() was not found");
+  if (!/lastInvoker\.focus\(\)/.test(closeDetailSrc))
+    die("Codex#4: closeDetail() does not restore focus to the invoking element");
+  if (!/dc\.addEventListener\("click",closeDetail\)/.test(html))
+    die("Codex#4: the [x] close button in showDetail/showRoster is not wired to closeDetail");
+  const showDetailBody2 = (html.match(/\nfunction showDetail\(n\)\{[\s\S]*?\n\}\n/) || [])[0];
+  const showRosterBody2 = (html.match(/\nfunction showRoster\(cat\)\{[\s\S]*?\n\}\n/) || [])[0];
+  if (!showDetailBody2 || !/lastInvoker=document\.activeElement/.test(showDetailBody2))
+    die("Codex#4: showDetail() never records the invoking element before opening");
+  if (!showRosterBody2 || !/lastInvoker=document\.activeElement/.test(showRosterBody2))
+    die("Codex#4: showRoster() never records the invoking element before opening");
+  // (5) reduced motion => instant scroll
+  const focusDetailSrc2 = (html.match(/\nfunction focusDetail\(\)\{[\s\S]*?\n\}/) || [])[0];
+  if (!focusDetailSrc2 || !/reducedMotion\(\)\?"auto":"smooth"/.test(focusDetailSrc2))
+    die("Codex#5: focusDetail() always scrolls smoothly, ignoring prefers-reduced-motion");
+  const reducedMotionSrc = (html.match(/\nfunction reducedMotion\(\)\{[\s\S]*?\n\}/) || [])[0];
+  if (!reducedMotionSrc || !/prefers-reduced-motion:\s*reduce/.test(reducedMotionSrc))
+    die("Codex#5: reducedMotion() does not query prefers-reduced-motion");
+  console.log("  ok codex-r1-explorer — panhint tracks resize, tally role supports its name, close restores focus, reduced motion is honoured");
+}
+
 // 11) schema contract: `lib/schema/c4-model.schema.json` is the declared contract, so both writers
 // of the model must be held to it. Driven through the CLI on purpose — the assertion is that the
 // COMMANDS reject a non-conforming model, not that some helper returns an array.
@@ -7140,6 +7322,43 @@ const diffPaths = (a, b, at = "") => {
     die("dogfood: README still advertises the retired public Control Room");
   console.log(
     "  ok dogfood — Pages publishes the explorer only; the Control Room stays local",
+  );
+}
+
+// F5 (2026-09-14 visual verification): forma's own self-model must not go stale in the tree —
+// the `forma` node's curated version has to track the published package, and the historical "not
+// built" prose for the Control Room (shipped in #120/#121) may not survive a regen.
+{
+  const pkg = JSON.parse(
+    readFileSync(join(HERE, "..", "package.json"), "utf-8"),
+  );
+  const status = JSON.parse(
+    readFileSync(
+      join(HERE, "..", "docs/architecture/c4-status.json"),
+      "utf-8",
+    ),
+  );
+  const model = JSON.parse(
+    readFileSync(join(HERE, "..", "docs/architecture/c4-model.json"), "utf-8"),
+  );
+  if (status.nodes.forma.statusWord !== "v" + pkg.version)
+    die(
+      `self-model-fresh: c4-status.json claims ${status.nodes.forma.statusWord}, package.json is v${pkg.version}`,
+    );
+  if (/not built/i.test(status.nodes.boards.current))
+    die(
+      "self-model-fresh: the boards node still claims the Control Room is not built (#120/#121 shipped it)",
+    );
+  const formaNode = model.nodes.find((n) => n.id === "forma");
+  if (formaNode.statusWord !== "v" + pkg.version)
+    die(
+      "self-model-fresh: gen did not re-decorate the committed model from the edited status overlay",
+    );
+  let r = run(["check"]);
+  if (r.status !== 0)
+    die("self-model-fresh: forma check must pass on its own regenerated model", r);
+  console.log(
+    "  ok self-model-fresh — forma's self-model version and Control Room status track the shipped package",
   );
 }
 
