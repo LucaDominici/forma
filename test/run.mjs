@@ -2954,10 +2954,14 @@ const diffPaths = (a, b, at = "") => {
     nodes: [
       { id: "forma" },
       { id: "cli", parent: "forma" },
-      { id: "cli-leaf", parent: "cli" },
+      { id: "cli-leaf", parent: "cli", level: "leaf" },
       { id: "lib", parent: "forma" },
-      { id: "leaf1", parent: "lib" },
-      { id: "leaf2", parent: "lib" },
+      { id: "leaf1", parent: "lib", level: "leaf" },
+      { id: "leaf2", parent: "lib", level: "leaf" },
+      // Codex round 1: an empty CONTAINER is not a dead-end leaf — it may grow real children
+      // later, and treating it as one would hide that it is still a container level.
+      { id: "empty-pkg", parent: "forma" },
+      { id: "empty-pkg-child", parent: "empty-pkg", level: "container" },
     ],
   };
   const withM = new Function(
@@ -2967,6 +2971,8 @@ const diffPaths = (a, b, at = "") => {
     die("F14: a container with one dead-end leaf child was not recognised");
   if (withM.singleDeadEndChild("lib"))
     die("F14: a container with two children must not be treated as a single dead end");
+  if (withM.singleDeadEndChild("empty-pkg"))
+    die("F14: a single NON-LEAF child (e.g. an empty container) must not be treated as a dead end");
   if (!/if\(only\)\{\$\("detail"\)\.style\.display="none";showDetail\(only\);return;\}/.test(html))
     die("F14: drillTo() does not open the single dead-end leaf's detail instead of navigating");
   console.log("  ok f14-single-leaf — a single dead-end leaf opens its detail instead of a one-box level");
@@ -2990,6 +2996,48 @@ const diffPaths = (a, b, at = "") => {
   if (!S.en.panHint || !S.it.panHint)
     die("F4: panHint copy missing from one locale");
   console.log("  ok f4-pan-hint — mobile pan affordance follows real overflow, both locales carry copy");
+}
+
+// Codex round 1 findings on the explorer slice, all fixed in one pass:
+// (1) panhint must recompute on ANY #stage resize, not only inside draw().
+// (2) the status-tally span needs a naming-capable role for its aria-label (axe: aria-prohibited-attr).
+// (3) already covered above — a single NON-leaf child must not count as a dead end.
+// (4) closing the detail panel must return focus to whatever invoked it.
+// (5) opening the detail panel must not animate the scroll under prefers-reduced-motion.
+{
+  const html = readFileSync(
+    join(HERE, "..", "lib", "viewer", "c4-hologram.html"),
+    "utf-8",
+  );
+  // (1) resize-driven recompute, independent of draw()
+  if (!/new ResizeObserver\(updatePanHint\)\.observe\(stage\)/.test(html))
+    die("Codex#1: no ResizeObserver recomputes panhint on a #stage resize");
+  if (!/function updatePanHint\(\)\{var st2=\$\("stage"\),ph=\$\("panhint"\);if\(st2&&ph\)ph\.hidden=st2\.scrollWidth<=st2\.clientWidth\+1;\}/.test(html))
+    die("Codex#1: updatePanHint() was not extracted as its own reusable function");
+  // (2) role="img" makes the aria-label on <span class="agg"> name-capable
+  if (!/<span class="agg" role="img" aria-label="/.test(html))
+    die('Codex#2: the tally span has an aria-label but no role that supports a name (axe: aria-prohibited-attr)');
+  // (4) focus returns to the invoker on close
+  const closeDetailSrc = (html.match(/\nfunction closeDetail\(\)\{[\s\S]*?\n\}/) || [])[0];
+  if (!closeDetailSrc) die("Codex#4: closeDetail() was not found");
+  if (!/lastInvoker\.focus\(\)/.test(closeDetailSrc))
+    die("Codex#4: closeDetail() does not restore focus to the invoking element");
+  if (!/dc\.addEventListener\("click",closeDetail\)/.test(html))
+    die("Codex#4: the [x] close button in showDetail/showRoster is not wired to closeDetail");
+  const showDetailBody2 = (html.match(/\nfunction showDetail\(n\)\{[\s\S]*?\n\}\n/) || [])[0];
+  const showRosterBody2 = (html.match(/\nfunction showRoster\(cat\)\{[\s\S]*?\n\}\n/) || [])[0];
+  if (!showDetailBody2 || !/lastInvoker=document\.activeElement/.test(showDetailBody2))
+    die("Codex#4: showDetail() never records the invoking element before opening");
+  if (!showRosterBody2 || !/lastInvoker=document\.activeElement/.test(showRosterBody2))
+    die("Codex#4: showRoster() never records the invoking element before opening");
+  // (5) reduced motion => instant scroll
+  const focusDetailSrc2 = (html.match(/\nfunction focusDetail\(\)\{[\s\S]*?\n\}/) || [])[0];
+  if (!focusDetailSrc2 || !/reducedMotion\(\)\?"auto":"smooth"/.test(focusDetailSrc2))
+    die("Codex#5: focusDetail() always scrolls smoothly, ignoring prefers-reduced-motion");
+  const reducedMotionSrc = (html.match(/\nfunction reducedMotion\(\)\{[\s\S]*?\n\}/) || [])[0];
+  if (!reducedMotionSrc || !/prefers-reduced-motion:\s*reduce/.test(reducedMotionSrc))
+    die("Codex#5: reducedMotion() does not query prefers-reduced-motion");
+  console.log("  ok codex-r1-explorer — panhint tracks resize, tally role supports its name, close restores focus, reduced motion is honoured");
 }
 
 // 11) schema contract: `lib/schema/c4-model.schema.json` is the declared contract, so both writers

@@ -756,7 +756,7 @@ function draw(animate){
  st2.classList.toggle("anim",animate!==false);
  // F4: the readable-scale map pans instead of shrinking (D-07); say so when there is
  // something to pan to, instead of leaving a box past the fold looking simply cut off.
- var ph=$("panhint");if(ph)ph.hidden=st2.scrollWidth<=st2.clientWidth+1;
+ updatePanHint();
  // breadcrumb
  var chain=[],c=pid;while(c){var nn=node(c);chain.unshift(nn);c=nn?nn.parent:null;}
  var lvlKey=pid?(kids[0]&&kids[0].level):"context",levels=M.levels||[],li=levels.indexOf(lvlKey),ki;
@@ -777,7 +777,10 @@ function draw(animate){
   for(j=0;j<ord.length;j++)if(T.cnt[ord[j]]){agg+='<i style="background:'+DOT[ord[j]]+'" title="'+esc(DOTLABEL[ord[j]])+'"></i>'+T.cnt[ord[j]];aggLabel.push(T.cnt[ord[j]]+" "+DOTLABEL[ord[j]]);}
   // The coverage rides WITH the percentage, never without it. See tallyOf.
   if(T.ruled)agg+=' &nbsp;'+(T.mean!=null?esc(STR.aggProgress)+' <b>'+T.mean+'%</b> ':'')+T.ruled+'/'+T.tot;
-  cb='<span class="agg" aria-label="'+esc(aggLabel.join(", "))+'">'+agg+'</span>'+cb;
+  // A plain <span> has an implicit "generic" role, which axe's aria-prohibited-attr rule refuses
+  // a name on — generic has no name-from-author support. role="img" is the smallest semantic role
+  // that DOES support aria-label for a summary that is genuinely a picture-in-text (colour dots).
+  cb='<span class="agg" role="img" aria-label="'+esc(aggLabel.join(", "))+'">'+agg+'</span>'+cb;
  }
  if(BASE&&BASE.timeline){var cpLabel=CPID==="as-is"?STR.asIs:CPID;for(j=0;j<TSTATES.length;j++)if(TSTATES[j].id===CPID)cpLabel=TSTATES[j].label;
   cb='<b>'+esc(cpLabel)+'</b> &nbsp;·&nbsp; '+cb;}
@@ -877,6 +880,10 @@ function renderMapTable(nodes,edges){
  for(i=0;i<edges.length;i++){e=edges[i];out+='<tr><td>'+esc(mapEndpoint(e.from))+'</td><td>'+esc(mapEndpoint(e.to))+'</td><td>'+esc(e.label||STR.unknown)+'</td></tr>';}
  $("maptable").innerHTML=out+'</tbody></table>';
 }
+// F4 follow-up (Codex round 1): a window/container resize without a redraw (rotating a device,
+// resizing a desktop window without crossing the 600px breakpoint) left #panhint showing its last
+// verdict instead of the current one. Recomputed on demand from draw() AND on any #stage resize.
+function updatePanHint(){var st2=$("stage"),ph=$("panhint");if(st2&&ph)ph.hidden=st2.scrollWidth<=st2.clientWidth+1;}
 function cssv(v){try{return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||"#2b6e8a";}catch(e){return "#2b6e8a";}}
 function detailState(n,timeline){
  // Function prose says what a box is. It is not also a checkpoint state: unchanged timeline nodes
@@ -887,9 +894,23 @@ function detailState(n,timeline){
 // F10: opening the detail panel used to leave it wherever the layout put it — often below the
 // fold on a tall level — so a click that opened it looked like it did nothing. Scroll it into view
 // and move focus there, the same way drillTo() already moves focus for the deeper level.
-function focusDetail(){var d=$("detail");if(!d)return;d.scrollIntoView({block:"nearest",behavior:"smooth"});d.focus();}
+// Codex round 1 (LOW): a reader who asked their OS to stop motion still got an animated scroll —
+// the same WCAG 2.2.2 principle already honoured for the SVG's own entrance animation (see the
+// prefers-reduced-motion media query above) extends to this one, the only other motion the viewer
+// introduces on its own.
+function reducedMotion(){try{return window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;}catch(e){return false;}}
+var lastInvoker=null;
+function focusDetail(){var d=$("detail");if(!d)return;d.scrollIntoView({block:"nearest",behavior:reducedMotion()?"auto":"smooth"});d.focus();}
+// Codex round 1: closing the detail panel used to drop focus to <body>, losing the reader's place
+// in the map. Return it to whatever was focused when the panel opened (the node, or `[+] DRILL`),
+// falling back to the `<main>` landmark if that element is gone (e.g. a redraw replaced it).
+function closeDetail(){$("detail").style.display="none";
+ if(lastInvoker&&document.contains(lastInvoker)&&typeof lastInvoker.focus==="function")lastInvoker.focus();
+ else{var c=$("content");if(c)c.focus();}
+}
 function showDetail(n){
  if(n&&n.__catalog)return showRoster(n);
+ lastInvoker=document.activeElement;
  var timeline=!!(BASE&&BASE.timeline),src=srcOf(n),cur=detailState(n,timeline),showSrc=src&&String(cur).indexOf(src)<0;
  var change=timeline?nodeChange(n.id):null;
  $("detail").innerHTML='<button type="button" class="cl" id="dc">'+esc(STR.detClose)+'</button><h3>'+esc(n.name)+' <span class="cat">· '+esc(n.category||n.kind||"")+(n.tech?" · "+esc(n.tech):"")+'</span></h3>'
@@ -916,12 +937,13 @@ function showDetail(n){
   +(hasKids(n.id)?'<button type="button" class="detaildrill" id="ddrill">'+esc(STR.detDrill)+'</button>':'');
  $("detail").style.display="block";
  focusDetail();
- var dc=$("dc");if(dc)dc.addEventListener("click",function(){$("detail").style.display="none";});
+ var dc=$("dc");if(dc)dc.addEventListener("click",closeDetail);
  var dd=$("ddrill");if(dd)dd.addEventListener("click",function(){drillTo(n.id,true);});
 }
 // FEATURE #4: LIST detail variant — searchable roster of a collapsed catalogue's members.
 // Each row keeps the per-leaf name + func/current description (the payoff must survive).
 function showRoster(cat){
+ lastInvoker=document.activeElement;
  var members=cat.members||[];
  var head='<button type="button" class="cl" id="dc">'+esc(STR.detClose)+'</button>'
   +'<h3>'+esc(cat.name)+' <span class="cat">· '+esc(cat.count+" "+STR.rosterCount)+'</span></h3>'
@@ -929,7 +951,7 @@ function showRoster(cat){
   +'<div class="roster" id="rlist" tabindex="0" role="list" aria-label="'+esc(cat.name+' · '+cat.count+' '+STR.rosterCount)+'"></div>';
  $("detail").innerHTML=head;$("detail").style.display="block";
  focusDetail();
- var dc=$("dc");if(dc)dc.addEventListener("click",function(){$("detail").style.display="none";});
+ var dc=$("dc");if(dc)dc.addEventListener("click",closeDetail);
  function rowHtml(m){
   var d=m.current||m.func||"";
   var pct=m.completion!=null?(m.completion+"%"):(m.statusWord||"");
@@ -957,7 +979,11 @@ function clamp(v,lo,hi){return v<lo?lo:v>hi?hi:v;}
 // children of its own) used to jump the level straight to "LEAVES" for a screen holding one box —
 // a level change that showed no more than the detail panel already would. Explain instead of
 // jumping: open that leaf's own detail rather than navigating to a one-box level.
-function singleDeadEndChild(id){var kids=childrenOf(id);return (kids.length===1&&!hasKids(kids[0].id))?kids[0]:null;}
+// Codex round 1: an empty CONTAINER (no leaves yet, e.g. a freshly scaffolded package) is not a
+// dead end the same way a real leaf is — it is a level that legitimately has zero children today
+// and may grow them; jumping past it into its own detail would hide that it is still a container.
+// Only a true `leaf` node with no children of its own counts as the explain-instead-of-drill case.
+function singleDeadEndChild(id){var kids=childrenOf(id);return (kids.length===1&&kids[0].level==="leaf"&&!hasKids(kids[0].id))?kids[0]:null;}
 function drillTo(id,focusFirst){if(!hasKids(id))return;
  var only=singleDeadEndChild(id);
  if(only){$("detail").style.display="none";showDetail(only);return;}
@@ -968,6 +994,10 @@ function wire(){
  var stage=$("stage");
  // Reapply readable SVG dimensions when crossing the mobile breakpoint, not on every pixel resize.
  window.matchMedia("(max-width:600px)").addEventListener("change",function(){draw(false);});
+ // A resize that does not cross that breakpoint (or a container resize inside an embed) still
+ // changes whether the map overflows; panhint must track it independently of draw().
+ if(typeof ResizeObserver!=="undefined")new ResizeObserver(updatePanHint).observe(stage);
+ else window.addEventListener("resize",updatePanHint);
  stage.addEventListener("mousedown",function(ev){
   if(ev.target.getAttribute&&ev.target.getAttribute("data-drill"))return; // [+] is a click→drill, not a drag grip
   var g=ev.target;while(g&&g!==stage&&!(g.getAttribute&&g.getAttribute("data-id")))g=g.parentNode;
