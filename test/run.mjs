@@ -7808,7 +7808,6 @@ const diffPaths = (a, b, at = "") => {
   const renewed = applyCounterResults(
     repo,
     issueSnapshot,
-    issues,
     readJson(health),
     readJson(findings).findings,
     work,
