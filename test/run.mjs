@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawnSync, spawn } from "node:child_process";
 import {
   mkdtempSync,
   readFileSync,
@@ -6090,6 +6090,60 @@ const diffPaths = (a, b, at = "") => {
   );
 }
 
+// §one-cpm-cache — repofiles.mjs' trackedFiles() cache must not survive across composes (#133 S4
+// follow-up, Codex round 1 HIGH). `room --serve` recomposes on every GET in one long-lived process
+// (`compose(true)` in room.mjs); a process-lifetime cache made a file `git add`ed after the server
+// started invisible until restart, which is exactly the staleness `git ls-files` was memoised to
+// avoid causing three times over, now caused once but forever. Reuses the `room` fixture's `alpha`
+// checkout, already committed by the block above — this block only adds one more commit to it.
+{
+  const R = join(tmp, "room"),
+    alpha = join(R, "alpha"),
+    manifest = join(R, "manifest.json");
+  const child = spawn(
+    process.execPath,
+    [join(HERE, "..", "lib", "room.mjs"), "--manifest", manifest, "--port", "0", "--serve"],
+    { stdio: ["ignore", "pipe", "pipe"] },
+  );
+  let out = "";
+  const port = await new Promise((resolvePort, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error("one-cpm-cache: room --serve did not report a port in time: " + out)),
+      5000,
+    );
+    const onData = (chunk) => {
+      out += chunk.toString();
+      const m = /serving http:\/\/127\.0\.0\.1:(\d+)/.exec(out);
+      if (m) { clearTimeout(timer); child.stdout.off("data", onData); resolvePort(Number(m[1])); }
+    };
+    child.stdout.on("data", onData);
+    child.on("error", reject);
+  });
+  try {
+    // Added AFTER the server's first compose() at startup — a real mid-session edit, the same shape
+    // as a document landing between two Options-view reloads.
+    writeFileSync(
+      join(alpha, "docs/LIVE-ADD.md"),
+      "# Live-added\n\nCommitted after the server started (#133 S4 follow-up).\n",
+    );
+    const git = (args) => spawnSync("git", ["-C", alpha, ...args], { encoding: "utf-8" });
+    git(["add", "docs/LIVE-ADD.md"]);
+    const committed = git(["commit", "-q", "-m", "docs: live-add after serve start"]);
+    if (committed.status !== 0)
+      die("one-cpm-cache: could not commit the live-added doc", committed);
+    const html = await fetch(`http://127.0.0.1:${port}/`).then((r) => r.text());
+    if (!/LIVE-ADD\.md/.test(html))
+      die(
+        "one-cpm-cache: a doc git-added after the server started must appear on the very next compose, not require a restart",
+      );
+  } finally {
+    child.kill();
+  }
+  console.log(
+    "  ok one-cpm-cache — trackedFiles is reset at each compose(), not stuck for the life of the server",
+  );
+}
+
 // `forma scan` and `forma room --serve`: the two halves of "autodetect, with checkboxes". The
 // second exists because static HTML cannot write a file, and the first exists so the answer to
 // "which programmes are there" is not typed by hand. Both are graded on the same thing: a decision
@@ -9487,6 +9541,35 @@ const diffPaths = (a, b, at = "") => {
     die("one-cpm: a milestone cycle must be reported in codepoint order, got " + JSON.stringify(cyclic.cycles));
 
   console.log("  ok one-cpm — milestone order and cycle tie-break follow codepointCompare, not a-b");
+}
+
+// §one-cpm-astral — criticalChain's tie-break must compare true Unicode scalar values, not UTF-16
+// code units (Codex round 1 MEDIUM, #133 S4). An astral id (U+10000, a surrogate PAIR starting with
+// the high surrogate U+D800) and a BMP private-use id (U+E000, one code unit) are the textbook case
+// codepoint-compare already carries a unit test for: U+D800 < U+E000 as code UNITS, so a naive
+// default sort puts the astral id first, but U+10000 > U+E000 as scalar values, so codepointCompare
+// puts the private-use id first. Two independent, equally-critical milestones (same estimate, no
+// dependency between them) are both heads with zero total float, so the chain's start is exactly
+// the tie `criticalChain`'s `heads.sort(cmp)[0]` has to break.
+{
+  const proj = (milestones) => ({ schema: "arbiter-milestones-v1", milestones });
+  const astral = "M" + String.fromCodePoint(0x10000);
+  const pua = "M" + String.fromCodePoint(0xe000);
+  if ([astral, pua].sort()[0] !== astral)
+    die("one-cpm-astral: fixture assumption broke — default UTF-16 sort no longer puts the astral id first");
+  if (codepointCompare(pua, astral) !== -1)
+    die("one-cpm-astral: fixture assumption broke — codepointCompare no longer ranks the private-use id first");
+
+  const tie = deriveMilestonePath(
+    proj([
+      { id: astral, title: "a", depends_on: [], horizon: "next", status: "planned", estimate_days: 5 },
+      { id: pua, title: "b", depends_on: [], horizon: "next", status: "planned", estimate_days: 5 },
+    ]),
+  );
+  if (JSON.stringify(tie.criticalPath) !== JSON.stringify([pua]))
+    die("one-cpm-astral: the tie-break must follow codepointCompare (private-use first), got " + JSON.stringify(tie.criticalPath));
+
+  console.log("  ok one-cpm-astral — criticalChain's tie-break is code-point order, not UTF-16 code-unit order");
 }
 
 // §one-cpm-characterization — the issue-DAG `criticalPath` output, captured on a diamond fixture
