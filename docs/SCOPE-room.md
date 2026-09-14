@@ -1,8 +1,8 @@
 ---
 title: 'Scope — what "finished" means for the Control Room'
-doc_version: '1.1.0'
+doc_version: '1.1.1'
 status: active
-last_review: '2026-08-17'
+last_review: '2026-09-14'
 owner: 'Luca Dominici'
 canonical_id: 'scope-room'
 tags: ['audience/dev', 'kind/governance']
@@ -29,7 +29,15 @@ code.
 > drifted; `scripts/room-presentable.mjs` exits 0 on the generated artifact and fails on a missing
 > evidence ref, an un-piled issue reference, or a non-deterministic re-render.
 
-Two people running those three commands on the same inputs get the same three verdicts.
+Two people running those three commands on the same inputs get the same three verdicts —
+including across machines with different runtime locales. Every id/title sort that feeds a
+rendered aggregate (milestones, use cases, runbooks, the milestone path, milestone
+reconciliation, and `verify`'s dependency-edge list) orders by Unicode SCALAR value
+(`lib/audit.mjs`'s `codepointCompare`), never by `String.prototype.localeCompare` or a locale
+collation: ICU collation is locale-dependent (`sv_SE` sorts diacritics after `z`; `en_US`/`C` do
+not), so a room composed under one locale could otherwise fail `check` under another, or reorder
+silently. This can differ from a human's casual reading order for mixed-case or non-ASCII
+titles/ids, but is required for `check`'s byte comparison to hold across machines.
 
 Both gates are exercised by `npm test` against `test/fixtures/room`, in both directions: they pass
 on an untouched briefing and fail on one whose aggregates were altered by hand. That second half is

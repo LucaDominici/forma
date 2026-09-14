@@ -39,6 +39,7 @@ import {
   deriveRunbooks,
 } from "../lib/roomderive.mjs";
 import { loadDocs } from "../lib/roomdocs.mjs";
+import { codepointCompare } from "../lib/audit.mjs";
 import { deriveRtm } from "../lib/rtm.mjs";
 import { componentsFor } from "../lib/cluster.mjs";
 import { canonicalPath } from "../lib/roomload.mjs";
@@ -5552,6 +5553,58 @@ const diffPaths = (a, b, at = "") => {
   if (r.status === 0 || !/document gate/.test(r.stderr || ""))
     die("room: check did not reject and name a hand-altered document gate", r);
 
+  // F1: the portfolio is a cross-programme aggregate `check` never re-derived — only each
+  // programme's own fields were compared. A hand-altered `portfolio.totals.open` must be refused
+  // and the failure must name the portfolio.
+  const tamperedPortfolio = join(R, "tampered-portfolio.html");
+  const alteredTotals = { ...ROOM.portfolio.totals, open: 0 };
+  tamper(
+    roomHtml,
+    tamperedPortfolio,
+    JSON.stringify(ROOM.portfolio.totals),
+    JSON.stringify(alteredTotals),
+  );
+  r = checkRoom(tamperedPortfolio);
+  if (r.status === 0 || !/portfolio/.test(r.stderr || ""))
+    die(
+      "room: check did not reject and name a hand-altered portfolio.totals.open",
+      r,
+    );
+
+  // F1: `meta.today` and `meta.excluded` are re-derived and compared alongside `portfolio` — a
+  // hand-altered determinism anchor or exclusion list must be refused just as loudly.
+  const tamperedMetaToday = join(R, "tampered-meta-today.html");
+  tamper(
+    roomHtml,
+    tamperedMetaToday,
+    '"today":' + JSON.stringify(ROOM.meta.today),
+    '"today":' + JSON.stringify("2099-01-01"),
+  );
+  r = checkRoom(tamperedMetaToday);
+  if (r.status === 0 || !/meta\.today/.test(r.stderr || ""))
+    die(
+      "room: check did not reject and name a hand-altered meta.today",
+      r,
+    );
+
+  const tamperedMetaExcluded = join(R, "tampered-meta-excluded.html");
+  tamper(
+    roomHtml,
+    tamperedMetaExcluded,
+    '"excluded":' + JSON.stringify(ROOM.meta.excluded),
+    '"excluded":' +
+      JSON.stringify([
+        ...ROOM.meta.excluded,
+        { id: "ghost", ghRepo: "acme/ghost" },
+      ]),
+  );
+  r = checkRoom(tamperedMetaExcluded);
+  if (r.status === 0 || !/meta\.excluded/.test(r.stderr || ""))
+    die(
+      "room: check did not reject and name a hand-altered meta.excluded",
+      r,
+    );
+
   // A manifest and an artifact that disagree about which programmes exist is drift, not a detail.
   const manifestGamma = join(R, "manifest-gamma.json");
   const mf = readJson(manifest);
@@ -9795,6 +9848,131 @@ const diffPaths = (a, b, at = "") => {
   console.log("  ok production-recovery — symlink aliases canonicalize and the reviewed 41-file runtime allowlist is enforced");
 }
 
+// F2 unit pin: `codepointCompare` must order true Unicode SCALAR values, not UTF-16 code units.
+// Plain `<`/`>` on strings compares code units, which puts every astral character (a surrogate
+// pair, U+10000 and up) before any BMP character in U+E000..U+FFFF — backwards from scalar order.
+// Also pins that it does not reproduce ICU's NUL-ignoring defect (`("r"+NUL+"2").localeCompare("r2")
+// === 0`, the exact case the audit measured against `verify.mjs`'s edge sort).
+{
+  const astral = String.fromCodePoint(0x10000), pua = String.fromCodePoint(0xe000);
+  if (codepointCompare(astral, pua) !== 1)
+    die(
+      "codepointCompare: an astral character (U+10000) must sort AFTER a BMP private-use character (U+E000)",
+    );
+  if (codepointCompare(pua, astral) !== -1)
+    die("codepointCompare: is not antisymmetric for the astral/BMP pair");
+  // Mixed-case ASCII: unaffected by the scalar-vs-code-unit distinction (ASCII has one code unit
+  // per scalar), but pinned so a future change to the comparator cannot silently invert it.
+  if (
+    codepointCompare("a", "Z") !== 1 ||
+    codepointCompare("Z", "a") !== -1 ||
+    codepointCompare("a", "a") !== 0
+  )
+    die("codepointCompare: mixed-case ASCII order regressed");
+  const NUL = String.fromCharCode(0);
+  if (("r" + NUL + "2").localeCompare("r2") !== 0)
+    die(
+      "codepointCompare: the ICU defect this replaces is no longer reproducible — re-verify the audit's baseline claim",
+    );
+  if (codepointCompare("r" + NUL + "2", "r2") === 0)
+    die(
+      "codepointCompare: must NOT collapse a NUL-adjacent digit the way ICU's localeCompare does",
+    );
+  console.log(
+    "  ok codepoint-compare — true Unicode scalar order (astral vs BMP, mixed-case ASCII), and the ICU NUL-collapse defect does not reproduce",
+  );
+}
+
+// F2: `localeCompare` is locale-dependent — sorting non-ASCII, mixed-case ids/titles under a
+// Swedish collation locale gives a different order than under `C`. Every site the audit named
+// (`deriveMilestones`, `deriveUseCases`, `deriveRunbooks`, `deriveMilestonePath`,
+// `deriveMilestoneReconciliation`) must sort by codepoint, so the JSON they emit is byte-identical
+// regardless of the runtime locale — reverting any one of the five back to `localeCompare` must
+// fail this probe.
+{
+  const localeScript = join(tmp, "locale-probe.mjs");
+  writeFileSync(
+    localeScript,
+    [
+      "import { deriveMilestones, deriveUseCases, deriveRunbooks, deriveMilestonePath, deriveMilestoneReconciliation } from " +
+        JSON.stringify(join(HERE, "..", "lib", "roomderive.mjs")) + ";",
+      "const ids = ['z', 'ä', 'a', 'Z'];",
+      "const issuesSnapshot = { milestones: ids.map((title) => ({ title, due: null, open: 1, closed: 0 })), issues: [] };",
+      "const useCaseProjection = { useCases: ids.map((id) => ({ id, actor: 'x', goal: 'g' })) };",
+      "const runbookProjection = { runbooks: ids.map((id) => ({ id, file: 'r.md', handles: [] })) };",
+      // No estimate_days: `unestimated` is filtered straight off `ids` in the array's own order,
+      // so unlike `nodes` (re-sorted with a plain, locale-independent `.sort()` downstream) it
+      // actually surfaces the id-sort comparator's order — the thing this probe has to catch.
+      "const milestonePathProjection = { milestones: ids.map((id) => ({ id, depends_on: [], status: 'planned', horizon: 'now' })) };",
+      "process.stdout.write(JSON.stringify({",
+      "  milestones: deriveMilestones(issuesSnapshot),",
+      "  useCases: deriveUseCases(useCaseProjection),",
+      "  runbooks: deriveRunbooks(runbookProjection),",
+      "  milestonePath: deriveMilestonePath(milestonePathProjection),",
+      "  milestoneReconciliation: deriveMilestoneReconciliation(milestonePathProjection, issuesSnapshot),",
+      "}));",
+    ].join("\n"),
+  );
+  const runLocale = (LC_ALL) =>
+    spawnSync(process.execPath, [localeScript], {
+      encoding: "utf-8",
+      env: { ...process.env, LC_ALL },
+    });
+  const sv = runLocale("sv_SE.UTF-8");
+  const c = runLocale("C");
+  if (sv.status !== 0 || c.status !== 0)
+    die("locale: milestone/use-case/runbook probe did not run cleanly", {
+      sv,
+      c,
+    });
+  if (sv.stdout !== c.stdout)
+    die(
+      "locale: derived milestone/use-case/runbook/milestone-path/reconciliation order is not byte-identical across LC_ALL=sv_SE.UTF-8 and LC_ALL=C:\n" +
+        sv.stdout +
+        "\n" +
+        c.stdout,
+    );
+  console.log(
+    "  ok locale — milestone, use-case, runbook and milestone-path/reconciliation order is codepoint-stable across LC_ALL=sv_SE.UTF-8 and LC_ALL=C",
+  );
+}
+
+// F2 (verify.mjs edge sort): one issue blocked by four external endpoints sharing the same
+// number, whose repo names differ only by case/diacritic. The sort key's deciding component is
+// that diacritic-sensitive string, so `dependencies.edges` must come out byte-identical across
+// locales — reverting `verify.mjs`'s edge sort to `localeCompare` must fail this probe.
+{
+  const localeRepo = join(tmp, "verify-locale-repo");
+  mkdirSync(localeRepo, { recursive: true });
+  const GH_LOCALE = process.execPath + " " + join(HERE, "stub-gh.mjs") + " locale";
+  const runVerifyLocale = (LC_ALL) => {
+    const issues = join(tmp, "verify-locale-issues-" + LC_ALL.replace(/[^a-zA-Z0-9]/g, "_") + ".json");
+    const r = spawnSync(
+      process.execPath,
+      [
+        BIN, "verify", "--repo", localeRepo, "--issues", issues,
+        "--gh-repo", "acme/thing", "--gh-cmd", GH_LOCALE,
+      ],
+      { encoding: "utf-8", env: { ...process.env, LC_ALL } },
+    );
+    if (r.status !== 0) die("locale: verify (edge sort) did not run cleanly under " + LC_ALL, r);
+    const snap = readJson(issues);
+    return JSON.stringify(snap.dependencies.edges);
+  };
+  const svEdges = runVerifyLocale("sv_SE.UTF-8");
+  const cEdges = runVerifyLocale("C");
+  if (svEdges !== cEdges)
+    die(
+      "locale: verify's dependencies.edges are not byte-identical across LC_ALL=sv_SE.UTF-8 and LC_ALL=C:\n" +
+        svEdges +
+        "\n" +
+        cEdges,
+    );
+  console.log(
+    "  ok locale — verify's edge sort is codepoint-stable across LC_ALL=sv_SE.UTF-8 and LC_ALL=C",
+  );
+}
+
 console.log(
-  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood, lenses all green.",
+  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale all green.",
 );
