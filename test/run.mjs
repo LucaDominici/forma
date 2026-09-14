@@ -2858,6 +2858,45 @@ const diffPaths = (a, b, at = "") => {
   );
 }
 
+// F5 (2026-09-14 visual verification): the header must surface the model's own version when it
+// carries one, and the map's text table must not print an "Unknown" evidence column when every
+// context-level row is, by design, evidence-free (docmap.mjs — curated boxes carry no file path).
+{
+  const html = readFileSync(
+    join(HERE, "..", "lib", "viewer", "c4-hologram.html"),
+    "utf-8",
+  );
+  const versionSrc = (
+    html.match(/\nfunction systemVersion\(model\)\{[\s\S]*?\n\}/) || []
+  )[0];
+  if (!versionSrc) die("F5: systemVersion(model) was not found in the viewer");
+  const systemVersion = new Function(versionSrc + "; return systemVersion")();
+  if (systemVersion({ nodes: [{ kind: "system", statusWord: "v1.2.0" }] }) !== "v1.2.0")
+    die("F5: systemVersion did not read a curated system node's statusWord");
+  if (systemVersion({ nodes: [{ kind: "person", statusWord: "v1.2.0" }] }) !== null)
+    die("F5: systemVersion must not borrow a version from a non-system node");
+  if (systemVersion({ nodes: [] }) !== null)
+    die("F5: systemVersion must stay silent rather than invent a version");
+  if (!/STR\.stampVersion/.test(html))
+    die("F5: the fact-base stamp never reads the version string");
+
+  // hasEvidenceCol calls evidencePath, so extract the file region spanning both definitions.
+  const region = (html.match(/\nfunction evidencePath[\s\S]*?function hasEvidenceCol\(nodes\)\{[\s\S]*?\n\}/) || [])[0];
+  if (!region) die("F5: hasEvidenceCol(nodes) was not found in the viewer");
+  const built = new Function(
+    'var STR={unknown:"Unknown"};' + region + "; return {evidencePath:evidencePath,hasEvidenceCol:hasEvidenceCol}",
+  )();
+  const noEvidence = [{ id: "forma" }, { id: "dev" }];
+  const withEvidence = [{ id: "leaf", evidence: [{ type: "path", ref: "lib/x.mjs" }] }];
+  if (built.hasEvidenceCol(noEvidence))
+    die("F5: an all-Unknown evidence column must be hidden");
+  if (!built.hasEvidenceCol(withEvidence))
+    die("F5: a real evidence path must not be hidden");
+  console.log(
+    "  ok f5-header-table — the stamp surfaces a curated version and the map table drops an all-Unknown evidence column",
+  );
+}
+
 // 11) schema contract: `lib/schema/c4-model.schema.json` is the declared contract, so both writers
 // of the model must be held to it. Driven through the CLI on purpose — the assertion is that the
 // COMMANDS reject a non-conforming model, not that some helper returns an array.

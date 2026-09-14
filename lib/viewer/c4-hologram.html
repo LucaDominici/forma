@@ -48,7 +48,7 @@ select#skin option{background:#08202e;color:var(--nm)}
 #crumb b{color:var(--cyan)}
 #crumb a{color:#8fd8ec;cursor:pointer}
 #crumb a:hover{text-decoration:underline}
-#stamp{font-size:9.5px;color:var(--ter2);margin-bottom:6px}
+#stamp{font-size:12px;color:var(--ter2);margin-bottom:6px}
 #stage{position:relative;width:100%;height:74vh;min-height:520px;border:1px solid var(--stageborder);border-radius:12px;background:var(--stagebg);overflow:hidden}
 svg{width:100%;height:100%;display:block}
 #maptable{margin-top:12px;border:1px solid var(--stageborder);border-radius:10px;overflow:auto;background:var(--stagebg)}
@@ -155,7 +155,7 @@ svg.dense .edge.hot{opacity:1;stroke-width:2.6}
 }
 #etip{position:absolute;pointer-events:none;display:none;z-index:6;background:var(--detailbg);border:1px solid var(--border);
  color:var(--nm);font-size:10px;letter-spacing:.03em;padding:3px 8px;border-radius:5px;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,.45)}
-#legend{display:flex;gap:13px;font-size:9.5px;color:var(--sec);margin:10px 0 0;flex-wrap:wrap}
+#legend{display:flex;gap:13px;font-size:12px;color:var(--sec);margin:10px 0 0;flex-wrap:wrap}
 #legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;box-sizing:border-box}
 .hint{color:var(--ter2)}
 #detail{margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:13px;background:var(--detailbg);display:none}
@@ -302,7 +302,7 @@ var STRINGS={
   detNotes:"Notable details", detRefs:"References", detWhere:"Where it runs",
   detTarget:"TARGET",
   rosterSearch:"filter…", rosterCount:"members", rosterEmpty:"no match", aggProgress:"progress",
-  stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology", stampProjection:"projection:", staticSrc:"(static source)",
+  stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology", stampProjection:"projection:", staticSrc:"(static source)", stampVersion:"version:",
   errEmpty:"Model unreachable or empty.",
   errNotFound:"Model not found (./c4-model.json). Open via `forma serve` or inject window.__C4_MODEL__.",
   errUnavail:"Model unavailable.", errTimeline:"Invalid architecture timeline."
@@ -328,7 +328,7 @@ var STRINGS={
   detNotes:"Dettagli notevoli", detRefs:"Riferimenti", detWhere:"Dove gira",
   detTarget:"TARGET",
   rosterSearch:"filtra…", rosterCount:"elementi", rosterEmpty:"nessun risultato", aggProgress:"avanzamento",
-  stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology", stampProjection:"proiezione:", staticSrc:"(fonte statica)",
+  stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology", stampProjection:"proiezione:", staticSrc:"(fonte statica)", stampVersion:"versione:",
   errEmpty:"Modello non raggiungibile o vuoto.",
   errNotFound:"Modello non trovato (./c4-model.json). Apri via `forma serve` o inietta window.__C4_MODEL__.",
   errUnavail:"Modello non disponibile.", errTimeline:"Timeline architetturale non valida."
@@ -748,11 +748,12 @@ function draw(animate){
  // `childrenOf` is doing here. See tallyOf.
  var T=tallyOf(realKids,childrenOf);
  if(T.tot){
-  var DOT={done:"#2fe08a",prog:"#ffc74d",next:"#3ee7ff",plan:"#2d5a72",prob:"#ff5d5d",unk:"#7d8f99"},ord=["done","prog","next","plan","prob","unk"],agg="";
-  for(j=0;j<ord.length;j++)if(T.cnt[ord[j]])agg+='<i style="background:'+DOT[ord[j]]+'"></i>'+T.cnt[ord[j]];
+  var DOT={done:"#2fe08a",prog:"#ffc74d",next:"#3ee7ff",plan:"#2d5a72",prob:"#ff5d5d",unk:"#7d8f99"},ord=["done","prog","next","plan","prob","unk"],
+   DOTLABEL={done:STR.legDone,prog:STR.legProg,next:STR.legNext,plan:STR.legPlan,prob:STR.legProb,unk:STR.legUnk},agg="",aggLabel=[];
+  for(j=0;j<ord.length;j++)if(T.cnt[ord[j]]){agg+='<i style="background:'+DOT[ord[j]]+'" title="'+esc(DOTLABEL[ord[j]])+'"></i>'+T.cnt[ord[j]];aggLabel.push(T.cnt[ord[j]]+" "+DOTLABEL[ord[j]]);}
   // The coverage rides WITH the percentage, never without it. See tallyOf.
   if(T.ruled)agg+=' &nbsp;'+(T.mean!=null?esc(STR.aggProgress)+' <b>'+T.mean+'%</b> ':'')+T.ruled+'/'+T.tot;
-  cb='<span class="agg">'+agg+'</span>'+cb;
+  cb='<span class="agg" aria-label="'+esc(aggLabel.join(", "))+'">'+agg+'</span>'+cb;
  }
  if(BASE&&BASE.timeline){var cpLabel=CPID==="as-is"?STR.asIs:CPID;for(j=0;j<TSTATES.length;j++)if(TSTATES[j].id===CPID)cpLabel=TSTATES[j].label;
   cb='<b>'+esc(cpLabel)+'</b> &nbsp;·&nbsp; '+cb;}
@@ -840,9 +841,14 @@ function levelName(l){return (STR.lvlNames&&STR.lvlNames[l])||l||"—";}
 function evidencePath(n){var ev=(n&&n.evidence)||[];for(var i=0;i<ev.length;i++)if(ev[i]&&ev[i].type==="path"&&ev[i].ref)return ev[i].ref;return STR.unknown;}
 function mapEndpoint(id){var n=CATNODES[id]||node(id);return n?n.name+" ("+id+")":id;}
 function mapStatus(n){var roll=(n.__catalog||mode==="target")?null:rollStatus(n,childrenOf),status=(roll?roll.status2:(n.status2||n.status||STR.unknown)),badge=n.__catalog?String(n.count):(mode==="target"?STR.detTarget:badgeOf(n,roll));return status+" · "+badge;}
+// F5: a curated context level (people, systems, external boxes) carries no file evidence at all —
+// that is by design (docmap.mjs), not a gap to fill — so a column that is Unknown on every row is
+// noise, not information, and is dropped rather than printed as a wall of "Unknown".
+function hasEvidenceCol(nodes){var i;for(i=0;i<nodes.length;i++)if(evidencePath(nodes[i])!==STR.unknown)return true;return false;}
 function renderMapTable(nodes,edges){
- var out='<table><caption>'+esc(STR.mapTable+' · '+STR.mapNodes)+'</caption><thead><tr><th scope="col">'+esc(STR.node)+'</th><th scope="col">'+esc(STR.category)+'</th><th scope="col">'+esc(STR.status)+'</th><th scope="col">'+esc(STR.evidencePath)+'</th></tr></thead><tbody>',i,n,e;
- for(i=0;i<nodes.length;i++){n=nodes[i];out+='<tr><td>'+esc(n.name)+'</td><td>'+esc(n.category||n.kind||STR.unknown)+'</td><td>'+esc(mapStatus(n))+'</td><td>'+esc(evidencePath(n))+'</td></tr>';}
+ var evCol=hasEvidenceCol(nodes);
+ var out='<table><caption>'+esc(STR.mapTable+' · '+STR.mapNodes)+'</caption><thead><tr><th scope="col">'+esc(STR.node)+'</th><th scope="col">'+esc(STR.category)+'</th><th scope="col">'+esc(STR.status)+'</th>'+(evCol?'<th scope="col">'+esc(STR.evidencePath)+'</th>':'')+'</tr></thead><tbody>',i,n,e;
+ for(i=0;i<nodes.length;i++){n=nodes[i];out+='<tr><td>'+esc(n.name)+'</td><td>'+esc(n.category||n.kind||STR.unknown)+'</td><td>'+esc(mapStatus(n))+'</td>'+(evCol?'<td>'+esc(evidencePath(n))+'</td>':'')+'</tr>';}
  out+='</tbody></table><table><caption>'+esc(STR.mapRelationships)+'</caption><thead><tr><th scope="col">'+esc(STR.from)+'</th><th scope="col">'+esc(STR.to)+'</th><th scope="col">'+esc(STR.relationship)+'</th></tr></thead><tbody>';
  for(i=0;i<edges.length;i++){e=edges[i];out+='<tr><td>'+esc(mapEndpoint(e.from))+'</td><td>'+esc(mapEndpoint(e.to))+'</td><td>'+esc(e.label||STR.unknown)+'</td></tr>';}
  $("maptable").innerHTML=out+'</tbody></table>';
@@ -1127,10 +1133,15 @@ function moveTip(ev){var st=$("stage").getBoundingClientRect(),t=$("etip");
  var x=ev.clientX-st.left+12,y=ev.clientY-st.top+12;
  t.style.left=Math.min(x,st.width-t.offsetWidth-6)+"px";t.style.top=Math.min(y,st.height-t.offsetHeight-6)+"px";}
 
+// F5 (2026-09-14): the header showed a fact-base date but never the version of what it describes,
+// so a stale model looked as current as a fresh one. Not every model carries one — only the system
+// node's curated statusWord does — so this stays silent rather than inventing a number.
+function systemVersion(model){var ns=(model&&model.nodes)||[],i;for(i=0;i<ns.length;i++)if(ns[i].kind==="system"&&ns[i].statusWord)return ns[i].statusWord;return null;}
 // Fact-base line. `suffix` marks a RE-VERIFY that could not re-read the model (injected/offline).
 function stamp(suffix){
- var m=(M&&M.meta)||{};
+ var m=(M&&M.meta)||{},ver=systemVersion(M);
  $("stamp").textContent=STR.stampBase+" "+(m.verifiedAt||(M&&M.generatedAt)||(M&&M.source&&M.source.commit)||"—")
+  +(ver?" · "+STR.stampVersion+" "+ver:"")
   +" · "+STR.stampMethod+" "+(m.verifyMethod||STR.stampVerify)
   +(BASE&&BASE.timeline?" · "+STR.stampProjection+" "+BASE.timeline.source:"")+(suffix?" "+suffix:"");
 }
