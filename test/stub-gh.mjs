@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Offline stand-in for the gh commands used by forma verify.
 const args = process.argv.slice(2)
-const mode = ['multi', 'fail-signals', 'truncated', 'unsupported', 'locale', 'transport-fail'].includes(args[0]) ? args.shift() : 'default'
+const mode = ['multi', 'fail-signals', 'truncated', 'unsupported', 'locale', 'transport-fail', 'auth-fail'].includes(args[0]) ? args.shift() : 'default'
 const after = (value) => { const i = args.indexOf(value); return i < 0 ? null : args[i + 1] }
 const issue = (number, fields = {}) => ({
   number, title: number === 7 ? 'Fix the thing' : 'Open the other thing', state: number === 7 ? 'CLOSED' : 'OPEN',
@@ -36,6 +36,10 @@ if (args[0] === 'api' && args[1] === 'graphql') {
     console.log(JSON.stringify([{ data: { repository: { issues: { nodes: [twenty], pageInfo: { hasNextPage: false, endCursor: null } } } } }]))
     process.exit(0)
   }
+  // An auth/permission failure on the SAME dependency-bearing query, worded like GitHub's real
+  // "Resource not accessible by integration" — matches the old broad "not accessible" regex but
+  // names no field, so it must NOT be read as "dependency fields unsupported" (S2 round-1 HIGH-2).
+  if (mode === 'auth-fail' && withDependencies) { console.error('Resource not accessible by integration'); process.exit(1) }
   const seven = issue(7, withDependencies ? { blockedBy: relation(), blocking: relation([endpoint(8, 'OPEN')]) } : {})
   const eight = issue(8, withDependencies ? { blockedBy: { totalCount: mode === 'truncated' ? 2 : 1, nodes: [endpoint(7, 'CLOSED')] }, blocking: relation() } : {})
   const nine = issue(9, withDependencies ? { blockedBy: relation(), blocking: relation() } : {})

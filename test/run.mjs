@@ -38,6 +38,7 @@ import {
   deriveQueue,
   deriveUseCases,
   deriveRunbooks,
+  derivePortfolio,
 } from "../lib/roomderive.mjs";
 import { loadDocs } from "../lib/roomdocs.mjs";
 import { codepointCompare } from "../lib/audit.mjs";
@@ -10077,6 +10078,109 @@ const diffPaths = (a, b, at = "") => {
   }
 }
 
+// §s2-round1 (Codex review of #127, round 1) — five more silent-default paths found in the S2 fix
+// itself: portfolio link coverage skipped the same `linked.error` guard the per-programme path
+// uses, an unrelated auth/transport error matched the "unsupported field" regex by wording alone,
+// tuple-form `items` was neither rejected nor validated, an unreadable directory entry was
+// skipped silently instead of failing the coverage scan, and string length was counted in UTF-16
+// units instead of code points.
+
+// HIGH-1: derivePortfolio must gate `linkCoverage` on `!linked.error` exactly like deriveAll's own
+// per-programme `coverage` does (roomderive.mjs:827) — an unreadable git history is unmeasured,
+// never a measured 0%.
+{
+  const noGit = join(tmp, "s2r1-portfolio-not-a-checkout");
+  mkdirSync(noGit, { recursive: true });
+  const deriveContext = {};
+  const derived = deriveAll(
+    {
+      repo: noGit, model: { nodes: [] }, topo: { leafSources: [] },
+      issuesSnapshot: {
+        issues: [{ n: 1, state: "OPEN", labels: [], ms: null, title: "x", createdAt: "2026-01-01", closedAt: null }],
+        milestones: [], fetchedAt: "2026-01-01", collection: {}, dependencies: { supported: false, edges: [] },
+      },
+      health: { verdicts: [], dependencyConfirmations: [] }, findings: { findings: [] },
+      brief: null, briefPath: null, manifest: { today: "2026-01-01" },
+      gateInputs: null, arbiterMilestones: null, docs: null,
+    },
+    deriveContext,
+  );
+  const program = {
+    id: "p", ghRepo: "acme/p", repo: noGit, model: { nodes: [] }, topo: { leafSources: [] },
+    issuesSnapshot: { issues: [{ n: 1, state: "OPEN", labels: [], ms: null, title: "x", createdAt: "2026-01-01", closedAt: null }], milestones: [], fetchedAt: "2026-01-01" },
+    derived, deriveContext,
+  };
+  const portfolio = derivePortfolio({ today: "2026-01-01", programs: [program] });
+  const summary = portfolio.programs.find((p) => p.id === "p");
+  if (!summary || summary.linkCoverage !== null)
+    die("S2R1 HIGH-1: portfolio linkCoverage must be null (unmeasured) when linked.error is set, got " + JSON.stringify(summary && summary.linkCoverage));
+  console.log("  ok s2-round1-1 — portfolio linkCoverage stays null on an unreadable git history");
+}
+
+// HIGH-2: an auth/permission error worded like GitHub's real "Resource not accessible by
+// integration" must NOT be read as "dependency fields unsupported" — only a field-specific
+// GraphQL error naming blockedBy/blocking may enable the no-dependencies fallback.
+{
+  const repo = join(tmp, "s2r1-verify-auth"), issues = join(repo, "issues.json"), model = join(repo, "model.json");
+  mkdirSync(repo, { recursive: true });
+  writeFileSync(model, JSON.stringify({ meta: { ghRepo: "acme/thing" }, nodes: [], edges: [] }));
+  const before = existsSync(issues) ? readFileSync(issues, "utf-8") : null;
+  const r = run([
+    "verify", "--repo", repo, "--model", model, "--issues", issues, "--gh-repo", "acme/thing",
+    "--gh-cmd", process.execPath + " " + join(HERE, "stub-gh.mjs") + " auth-fail",
+  ]);
+  if (r.status === 0) die("S2R1 HIGH-2: an auth/permission error must not be mistaken for unsupported dependency fields", r);
+  if (existsSync(issues) && readFileSync(issues, "utf-8") !== before)
+    die("S2R1 HIGH-2: an auth failure must leave the snapshot untouched");
+  console.log("  ok s2-round1-2 — an auth/permission error fails verify instead of falling back silently");
+}
+
+// HIGH-3: tuple-form `items: [...]` must be rejected as an unsupported schema keyword, not
+// silently allowed through as if it were the single-schema form.
+{
+  const badSchema = join(tmp, "s2r1-tuple-items.schema.json");
+  writeFileSync(badSchema, JSON.stringify({ type: "array", items: [{ type: "string" }, { type: "number" }] }));
+  const errs = validateModel(["a", 1], new URL("file://" + badSchema));
+  if (!errs.length || !errs.some((e) => /unsupported schema keyword "items"/.test(e)))
+    die("S2R1 HIGH-3: tuple-form items must be refused as an unsupported schema keyword, got " + JSON.stringify(errs));
+  console.log("  ok s2-round1-3 — tuple-form items is refused, not silently allowlisted");
+}
+
+// MEDIUM-4: SOURCE COVERAGE must fail on a directory entry it cannot `statSync`, not skip it
+// silently. A dangling symlink reproduces this without chmod (root-proof).
+{
+  const repo = join(tmp, "s2r1-dangling-symlink");
+  cpSync(FIX("mini"), repo, { recursive: true });
+  const topo = join(tmp, "s2r1-dangling-topo.json"), model = join(tmp, "s2r1-dangling-model.json");
+  let r = run(["init", "--repo", repo, "--out", topo, "--force"]);
+  if (r.status !== 0) die("S2R1 MEDIUM-4: init on the fixture repo failed", r);
+  r = run(["gen", "--repo", repo, "--topology", topo, "--out", model]);
+  if (r.status !== 0) die("S2R1 MEDIUM-4: gen on the fixture repo failed", r);
+  symlinkSync("nowhere", join(repo, "src", "dangling.js"));
+  r = run(["check", "--repo", repo, "--model", model, "--topology", topo]);
+  if (r.status === 0 || !/SOURCE COVERAGE.*(unreadable|unstatable)/i.test(r.stderr || ""))
+    die("S2R1 MEDIUM-4: a dangling symlink (unstatable entry) must fail SOURCE COVERAGE, not skip it", r);
+  console.log("  ok s2-round1-4 — an unstatable source entry fails SOURCE COVERAGE");
+}
+
+// MEDIUM-5: minLength/maxLength must count Unicode code points, not UTF-16 code units — an astral
+// character (surrogate pair) is one character, not two.
+{
+  const schemaPath = join(tmp, "s2r1-codepoints.schema.json");
+  writeFileSync(schemaPath, JSON.stringify({ type: "string", minLength: 2 }));
+  const astral = "\u{1D11E}"; // one code point, two UTF-16 units: value.length === 2, [...value].length === 1
+  const errs = validateModel(astral, new URL("file://" + schemaPath));
+  if (!errs.length || !errs.some((e) => /minLength|at least/.test(e)))
+    die("S2R1 MEDIUM-5: minLength must count code points (1 astral char < 2), a UTF-16-unit count wrongly passes it: " + JSON.stringify(errs));
+  const schemaPath2 = join(tmp, "s2r1-codepoints-min1.schema.json");
+  writeFileSync(schemaPath2, JSON.stringify({ type: "string", minLength: 2 }));
+  const twoAstral = astral + astral; // two code points, four UTF-16 units
+  const errs2 = validateModel(twoAstral, new URL("file://" + schemaPath2));
+  if (errs2.length)
+    die("S2R1 MEDIUM-5: two astral characters must satisfy minLength: 2, got " + JSON.stringify(errs2));
+  console.log("  ok s2-round1-5 — minLength/maxLength count Unicode code points, not UTF-16 units");
+}
+
 console.log(
-  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale, s2-fail-closed all green.",
+  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale, s2-fail-closed, s2-round1 all green.",
 );
