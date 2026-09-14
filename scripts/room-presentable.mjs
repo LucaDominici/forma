@@ -12,10 +12,11 @@
 // shape the composer had stopped producing.
 //
 //   node scripts/room-presentable.mjs --room <control-room.html> --manifest <forma.room.json>
-import { readFileSync, unlinkSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { join, dirname, isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { tmpdir } from 'node:os'
 import { daysBetween } from '../lib/roomderive.mjs'
 import { DERIVED_KEYS, LENSES, derivedLenses, ownershipViolations } from '../lib/lenses.mjs'
 import { validateEvidence } from '../lib/audit.mjs'
@@ -160,7 +161,8 @@ for (const program of programs) {
 // 6) determinism: re-run `forma room` with the SAME manifest and byte-compare. Nothing in room.mjs
 // reads Date.now()/Math.random() — fetchedAt/today both come from input files — so two runs on
 // unchanged inputs must be byte-identical, or the template introduced non-determinism.
-const tmpOut = join(HERE, '..', `.room-presentable-tmp-${process.pid}.html`)
+const tmpDir = mkdtempSync(join(tmpdir(), 'forma-room-presentable-'))
+const tmpOut = join(tmpDir, 'room.html')
 let determinismNote = 'skipped (re-run failed)', deterministic = false
 try {
   execFileSync(process.execPath, [join(HERE, '..', 'lib', 'room.mjs'), '--manifest', MANIFEST, '--out', tmpOut], { stdio: ['ignore', 'pipe', 'pipe'] })
@@ -170,7 +172,7 @@ try {
 } catch (e) {
   determinismNote = `re-run failed: ${String((e && e.stderr) || (e && e.message) || e).slice(0, 200)}`
 } finally {
-  if (existsSync(tmpOut)) unlinkSync(tmpOut)
+  rmSync(tmpDir, { recursive: true, force: true })
 }
 
 const staleAfterDays = manifest.staleAfterDays || 14

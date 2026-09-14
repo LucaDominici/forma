@@ -319,7 +319,7 @@ var STRINGS={
   detClose:"[x] close", detDrill:"Drill into this node", detFunc:"What it does", detNow:"Current state (facts)", detCheckpoint:"At this checkpoint", detChange:"Change from previous",
   detTgt:"Target state (project)", detSrc:"Verification source", detIssue:"Issue",
   detNotes:"Notable details", detRefs:"References", detWhere:"Where it runs",
-  detTarget:"TARGET",
+  detTarget:"TARGET", drillLabel:"[+] DRILL",
   rosterSearch:"filter…", rosterCount:"members", rosterEmpty:"no match", aggProgress:"progress",
   skip:"Skip to map", panHint:"⇆ this map is wider than the screen — scroll to see the rest",
   stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology", stampProjection:"projection:", staticSrc:"(static source)", stampVersion:"version:",
@@ -346,7 +346,7 @@ var STRINGS={
   detClose:"[x] chiudi", detDrill:"Entra in questo nodo", detFunc:"Cosa fa", detNow:"Stato attuale (fatti)", detCheckpoint:"A questo checkpoint", detChange:"Modifica dal precedente",
   detTgt:"Stato finito (progetto)", detSrc:"Fonte verifica", detIssue:"Issue",
   detNotes:"Dettagli notevoli", detRefs:"Riferimenti", detWhere:"Dove gira",
-  detTarget:"TARGET",
+  detTarget:"TARGET", drillLabel:"[+] ENTRA",
   rosterSearch:"filtra…", rosterCount:"elementi", rosterEmpty:"nessun risultato", aggProgress:"avanzamento",
   skip:"Vai alla mappa", panHint:"⇆ la mappa è più larga dello schermo — scorri per vedere il resto",
   stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology", stampProjection:"proiezione:", staticSrc:"(fonte statica)", stampVersion:"versione:",
@@ -742,7 +742,7 @@ function draw(animate){
   var dlines=wrapDesc(desc,Math.floor((p.w-26)/5.4),MAXL);
   for(var q=0;q<dlines.length;q++)s+='<text class="dd" x="'+(p.x+13)+'" y="'+(p.y+51+q*12.5)+'">'+esc(dlines[q])+'</text>';
   if(dr)s+='<rect class="drillhit" data-drill="1" x="'+(p.x+p.w-96)+'" y="'+(p.y+p.h-25)+'" width="88" height="20" rx="5"/>'
-   +'<text class="plus" x="'+(p.x+p.w-13)+'" y="'+(p.y+p.h-9)+'" text-anchor="end">[+] DRILL</text>';
+   +'<text class="plus" x="'+(p.x+p.w-13)+'" y="'+(p.y+p.h-9)+'" text-anchor="end">'+esc(STR.drillLabel)+'</text>';
   else if(isCat)s+='<text class="plus" x="'+(p.x+p.w-13)+'" y="'+(p.y+p.h-9)+'" text-anchor="end">[≡] '+esc(String(n.count))+'</text>';
   s+='</g>';
  }
