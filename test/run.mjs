@@ -13,6 +13,7 @@ import {
   existsSync,
   renameSync,
   symlinkSync,
+  chmodSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -9973,6 +9974,109 @@ const diffPaths = (a, b, at = "") => {
   );
 }
 
+// §s2-fail-closed (audit 2026-09-14, S2) — five silent-default paths that used to fail open now
+// fail closed: an opt-in-by-presence arbiter path that names nothing, a schema keyword the engine
+// silently ignores, an unmeasured issue↔code link presented as a measured zero, a transport failure
+// mistaken for "dependency fields unsupported", and a source directory the coverage scanner cannot
+// even read.
+
+// F3a: `arbiter.milestones` is opt-in BY PRESENCE — an empty string names no projection but is not
+// absent either, and the schema's own `minLength: 1` must reject it, not read it as undeclared.
+{
+  const roomSchema = new URL("../lib/schema/forma.room.schema.json", import.meta.url);
+  const manifest = {
+    today: "2026-01-01",
+    programs: [{ id: "p", ghRepo: "acme/p", repo: ".", issues: "issues.json", arbiter: { milestones: "" } }],
+  };
+  const errs = validateModel(manifest, roomSchema);
+  if (!errs.length || !errs.some((e) => /milestones/.test(e)))
+    die("S2 F3a: an empty-string arbiter.milestones must fail manifest validation, got " + JSON.stringify(errs));
+  console.log("  ok s2-fail-closed-1 — empty-string arbiter.milestones fails schema validation");
+}
+
+// F3b: an unsupported JSON-Schema keyword (patternProperties, oneOf, allOf, external $ref, tuple
+// items, dependencies…) must make validateModel refuse the SCHEMA, not silently under-validate the
+// model against it. The five shipped schemas must trip no guard — the supported set is complete.
+{
+  const badSchema = join(tmp, "s2-unsupported-keyword.schema.json");
+  writeFileSync(badSchema, JSON.stringify({ type: "object", properties: { x: { type: "string", patternProperties: { "^a": { type: "string" } } } } }));
+  const errs = validateModel({ x: "y" }, new URL("file://" + badSchema));
+  if (!errs.length || !errs.some((e) => /unsupported schema keyword/.test(e)))
+    die("S2 F3b: a schema with an unsupported keyword must make validateModel return an error, got " + JSON.stringify(errs));
+  for (const f of ["c4-model.schema.json", "c4-issues.schema.json", "c4-health.schema.json", "c4-findings.schema.json", "c4-brief.schema.json", "forma.room.schema.json"]) {
+    const shipped = validateModel({}, new URL("../lib/schema/" + f, import.meta.url)).filter((e) => /unsupported schema keyword/.test(e));
+    if (shipped.length) die(`S2 F3b: ${f} trips the supported-keyword guard — the set is incomplete: ${shipped.join("; ")}`);
+  }
+  console.log("  ok s2-fail-closed-2 — an unsupported schema keyword is refused, and every shipped schema stays clean");
+}
+
+// F4/D-5: a programme whose repo is not a git checkout gets `linked.error` from linkIssuesToNodes.
+// deriveAll must carry that error into `derived.link.error` and turn `coverage` into an unmeasured
+// null — not a measured "0% linked" the briefing would show as if it had counted something.
+{
+  const noGit = join(tmp, "s2-not-a-checkout");
+  mkdirSync(noGit, { recursive: true });
+  const out = deriveAll({
+    repo: noGit, model: { nodes: [] }, topo: { leafSources: [] },
+    issuesSnapshot: {
+      issues: [{ n: 1, state: "OPEN", labels: [], ms: null, title: "x", createdAt: "2026-01-01", closedAt: null }],
+      milestones: [], fetchedAt: "2026-01-01", collection: {}, dependencies: { supported: false, edges: [] },
+    },
+    health: { verdicts: [], dependencyConfirmations: [] }, findings: { findings: [] },
+    brief: null, briefPath: null, manifest: { today: "2026-01-01" },
+    gateInputs: null, arbiterMilestones: null, docs: null,
+  });
+  if (!out.link || !out.link.error) die("S2 F4: a repo that is not a git checkout must set derived.link.error");
+  if (out.link.coverage !== null) die("S2 F4: derived.link.coverage must be null (unmeasured), got " + JSON.stringify(out.link.coverage));
+  console.log("  ok s2-fail-closed-3 — an unreadable git history yields link.error and a null (not zero) coverage");
+}
+
+// F5: a transport failure (auth, network, rate limit) on the dependency-enabled GraphQL query must
+// not be mistaken for "this API has no dependency fields" — that class alone may retry without
+// dependencies. A transport failure must fail `verify` outright and leave every file untouched.
+{
+  const repo = join(tmp, "s2-verify-transport"), issues = join(repo, "issues.json"), model = join(repo, "model.json");
+  mkdirSync(repo, { recursive: true });
+  writeFileSync(model, JSON.stringify({ meta: { ghRepo: "acme/thing" }, nodes: [], edges: [] }));
+  const before = existsSync(issues) ? readFileSync(issues, "utf-8") : null;
+  const r = run([
+    "verify", "--repo", repo, "--model", model, "--issues", issues, "--gh-repo", "acme/thing",
+    "--gh-cmd", process.execPath + " " + join(HERE, "stub-gh.mjs") + " transport-fail",
+  ]);
+  if (r.status === 0) die("S2 F5: a transport failure on the dependency query must not exit 0", r);
+  if (existsSync(issues) && readFileSync(issues, "utf-8") !== before)
+    die("S2 F5: a transport failure must leave the snapshot untouched");
+  console.log("  ok s2-fail-closed-4 — a stub-gh transport failure fails verify and leaves the snapshot untouched");
+}
+
+// F14: SOURCE COVERAGE must fail loud on a directory it cannot read, not treat it as though it
+// held no recognised files (fail open). Skipped under uid 0, where chmod 000 does not deny reads.
+{
+  if (process.getuid && process.getuid() === 0) {
+    console.log("  skip s2-fail-closed-5 — running as root, chmod 000 is not enforced");
+  } else {
+    const repo = join(tmp, "s2-unreadable-source");
+    cpSync(FIX("mini"), repo, { recursive: true });
+    const topo = join(tmp, "s2-unreadable-topo.json"), model = join(tmp, "s2-unreadable-model.json");
+    let r = run(["init", "--repo", repo, "--out", topo, "--force"]);
+    if (r.status !== 0) die("S2 F14: init on the fixture repo failed", r);
+    r = run(["gen", "--repo", repo, "--topology", topo, "--out", model]);
+    if (r.status !== 0) die("S2 F14: gen on the fixture repo failed", r);
+    const blocked = join(repo, "src", "blocked");
+    mkdirSync(blocked);
+    writeFileSync(join(blocked, "hidden.js"), "export const hidden = 1\n");
+    chmodSync(blocked, 0o000);
+    try {
+      r = run(["check", "--repo", repo, "--model", model, "--topology", topo]);
+    } finally {
+      chmodSync(blocked, 0o755);
+    }
+    if (r.status === 0 || !/SOURCE COVERAGE.*unreadable/i.test(r.stderr || ""))
+      die("S2 F14: an unreadable source directory must fail SOURCE COVERAGE, not skip it", r);
+    console.log("  ok s2-fail-closed-5 — an unreadable source directory fails SOURCE COVERAGE");
+  }
+}
+
 console.log(
-  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale all green.",
+  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale, s2-fail-closed all green.",
 );
