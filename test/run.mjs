@@ -10802,6 +10802,98 @@ const diffPaths = (a, b, at = "") => {
   console.log("  ok architecture-module-table — every lib/*.mjs module is in ARCHITECTURE.md's table, count matches");
 }
 
+// F2 (2026-09-14 visual verification) — the plan lens headline ("N decisions are waiting on you")
+// and the portfolio front door ("N things need you") both count issues matching the DECLARED
+// blocking rule (label OR an open blocker on a dependency edge, derivePortfolio's `blockedIssues`).
+// The Kanban "Waiting on a human" bucket sits on a different, narrower axis (a declared needs-human
+// LABEL only, gated behind the audit partition — deriveKanban never sees dependency edges) and is
+// an intentionally separate epistemic question ("what is known about this issue", not "is it
+// blocked"). Reusing "Waiting on a human" as its label made the two numbers read as one contradicted
+// claim on the same screen (viafera/forma real snapshots: headline 1/4, bucket 0, because both
+// repos declare `blockedBy: {labels: []}` and their blocking is dependency-only, invisible to the
+// label-only bucket). The fix is not to fold the axes together (that would move issues across the
+// audit partition and falsify its own "closed + open = total" subtitle) — it is to name the shared
+// rule explicitly in the one count both surfaces show, rename the bucket so it cannot be misread as
+// the same number, and give both headlines a real singular so "1 decisions" cannot happen again.
+{
+  const mk = (id, ghRepo, blockedLabels, issues) => {
+    const issuesSnapshot = {
+      issues, milestones: [], fetchedAt: "2026-01-01", collection: {},
+      dependencies: { supported: true, complete: true, edges: [] },
+    };
+    const deriveContext = {};
+    const derived = deriveAll(
+      {
+        repo: tmp, model: null, topo: null, issuesSnapshot,
+        health: { verdicts: [], dependencyConfirmations: [] }, findings: { findings: [] },
+        brief: null, briefPath: null, manifest: { today: "2026-01-01", blockedBy: { labels: blockedLabels } },
+        gateInputs: null, arbiterMilestones: null, docs: null,
+      },
+      deriveContext,
+    );
+    return { id, ghRepo, repo: tmp, model: null, topo: null, issuesSnapshot, derived, deriveContext, blockedBy: { labels: blockedLabels } };
+  };
+  const issue = (n, labels) => ({ n, title: "t" + n, state: "OPEN", labels, ms: null, createdAt: "2026-01-01", closedAt: null });
+  // one blocked issue (singular case) ...
+  const one = mk("one", "acme/one", ["blocked"], [issue(1, ["blocked"]), issue(2, [])]);
+  // ... and two blocked issues (plural case), so the fixture exercises both grammatical forms.
+  const two = mk("two", "acme/two", ["blocked"], [issue(3, ["blocked"]), issue(4, ["blocked"]), issue(5, [])]);
+  const portfolio = derivePortfolio({ today: "2026-01-01", programs: [one, two] });
+  const summaryOf = (id) => portfolio.programs.find((p) => p.id === id);
+  const perProgramCount = (id) => portfolio.blocked.filter((b) => b.program === id).length;
+
+  // The "one count" invariant: the plan headline (built from `portfolio.blocked` filtered by
+  // programme) must equal the programme's own derived `blocked` figure, and the portfolio total
+  // must equal the sum across programmes — the same measurement read at two scopes, never two.
+  if (summaryOf("one").blocked !== 1 || perProgramCount("one") !== 1)
+    die("f2-counts: programme 'one' must show exactly 1 blocked issue at both the summary and the per-item list, got " + JSON.stringify([summaryOf("one").blocked, perProgramCount("one")]));
+  if (summaryOf("two").blocked !== 2 || perProgramCount("two") !== 2)
+    die("f2-counts: programme 'two' must show exactly 2 blocked issues at both the summary and the per-item list, got " + JSON.stringify([summaryOf("two").blocked, perProgramCount("two")]));
+  if (portfolio.totals.blocked !== summaryOf("one").blocked + summaryOf("two").blocked)
+    die("f2-counts: the portfolio total must be the sum of the per-programme blocked counts it declares, got " + portfolio.totals.blocked);
+
+  // The plural fix: "N decisions are waiting on you" had no singular. `techHeadline`/`techHeadlineOne`
+  // must differ only in the singular/plural of "issue(s)", both must name the blocking rule (never a
+  // bare, unexplained count), and the template must actually select between them by count.
+  const en = readJson(join(HERE, "..", "lib/viewer/strings/en.json"));
+  const it = readJson(join(HERE, "..", "lib/viewer/strings/it.json"));
+  const fmtLocal = (s, d) => String(s).replace(/\{([^}]+)\}/g, (_, k) => (d[k] == null ? "" : String(d[k])));
+  const pluralLocal = (n, one_, other_) => (n === 1 ? one_ : other_);
+  for (const [locale, strings, singleWord, pluralWord] of [
+    ["en", en, "issue matches", "issues match"],
+    ["it", it, "issue corrisponde", "issue corrispondono"],
+  ]) {
+    const headlineOne = fmtLocal(pluralLocal(1, strings.techHeadlineOne, strings.techHeadline), { n: 1 });
+    const headlineTwo = fmtLocal(pluralLocal(2, strings.techHeadlineOne, strings.techHeadline), { n: 2 });
+    if (!headlineOne.startsWith("1 " + singleWord))
+      die(`f2-counts (${locale}): techHeadlineOne must read "1 ${singleWord}...", got "${headlineOne}"`);
+    if (!headlineTwo.startsWith("2 " + pluralWord))
+      die(`f2-counts (${locale}): techHeadline must read "2 ${pluralWord}...", got "${headlineTwo}"`);
+    if (!/blocking rule|regola di blocco/.test(strings.techHeadline) || !/blocking rule|regola di blocco/.test(strings.techHeadlineOne))
+      die(`f2-counts (${locale}): the plan headline must name the blocking rule it counts`);
+    // Same defect, portfolio scope: "{blocked} things need you" never agreed with blocked===1.
+    const thesisOne = fmtLocal(strings.thesisOne, { blocked: 1, blockedWord: pluralLocal(1, strings.thesisBlockedWordOne, strings.thesisBlockedWord), open: 3, programs: 1 });
+    const thesisTwo = fmtLocal(strings.thesisOne, { blocked: 2, blockedWord: pluralLocal(2, strings.thesisBlockedWordOne, strings.thesisBlockedWord), open: 3, programs: 1 });
+    if (thesisOne.indexOf("1 " + strings.thesisBlockedWordOne) === -1)
+      die(`f2-counts (${locale}): the portfolio thesis must use the singular blocked word for blocked===1, got "${thesisOne}"`);
+    if (thesisTwo.indexOf("2 " + strings.thesisBlockedWord) === -1)
+      die(`f2-counts (${locale}): the portfolio thesis must use the plural blocked word for blocked===2, got "${thesisTwo}"`);
+    // The Kanban bucket must no longer share its label with the blocking-rule count: same wording on
+    // both surfaces is exactly how "0 waiting on a human" read as a contradiction of "N blocked".
+    if (strings.bucketAspettanoUmano === strings.kpiBlocked)
+      die(`f2-counts (${locale}): the "needs-human label" bucket must not share its name with the declared-blocking-rule KPI`);
+  }
+
+  // The template must actually route through plural(), not just declare the strings.
+  const template = readFileSync(join(HERE, "..", "lib/viewer/control-room.html"), "utf-8");
+  if (!/plural\(mine\.length,STR\.techHeadlineOne,STR\.techHeadline\)/.test(template))
+    die("f2-counts: viewPlan's headline does not select techHeadline/techHeadlineOne by count");
+  if (!/plural\(blockedClaim\.value,STR\.thesisBlockedWordOne,STR\.thesisBlockedWord\)/.test(template))
+    die("f2-counts: the portfolio thesis does not select a singular/plural blocked word by count");
+
+  console.log("  ok f2-counts — the plan headline and portfolio front door derive from the same declared-blocking-rule count, name the rule, and both have a real singular");
+}
+
 console.log(
-  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, serve-cli, strict-flags, equals-flags, limit-strict, drill-label, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale, s2-fail-closed, s2-round1, architecture-module-table all green.",
+  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, serve-cli, strict-flags, equals-flags, limit-strict, drill-label, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale, s2-fail-closed, s2-round1, architecture-module-table, f2-counts all green.",
 );
