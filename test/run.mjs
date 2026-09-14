@@ -1065,8 +1065,6 @@ const diffPaths = (a, b, at = "") => {
     "init",
     "--repo",
     REPO,
-    "--topology",
-    testsTopo,
     "--out",
     testsTopo,
     "--force",
@@ -10423,6 +10421,137 @@ const diffPaths = (a, b, at = "") => {
   console.log("  ok s2-round1-5 — minLength/maxLength count Unicode code points, not UTF-16 units");
 }
 
+// F13 — `forma serve` (the static doc viewer, distinct from `room --serve`) must bind loopback
+// only and answer a malformed URI with 400 instead of dying: `decodeURIComponent` throws on a lone
+// `%` escape and used to take the whole process down with it.
+{
+  const repo = join(tmp, "serve-cli");
+  mkdirSync(join(repo, "docs/architecture"), { recursive: true });
+  const child = spawn(
+    process.execPath,
+    [join(HERE, "..", "lib", "serve.mjs"), "--repo", repo, "--port", "0"],
+    { stdio: ["ignore", "pipe", "pipe"] },
+  );
+  let out = "";
+  const port = await new Promise((resolvePort, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error("serve-cli: forma serve did not report a port in time: " + out)),
+      3000,
+    );
+    const onData = (chunk) => {
+      out += chunk.toString();
+      const m = /http:\/\/127\.0\.0\.1:(\d+)/.exec(out);
+      if (m) { clearTimeout(timer); child.stdout.off("data", onData); resolvePort(Number(m[1])); }
+    };
+    child.stdout.on("data", onData);
+    child.on("error", reject);
+  });
+  if (/0\.0\.0\.0|::/.test(out))
+    die("serve-cli: forma serve bound something wider than loopback: " + out);
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/%E0`);
+    if (res.status !== 400)
+      die("serve-cli: a malformed URI must answer 400, got " + res.status);
+  } finally {
+    child.kill();
+  }
+  console.log(
+    "  ok serve-cli — forma serve binds loopback only and answers a malformed URI with 400 instead of crashing",
+  );
+}
+
+// F12 — an unknown flag must fail loud (exit 1), not be silently ignored. `room.mjs`/`audit.mjs`
+// already reject unknown flags; gen/check/verify/init/serve did not.
+{
+  const topo = join(tmp, "strict-topo.json"), model = join(tmp, "strict-model.json");
+  let r = run(["init", "--repo", FIX("mini"), "--out", topo, "--force"]);
+  if (r.status !== 0) die("strict-flags: setup init exit " + r.status, r);
+  r = run(["gen", "--repo", FIX("mini"), "--topology", topo, "--out", model, "--bogus"]);
+  if (r.status === 0) die("strict-flags: gen --bogus must exit 1, not be silently ignored", r);
+  r = run(["init", "--repo", FIX("mini"), "--out", topo, "--force", "--bogus"]);
+  if (r.status === 0) die("strict-flags: init --bogus must exit 1", r);
+  r = run(["check", "--repo", FIX("mini"), "--model", model, "--topology", topo, "--bogus"]);
+  if (r.status === 0) die("strict-flags: check --bogus must exit 1", r);
+  r = run(["verify", "--repo", FIX("mini"), "--bogus"]);
+  if (r.status === 0) die("strict-flags: verify --bogus must exit 1", r);
+  const serveResult = spawnSync(process.execPath, [join(HERE, "..", "lib", "serve.mjs"), "--bogus"], { encoding: "utf-8" });
+  if (serveResult.status === 0) die("strict-flags: serve --bogus must exit 1", serveResult);
+  console.log(
+    "  ok strict-flags — gen/init/check/verify/serve exit 1 on an unknown flag instead of ignoring it",
+  );
+}
+
+// Codex round 1 HIGH — parseArgs({strict:true}) only rejects an UNKNOWN flag; the retained raw
+// `process.argv.indexOf('--key')` readers never matched a `--key=value` token, so a KNOWN flag
+// given in that form was silently ignored and fell back to its default. `forma check
+// --repo=/bad --model=/bad --topology=/bad` therefore graded the CURRENT repo (cwd), not /bad.
+{
+  const bad = run(["check", "--repo=/bad", "--model=/bad", "--topology=/bad"]);
+  if (bad.status === 0)
+    die("equals-flags: check --repo=/bad --model=/bad --topology=/bad must fail, not silently grade the current repo", bad);
+  console.log("  ok equals-flags-reject — check --key=/bad is honoured, not silently ignored");
+
+  // One `--key=value` case per CLI must be honoured, not just rejected: a full init→gen→check
+  // pipeline driven entirely with `=`-form flags must produce the same files a space-form pipeline
+  // would, proving parseArgs().values — not indexOf — is what the value ends up coming from.
+  // Copied to a scratch dir (not run against FIX("mini") directly): `verify` below writes a live
+  // c4-issues.json snapshot into --repo, and the fixture must stay pristine for every other test.
+  const eqRepo = join(tmp, "eq-repo");
+  cpSync(FIX("mini"), eqRepo, { recursive: true });
+  const topoEq = join(tmp, "eq-topo.json"), modelEq = join(tmp, "eq-model.json");
+  let r = run(["init", `--repo=${eqRepo}`, `--out=${topoEq}`, "--force"]);
+  if (r.status !== 0 || !existsSync(topoEq)) die("equals-flags: init --out=<path> was not honoured", r);
+  r = run(["gen", `--repo=${eqRepo}`, `--topology=${topoEq}`, `--out=${modelEq}`]);
+  if (r.status !== 0 || !existsSync(modelEq)) die("equals-flags: gen --topology=/--out= were not honoured", r);
+  r = run(["check", `--repo=${eqRepo}`, `--model=${modelEq}`, `--topology=${topoEq}`]);
+  if (r.status !== 0) die("equals-flags: check --repo=/--model=/--topology= were not honoured", r);
+
+  const GH = process.execPath + " " + join(HERE, "stub-gh.mjs");
+  r = run(["verify", `--repo=${eqRepo}`, `--model=${modelEq}`, "--gh-repo=acme/thing", `--gh-cmd=${GH}`]);
+  if (r.status !== 0) die("equals-flags: verify --gh-repo=/--gh-cmd= were not honoured", r);
+
+  const child = spawn(process.execPath, [join(HERE, "..", "lib", "serve.mjs"), `--repo=${eqRepo}`, "--port=0"], { stdio: ["ignore", "pipe", "pipe"] });
+  const port = await new Promise((resolvePort, reject) => {
+    let out = "";
+    const timer = setTimeout(() => reject(new Error("equals-flags: forma serve --port=0 did not report a port in time: " + out)), 3000);
+    const onData = (chunk) => {
+      out += chunk.toString();
+      const m = /http:\/\/127\.0\.0\.1:(\d+)/.exec(out);
+      if (m) { clearTimeout(timer); child.stdout.off("data", onData); resolvePort(Number(m[1])); }
+    };
+    child.stdout.on("data", onData);
+    child.on("error", reject);
+  });
+  child.kill();
+  if (!(port > 0)) die("equals-flags: serve --port=0 was not honoured");
+  console.log("  ok equals-flags-honour — init/gen/check/verify/serve all honour --key=value, not just --key value");
+}
+
+// Codex round 1 MEDIUM — `room update` still parsed and forwarded `--limit`, though the flag was
+// removed from `verify`; strict parsing was added everywhere else but not here.
+{
+  const SCRATCH_OUT = join(tmp, "limit-strict-out.html");
+  const r = run(["room", "update", "--manifest", "forma.room.json", "--out", SCRATCH_OUT, "--skip-verify", "--limit", "5"]);
+  if (r.status === 0) die("limit-strict: room update --limit must exit 1 (the flag was removed, not just unforwarded)", r);
+  console.log("  ok limit-strict — room update --limit is an unknown flag now, not a silently-accepted dead one");
+}
+
+// Codex round 1 LOW — the DRILL label must be a real localization (it differs from en), and must
+// actually be rendered through STR.drillLabel rather than sitting in the table unread.
+// (F20's read-only-install case is not covered by a test — see HANDOFF.md.)
+{
+  const src = readFileSync(join(HERE, "..", "lib/viewer/c4-hologram.html"), "utf-8");
+  const enMatch = src.match(/drillLabel:"([^"]+)"/);
+  const itMatch = [...src.matchAll(/drillLabel:"([^"]+)"/g)][1];
+  if (!enMatch || !itMatch)
+    die("drill-label: STRINGS is missing a drillLabel key for en or it");
+  if (enMatch[1] === itMatch[1])
+    die('drill-label: it.drillLabel must be a real translation, not a copy of en ("' + enMatch[1] + '")');
+  if (!/STR\.drillLabel\b/.test(src))
+    die("drill-label: the DRILL text is declared but never rendered through STR.drillLabel");
+  console.log("  ok drill-label — [+] DRILL is localized (en/it) and rendered through STR.drillLabel, not hardcoded");
+}
+
 console.log(
-  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale, s2-fail-closed, s2-round1 all green.",
+  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, serve-cli, strict-flags, equals-flags, limit-strict, drill-label, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale, s2-fail-closed, s2-round1 all green.",
 );
