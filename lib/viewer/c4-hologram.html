@@ -13,6 +13,10 @@
  --edge:#2b6e8a; --edgeplan:oklch(49.3% 0.056 233); --elbl:oklch(58.3% 0.081 229); --ddtxt:#7fb3c6; --now:#cfeefb; --tgt:#8fd8ec; --src:#4fbf8d;}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"SF Mono",Menlo,Consolas,ui-monospace,monospace;background:var(--bg);color:var(--nm);overflow-x:hidden}
+/* F9: same skip-link shape as the Control Room (lib/viewer/control-room.html) — off-screen until
+   focused, moves focus to the landmark rather than only scrolling the page there. */
+.skip{position:fixed;left:8px;top:6px;z-index:40;min-height:44px;padding:6px 10px;background:var(--stagebg);border:1px solid var(--cyan);color:var(--nm);transform:translateY(-160%)}
+.skip:focus{transform:none}
 #wrap{padding:14px 18px 26px;min-height:100vh;background:
  radial-gradient(ellipse at 50% -10%,var(--halo),transparent 55%),
  repeating-linear-gradient(0deg,transparent,transparent 39px,var(--grid) 40px),
@@ -182,6 +186,7 @@ svg.dense .edge.hot{opacity:1;stroke-width:2.6}
  background:transparent;border:1px solid var(--border);color:var(--nm)}
 #detail .roster{max-height:44vh;overflow-y:auto;border-top:1px solid var(--border)}
 #detail .roster:focus{outline:2px solid var(--cyan);outline-offset:2px}
+#detail:focus{outline:2px solid var(--cyan);outline-offset:2px}
 #detail .ritem{padding:7px 2px 7px 4px;border-bottom:1px solid rgba(30,74,94,.4);display:block}
 #detail .ritem .rn{color:var(--nm);font-size:11px;font-weight:700}
 #detail .ritem .rp{float:right;color:var(--sec);font-size:9px;letter-spacing:.08em}
@@ -228,6 +233,7 @@ html[data-skin^="blueprint"] .nd.delta rect,html[data-skin^="blueprint"] .edge.d
 </style>
 </head>
 <body>
+<button class="skip" id="skip" type="button"></button>
 <div id="wrap">
  <div class="top">
   <div><h1 id="title">Forma · C4 Hologram</h1>
@@ -256,6 +262,7 @@ html[data-skin^="blueprint"] .nd.delta rect,html[data-skin^="blueprint"] .edge.d
   <div id="timeline-track"></div>
   <div id="checkpoint-summary"></div>
  </nav>
+ <main id="content" tabindex="-1">
  <div id="crumb"></div>
  <div id="stamp"></div>
  <div id="stage"><div id="etip"></div><div id="err" style="display:none"></div></div>
@@ -274,7 +281,8 @@ html[data-skin^="blueprint"] .nd.delta rect,html[data-skin^="blueprint"] .edge.d
   <span id="lg-checkpoint-wrap" style="display:none"><i style="border:1.5px solid #3ee7ff"></i><span id="lg-checkpoint"></span></span>
   <span class="hint" id="lg-hint"></span>
  </div>
- <div id="detail"></div>
+ <div id="detail" tabindex="-1"></div>
+ </main>
 </div>
 <script>
 (function(){
@@ -302,6 +310,7 @@ var STRINGS={
   detNotes:"Notable details", detRefs:"References", detWhere:"Where it runs",
   detTarget:"TARGET",
   rosterSearch:"filter…", rosterCount:"members", rosterEmpty:"no match", aggProgress:"progress",
+  skip:"Skip to map",
   stampBase:"Fact base:", stampMethod:"method:", stampVerify:"code+topology", stampProjection:"projection:", staticSrc:"(static source)", stampVersion:"version:",
   errEmpty:"Model unreachable or empty.",
   errNotFound:"Model not found (./c4-model.json). Open via `forma serve` or inject window.__C4_MODEL__.",
@@ -328,6 +337,7 @@ var STRINGS={
   detNotes:"Dettagli notevoli", detRefs:"Riferimenti", detWhere:"Dove gira",
   detTarget:"TARGET",
   rosterSearch:"filtra…", rosterCount:"elementi", rosterEmpty:"nessun risultato", aggProgress:"avanzamento",
+  skip:"Vai alla mappa",
   stampBase:"Base fatti:", stampMethod:"metodo:", stampVerify:"code+topology", stampProjection:"proiezione:", staticSrc:"(fonte statica)", stampVersion:"versione:",
   errEmpty:"Modello non raggiungibile o vuoto.",
   errNotFound:"Modello non trovato (./c4-model.json). Apri via `forma serve` o inietta window.__C4_MODEL__.",
@@ -860,6 +870,10 @@ function detailState(n,timeline){
  return timeline?(n.current||""):(n.current||n.func||n.description||"");
 }
 
+// F10: opening the detail panel used to leave it wherever the layout put it — often below the
+// fold on a tall level — so a click that opened it looked like it did nothing. Scroll it into view
+// and move focus there, the same way drillTo() already moves focus for the deeper level.
+function focusDetail(){var d=$("detail");if(!d)return;d.scrollIntoView({block:"nearest",behavior:"smooth"});d.focus();}
 function showDetail(n){
  if(n&&n.__catalog)return showRoster(n);
  var timeline=!!(BASE&&BASE.timeline),src=srcOf(n),cur=detailState(n,timeline),showSrc=src&&String(cur).indexOf(src)<0;
@@ -887,6 +901,7 @@ function showDetail(n){
   +((n.meta&&Array.isArray(n.meta.refs)&&n.meta.refs.length)?'<div class="row"><span class="lbl">'+esc(STR.detRefs)+'</span><span class="src">'+n.meta.refs.map(function(r){var label=esc(String((r&&r.label)||(r&&r.url)||r));return (r&&r.url&&/^https:\/\//.test(String(r.url)))?'<a href="'+esc(String(r.url))+'" target="_blank" rel="noopener noreferrer">'+label+'</a>':label;}).join(" · ")+'</span></div>':'')
   +(hasKids(n.id)?'<button type="button" class="detaildrill" id="ddrill">'+esc(STR.detDrill)+'</button>':'');
  $("detail").style.display="block";
+ focusDetail();
  var dc=$("dc");if(dc)dc.addEventListener("click",function(){$("detail").style.display="none";});
  var dd=$("ddrill");if(dd)dd.addEventListener("click",function(){drillTo(n.id,true);});
 }
@@ -899,6 +914,7 @@ function showRoster(cat){
   +'<input class="rostersearch" id="rsq" type="text" placeholder="'+esc(STR.rosterSearch)+'" autocomplete="off">'
   +'<div class="roster" id="rlist" tabindex="0" role="list" aria-label="'+esc(cat.name+' · '+cat.count+' '+STR.rosterCount)+'"></div>';
  $("detail").innerHTML=head;$("detail").style.display="block";
+ focusDetail();
  var dc=$("dc");if(dc)dc.addEventListener("click",function(){$("detail").style.display="none";});
  function rowHtml(m){
   var d=m.current||m.func||"";
@@ -923,7 +939,15 @@ function svgPt(evt){var svg=$("stage").querySelector("svg");if(!svg||!svg.getScr
  var p=svg.createSVGPoint();p.x=evt.clientX;p.y=evt.clientY;try{return p.matrixTransform(svg.getScreenCTM().inverse());}catch(e){return null;}}
 function curPos(){return POS[keyOf()]?POS[keyOf()].pos:null;}
 function clamp(v,lo,hi){return v<lo?lo:v>hi?hi:v;}
-function drillTo(id,focusFirst){if(!hasKids(id))return;$("detail").style.display="none";stack.push(id);draw(true);
+// F14: a container whose only child is one dead-end leaf (no component layer, that leaf has no
+// children of its own) used to jump the level straight to "LEAVES" for a screen holding one box —
+// a level change that showed no more than the detail panel already would. Explain instead of
+// jumping: open that leaf's own detail rather than navigating to a one-box level.
+function singleDeadEndChild(id){var kids=childrenOf(id);return (kids.length===1&&!hasKids(kids[0].id))?kids[0]:null;}
+function drillTo(id,focusFirst){if(!hasKids(id))return;
+ var only=singleDeadEndChild(id);
+ if(only){$("detail").style.display="none";showDetail(only);return;}
+ $("detail").style.display="none";stack.push(id);draw(true);
  if(focusFirst)setTimeout(function(){var first=$("stage").querySelector(".nd[tabindex]");if(first)first.focus();},0);}
 
 function wire(){
@@ -989,6 +1013,7 @@ function wire(){
  });
  $("crumb").addEventListener("click",function(ev){if(ev.target.tagName==="A"){var d=+ev.target.getAttribute("data-d");
   stack=stack.slice(0,d+2);if(!stack.length)stack=[null];draw(true);}});
+ var skipBtn=$("skip");if(skipBtn)skipBtn.addEventListener("click",function(){$("content").focus();});
  $("back").addEventListener("click",function(){if(stack.length>1){stack.pop();draw(true);}});
  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&stack.length>1){stack.pop();draw(true);}});
  $("bnow").addEventListener("click",function(){mode="now";$("bnow").className="on";$("btgt").className="";draw(false);});
@@ -1013,6 +1038,7 @@ function wire(){
 // ---- i18n: apply every static UI string from STR ----
 function applyStrings(){
  function set(id,txt){var e=$(id);if(e)e.textContent=txt;}
+ set("skip",STR.skip);
  set("subhelp",STR.subhelp);set("back",STR.back);set("bnow",STR.now);set("btgt",STR.tgt);
  set("brf",STR.reverify);set("brl",STR.resetLayout);var brl=$("brl");if(brl)brl.title=STR.resetLayoutTitle;
  set("blbl",STR.labels);var bl=$("blbl");if(bl)bl.title=STR.labelsTitle;

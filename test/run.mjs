@@ -2897,6 +2897,81 @@ const diffPaths = (a, b, at = "") => {
   );
 }
 
+// F9 (2026-09-14 visual verification): a skip link and a `<main>` landmark, same shape as the
+// Control Room's own (lib/viewer/control-room.html: `.skip` button + `<main id="content">`).
+{
+  const html = readFileSync(
+    join(HERE, "..", "lib", "viewer", "c4-hologram.html"),
+    "utf-8",
+  );
+  if (!/<main id="content" tabindex="-1">/.test(html))
+    die("F9: no `<main>` landmark around the explorer's content");
+  if (!/<button class="skip" id="skip" type="button">/.test(html))
+    die("F9: no skip-link button");
+  if (!/skipBtn\.addEventListener\("click",function\(\)\{\$\("content"\)\.focus\(\);\}\)/.test(html))
+    die("F9: the skip link does not move focus to the `<main>` landmark");
+  console.log("  ok f9-landmarks — skip link moves focus into a `<main>` landmark");
+}
+
+// F10 (2026-09-14 visual verification): opening a node's detail must scroll it into view and move
+// focus there, not merely toggle `display` on a panel the layout left below the fold.
+{
+  const html = readFileSync(
+    join(HERE, "..", "lib", "viewer", "c4-hologram.html"),
+    "utf-8",
+  );
+  if (!/<div id="detail" tabindex="-1">/.test(html))
+    die("F10: #detail is not a focus target (no tabindex)");
+  const focusDetailSrc = (
+    html.match(/\nfunction focusDetail\(\)\{[\s\S]*?\n\}/) || []
+  )[0];
+  if (!focusDetailSrc || !/scrollIntoView/.test(focusDetailSrc) || !/\.focus\(\)/.test(focusDetailSrc))
+    die("F10: focusDetail() does not scroll the panel into view and focus it");
+  const showDetailBody = (html.match(/\nfunction showDetail\(n\)\{[\s\S]*?\n\}\n/) || [])[0];
+  const showRosterBody = (html.match(/\nfunction showRoster\(cat\)\{[\s\S]*?\n\}\n/) || [])[0];
+  if (!showDetailBody || !/focusDetail\(\)/.test(showDetailBody))
+    die("F10: showDetail() never calls focusDetail()");
+  if (!showRosterBody || !/focusDetail\(\)/.test(showRosterBody))
+    die("F10: showRoster() never calls focusDetail()");
+  console.log("  ok f10-detail-focus — opening a node's detail scrolls it into view and focuses it");
+}
+
+// F14 (2026-09-14 visual verification): a container whose only child is a single dead-end leaf (no
+// component layer, no children of its own) must not drill into a one-box "LEAVES" level — that
+// screen tells the reader nothing the detail panel doesn't already say. Show the detail instead.
+{
+  const html = readFileSync(
+    join(HERE, "..", "lib", "viewer", "c4-hologram.html"),
+    "utf-8",
+  );
+  const childrenOfSrc = (html.match(/\nfunction childrenOf\(pid\)\{[\s\S]*?\n\}/) || [])[0];
+  const hasKidsSrc = (html.match(/\nfunction hasKids\(id\)\{[\s\S]*?\n\}/) || [])[0];
+  const singleDeadEndSrc = (html.match(/\nfunction singleDeadEndChild\(id\)\{[\s\S]*?\n\}/) || [])[0];
+  if (!childrenOfSrc || !hasKidsSrc || !singleDeadEndSrc)
+    die("F14: childrenOf/hasKids/singleDeadEndChild were not all found in the viewer");
+  const region = childrenOfSrc + "\n" + hasKidsSrc + "\n" + singleDeadEndSrc;
+  const M = {
+    nodes: [
+      { id: "forma" },
+      { id: "cli", parent: "forma" },
+      { id: "cli-leaf", parent: "cli" },
+      { id: "lib", parent: "forma" },
+      { id: "leaf1", parent: "lib" },
+      { id: "leaf2", parent: "lib" },
+    ],
+  };
+  const withM = new Function(
+    "M=arguments[0];" + region + "; return {singleDeadEndChild:singleDeadEndChild}",
+  )(M);
+  if (!withM.singleDeadEndChild("cli") || withM.singleDeadEndChild("cli").id !== "cli-leaf")
+    die("F14: a container with one dead-end leaf child was not recognised");
+  if (withM.singleDeadEndChild("lib"))
+    die("F14: a container with two children must not be treated as a single dead end");
+  if (!/if\(only\)\{\$\("detail"\)\.style\.display="none";showDetail\(only\);return;\}/.test(html))
+    die("F14: drillTo() does not open the single dead-end leaf's detail instead of navigating");
+  console.log("  ok f14-single-leaf — a single dead-end leaf opens its detail instead of a one-box level");
+}
+
 // 11) schema contract: `lib/schema/c4-model.schema.json` is the declared contract, so both writers
 // of the model must be held to it. Driven through the CLI on purpose — the assertion is that the
 // COMMANDS reject a non-conforming model, not that some helper returns an array.
