@@ -10494,20 +10494,23 @@ const diffPaths = (a, b, at = "") => {
   // One `--key=value` case per CLI must be honoured, not just rejected: a full init→gen→check
   // pipeline driven entirely with `=`-form flags must produce the same files a space-form pipeline
   // would, proving parseArgs().values — not indexOf — is what the value ends up coming from.
+  // Copied to a scratch dir (not run against FIX("mini") directly): `verify` below writes a live
+  // c4-issues.json snapshot into --repo, and the fixture must stay pristine for every other test.
+  const eqRepo = join(tmp, "eq-repo");
+  cpSync(FIX("mini"), eqRepo, { recursive: true });
   const topoEq = join(tmp, "eq-topo.json"), modelEq = join(tmp, "eq-model.json");
-  let r = run(["init", `--repo=${FIX("mini")}`, `--out=${topoEq}`, "--force"]);
+  let r = run(["init", `--repo=${eqRepo}`, `--out=${topoEq}`, "--force"]);
   if (r.status !== 0 || !existsSync(topoEq)) die("equals-flags: init --out=<path> was not honoured", r);
-  r = run(["gen", `--repo=${FIX("mini")}`, `--topology=${topoEq}`, `--out=${modelEq}`]);
+  r = run(["gen", `--repo=${eqRepo}`, `--topology=${topoEq}`, `--out=${modelEq}`]);
   if (r.status !== 0 || !existsSync(modelEq)) die("equals-flags: gen --topology=/--out= were not honoured", r);
-  r = run(["check", `--repo=${FIX("mini")}`, `--model=${modelEq}`, `--topology=${topoEq}`]);
+  r = run(["check", `--repo=${eqRepo}`, `--model=${modelEq}`, `--topology=${topoEq}`]);
   if (r.status !== 0) die("equals-flags: check --repo=/--model=/--topology= were not honoured", r);
 
   const GH = process.execPath + " " + join(HERE, "stub-gh.mjs");
-  r = run(["verify", `--repo=${FIX("mini")}`, `--model=${modelEq}`, "--gh-repo=acme/thing", `--gh-cmd=${GH}`]);
+  r = run(["verify", `--repo=${eqRepo}`, `--model=${modelEq}`, "--gh-repo=acme/thing", `--gh-cmd=${GH}`]);
   if (r.status !== 0) die("equals-flags: verify --gh-repo=/--gh-cmd= were not honoured", r);
 
-  const serveOut = join(tmp, "eq-serve-out.txt");
-  const child = spawn(process.execPath, [join(HERE, "..", "lib", "serve.mjs"), `--repo=${FIX("mini")}`, "--port=0"], { stdio: ["ignore", "pipe", "pipe"] });
+  const child = spawn(process.execPath, [join(HERE, "..", "lib", "serve.mjs"), `--repo=${eqRepo}`, "--port=0"], { stdio: ["ignore", "pipe", "pipe"] });
   const port = await new Promise((resolvePort, reject) => {
     let out = "";
     const timer = setTimeout(() => reject(new Error("equals-flags: forma serve --port=0 did not report a port in time: " + out)), 3000);
