@@ -10569,7 +10569,12 @@ const diffPaths = (a, b, at = "") => {
   const modules = readdirSync(join(HERE, "..", "lib"))
     .filter((f) => f.endsWith(".mjs"))
     .sort();
-  const missing = modules.filter((f) => !section.includes("`" + f + "`"));
+  // Only real Markdown table rows count (`| \`name.mjs\` | …`), so a prose mention cannot stand in
+  // for a missing row.
+  const rows = new Set(
+    [...section.matchAll(/^\|\s*`([^`]+\.mjs)`\s*\|/gm)].map((m) => m[1]),
+  );
+  const missing = modules.filter((f) => !rows.has(f));
   if (missing.length) die("architecture-module-table: missing rows for " + missing.join(", "));
   if (Number(countMatch[1]) !== modules.length)
     die(

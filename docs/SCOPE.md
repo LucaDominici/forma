@@ -182,8 +182,8 @@ single day on 2026-07-26. The estimate is effort, not calendar.
    0.9.0 that closes this boundary?** **Now / fold.**
 3. **Does the boundary exclude every new engine capability — no new language, no new command?**
    **Yes / no.**
-4. **Do the dead-code and `--from-docs` cleanups stay outside, done only if someone trips over
-   them?** **Yes / no.**
+4. ~~**Do the dead-code and `--from-docs` cleanups stay outside, done only if someone trips over
+   them?**~~ Resolved: done in #136 (S7 slice), see §4 above.
 
 ## 7. After the boundary
 

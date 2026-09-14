@@ -131,7 +131,7 @@ The 26 top-level `lib/*.mjs` modules each have one primary responsibility:
 | `roomload.mjs` | Resolve a manifest entry's concrete inputs, shared by the composer and the checker. |
 | `roomupdate.mjs` | Refresh a programme's live issue snapshot and recompose the Control Room. |
 | `rtm.mjs` | Derive the requirements traceability matrix from documents and issues already on hand. |
-| `scan.mjs` | Find the programmes under a directory and write them into a manifest, read-only. |
+| `scan.mjs` | Find the programmes under a directory and write them into a manifest; read-only over the repositories it discovers. |
 | `serve.mjs` | Serve architecture files and the fallback viewer locally with traversal protection. |
 | `taxonomy.mjs` | Detect label families by syntax and population without semantic inference. |
 | `validate.mjs` | Validate the shipped schema subset and materialize typed cumulative timelines. |
@@ -252,7 +252,7 @@ Accepted ADRs are immutable. A changed decision requires a new ADR that supersed
 | Generation and contract behavior remain deterministic across fixtures. | `npm test` | The suite is green end to end; the `docmap-cap` defect this row once named is gone (no such block exists in `test/run.mjs`). |
 | The public single-model demo is suitable for presentation. | `node scripts/presentable.mjs docs/demo/c4-model.json` | The test suite invokes this exact shipped artifact and requires exit 0 ([`test/run.mjs:1407-1411`](../../test/run.mjs#L1407-L1411)). |
 | A Control Room is adherent and keeps its briefing promises. | `forma check` followed by `node scripts/room-presentable.mjs ...` | The checker re-derives aggregates through `roomderive.mjs`; the publication gate checks evidence, issue coverage, freshness, closure-rate naming, and identical re-render bytes ([`scripts/room-presentable.mjs:93-109`](../../scripts/room-presentable.mjs#L93-L109)). |
-| The npm surface contains only intended runtime files and no editor residue. | `npm pack --dry-run --json` | The prepack guard passes, but the documented file count is stale; see section 11. |
+| The npm surface contains only intended runtime files and no editor residue. | `npm pack --dry-run --json` | The prepack guard enforces the reviewed 42-entry allowlist; see section 11. |
 | Releases use the declared version and token-free provenance. | Push a matching `v*` tag and require the `release` workflow to pass. | The workflow checks version equality, lint, tests, and OIDC publish before release. |
 
 ## 11. Risks and technical debt
