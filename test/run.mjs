@@ -9452,6 +9452,67 @@ const diffPaths = (a, b, at = "") => {
   );
 }
 
+// §one-cpm — the milestone comment promises code-point order (#133 S4). Both `nodes` and the
+// `criticalPath` tie-break must sort ids the way `codepointCompare` does, not the numeric `a - b`
+// the code inherited from the issue path (NaN on a string id, which V8's stable sort then leaves in
+// whatever order the traversal happened to visit).
+//
+// M10/M2/M1 in a straight chain does NOT expose the bug for `nodes`/`criticalPath`: these three
+// ASCII ids happen to compare the same under UTF-16 code-unit order as under `codepointCompare`, and
+// a chain has no tie to break either way. Both assertions below already hold today — kept as
+// characterization of the promised behaviour, not as the RED. The cyclic fixture that follows is the
+// one that actually fails today: `cycleGroups` reports the cycle in BFS-discovery order (M1, M2,
+// M10) instead of code-point order (M1, M10, M2), because its `.sort((a, b) => a - b)` is a no-op
+// on strings.
+{
+  const proj = (milestones) => ({ schema: "arbiter-milestones-v1", milestones });
+  const ms = (id, over = {}) => ({ id, title: `Milestone ${id}`, depends_on: [], horizon: "next", status: "planned", estimate_days: 1, ...over });
+
+  const chain = deriveMilestonePath(
+    proj([ms("M10", { depends_on: ["M2"] }), ms("M2", { depends_on: ["M1"] }), ms("M1")]),
+  );
+  const codepointOrder = ["M1", "M10", "M2"];
+  if (JSON.stringify(chain.nodes.map((n) => n.id)) !== JSON.stringify(codepointOrder))
+    die("one-cpm: milestone nodes must be ordered by codepointCompare, got " + JSON.stringify(chain.nodes.map((n) => n.id)));
+  if (JSON.stringify(chain.criticalPath) !== JSON.stringify(["M1", "M2", "M10"]))
+    die("one-cpm: milestone criticalPath must be predecessor-first in codepoint order, got " + JSON.stringify(chain.criticalPath));
+
+  // M1 -> M2 -> M10 -> M1: a 3-cycle. BFS from M1 (the codepoint-smallest) discovers M2 then M10,
+  // which is NOT codepoint order (M10 < M2). Today's numeric comparator leaves that discovery order
+  // untouched; the fix must re-sort the group by codepointCompare.
+  const cyclic = deriveMilestonePath(
+    proj([ms("M1", { depends_on: ["M10"] }), ms("M2", { depends_on: ["M1"] }), ms("M10", { depends_on: ["M2"] })]),
+  );
+  if (cyclic.cycles.length !== 1 || JSON.stringify(cyclic.cycles[0]) !== JSON.stringify(["M1", "M10", "M2"]))
+    die("one-cpm: a milestone cycle must be reported in codepoint order, got " + JSON.stringify(cyclic.cycles));
+
+  console.log("  ok one-cpm — milestone order and cycle tie-break follow codepointCompare, not a-b");
+}
+
+// §one-cpm-characterization — the issue-DAG `criticalPath` output, captured on a diamond fixture
+// BEFORE the CPM core is shared with the milestone path (#133 S4). This is a characterization test:
+// it is expected to already be green, and its job is to fail loudly if the refactor changes so much
+// as a field order in an output `check.mjs` compares byte-for-byte against what `room` wrote.
+{
+  const edge = (from, to) => ({
+    from: { repo: "o/r", number: from, url: "u", state: "OPEN" },
+    to: { repo: "o/r", number: to, url: "u", state: "OPEN" },
+    source: "native",
+  });
+  const snap = (issues, edges, supported = true) => ({
+    issues: issues.map(([n, state]) => ({ n, state })),
+    dependencies: { supported, complete: true, edges },
+  });
+  const diamond = deriveCriticalPath(
+    { supported: true, edges: [edge(1, 2), edge(1, 3), edge(2, 4), edge(3, 4)] },
+    snap([[1, "OPEN"], [2, "OPEN"], [3, "CLOSED"], [4, "OPEN"]], []),
+  );
+  const expected = '{"durationModel":"open-issue-uniform-1d","projectDurationDays":3,"nodes":[{"n":1,"duration":1,"earlyStart":2,"earlyFinish":3,"lateStart":2,"lateFinish":3,"totalFloat":0,"freeFloat":0,"isCritical":true},{"n":2,"duration":1,"earlyStart":1,"earlyFinish":2,"lateStart":1,"lateFinish":2,"totalFloat":0,"freeFloat":0,"isCritical":true},{"n":3,"duration":0,"earlyStart":1,"earlyFinish":1,"lateStart":2,"lateFinish":2,"totalFloat":1,"freeFloat":1,"isCritical":false},{"n":4,"duration":1,"earlyStart":0,"earlyFinish":1,"lateStart":0,"lateFinish":1,"totalFloat":0,"freeFloat":0,"isCritical":true}],"criticalPath":[4,2,1],"cycles":[],"excludedForeign":[]}';
+  if (JSON.stringify(diamond) !== expected)
+    die("one-cpm-characterization: issue criticalPath output changed shape, got " + JSON.stringify(diamond));
+
+  console.log("  ok one-cpm-characterization — issue criticalPath output pinned before the CPM refactor");
+}
 
 // §ontology-lenses — use cases and runbook coverage, the two surfaces wave 8 gave a home (#2480).
 //
