@@ -5552,6 +5552,24 @@ const diffPaths = (a, b, at = "") => {
   if (r.status === 0 || !/document gate/.test(r.stderr || ""))
     die("room: check did not reject and name a hand-altered document gate", r);
 
+  // F1: the portfolio is a cross-programme aggregate `check` never re-derived — only each
+  // programme's own fields were compared. A hand-altered `portfolio.totals.open` must be refused
+  // and the failure must name the portfolio.
+  const tamperedPortfolio = join(R, "tampered-portfolio.html");
+  const alteredTotals = { ...ROOM.portfolio.totals, open: 0 };
+  tamper(
+    roomHtml,
+    tamperedPortfolio,
+    JSON.stringify(ROOM.portfolio.totals),
+    JSON.stringify(alteredTotals),
+  );
+  r = checkRoom(tamperedPortfolio);
+  if (r.status === 0 || !/portfolio/.test(r.stderr || ""))
+    die(
+      "room: check did not reject and name a hand-altered portfolio.totals.open",
+      r,
+    );
+
   // A manifest and an artifact that disagree about which programmes exist is drift, not a detail.
   const manifestGamma = join(R, "manifest-gamma.json");
   const mf = readJson(manifest);
@@ -9795,6 +9813,52 @@ const diffPaths = (a, b, at = "") => {
   console.log("  ok production-recovery — symlink aliases canonicalize and the reviewed 41-file runtime allowlist is enforced");
 }
 
+// F2: `localeCompare` is locale-dependent — sorting non-ASCII, mixed-case titles under a Swedish
+// collation locale gives a different order than under `C`. `deriveMilestones`/`deriveUseCases`
+// must sort by codepoint, so the JSON they emit is byte-identical regardless of the runtime locale.
+{
+  const localeScript = join(tmp, "locale-probe.mjs");
+  writeFileSync(
+    localeScript,
+    [
+      "import { deriveMilestones, deriveUseCases } from " +
+        JSON.stringify(join(HERE, "..", "lib", "roomderive.mjs")) + ";",
+      "const issuesSnapshot = { milestones: [",
+      "  { title: 'z', due: null, open: 1, closed: 0 },",
+      "  { title: 'ä', due: null, open: 1, closed: 0 },",
+      "  { title: 'a', due: null, open: 1, closed: 0 },",
+      "  { title: 'Z', due: null, open: 1, closed: 0 },",
+      "] };",
+      "const projection = { useCases: [",
+      "  { id: 'z', actor: 'x', goal: 'g' },",
+      "  { id: 'ä', actor: 'x', goal: 'g' },",
+      "  { id: 'a', actor: 'x', goal: 'g' },",
+      "  { id: 'Z', actor: 'x', goal: 'g' },",
+      "] };",
+      "process.stdout.write(JSON.stringify({ milestones: deriveMilestones(issuesSnapshot), useCases: deriveUseCases(projection) }));",
+    ].join("\n"),
+  );
+  const runLocale = (LC_ALL) =>
+    spawnSync(process.execPath, [localeScript], {
+      encoding: "utf-8",
+      env: { ...process.env, LC_ALL },
+    });
+  const sv = runLocale("sv_SE.UTF-8");
+  const c = runLocale("C");
+  if (sv.status !== 0 || c.status !== 0)
+    die("locale: milestone/use-case probe did not run cleanly", { sv, c });
+  if (sv.stdout !== c.stdout)
+    die(
+      "locale: deriveMilestones/deriveUseCases are not byte-identical across LC_ALL=sv_SE.UTF-8 and LC_ALL=C:\n" +
+        sv.stdout +
+        "\n" +
+        c.stdout,
+    );
+  console.log(
+    "  ok locale — milestone and use-case order is codepoint-stable across LC_ALL=sv_SE.UTF-8 and LC_ALL=C",
+  );
+}
+
 console.log(
-  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood, lenses all green.",
+  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, markdown, strings, rtm-dogfood, lenses, locale all green.",
 );
