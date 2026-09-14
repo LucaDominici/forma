@@ -47,11 +47,15 @@ schema could not have caught the other 6 on its own: it had no field to check.
   own objects. A legacy brief with neither field validates unchanged and renders every prior
   `holds` as `self-held` from now on — the honest read, not a crash: nothing on file records who
   verified those claims, so nothing can call it independent.
-- `lib/roomupdate.mjs` (`room update --fill --counter`) gained `--author-engine`/`--verifier-engine`
-  (two flags, since one invocation can run both apply steps with two different identities) and
-  passes them through to the two `audit.mjs --apply` subprocesses it spawns.
+- `lib/roomupdate.mjs` gained `--author-engine` (for `room update --fill`) and `--verifier-engine`
+  (for `room update --counter`), each forwarded to the `audit.mjs --apply` subprocess that flag
+  spawns. `--fill` and `--counter` are refused together (#123 follow-up: `--fill` always re-plans
+  from the current state before applying, so a counter result from any earlier plan is stale the
+  moment a combined call re-plans again) — every invocation therefore carries exactly one of the
+  two engine flags, never both on the same apply.
 - `adapters/codex/forma-counterverify` and the `forma-room-update` rituals (Claude and Codex) were
-  updated to always pass their own `--engine`, and the ritual to pass two different ids.
+  updated to always pass their own engine flag on their respective `room update` call, one writing
+  `--author-engine` and the other `--verifier-engine`, so the two identities never collide.
 
 **Rejected: infer the engine from `writtenAt`/process environment.** Forma runs offline with no
 network and no model call (ADR-0001); it has no channel to observe which model is driving the CLI

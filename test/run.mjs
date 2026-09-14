@@ -7091,9 +7091,9 @@ const diffPaths = (a, b, at = "") => {
     "audit --repo . --today",
     "--plan",
     "audit-fill.json",
-    "--apply",
+    "--fill --author-engine",
     "forma-counterverify",
-    "--fill --counter",
+    "--counter --verifier-engine",
     "room-presentable",
   ];
   let last = -1;
@@ -7102,6 +7102,11 @@ const diffPaths = (a, b, at = "") => {
     if (at < 0) die("ritual skill: step missing or out of order: " + step);
     last = at;
   }
+  // #123 follow-up (Codex review): the ritual must never document `--fill --counter` as an
+  // invocation to run — only mention it (in backticks, as prose) as the combination `room update`
+  // itself now rejects.
+  if (/room update[^\n`]*--fill[^\n`]*--counter/.test(ritual))
+    die("ritual skill: still documents the broken combined --fill --counter invocation");
   for (const rule of [
     /anchor that never expires/,
     /Caps/,
@@ -8973,41 +8978,11 @@ const diffPaths = (a, b, at = "") => {
     );
   writeFileSync(brief, goodBrief);
 
-  // Ritual repro (Codex review of #123): the documented ritual applies the fill directly
-  // (`audit --apply`, step 4), lets the verifier counter-verify the regenerated plan (step 5),
-  // then runs `room update --skip-verify --fill --counter` together (step 6). `--fill` inside
-  // `room update` always re-plans from the CURRENT state first — which is already post-fill —
-  // and then tries to re-apply the same fill against that fresh plan; the fill's planHash is
-  // the pre-fill one, so the combined call cannot complete as documented.
-  r = run([...briefArgs, "--plan", plan]);
-  if (r.status !== 0) die("ritual repro: initial plan exit " + r.status, r);
-  claimsFill([
-    {
-      id: "ritual-repro",
-      kind: "note",
-      text: "Exercises the documented fill-then-counter ritual order.",
-      about: { issue: 1 },
-      evidence: [{ type: "issue", ref: "1" }],
-    },
-  ]);
-  r = run([...briefArgs, "--apply", fill, "--audit-plan", plan, "--engine", "claude"]);
-  if (r.status !== 0) die("ritual repro: step 4 direct fill apply exit " + r.status, r);
-  r = run([...briefArgs, "--plan", plan]); // step 5: re-plan so the verifier sees the fresh brief claim
-  if (r.status !== 0) die("ritual repro: step 5 re-plan exit " + r.status, r);
-  const ritualCounter = {
-    planHash: readJson(plan).planHash,
-    results: readJson(plan)
-      .claims.filter(
-        (c) => c.kind === "brief-claim" && c.id === "brief:ritual-repro",
-      )
-      .map((c) => ({
-        claimId: c.id,
-        verdict: "holds",
-        reason: "ritual repro hold",
-        evidence: { type: "file", ref: "src/core/engine.js" },
-      })),
-  };
-  writeFileSync(counter, JSON.stringify(ritualCounter));
+  // Ritual order (Codex review of #123): `room update --fill` always re-plans from the CURRENT
+  // state before applying, so a `--counter` in the SAME invocation can only ever target a plan
+  // this process re-plans again right after — never the one a verifier actually saw. Combining
+  // the two flags is rejected up front, naming the two-step order instead of failing deep inside
+  // audit.mjs with a stale-planHash error.
   const ritualManifest = readJson(briefManifest);
   ritualManifest.programs[0].auditPlan = plan;
   ritualManifest.programs[0].auditFill = fill;
@@ -9029,15 +9004,70 @@ const diffPaths = (a, b, at = "") => {
     "codex",
   ]);
   if (r.status === 0)
+    die("ritual order: combined --fill --counter unexpectedly succeeded");
+  if (
+    !/--fill and --counter cannot run together/.test(r.stderr || "") ||
+    !/--skip-verify --fill --author-engine/.test(r.stderr || "") ||
+    !/--skip-verify --counter --verifier-engine/.test(r.stderr || "")
+  )
     die(
-      "ritual repro: documented step 6 (--fill --counter together after a direct fill apply) unexpectedly succeeded",
-    );
-  if (!/planHash does not match/.test(r.stderr || ""))
-    die(
-      "ritual repro: step 6 failed for an unexpected reason: " +
+      "ritual order: combined --fill --counter did not name the two-step order: " +
         r.status +
         " " +
         r.stderr,
+    );
+  // The two-step order it names actually works end to end: fill lands (author-engine stamped),
+  // the verifier counter-verifies the REGENERATED plan, and the counter result applies clean.
+  r = run([...briefArgs, "--plan", plan]);
+  if (r.status !== 0) die("ritual order: initial plan exit " + r.status, r);
+  claimsFill([
+    {
+      id: "ritual-note",
+      kind: "note",
+      text: "Exercises the documented two-step fill-then-counter ritual order.",
+      about: { issue: 1 },
+      evidence: [{ type: "issue", ref: "1" }],
+    },
+  ]);
+  r = run([
+    "room", "update", "--manifest", briefManifest, "--out", briefRoom,
+    "--skip-verify", "--fill", "--author-engine", "claude",
+  ]);
+  if (r.status !== 0) die("ritual order: step 1 (room update --fill) exit " + r.status, r);
+  const ritualClaim = readJson(brief).claims.find((c) => c.id === "ritual-note");
+  if (!ritualClaim || !ritualClaim.author || ritualClaim.author.engine !== "claude")
+    die(
+      "ritual order: room update --fill did not stamp --author-engine: " +
+        JSON.stringify(ritualClaim),
+    );
+  r = run([...briefArgs, "--plan", plan]); // the verifier re-plans to see the brief just written
+  if (r.status !== 0) die("ritual order: verifier re-plan exit " + r.status, r);
+  const ritualCounter = {
+    planHash: readJson(plan).planHash,
+    results: readJson(plan)
+      .claims.filter(
+        (c) => c.kind === "brief-claim" && c.id === "brief:ritual-note",
+      )
+      .map((c) => ({
+        claimId: c.id,
+        verdict: "holds",
+        reason: "ritual order hold",
+        evidence: { type: "file", ref: "src/core/engine.js" },
+      })),
+  };
+  writeFileSync(counter, JSON.stringify(ritualCounter));
+  r = run([
+    "room", "update", "--manifest", briefManifest, "--out", briefRoom,
+    "--skip-verify", "--counter", "--verifier-engine", "codex",
+  ]);
+  if (r.status !== 0) die("ritual order: step 2 (room update --counter) exit " + r.status, r);
+  const ritualVerified = readJson(brief).claims.find(
+    (c) => c.id === "ritual-note",
+  ).verified;
+  if (!ritualVerified || ritualVerified.engine !== "codex" || ritualVerified.verdict !== "holds")
+    die(
+      "ritual order: room update --counter did not land the fresh hold: " +
+        JSON.stringify(ritualVerified),
     );
   writeFileSync(brief, goodBrief);
 

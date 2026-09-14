@@ -200,16 +200,19 @@ for Codex), split at the network boundary. Give each active programme `health`, 
 forma room update --manifest forma.room.json                       # live facts (the only network)
 forma audit --plan …                                               # what is missing or stale
 <the writing agent fills verdicts, findings, brief → audit-fill.json>
-forma audit --apply audit-fill.json --audit-plan …                 # item by item; refusals named
-<the hostile verifier runs $forma-counterverify over the re-generated plan>
-forma room update --manifest forma.room.json --skip-verify --fill --counter
+forma room update --manifest forma.room.json --skip-verify --fill --author-engine …   # item by item; refusals named
+<the hostile verifier re-plans and runs $forma-counterverify over the regenerated plan>
+forma room update --manifest forma.room.json --skip-verify --counter --verifier-engine …
 forma check --room control-room.html && node scripts/room-presentable.mjs …
 ```
 
 The first command refreshes every GitHub fact base and fails without recomposing if any fetch is
-incomplete. The last update regenerates every plan, applies fill and counter results one entry at a
-time, and only then recomposes; `room-presentable` refuses to publish a decision nobody held. Forma
-never launches an agent itself (D-08 / I2), and `today` never moves on its own (I12).
+incomplete. `--fill` and `--counter` never run in the same `room update` call — `--fill` re-plans
+from the current state before applying, so a counter result written against any earlier plan would
+already be stale by the time `--counter` re-plans again; `room update` rejects the combination by
+name. Each of the two updates above regenerates its plan, applies its result one entry at a time,
+and only then recomposes; `room-presentable` refuses to publish a decision nobody held. Forma never
+launches an agent itself (D-08 / I2), and `today` never moves on its own (I12).
 
 One file. A briefing in reading order at `#/`, and under it six lenses per programme, each
 answering exactly one question (ADR-0008). A lens is published only where its backing artifacts
