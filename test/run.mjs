@@ -5606,6 +5606,34 @@ const diffPaths = (a, b, at = "") => {
       r,
     );
 
+  // F8: `room` schema-validates a programme's model before composing (lib/room.mjs), but `check
+  // --room` re-reads the same model.json from disk without validating it at all — an
+  // additionalProperties violation leaves `deriveAll`'s output byte-identical (so the
+  // re-derivation-parity comparisons above cannot catch it), yet the model is invalid. `check
+  // --room` must report it, naming the schema, the same way `room` would refuse to compose it.
+  // `--model` here points at a file that does not exist, so the top-level (non-room) C4 gate that
+  // `checkRoom` normally also exercises is skipped (ROOM_ONLY) and only the room block is under
+  // test.
+  const pristineModel = readFileSync(model, "utf-8");
+  const brokenModel = JSON.parse(pristineModel);
+  brokenModel._bogus = true;
+  writeFileSync(model, JSON.stringify(brokenModel, null, 2));
+  r = run([
+    "check",
+    "--model",
+    join(R, "no-such-model.json"),
+    "--room",
+    roomHtml,
+    "--manifest",
+    manifest,
+  ]);
+  writeFileSync(model, pristineModel);
+  if (r.status === 0 || !/c4-model\.schema\.json/.test(r.stderr || ""))
+    die(
+      "room: check --room did not reject a schema-invalid programme model (F8)",
+      r,
+    );
+
   // A manifest and an artifact that disagree about which programmes exist is drift, not a detail.
   const manifestGamma = join(R, "manifest-gamma.json");
   const mf = readJson(manifest);
