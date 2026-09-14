@@ -10838,7 +10838,27 @@ const diffPaths = (a, b, at = "") => {
   const one = mk("one", "acme/one", ["blocked"], [issue(1, ["blocked"]), issue(2, [])]);
   // ... and two blocked issues (plural case), so the fixture exercises both grammatical forms.
   const two = mk("two", "acme/two", ["blocked"], [issue(3, ["blocked"]), issue(4, ["blocked"]), issue(5, [])]);
-  const portfolio = derivePortfolio({ today: "2026-01-01", programs: [one, two] });
+  // Codex round 1 HIGH-2: a programme blocked ONLY by a dependency edge, never a label — exactly
+  // viafera/forma's real shape (`blockedBy: { labels: [] }`, blocking comes entirely from an open
+  // blocker at the other end of a dependency edge). #6 carries no needs-human label, so it must
+  // still count as blocked (union rule) while staying OUT of the Kanban's label-only bucket.
+  const depIssuesSnapshot = {
+    issues: [issue(6, []), issue(7, [])], milestones: [], fetchedAt: "2026-01-01", collection: {},
+    ghRepo: "acme/dep",
+    dependencies: { supported: true, complete: true, edges: [{ source: "native", from: { repo: "acme/dep", number: 6 }, to: { repo: "acme/dep", number: 7, state: "OPEN" } }] },
+  };
+  const depDeriveContext = {};
+  const depDerived = deriveAll(
+    {
+      repo: tmp, model: null, topo: null, issuesSnapshot: depIssuesSnapshot,
+      health: { verdicts: [], dependencyConfirmations: [] }, findings: { findings: [] },
+      brief: null, briefPath: null, manifest: { today: "2026-01-01", blockedBy: { labels: [] } },
+      gateInputs: null, arbiterMilestones: null, docs: null,
+    },
+    depDeriveContext,
+  );
+  const dep = { id: "dep", ghRepo: "acme/dep", repo: tmp, model: null, topo: null, issuesSnapshot: depIssuesSnapshot, derived: depDerived, deriveContext: depDeriveContext, blockedBy: { labels: [] } };
+  const portfolio = derivePortfolio({ today: "2026-01-01", programs: [one, two, dep] });
   const summaryOf = (id) => portfolio.programs.find((p) => p.id === id);
   const perProgramCount = (id) => portfolio.blocked.filter((b) => b.program === id).length;
 
@@ -10849,8 +10869,18 @@ const diffPaths = (a, b, at = "") => {
     die("f2-counts: programme 'one' must show exactly 1 blocked issue at both the summary and the per-item list, got " + JSON.stringify([summaryOf("one").blocked, perProgramCount("one")]));
   if (summaryOf("two").blocked !== 2 || perProgramCount("two") !== 2)
     die("f2-counts: programme 'two' must show exactly 2 blocked issues at both the summary and the per-item list, got " + JSON.stringify([summaryOf("two").blocked, perProgramCount("two")]));
-  if (portfolio.totals.blocked !== summaryOf("one").blocked + summaryOf("two").blocked)
+  if (portfolio.totals.blocked !== summaryOf("one").blocked + summaryOf("two").blocked + summaryOf("dep").blocked)
     die("f2-counts: the portfolio total must be the sum of the per-programme blocked counts it declares, got " + portfolio.totals.blocked);
+
+  // Codex round 1 HIGH-2: at both scopes, the dependency-only programme's union count (headline,
+  // KPI) must read 1, while the label-only Kanban bucket — a different, narrower rule — must read 0.
+  // Both are correct; the bug was letting them share wording that implied they were the same number.
+  if (summaryOf("dep").blocked !== 1 || perProgramCount("dep") !== 1)
+    die("f2-counts: programme 'dep' is blocked only via a dependency edge and must still count as 1 blocked issue (portfolio and per-programme), got " + JSON.stringify([summaryOf("dep").blocked, perProgramCount("dep")]));
+  if ((dep.derived.kanban["aspettano-umano"] || []).length !== 0)
+    die("f2-counts: a dependency-only block must not land in the label-only Kanban bucket, got " + JSON.stringify(dep.derived.kanban["aspettano-umano"]));
+  if (dep.derived.kanbanHumanDeclared !== true)
+    die("f2-counts: the label-only bucket's zero must be measured (declared), not unknown, in this fixture");
 
   // The plural fix: "N decisions are waiting on you" had no singular. `techHeadline`/`techHeadlineOne`
   // must differ only in the singular/plural of "issue(s)", both must name the blocking rule (never a
@@ -10882,6 +10912,22 @@ const diffPaths = (a, b, at = "") => {
     // both surfaces is exactly how "0 waiting on a human" read as a contradiction of "N blocked".
     if (strings.bucketAspettanoUmano === strings.kpiBlocked)
       die(`f2-counts (${locale}): the "needs-human label" bucket must not share its name with the declared-blocking-rule KPI`);
+  }
+  // Codex round 1 HIGH-1: `execHeadline`/`kpiBlocked` render the UNION count (label ∪ dependency) —
+  // the same measurement as `techHeadline`/`thesis` — but still read "waiting on a human", the
+  // label-only bucket's own wording. A programme blocked only by dependency (the `dep` fixture
+  // above, and real viafera/forma) then shows "N waiting on a human" beside a Kanban bucket
+  // correctly reading 0 under the exact same words, which is the F2 contradiction all over again.
+  for (const [locale, strings, humanPhrase] of [
+    ["en", en, /waiting on a human/i],
+    ["it", it, /aspettano un umano/i],
+  ]) {
+    if (humanPhrase.test(strings.kpiBlocked))
+      die(`f2-counts (${locale}): kpiBlocked renders the union blocking-rule count and must not use the label-only "waiting on a human" wording, got "${strings.kpiBlocked}"`);
+    if (humanPhrase.test(strings.execHeadline))
+      die(`f2-counts (${locale}): execHeadline renders the union blocking-rule count and must not use the label-only "waiting on a human" wording, got "${strings.execHeadline}"`);
+    if (humanPhrase.test(strings.noBlocked))
+      die(`f2-counts (${locale}): noBlocked is the union list's empty state and must not use the label-only "waiting on a human" wording, got "${strings.noBlocked}"`);
   }
 
   // The template must actually route through plural(), not just declare the strings.
