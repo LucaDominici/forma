@@ -10462,6 +10462,27 @@ const diffPaths = (a, b, at = "") => {
   );
 }
 
+// F12 — an unknown flag must fail loud (exit 1), not be silently ignored. `room.mjs`/`audit.mjs`
+// already reject unknown flags; gen/check/verify/init/serve did not.
+{
+  const topo = join(tmp, "strict-topo.json"), model = join(tmp, "strict-model.json");
+  let r = run(["init", "--repo", FIX("mini"), "--out", topo, "--force"]);
+  if (r.status !== 0) die("strict-flags: setup init exit " + r.status, r);
+  r = run(["gen", "--repo", FIX("mini"), "--topology", topo, "--out", model, "--bogus"]);
+  if (r.status === 0) die("strict-flags: gen --bogus must exit 1, not be silently ignored", r);
+  r = run(["init", "--repo", FIX("mini"), "--out", topo, "--force", "--bogus"]);
+  if (r.status === 0) die("strict-flags: init --bogus must exit 1", r);
+  r = run(["check", "--repo", FIX("mini"), "--model", model, "--topology", topo, "--bogus"]);
+  if (r.status === 0) die("strict-flags: check --bogus must exit 1", r);
+  r = run(["verify", "--repo", FIX("mini"), "--bogus"]);
+  if (r.status === 0) die("strict-flags: verify --bogus must exit 1", r);
+  const serveResult = spawnSync(process.execPath, [join(HERE, "..", "lib", "serve.mjs"), "--bogus"], { encoding: "utf-8" });
+  if (serveResult.status === 0) die("strict-flags: serve --bogus must exit 1", serveResult);
+  console.log(
+    "  ok strict-flags — gen/init/check/verify/serve exit 1 on an unknown flag instead of ignoring it",
+  );
+}
+
 console.log(
-  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, serve-cli, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale, s2-fail-closed, s2-round1 all green.",
+  "OK — arbiter-contract, mini, flat-python, data-noise, virgin-kebab, go-nested, go-grouped, context-seed, two-stack, attach-doc, enrich, scaffold, status-overlay, status-apply, component-hash, verify, layout-hints, viewer, schema, timeline, docmap, declaration, presentable, room, rtm, views, scan, serve, serve-cli, strict-flags, markdown, strings, rtm-dogfood, lenses, codepoint-compare, locale, s2-fail-closed, s2-round1 all green.",
 );
