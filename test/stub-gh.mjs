@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Offline stand-in for the gh commands used by forma verify.
 const args = process.argv.slice(2)
-const mode = ['multi', 'fail-signals', 'truncated', 'unsupported'].includes(args[0]) ? args.shift() : 'default'
+const mode = ['multi', 'fail-signals', 'truncated', 'unsupported', 'locale'].includes(args[0]) ? args.shift() : 'default'
 const after = (value) => { const i = args.indexOf(value); return i < 0 ? null : args[i + 1] }
 const issue = (number, fields = {}) => ({
   number, title: number === 7 ? 'Fix the thing' : 'Open the other thing', state: number === 7 ? 'CLOSED' : 'OPEN',
@@ -17,6 +17,22 @@ if (args[0] === 'api' && args[1] === 'graphql') {
   if (!args.includes('--paginate') || !args.includes('--slurp')) { console.error('stub-gh: GraphQL must prove pagination with --paginate --slurp'); process.exit(2) }
   const withDependencies = String(after('-f') || '').includes('blockedBy(first:50)')
   if (mode === 'unsupported' && withDependencies) { console.error('blockedBy is not supported'); process.exit(3) }
+  // F2 (verify edge sort): one issue blocked by four external endpoints sharing the same number,
+  // whose repo names differ only by case/diacritic ('z','ä','a','Z' — the same set the audit
+  // measured). All four edges share the same `from`, so the sort key's deciding component is the
+  // diacritic-sensitive `to.repo` string: locale-sensitive under ICU collation, codepoint-stable
+  // under `codepointCompare`.
+  if (mode === 'locale') {
+    const diacriticRepos = ['acme/z-thing', 'acme/ä-thing', 'acme/a-thing', 'acme/Z-thing']
+    const blockers = diacriticRepos.map((repo) => ({ number: 999, state: 'OPEN', url: `https://github.com/${repo}/issues/999`, repository: { nameWithOwner: repo } }))
+    const twenty = issue(20, {
+      title: 'locale issue', state: 'OPEN', milestone: null, labels: { nodes: [] },
+      blockedBy: withDependencies ? relation(blockers) : undefined,
+      blocking: withDependencies ? relation() : undefined,
+    })
+    console.log(JSON.stringify([{ data: { repository: { issues: { nodes: [twenty], pageInfo: { hasNextPage: false, endCursor: null } } } } }]))
+    process.exit(0)
+  }
   const seven = issue(7, withDependencies ? { blockedBy: relation(), blocking: relation([endpoint(8, 'OPEN')]) } : {})
   const eight = issue(8, withDependencies ? { blockedBy: { totalCount: mode === 'truncated' ? 2 : 1, nodes: [endpoint(7, 'CLOSED')] }, blocking: relation() } : {})
   const nine = issue(9, withDependencies ? { blockedBy: relation(), blocking: relation() } : {})
