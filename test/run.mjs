@@ -10219,10 +10219,17 @@ const diffPaths = (a, b, at = "") => {
 }
 
 // #140 S3 F7: evidence hashing/staleness primitives live in lib/evidence.mjs, not lib/audit.mjs —
-// roomderive.mjs/roomdocs.mjs/verify.mjs/check.mjs must import them from there, never reach back
-// into the audit plan/apply channel for functions that have nothing to do with it.
+// roomderive.mjs/roomdocs.mjs/verify.mjs/check.mjs/room-presentable.mjs must import them from
+// there, never reach back into the audit plan/apply channel for functions that have nothing to
+// do with it.
 {
-  const evidenceImporters = ["lib/roomderive.mjs", "lib/roomdocs.mjs", "lib/verify.mjs", "lib/check.mjs"];
+  const evidenceImporters = [
+    "lib/roomderive.mjs",
+    "lib/roomdocs.mjs",
+    "lib/verify.mjs",
+    "lib/check.mjs",
+    "scripts/room-presentable.mjs",
+  ];
   for (const rel of evidenceImporters) {
     const src = readFileSync(join(HERE, "..", rel), "utf-8");
     if (/from ['"](\.\.\/lib\/|\.\/)?audit\.mjs['"]/.test(src))
@@ -10230,7 +10237,7 @@ const diffPaths = (a, b, at = "") => {
     if (!/from ['"](\.\.\/lib\/|\.\/)?evidence\.mjs['"]/.test(src))
       die(`import-graph: ${rel} must import evidence primitives from evidence.mjs`);
   }
-  console.log("  ok import-graph — roomderive/roomdocs/verify/check import evidence primitives from evidence.mjs, not audit.mjs");
+  console.log("  ok import-graph — roomderive/roomdocs/verify/check/room-presentable import evidence primitives from evidence.mjs, not audit.mjs");
 }
 
 // F2 unit pin: `codepointCompare` must order true Unicode SCALAR values, not UTF-16 code units.

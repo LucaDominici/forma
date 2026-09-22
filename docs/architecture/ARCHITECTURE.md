@@ -205,7 +205,7 @@ The boundary data is explicit:
 
 ## 7. Deployment view
 
-Forma is installed locally with `npx forma-arch` or as a development dependency. The npm package is selected by [`package.json:33-39`](../../package.json#L33-L39): `bin/forma.mjs`, all of `lib/`, `LICENSE`, `NOTICE`, `README.md`, and npm's package metadata ship. Repository docs, tests, scripts, fixtures, and GitHub workflows do not ship. `npm pack --dry-run --json` reports 42 package entries, matching the 42-entry allowlist [`scripts/check-clean.mjs`](../../scripts/check-clean.mjs) enforces at `prepack`; `AGENTS.md` states the same number.
+Forma is installed locally with `npx forma-arch` or as a development dependency. The npm package is selected by [`package.json:33-39`](../../package.json#L33-L39): `bin/forma.mjs`, all of `lib/`, `LICENSE`, `NOTICE`, `README.md`, and npm's package metadata ship. Repository docs, tests, scripts, fixtures, and GitHub workflows do not ship. `npm pack --dry-run --json` reports 43 package entries, matching the 43-entry allowlist [`scripts/check-clean.mjs`](../../scripts/check-clean.mjs) enforces at `prepack`; `AGENTS.md` states the same number.
 
 GitHub Pages is a separate static deployment. On pushes to `main`, it copies only `lib/viewer/c4-hologram.html` and the committed `docs/demo/c4-model.json`, runs the single-model presentation gate, and deploys `_site` ([`.github/workflows/pages.yml:38-52`](../../.github/workflows/pages.yml#L38-L52)). It does not regenerate the private-source demo and does not publish a Control Room.
 
@@ -219,7 +219,7 @@ Release deployment starts with a `v*` tag. The workflow checks that the tag matc
 
 ### Evidence and citation
 
-Descriptions record `descSource`; document-derived state records its source and coverage; issue linkage follows `#N` in a commit subject to touched files and then C4 ownership; audit verdicts require path, commit, or issue evidence. The implementation rejects missing paths and unresolvable commits before applying an audit fill ([`lib/audit.mjs:32-58`](../../lib/audit.mjs#L32-L58)). Evidence is not ornamental metadata. It is what makes a displayed claim reviewable.
+Descriptions record `descSource`; document-derived state records its source and coverage; issue linkage follows `#N` in a commit subject to touched files and then C4 ownership; audit verdicts require path, commit, or issue evidence. The implementation rejects missing paths and unresolvable commits before applying an audit fill ([`lib/evidence.mjs`](../../lib/evidence.mjs#L32-L58)). Evidence is not ornamental metadata. It is what makes a displayed claim reviewable.
 
 ### The honest blank
 
@@ -253,13 +253,13 @@ Accepted ADRs are immutable. A changed decision requires a new ADR that supersed
 | Generation and contract behavior remain deterministic across fixtures. | `npm test` | The suite is green end to end; the `docmap-cap` defect this row once named is gone (no such block exists in `test/run.mjs`). |
 | The public single-model demo is suitable for presentation. | `node scripts/presentable.mjs docs/demo/c4-model.json` | The test suite invokes this exact shipped artifact and requires exit 0 ([`test/run.mjs:1407-1411`](../../test/run.mjs#L1407-L1411)). |
 | A Control Room is adherent and keeps its briefing promises. | `forma check` followed by `node scripts/room-presentable.mjs ...` | The checker re-derives aggregates through `roomderive.mjs`; the publication gate checks evidence, issue coverage, freshness, closure-rate naming, and identical re-render bytes ([`scripts/room-presentable.mjs:93-109`](../../scripts/room-presentable.mjs#L93-L109)). |
-| The npm surface contains only intended runtime files and no editor residue. | `npm pack --dry-run --json` | The prepack guard enforces the reviewed 42-entry allowlist; see section 11. |
+| The npm surface contains only intended runtime files and no editor residue. | `npm pack --dry-run --json` | The prepack guard enforces the reviewed 43-entry allowlist; see section 11. |
 | Releases use the declared version and token-free provenance. | Push a matching `v*` tag and require the `release` workflow to pass. | The workflow checks version equality, lint, tests, and OIDC publish before release. |
 
 ## 11. Risks and technical debt
 
 - **Static line references rot, and did.** A since-deleted orientation document accumulated wrong line numbers and two false claims (the viewer at 746 lines when it is 1068; the model never validated against its schema, which [`lib/check.mjs`](../../lib/check.mjs) has done since the schema landed). It was removed on this branch in favour of [`GLOBAL_INVARIANTS.md`](../GLOBAL_INVARIANTS.md), which pairs each rule with an executable enforcement point. Line citations remain useful evidence at a reviewed commit; they are not a substitute for a check that runs.
-- **The shipped-file count is now an executable assertion, resolved.** `scripts/check-clean.mjs` enforces a 42-entry allowlist at `prepack`, refusing to publish if the reviewed set changes; `AGENTS.md` and this document both state 42. This was open debt (a hard-coded count nothing checked); it is now enforced in code, not prose.
+- **The shipped-file count is now an executable assertion, resolved.** `scripts/check-clean.mjs` enforces a 43-entry allowlist at `prepack`, refusing to publish if the reviewed set changes; `AGENTS.md` and this document both state 43. This was open debt (a hard-coded count nothing checked); it is now enforced in code, not prose.
 - **Issue-to-code coverage is intentionally partial.** Git can link only issues cited by commits that touch modeled files. Sweeps are excluded and named. Unlinked work remains unknown; it must never be presented as zero.
 - **Offline freshness has a hard limit.** `check` can validate shape and reject an old snapshot relative to manifest `today`, but it cannot know whether GitHub changed after `fetchedAt`. Only a new `verify` can establish a newer fact base.
 - **Heuristic parsing has bounded precision.** Non-Go edges use name references; Go imports and source docstrings use regular expressions rather than language ASTs. This is acceptable for an explorer, not for compiler-grade analysis ([`lib/validate.mjs:1-13`](../../lib/validate.mjs#L1-L13), [ADR-0001](../adr/0001-zero-dependency-esm.md)).

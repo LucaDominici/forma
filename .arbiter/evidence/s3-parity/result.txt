@@ -1,5 +1,5 @@
 # S3 parity harness result
-generated 2026-09-22T20:38:21.720Z
+generated 2026-09-22T20:47:54.671Z
 
 | cell | kind | base exit | branch exit | verdict |
 |---|---|---|---|---|
@@ -101,43 +101,43 @@ generated 2026-09-22T20:38:21.720Z
 
 ## Details (first stderr line per column, only where verdict != same)
 - issues / falsy-null [check] :: stricter
-  base:   
+  base:
   branch: [check-c4] FAIL (1):
 - issues / falsy-false [check] :: stricter
-  base:   
+  base:
   branch: [check-c4] FAIL (1):
 - issues / falsy-zero [check] :: stricter
-  base:   
+  base:
   branch: [check-c4] FAIL (1):
 - issues / falsy-emptystring [check] :: stricter
-  base:   
+  base:
   branch: [check-c4] FAIL (1):
 - health / falsy-null [check] :: stricter
-  base:   
+  base:
   branch: [check-c4] FAIL (1):
 - health / falsy-false [check] :: stricter
-  base:   
+  base:
   branch: [check-c4] FAIL (1):
 - health / falsy-zero [check] :: stricter
-  base:   
+  base:
   branch: [check-c4] FAIL (1):
 - health / falsy-emptystring [check] :: stricter
-  base:   
+  base:
   branch: [check-c4] FAIL (1):
 - findings / falsy-null [check] :: stricter
-  base:   
+  base:
   branch: [check-c4] FAIL (1):
 - findings / falsy-false [check] :: stricter
-  base:   
+  base:
   branch: [check-c4] FAIL (1):
 - findings / falsy-zero [check] :: stricter
-  base:   
+  base:
   branch: [check-c4] FAIL (1):
 - findings / falsy-emptystring [check] :: stricter
-  base:   
+  base:
   branch: [check-c4] FAIL (1):
 - issues / truncated:true [check] :: stricter
-  base:   
+  base:
   branch: [check-c4] FAIL (1):
 
 Total cells: 95, REGRESSION: 0

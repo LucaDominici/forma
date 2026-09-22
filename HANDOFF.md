@@ -1,6 +1,6 @@
 # HANDOFF — Forma #140 audit slice S3 (group A+B), worktree s3-evidence-loader
 
-HEAD: `948c491925b28ab3a55e2f02ac793bebc489680b`
+HEAD: `41247ec` (orchestrator amendments on top of the worker's `28ee3be`, see below).
 Branch: `task/s3-evidence-loader`, started at `b09b2c2`.
 
 ## Commits against b09b2c2
@@ -10,10 +10,18 @@ Branch: `task/s3-evidence-loader`, started at `b09b2c2`.
 8021536 fix(room): report truncated/asymmetric-topology diagnostics in check; fail closed on a falsy overlay (#140 S3, Codex round 3)
 b872f9f test(room): add the #140 S3 baseline-vs-branch parity harness and its zero-REGRESSION result
 948c491 refactor(evidence): extract evidence.mjs from audit.mjs (#140 S3 F7)
+28ee3be docs: add this HANDOFF.md
+41247ec docs(delivery): fix lint-file-count claim, 36 -> 37, after evidence.mjs extraction
 ```
 
 Steps 1 (parity harness) and 2 (HIGH bug fixes + RED tests) were completed and committed
 before this session; Step 3 (evidence.mjs extraction) is `948c491`, committed this session.
+
+`41247ec` and the round-1 Codex review fixes below it were added by the orchestrator after
+this HANDOFF was first written, closing the gaps a first independent re-verification pass
+and a Codex round-1 diff review found (see "Post-handoff orchestrator fixes" at the end of
+this file). The prose above this note describes the state as of `28ee3be`; treat the note
+at the end as the authoritative addendum.
 
 ### Judgment call: single commit for Step 3, not RED-then-GREEN split
 
@@ -127,6 +135,28 @@ pre-existing since `fab0539`; Step 3 did not touch this logic, only the import l
   `rt`/`program` vars) in `test/run.mjs` were dismissed as not real Forma gate failures:
   this is a zero-TypeScript, zero-dep ESM project with no `tsc` gate — `npm run lint`
   (Forma's own zero-dep lint) is the authoritative lint gate and passes clean.
+
+## Post-handoff orchestrator fixes
+
+- **`41247ec`** — an independent re-run of `check --room` (not taken on trust from this
+  file's own gate roster above) found a real FAIL that the roster above missed:
+  `docs/DELIVERY.md`'s live-checked `lint-file-count` claim (`forma.room.json`'s
+  `documentGate`) still said "checks 36 files" while `npm run lint` now measures 37 after
+  the F7 extraction. Fixed and re-verified `check --room` exits 0.
+- **Codex round 1** (delta review of `b09b2c2..41247ec`) found no HIGH findings, but
+  several MEDIUM/LOW doc-drift items of the same stale-count class as the bug above:
+  `docs/architecture/ARCHITECTURE.md` (lines 208/256/262) and `docs/DELIVERY.md` (line
+  126) still said "42-entry allowlist" after the allowlist moved to 43; `docs/SCOPE-room.md`
+  and `ARCHITECTURE.md` still attributed `codepointCompare`/evidence validation to
+  `lib/audit.mjs` instead of `lib/evidence.mjs`; `.arbiter/evidence/s3-parity/result.txt`
+  had trailing whitespace failing `git diff --check`; the import-graph test omitted
+  `scripts/room-presentable.mjs`, one of the six files whose import was repointed to
+  `evidence.mjs`. All fixed directly (no new commit hash recorded here since this file is
+  edited in the same pass — see `git log` on this branch for the actual commit boundary).
+  `docs/DELIVERY.md` line 45 ("contains 42 files") was deliberately left alone: it is a
+  historical claim scoped to the already-shipped 1.3.0 tarball, not a live count.
+- Round 2 (delta-only, if still needed) and the PR are the orchestrator's next step from
+  here, per the approved plan's Step 4.
 
 ## Explicitly NOT done (per task scope)
 
