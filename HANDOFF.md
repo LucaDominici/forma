@@ -1,6 +1,6 @@
 # HANDOFF — Forma #140 audit slice S3 (group A+B), worktree s3-evidence-loader
 
-HEAD: `41247ec` (orchestrator amendments on top of the worker's `28ee3be`, see below).
+HEAD: `ff448cc` (orchestrator amendments on top of the worker's `28ee3be`, see below).
 Branch: `task/s3-evidence-loader`, started at `b09b2c2`.
 
 ## Commits against b09b2c2
@@ -12,6 +12,7 @@ b872f9f test(room): add the #140 S3 baseline-vs-branch parity harness and its ze
 948c491 refactor(evidence): extract evidence.mjs from audit.mjs (#140 S3 F7)
 28ee3be docs: add this HANDOFF.md
 41247ec docs(delivery): fix lint-file-count claim, 36 -> 37, after evidence.mjs extraction
+ff448cc docs+test: close Codex round-1 doc-drift and import-graph gaps (#140 S3)
 ```
 
 Steps 1 (parity harness) and 2 (HIGH bug fixes + RED tests) were completed and committed
@@ -155,8 +156,14 @@ pre-existing since `fab0539`; Step 3 did not touch this logic, only the import l
   edited in the same pass — see `git log` on this branch for the actual commit boundary).
   `docs/DELIVERY.md` line 45 ("contains 42 files") was deliberately left alone: it is a
   historical claim scoped to the already-shipped 1.3.0 tarball, not a live count.
-- Round 2 (delta-only, if still needed) and the PR are the orchestrator's next step from
-  here, per the approved plan's Step 4.
+- **Codex round 2** (delta review of `41247ec..ff448cc`, the round-1 fixes) found no HIGH
+  findings — **SHIP** verdict. Two LOW items, both fixed directly in this same commit
+  rather than parked (small enough that fixing cost less than filing): this file's own
+  HEAD/commit-list was stale, and `ARCHITECTURE.md:222`'s `lib/evidence.mjs` line anchor
+  was wrong (`#L32-L58`, which is `codepointCompare`, not the cited evidence-validation
+  code at `#L73-L125`). Every round-1 and round-2 finding is now resolved on-branch — no
+  follow-up park issue is needed for this slice.
+- The PR is the orchestrator's next step from here, per the approved plan's Step 4.
 
 ## Explicitly NOT done (per task scope)
 

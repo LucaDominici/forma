@@ -219,7 +219,7 @@ Release deployment starts with a `v*` tag. The workflow checks that the tag matc
 
 ### Evidence and citation
 
-Descriptions record `descSource`; document-derived state records its source and coverage; issue linkage follows `#N` in a commit subject to touched files and then C4 ownership; audit verdicts require path, commit, or issue evidence. The implementation rejects missing paths and unresolvable commits before applying an audit fill ([`lib/evidence.mjs`](../../lib/evidence.mjs#L32-L58)). Evidence is not ornamental metadata. It is what makes a displayed claim reviewable.
+Descriptions record `descSource`; document-derived state records its source and coverage; issue linkage follows `#N` in a commit subject to touched files and then C4 ownership; audit verdicts require path, commit, or issue evidence. The implementation rejects missing paths and unresolvable commits before applying an audit fill ([`lib/evidence.mjs`](../../lib/evidence.mjs#L73-L125)). Evidence is not ornamental metadata. It is what makes a displayed claim reviewable.
 
 ### The honest blank
 
