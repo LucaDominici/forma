@@ -5680,6 +5680,58 @@ const diffPaths = (a, b, at = "") => {
       r,
     );
 
+  // Codex round 3 (HIGH 1, #140 S3): `loadProgram` marks `issues-truncated` fatal, but
+  // `checkDiagnosticMessages` used to have no case for it — the programme was silently skipped
+  // (no FAIL line at all) even though the loop still `continue`d past it. Must now exit 1 and name
+  // the truncation.
+  const alphaIssues = join(alpha, "issues.json");
+  const pristineAlphaIssues = readFileSync(alphaIssues, "utf-8");
+  const truncatedSnap = JSON.parse(pristineAlphaIssues);
+  truncatedSnap.truncated = true;
+  writeFileSync(alphaIssues, JSON.stringify(truncatedSnap));
+  r = checkRoom(roomHtml);
+  writeFileSync(alphaIssues, pristineAlphaIssues);
+  if (r.status === 0 || !/truncated/.test(r.stderr || ""))
+    die(
+      "room: check --room did not reject a truncated issue snapshot (issues-truncated diagnostic)",
+      r,
+    );
+
+  // Codex round 3 (HIGH 1, #140 S3): same gap for `model-topology-symmetry` — declaring a model
+  // without a topology (or vice versa) must exit 1 and name the mismatch, not silently skip. The
+  // manifest declares `model` and no `topology` for alpha; the top-level (non-room) C4 gate still
+  // reads the real, untouched model/topology via --model/--topology, so only the room block is
+  // exercising the asymmetry.
+  const manifestNoTopology = join(R, "manifest-no-topology.json");
+  const mNoTopo = readJson(manifest);
+  delete mNoTopo.programs.find((p) => p.id === "alpha").topology;
+  writeFileSync(manifestNoTopology, JSON.stringify(mNoTopo, null, 2));
+  r = checkRoom(roomHtml, manifestNoTopology);
+  if (r.status === 0 || !/model and topology must either both be present or both be absent/.test(r.stderr || ""))
+    die(
+      "room: check --room did not reject a model declared without a topology (model-topology-symmetry diagnostic)",
+      r,
+    );
+
+  // Codex round 3 (HIGH 2, #140 S3): main's inline boundary skipped a programme SILENTLY on any
+  // falsy parsed overlay (`null`, `false`, `0`, `""`) — no FAIL line, exit 0. The shared loader must
+  // fail closed the same way (now reporting why, which is stricter, not a regression): a `null`
+  // health overlay must produce exactly one FAIL line, exit 1, and no raw Node stack trace.
+  writeFileSync(alphaHealth, "null");
+  r = checkRoom(roomHtml);
+  writeFileSync(alphaHealth, pristineAlphaHealth);
+  const failLines = (r.stderr || "").split("\n").filter((l) => /^ - /.test(l));
+  if (
+    r.status === 0 ||
+    failLines.length !== 1 ||
+    !/health overlay/.test(failLines[0]) ||
+    /at .*:\d+:\d+/.test(r.stderr || "")
+  )
+    die(
+      "room: check --room did not fail closed on a null health overlay with exactly one FAIL line",
+      r,
+    );
+
   // A manifest and an artifact that disagree about which programmes exist is drift, not a detail.
   const manifestGamma = join(R, "manifest-gamma.json");
   const mf = readJson(manifest);
