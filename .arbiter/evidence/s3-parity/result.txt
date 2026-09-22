@@ -1,0 +1,143 @@
+# S3 parity harness result
+generated 2026-09-22T20:47:54.671Z
+
+| cell | kind | base exit | branch exit | verdict |
+|---|---|---|---|---|
+| issues / missing | check | 1 | 1 | same |
+| issues / missing | room | 1 | 1 | same |
+| issues / falsy-null | check | 0 | 1 | stricter |
+| issues / falsy-null | room | 1 | 1 | same |
+| issues / falsy-false | check | 0 | 1 | stricter |
+| issues / falsy-false | room | 1 | 1 | same |
+| issues / falsy-zero | check | 0 | 1 | stricter |
+| issues / falsy-zero | room | 1 | 1 | same |
+| issues / falsy-emptystring | check | 0 | 1 | stricter |
+| issues / falsy-emptystring | room | 1 | 1 | same |
+| issues / truthy-number | check | 1 | 1 | same |
+| issues / truthy-number | room | 1 | 1 | same |
+| issues / truthy-string | check | 1 | 1 | same |
+| issues / truthy-string | room | 1 | 1 | same |
+| issues / truthy-bool | check | 1 | 1 | same |
+| issues / truthy-bool | room | 1 | 1 | same |
+| issues / truthy-array | check | 1 | 1 | same |
+| issues / truthy-array | room | 1 | 1 | same |
+| issues / invalid-json | check | 1 | 1 | same |
+| issues / invalid-json | room | 1 | 1 | same |
+| issues / schema-invalid-object | check | 1 | 1 | same |
+| issues / schema-invalid-object | room | 1 | 1 | same |
+| model / missing | check | 1 | 1 | same |
+| model / missing | room | 1 | 1 | same |
+| model / falsy-null | check | 1 | 1 | same |
+| model / falsy-null | room | 1 | 1 | same |
+| model / falsy-false | check | 1 | 1 | same |
+| model / falsy-false | room | 1 | 1 | same |
+| model / falsy-zero | check | 1 | 1 | same |
+| model / falsy-zero | room | 1 | 1 | same |
+| model / falsy-emptystring | check | 1 | 1 | same |
+| model / falsy-emptystring | room | 1 | 1 | same |
+| model / truthy-number | check | 1 | 1 | same |
+| model / truthy-number | room | 1 | 1 | same |
+| model / truthy-string | check | 1 | 1 | same |
+| model / truthy-string | room | 1 | 1 | same |
+| model / truthy-bool | check | 1 | 1 | same |
+| model / truthy-bool | room | 1 | 1 | same |
+| model / truthy-array | check | 1 | 1 | same |
+| model / truthy-array | room | 1 | 1 | same |
+| model / invalid-json | check | 1 | 1 | same |
+| model / invalid-json | room | 1 | 1 | same |
+| model / schema-invalid-object | check | 1 | 1 | same |
+| model / schema-invalid-object | room | 1 | 1 | same |
+| health / missing | check | 1 | 1 | same |
+| health / missing | room | 0 | 0 | same |
+| health / falsy-null | check | 0 | 1 | stricter |
+| health / falsy-null | room | 1 | 1 | same |
+| health / falsy-false | check | 0 | 1 | stricter |
+| health / falsy-false | room | 1 | 1 | same |
+| health / falsy-zero | check | 0 | 1 | stricter |
+| health / falsy-zero | room | 1 | 1 | same |
+| health / falsy-emptystring | check | 0 | 1 | stricter |
+| health / falsy-emptystring | room | 1 | 1 | same |
+| health / truthy-number | check | 1 | 1 | same |
+| health / truthy-number | room | 1 | 1 | same |
+| health / truthy-string | check | 1 | 1 | same |
+| health / truthy-string | room | 1 | 1 | same |
+| health / truthy-bool | check | 1 | 1 | same |
+| health / truthy-bool | room | 1 | 1 | same |
+| health / truthy-array | check | 1 | 1 | same |
+| health / truthy-array | room | 1 | 1 | same |
+| health / invalid-json | check | 1 | 1 | same |
+| health / invalid-json | room | 1 | 1 | same |
+| health / schema-invalid-object | check | 1 | 1 | same |
+| health / schema-invalid-object | room | 1 | 1 | same |
+| findings / missing | check | 1 | 1 | same |
+| findings / missing | room | 0 | 0 | same |
+| findings / falsy-null | check | 0 | 1 | stricter |
+| findings / falsy-null | room | 1 | 1 | same |
+| findings / falsy-false | check | 0 | 1 | stricter |
+| findings / falsy-false | room | 1 | 1 | same |
+| findings / falsy-zero | check | 0 | 1 | stricter |
+| findings / falsy-zero | room | 1 | 1 | same |
+| findings / falsy-emptystring | check | 0 | 1 | stricter |
+| findings / falsy-emptystring | room | 1 | 1 | same |
+| findings / truthy-number | check | 1 | 1 | same |
+| findings / truthy-number | room | 1 | 1 | same |
+| findings / truthy-string | check | 1 | 1 | same |
+| findings / truthy-string | room | 1 | 1 | same |
+| findings / truthy-bool | check | 1 | 1 | same |
+| findings / truthy-bool | room | 1 | 1 | same |
+| findings / truthy-array | check | 1 | 1 | same |
+| findings / truthy-array | room | 1 | 1 | same |
+| findings / invalid-json | check | 1 | 1 | same |
+| findings / invalid-json | room | 1 | 1 | same |
+| findings / schema-invalid-object | check | 1 | 1 | same |
+| findings / schema-invalid-object | room | 1 | 1 | same |
+| issues / truncated:true | check | 0 | 1 | stricter |
+| issues / truncated:true | room | 1 | 1 | same |
+| model-without-topology | check | 1 | 1 | same |
+| model-without-topology | room | 1 | 1 | same |
+| manifest-mismatch (ghRepo) | check | 1 | 1 | same |
+| manifest-mismatch (ghRepo) | room | 1 | 1 | same |
+| --staged-inputs (corrupt health, invalid json) | room | 1 | 1 | same |
+
+## Details (first stderr line per column, only where verdict != same)
+- issues / falsy-null [check] :: stricter
+  base:
+  branch: [check-c4] FAIL (1):
+- issues / falsy-false [check] :: stricter
+  base:
+  branch: [check-c4] FAIL (1):
+- issues / falsy-zero [check] :: stricter
+  base:
+  branch: [check-c4] FAIL (1):
+- issues / falsy-emptystring [check] :: stricter
+  base:
+  branch: [check-c4] FAIL (1):
+- health / falsy-null [check] :: stricter
+  base:
+  branch: [check-c4] FAIL (1):
+- health / falsy-false [check] :: stricter
+  base:
+  branch: [check-c4] FAIL (1):
+- health / falsy-zero [check] :: stricter
+  base:
+  branch: [check-c4] FAIL (1):
+- health / falsy-emptystring [check] :: stricter
+  base:
+  branch: [check-c4] FAIL (1):
+- findings / falsy-null [check] :: stricter
+  base:
+  branch: [check-c4] FAIL (1):
+- findings / falsy-false [check] :: stricter
+  base:
+  branch: [check-c4] FAIL (1):
+- findings / falsy-zero [check] :: stricter
+  base:
+  branch: [check-c4] FAIL (1):
+- findings / falsy-emptystring [check] :: stricter
+  base:
+  branch: [check-c4] FAIL (1):
+- issues / truncated:true [check] :: stricter
+  base:
+  branch: [check-c4] FAIL (1):
+
+Total cells: 95, REGRESSION: 0

@@ -15,6 +15,7 @@ lib/describe.mjs
 lib/doc.mjs
 lib/docmap.mjs
 lib/enrich.mjs
+lib/evidence.mjs
 lib/gen.mjs
 lib/init.mjs
 lib/lang.mjs

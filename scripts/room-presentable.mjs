@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
 import { daysBetween } from '../lib/roomderive.mjs'
 import { DERIVED_KEYS, LENSES, derivedLenses, ownershipViolations } from '../lib/lenses.mjs'
-import { validateEvidence } from '../lib/audit.mjs'
+import { validateEvidence } from '../lib/evidence.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const arg = (f, d) => { const i = process.argv.indexOf(f); return i > -1 ? process.argv[i + 1] : d }

@@ -42,7 +42,7 @@ import {
   derivePortfolio,
 } from "../lib/roomderive.mjs";
 import { loadDocs } from "../lib/roomdocs.mjs";
-import { codepointCompare } from "../lib/audit.mjs";
+import { codepointCompare } from "../lib/evidence.mjs";
 import { deriveRtm } from "../lib/rtm.mjs";
 import { componentsFor } from "../lib/cluster.mjs";
 import { canonicalPath } from "../lib/roomload.mjs";
@@ -5606,6 +5606,132 @@ const diffPaths = (a, b, at = "") => {
       r,
     );
 
+  // F8: `room` schema-validates a programme's model before composing (lib/room.mjs), but `check
+  // --room` re-reads the same model.json from disk without validating it at all — an
+  // additionalProperties violation leaves `deriveAll`'s output byte-identical (so the
+  // re-derivation-parity comparisons above cannot catch it), yet the model is invalid. `check
+  // --room` must report it, naming the schema, the same way `room` would refuse to compose it.
+  // `--model` here points at a file that does not exist, so the top-level (non-room) C4 gate that
+  // `checkRoom` normally also exercises is skipped (ROOM_ONLY) and only the room block is under
+  // test.
+  const pristineModel = readFileSync(model, "utf-8");
+  const brokenModel = JSON.parse(pristineModel);
+  brokenModel._bogus = true;
+  writeFileSync(model, JSON.stringify(brokenModel, null, 2));
+  r = run([
+    "check",
+    "--model",
+    join(R, "no-such-model.json"),
+    "--room",
+    roomHtml,
+    "--manifest",
+    manifest,
+  ]);
+  writeFileSync(model, pristineModel);
+  if (r.status === 0 || !/c4-model\.schema\.json/.test(r.stderr || ""))
+    die(
+      "room: check --room did not reject a schema-invalid programme model (F8)",
+      r,
+    );
+
+  // Codex round 1 (HIGH): a top-level JSON `null` model must not be treated the same as a
+  // read failure — it is a successfully parsed value that is certainly schema-invalid (the
+  // schema requires an object), and the loader must still run it through `validateModel` rather
+  // than silently skipping validation because the parsed value happens to be JS `null`.
+  writeFileSync(model, "null");
+  r = run([
+    "check",
+    "--model",
+    join(R, "no-such-model.json"),
+    "--room",
+    roomHtml,
+    "--manifest",
+    manifest,
+  ]);
+  writeFileSync(model, pristineModel);
+  if (r.status === 0 || !/c4-model\.schema\.json/.test(r.stderr || ""))
+    die(
+      "room: check --room accepted a top-level JSON null model instead of schema-validating it",
+      r,
+    );
+
+  // Codex round 1 (HIGH): a diagnostic that check --room has always continued past (a schema-
+  // invalid overlay, or a manifest/snapshot mismatch) must still let the rest of the gate run —
+  // in particular the re-derivation-parity comparison below it. Corrupt alpha's health overlay
+  // (schema-invalid, reported but not fatal) AND hand-alter the embedded Executive KPIs (only
+  // caught by the parity comparison that runs AFTER the overlay is loaded): both failures must
+  // appear together, proving the health-schema diagnostic did not short-circuit the run.
+  const alphaHealth = join(alpha, "health.json");
+  const pristineAlphaHealth = readFileSync(alphaHealth, "utf-8");
+  const brokenHealth = JSON.parse(pristineAlphaHealth);
+  brokenHealth._bogus = true;
+  writeFileSync(alphaHealth, JSON.stringify(brokenHealth, null, 2));
+  const tamperedKpi = join(R, "tampered-continuation.html");
+  tamper(roomHtml, tamperedKpi, '"openCount":2', '"openCount":7');
+  r = checkRoom(tamperedKpi);
+  writeFileSync(alphaHealth, pristineAlphaHealth);
+  if (
+    r.status === 0 ||
+    !/health overlay/.test(r.stderr || "") ||
+    !/Executive KPIs/.test(r.stderr || "")
+  )
+    die(
+      "room: check --room did not continue past a schema-invalid overlay to the later parity comparison",
+      r,
+    );
+
+  // Codex round 3 (HIGH 1, #140 S3): `loadProgram` marks `issues-truncated` fatal, but
+  // `checkDiagnosticMessages` used to have no case for it — the programme was silently skipped
+  // (no FAIL line at all) even though the loop still `continue`d past it. Must now exit 1 and name
+  // the truncation.
+  const alphaIssues = join(alpha, "issues.json");
+  const pristineAlphaIssues = readFileSync(alphaIssues, "utf-8");
+  const truncatedSnap = JSON.parse(pristineAlphaIssues);
+  truncatedSnap.truncated = true;
+  writeFileSync(alphaIssues, JSON.stringify(truncatedSnap));
+  r = checkRoom(roomHtml);
+  writeFileSync(alphaIssues, pristineAlphaIssues);
+  if (r.status === 0 || !/truncated/.test(r.stderr || ""))
+    die(
+      "room: check --room did not reject a truncated issue snapshot (issues-truncated diagnostic)",
+      r,
+    );
+
+  // Codex round 3 (HIGH 1, #140 S3): same gap for `model-topology-symmetry` — declaring a model
+  // without a topology (or vice versa) must exit 1 and name the mismatch, not silently skip. The
+  // manifest declares `model` and no `topology` for alpha; the top-level (non-room) C4 gate still
+  // reads the real, untouched model/topology via --model/--topology, so only the room block is
+  // exercising the asymmetry.
+  const manifestNoTopology = join(R, "manifest-no-topology.json");
+  const mNoTopo = readJson(manifest);
+  delete mNoTopo.programs.find((p) => p.id === "alpha").topology;
+  writeFileSync(manifestNoTopology, JSON.stringify(mNoTopo, null, 2));
+  r = checkRoom(roomHtml, manifestNoTopology);
+  if (r.status === 0 || !/model and topology must either both be present or both be absent/.test(r.stderr || ""))
+    die(
+      "room: check --room did not reject a model declared without a topology (model-topology-symmetry diagnostic)",
+      r,
+    );
+
+  // Codex round 3 (HIGH 2, #140 S3): main's inline boundary skipped a programme SILENTLY on any
+  // falsy parsed overlay (`null`, `false`, `0`, `""`) — no FAIL line, exit 0. The shared loader must
+  // fail closed the same way (now reporting why, which is stricter, not a regression): a `null`
+  // health overlay must produce exactly one FAIL line, exit 1, and no raw Node stack trace.
+  writeFileSync(alphaHealth, "null");
+  r = checkRoom(roomHtml);
+  writeFileSync(alphaHealth, pristineAlphaHealth);
+  const failLines = (r.stderr || "").split("\n").filter((l) => /^ - /.test(l));
+  if (
+    r.status === 0 ||
+    failLines.length !== 1 ||
+    !/health overlay/.test(failLines[0]) ||
+    /at .*:\d+:\d+/.test(r.stderr || "")
+  )
+    die(
+      "room: check --room did not fail closed on a null health overlay with exactly one FAIL line",
+      r,
+    );
+
   // A manifest and an artifact that disagree about which programmes exist is drift, not a detail.
   const manifestGamma = join(R, "manifest-gamma.json");
   const mf = readJson(manifest);
@@ -7624,13 +7750,15 @@ const diffPaths = (a, b, at = "") => {
     applyCounterResults,
     counterPlan,
     validateCounterResults,
+    applyBrief,
+  } = await import(join(HERE, "..", "lib/audit.mjs"));
+  const {
     classifyVerdictStaleness,
     classifyVerification,
-    applyBrief,
     hashEvidence,
     resolveEvidencePath,
     validateEvidence,
-  } = await import(join(HERE, "..", "lib/audit.mjs"));
+  } = await import(join(HERE, "..", "lib/evidence.mjs"));
   const labelClaims = counterPlan(
     null,
     {
@@ -10074,20 +10202,42 @@ const diffPaths = (a, b, at = "") => {
 }
 
 // Production recovery: aliased output paths must collide before any verifier can write, and the
-// package guard must cover the current 42-file runtime surface.
+// package guard must cover the current 43-file runtime surface.
 {
   const target = join(tmp, "allowlist-target.json"), alias = join(tmp, "allowlist-alias.json");
   writeFileSync(target, "{}\n"); symlinkSync(target, alias);
   if (canonicalPath(target) !== canonicalPath(alias)) die("release: canonicalPath missed a symlink alias");
   const guard = spawnSync(process.execPath, [join(HERE, "..", "scripts", "check-clean.mjs")], { encoding: "utf-8" });
-  if (guard.status !== 0 || !/42 reviewed runtime files, clean/.test(guard.stderr || "")) die("release: current 42-file runtime allowlist is not clean", guard);
+  if (guard.status !== 0 || !/43 reviewed runtime files, clean/.test(guard.stderr || "")) die("release: current 43-file runtime allowlist is not clean", guard);
   const packed = spawnSync("npm", ["pack", "--dry-run", "--json"], { cwd: join(HERE, ".."), encoding: "utf-8" });
   const packJson = (packed.stdout || "").slice((packed.stdout || "").indexOf("[\n"));
   let packMeta;
   try { packMeta = JSON.parse(packJson)[0]; } catch { packMeta = null; }
-  if (packed.status !== 0 || !packMeta || packMeta.entryCount !== 42 || !packMeta.files.some(({ path }) => path === "lib/roomupdate.mjs"))
-    die("release: npm pack effective file set is not the reviewed 42-file runtime surface", packed);
-  console.log("  ok production-recovery — symlink aliases canonicalize and the reviewed 42-file runtime allowlist is enforced");
+  if (packed.status !== 0 || !packMeta || packMeta.entryCount !== 43 || !packMeta.files.some(({ path }) => path === "lib/roomupdate.mjs"))
+    die("release: npm pack effective file set is not the reviewed 43-file runtime surface", packed);
+  console.log("  ok production-recovery — symlink aliases canonicalize and the reviewed 43-file runtime allowlist is enforced");
+}
+
+// #140 S3 F7: evidence hashing/staleness primitives live in lib/evidence.mjs, not lib/audit.mjs —
+// roomderive.mjs/roomdocs.mjs/verify.mjs/check.mjs/room-presentable.mjs must import them from
+// there, never reach back into the audit plan/apply channel for functions that have nothing to
+// do with it.
+{
+  const evidenceImporters = [
+    "lib/roomderive.mjs",
+    "lib/roomdocs.mjs",
+    "lib/verify.mjs",
+    "lib/check.mjs",
+    "scripts/room-presentable.mjs",
+  ];
+  for (const rel of evidenceImporters) {
+    const src = readFileSync(join(HERE, "..", rel), "utf-8");
+    if (/from ['"](\.\.\/lib\/|\.\/)?audit\.mjs['"]/.test(src))
+      die(`import-graph: ${rel} must not import from audit.mjs (evidence primitives moved to evidence.mjs)`);
+    if (!/from ['"](\.\.\/lib\/|\.\/)?evidence\.mjs['"]/.test(src))
+      die(`import-graph: ${rel} must import evidence primitives from evidence.mjs`);
+  }
+  console.log("  ok import-graph — roomderive/roomdocs/verify/check/room-presentable import evidence primitives from evidence.mjs, not audit.mjs");
 }
 
 // F2 unit pin: `codepointCompare` must order true Unicode SCALAR values, not UTF-16 code units.

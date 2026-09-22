@@ -33,7 +33,7 @@ Two people running those three commands on the same inputs get the same three ve
 including across machines with different runtime locales. Every id/title sort that feeds a
 rendered aggregate (milestones, use cases, runbooks, the milestone path, milestone
 reconciliation, and `verify`'s dependency-edge list) orders by Unicode SCALAR value
-(`lib/audit.mjs`'s `codepointCompare`), never by `String.prototype.localeCompare` or a locale
+(`lib/evidence.mjs`'s `codepointCompare`), never by `String.prototype.localeCompare` or a locale
 collation: ICU collation is locale-dependent (`sv_SE` sorts diacritics after `z`; `en_US`/`C` do
 not), so a room composed under one locale could otherwise fail `check` under another, or reorder
 silently. This can differ from a human's casual reading order for mixed-case or non-ASCII

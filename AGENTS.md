@@ -25,7 +25,10 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
   packages and `import` blocks), `render.mjs` (arc42 renderers shared by doc+check), `validate.mjs`
   (zero-dep JSON-schema walker used by `gen`, `check` and `room`), `link.mjs` (issue↔code linkage
   via git log, no LLM), `taxonomy.mjs` (auto-detected label families), `audit.mjs` (evidence-gated
-  Control Room verdicts, same doctrine as `enrich.mjs`), `roomderive.mjs` (Control Room aggregates
+  Control Room verdicts, same doctrine as `enrich.mjs`), `evidence.mjs` (evidence hashing,
+  evidence-path resolution and staleness classification — split out of `audit.mjs` so `check.mjs`,
+  `verify.mjs`, `roomderive.mjs` and `roomdocs.mjs` don't reach into the audit plan/apply channel
+  for primitives that have nothing to do with it), `roomderive.mjs` (Control Room aggregates
   — the ONE module both `room` and `check` import, so they can't disagree), `roomload.mjs` (how a
   manifest entry becomes concrete paths, and which programmes are active — shared for the same
   reason), `rtm.mjs` (requirements traceability derived from document tables, ADR-0006),
@@ -67,7 +70,7 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
 - The viewer is one HTML file in ES5 style (var/function); every new UI string goes in BOTH
   locales of `STRINGS`.
 - `npm pack --dry-run` must stay clean of editor residue — zero `.fuse_hidden` — and at exactly
-  the 42-entry runtime allowlist `scripts/check-clean.mjs` enforces at `prepack`; it refuses to
+  the 43-entry runtime allowlist `scripts/check-clean.mjs` enforces at `prepack`; it refuses to
   publish if the reviewed set changes. Bump the allowlist deliberately when you add or remove a
   shipped `lib/` file.
 - Architecture of Forma itself is modeled with Forma: see `docs/architecture/`
