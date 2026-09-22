@@ -106,7 +106,7 @@ flowchart TB
 
 ### Level 3: engine modules
 
-The 26 top-level `lib/*.mjs` modules each have one primary responsibility:
+The 27 top-level `lib/*.mjs` modules each have one primary responsibility:
 
 | Module | Single responsibility |
 |---|---|
@@ -117,6 +117,7 @@ The 26 top-level `lib/*.mjs` modules each have one primary responsibility:
 | `doc.mjs` | Project an arc42 scaffold or attach a governed generated block to an existing document. |
 | `docmap.mjs` | Join capability-table rows to nodes and derive cited descriptions and programme verdicts. |
 | `enrich.mjs` | Fill remaining prose holes through explicit, cached, opt-in enrichment. |
+| `evidence.mjs` | Hash, resolve and classify the staleness of evidence cited by health, findings and brief overlays. |
 | `gen.mjs` | Combine curated topology with live repository evidence and write the validated C4 model. |
 | `init.mjs` | Seed a best-effort topology and disclose source stacks it did not model. |
 | `lang.mjs` | Provide language-specific topology and edge facts, currently Go packages and imports. |

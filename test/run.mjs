@@ -42,7 +42,7 @@ import {
   derivePortfolio,
 } from "../lib/roomderive.mjs";
 import { loadDocs } from "../lib/roomdocs.mjs";
-import { codepointCompare } from "../lib/audit.mjs";
+import { codepointCompare } from "../lib/evidence.mjs";
 import { deriveRtm } from "../lib/rtm.mjs";
 import { componentsFor } from "../lib/cluster.mjs";
 import { canonicalPath } from "../lib/roomload.mjs";
@@ -7750,13 +7750,15 @@ const diffPaths = (a, b, at = "") => {
     applyCounterResults,
     counterPlan,
     validateCounterResults,
+    applyBrief,
+  } = await import(join(HERE, "..", "lib/audit.mjs"));
+  const {
     classifyVerdictStaleness,
     classifyVerification,
-    applyBrief,
     hashEvidence,
     resolveEvidencePath,
     validateEvidence,
-  } = await import(join(HERE, "..", "lib/audit.mjs"));
+  } = await import(join(HERE, "..", "lib/evidence.mjs"));
   const labelClaims = counterPlan(
     null,
     {
@@ -10200,20 +10202,35 @@ const diffPaths = (a, b, at = "") => {
 }
 
 // Production recovery: aliased output paths must collide before any verifier can write, and the
-// package guard must cover the current 42-file runtime surface.
+// package guard must cover the current 43-file runtime surface.
 {
   const target = join(tmp, "allowlist-target.json"), alias = join(tmp, "allowlist-alias.json");
   writeFileSync(target, "{}\n"); symlinkSync(target, alias);
   if (canonicalPath(target) !== canonicalPath(alias)) die("release: canonicalPath missed a symlink alias");
   const guard = spawnSync(process.execPath, [join(HERE, "..", "scripts", "check-clean.mjs")], { encoding: "utf-8" });
-  if (guard.status !== 0 || !/42 reviewed runtime files, clean/.test(guard.stderr || "")) die("release: current 42-file runtime allowlist is not clean", guard);
+  if (guard.status !== 0 || !/43 reviewed runtime files, clean/.test(guard.stderr || "")) die("release: current 43-file runtime allowlist is not clean", guard);
   const packed = spawnSync("npm", ["pack", "--dry-run", "--json"], { cwd: join(HERE, ".."), encoding: "utf-8" });
   const packJson = (packed.stdout || "").slice((packed.stdout || "").indexOf("[\n"));
   let packMeta;
   try { packMeta = JSON.parse(packJson)[0]; } catch { packMeta = null; }
-  if (packed.status !== 0 || !packMeta || packMeta.entryCount !== 42 || !packMeta.files.some(({ path }) => path === "lib/roomupdate.mjs"))
-    die("release: npm pack effective file set is not the reviewed 42-file runtime surface", packed);
-  console.log("  ok production-recovery — symlink aliases canonicalize and the reviewed 42-file runtime allowlist is enforced");
+  if (packed.status !== 0 || !packMeta || packMeta.entryCount !== 43 || !packMeta.files.some(({ path }) => path === "lib/roomupdate.mjs"))
+    die("release: npm pack effective file set is not the reviewed 43-file runtime surface", packed);
+  console.log("  ok production-recovery — symlink aliases canonicalize and the reviewed 43-file runtime allowlist is enforced");
+}
+
+// #140 S3 F7: evidence hashing/staleness primitives live in lib/evidence.mjs, not lib/audit.mjs —
+// roomderive.mjs/roomdocs.mjs/verify.mjs/check.mjs must import them from there, never reach back
+// into the audit plan/apply channel for functions that have nothing to do with it.
+{
+  const evidenceImporters = ["lib/roomderive.mjs", "lib/roomdocs.mjs", "lib/verify.mjs", "lib/check.mjs"];
+  for (const rel of evidenceImporters) {
+    const src = readFileSync(join(HERE, "..", rel), "utf-8");
+    if (/from ['"](\.\.\/lib\/|\.\/)?audit\.mjs['"]/.test(src))
+      die(`import-graph: ${rel} must not import from audit.mjs (evidence primitives moved to evidence.mjs)`);
+    if (!/from ['"](\.\.\/lib\/|\.\/)?evidence\.mjs['"]/.test(src))
+      die(`import-graph: ${rel} must import evidence primitives from evidence.mjs`);
+  }
+  console.log("  ok import-graph — roomderive/roomdocs/verify/check import evidence primitives from evidence.mjs, not audit.mjs");
 }
 
 // F2 unit pin: `codepointCompare` must order true Unicode SCALAR values, not UTF-16 code units.

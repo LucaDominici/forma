@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-09-14T01:07:41.347Z",
+  "generatedAt": "2026-09-22T20:33:34.346Z",
   "source": {
     "repo": "forma",
-    "commit": "3c6f6b1688c821c9f1f95cd755c6f2cb53207e83",
-    "branch": "task/s4-one-cpm",
+    "commit": "b872f9f36f6cf90313251389aa74fbcc1b253f3e",
+    "branch": "task/s3-evidence-loader",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -245,7 +245,7 @@
         {
           "type": "glob",
           "ref": "lib",
-          "count": 26
+          "count": 27
         }
       ],
       "category": "container",
@@ -469,6 +469,25 @@
       "descSource": "docstring"
     },
     {
+      "id": "lib__evidence_mjs",
+      "level": "leaf",
+      "parent": "lib",
+      "kind": "leaf",
+      "name": "evidence",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "lib/evidence.mjs"
+        }
+      ],
+      "category": "lib",
+      "status2": "unknown",
+      "target": "",
+      "func": "evidence.mjs — evidence hashing, evidence-path/record resolution and staleness classification. Split out of audit.mjs (#140 S3, F7): these are the primitives every caller of a c4-health / c4-findings / c4-brief overlay needs to ask \"does th",
+      "descSource": "docstring"
+    },
+    {
       "id": "lib__gen_mjs",
       "level": "leaf",
       "parent": "lib",
@@ -598,7 +617,7 @@
       "category": "lib",
       "status2": "unknown",
       "target": "",
-      "func": "repofiles.mjs — git ls-files, read once per repo per process (#133 S4). docmap.mjs, roomdocs.mjs and rtm.mjs each shelled out to git independently for the same answer; one forma room compose paid that cost three times over for a file list t",
+      "func": "repofiles.mjs — git ls-files, read once per repo PER COMPOSE (#133 S4). docmap.mjs, roomdocs.mjs and rtm.mjs each shelled out to git independently for the same answer; one forma room compose paid that cost three times over for a file list t",
       "descSource": "docstring"
     },
     {
