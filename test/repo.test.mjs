@@ -230,7 +230,7 @@ describe("repo", () => {
     );
     if (status.nodes.forma.statusWord !== "v" + pkg.version)
       die(
-        `self-model-fresh: c4-status.json claims ${status.nodes.forma.statusWord}, package.json is v${pkg.version}`,
+        `self-model-fresh: c4-status.json claims ${status.nodes.forma.statusWord}, package.json is v${pkg.version} — see PUBLISH.md step 4`,
       );
     if (/not built/i.test(status.nodes.boards.current))
       die(
@@ -239,7 +239,7 @@ describe("repo", () => {
     const formaNode = model.nodes.find((n) => n.id === "forma");
     if (formaNode.statusWord !== "v" + pkg.version)
       die(
-        "self-model-fresh: gen did not re-decorate the committed model from the edited status overlay",
+        "self-model-fresh: gen did not re-decorate the committed model from the edited status overlay — see PUBLISH.md step 4",
       );
     let r = run(["check"]);
     if (r.status !== 0)

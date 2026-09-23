@@ -75,10 +75,28 @@ So bootstrap once, then hand off to the workflow:
    `v1.0.0` tag. Release Please intentionally waits for a `v1.*` tag so it cannot reinterpret the
    pre-1.0 history as a 0.x release.
 4. **From then on**, releases are automatic and token-free with provenance. Conventional commits
-   merged to `main` make Release Please open a versioned release PR; review and merge that PR.
-   The `release` workflow then checks out the tag it created, asserts it matches `package.json`,
-   runs lint + test + `npm pack --dry-run`, then calls `npm publish`. Provenance (Sigstore) is
-   generated automatically because the repo is public and the job has `id-token: write`.
+   merged to `main` make Release Please open a versioned release PR. That PR **will not show a
+   green CI check on its own** — commits authored by the workflow's own `GITHUB_TOKEN` do not
+   trigger other workflows (GitHub's anti-recursion rule), so `ci-required` never runs until a
+   human pushes a commit to the branch. Two gates also compare other files against the version
+   Release Please just bumped in `package.json`, so that push has to carry a release-prep
+   commit (#141):
+   - `docs/architecture/c4-status.json` → `nodes.forma`: set `statusWord` to `v<version>`, set
+     `verify.source` to `CHANGELOG <version> · tag v<version>`, and rewrite `current` to describe
+     what actually shipped. Then run `node bin/forma.mjs gen` — it copies those fields into
+     `docs/architecture/c4-model.json` from the overlay; never hand-edit `c4-model.json` directly.
+   - `npm pack`, install the tarball into an empty temporary prefix, and run `forma --version` to
+     get real facts. Update the "The X.Y.Z release candidate" row in `docs/DELIVERY.md` with the
+     new version, the tarball name and the file count you actually observed.
+   - These are checked by `self-model-fresh` (`npm test`) and the `release-version` claim
+     (`forma check --room`) — both fail the PR's CI until this commit lands. Push it **last**,
+     right before merging: Release Please may rewrite the branch on a later `main` merge, which
+     would drop an earlier prep commit.
+
+   Once CI is green, review and merge the PR. The `release` workflow then checks out the tag it
+   created, asserts it matches `package.json`, runs lint + test + `npm pack --dry-run`, then calls
+   `npm publish`. Provenance (Sigstore) is generated automatically because the repo is public and
+   the job has `id-token: write`.
 5. **One-time repository settings:** permit GitHub Actions to create pull requests if the default
    setting blocks the release PR; protect release tags; and protect `main` with the CI gate. These
    are account settings, deliberately not changes the workflow can make to itself.
