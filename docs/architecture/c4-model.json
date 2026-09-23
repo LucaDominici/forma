@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-09-22T20:33:34.346Z",
+  "generatedAt": "2026-09-23T00:10:13.391Z",
   "source": {
     "repo": "forma",
-    "commit": "b872f9f36f6cf90313251389aa74fbcc1b253f3e",
-    "branch": "task/s3-evidence-loader",
+    "commit": "aa3ee64edb2eb27b785b3c54225601ef47865812",
+    "branch": "task/s5a-test-split",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -301,7 +301,7 @@
         {
           "type": "glob",
           "ref": "test",
-          "count": 3
+          "count": 8
         }
       ],
       "category": "container",
@@ -1001,6 +1001,82 @@
       "descSource": "docstring"
     },
     {
+      "id": "test__gen_test_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "gen.test",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/gen.test.mjs"
+        }
+      ],
+      "category": "test",
+      "status2": "unknown",
+      "target": "",
+      "func": "init→gen→check across fixtures: counts, curation (§1a/§2/§1b), overlays, determinism.",
+      "descSource": "docstring"
+    },
+    {
+      "id": "test__helpers_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "helpers",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/helpers.mjs"
+        }
+      ],
+      "category": "test",
+      "status2": "unknown",
+      "target": "",
+      "func": "Shared plumbing for the node:test files split out of the former test/run.mjs (S5, #144). Each test file spawns forma as a subprocess (BIN) against its own fixtures (FIX) and its own tmpdir (freshTmp), so files can run standalone or together",
+      "descSource": "docstring"
+    },
+    {
+      "id": "test__model_test_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "model.test",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/model.test.mjs"
+        }
+      ],
+      "category": "test",
+      "status2": "unknown",
+      "target": "",
+      "func": "Schema validation, timeline/docmap derivation, declaration+doc-drift, presentable gates.",
+      "descSource": "docstring"
+    },
+    {
+      "id": "test__overlays_test_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "overlays.test",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/overlays.test.mjs"
+        }
+      ],
+      "category": "test",
+      "status2": "unknown",
+      "target": "",
+      "func": "§7 enrich, WP-A overlays (status/apply/verify), the offline agent stub.",
+      "descSource": "docstring"
+    },
+    {
       "id": "test__run_mjs",
       "level": "leaf",
       "parent": "test",
@@ -1055,6 +1131,25 @@
       "status2": "unknown",
       "target": "",
       "func": "Offline stand-in for the gh commands used by forma verify.",
+      "descSource": "docstring"
+    },
+    {
+      "id": "test__viewer_test_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "viewer.test",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/viewer.test.mjs"
+        }
+      ],
+      "category": "test",
+      "status2": "unknown",
+      "target": "",
+      "func": "The viewer HTML: hologram behavior, header/landmarks/focus/pan a11y, the explorer.",
       "descSource": "docstring"
     }
   ],
