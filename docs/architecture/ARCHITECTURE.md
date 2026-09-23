@@ -248,7 +248,7 @@ Accepted ADRs are immutable. A changed decision requires a new ADR that supersed
 
 | Quality requirement | Verification command | Current evidence |
 |---|---|---|
-| Every shipped JavaScript entry parses. | `npm run lint` | Passes on this branch; the command checks `bin/forma.mjs`, every top-level `lib/*.mjs`, `scripts/lint.mjs`, and `test/run.mjs` ([`scripts/lint.mjs:2-12`](../../scripts/lint.mjs#L2-L12)). |
+| Every shipped JavaScript entry parses. | `npm run lint` | Passes on this branch; the command checks `bin/forma.mjs`, every top-level `lib/*.mjs`, `scripts/lint.mjs`, and every `test/*.mjs` ([`scripts/lint.mjs:2-12`](../../scripts/lint.mjs#L2-L12)). |
 | Forma's committed model remains adherent to Forma's source. | `node bin/forma.mjs check` | Passes on this branch. CI runs the same command after lint and tests ([`.github/workflows/ci.yml:23-27`](../../.github/workflows/ci.yml#L23-L27)). |
 | Generation and contract behavior remain deterministic across fixtures. | `npm test` | The suite is green end to end; the `docmap-cap` defect this row once named is gone (no such block exists in `test/run.mjs`). |
 | The public single-model demo is suitable for presentation. | `node scripts/presentable.mjs docs/demo/c4-model.json` | The test suite invokes this exact shipped artifact and requires exit 0 ([`test/model.test.mjs:951-966`](../../test/model.test.mjs#L951-L966)). |

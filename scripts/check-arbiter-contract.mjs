@@ -117,11 +117,10 @@ function main() {
   const dirIdx = argv.indexOf("--dir");
   const root =
     dirIdx === -1 ? resolve(scriptDir, "..") : resolve(argv[dirIdx + 1]);
+  // F11 (audit 2026-09-14): no default sibling guess. The cross-checkout half is opt-in via
+  // --sibling; without it, checkContract's !siblingRoot branch just skips that half.
   const sibIdx = argv.indexOf("--sibling");
-  const sibling =
-    sibIdx === -1
-      ? resolve(root, "..", SIBLING_REPO)
-      : resolve(argv[sibIdx + 1]);
+  const sibling = sibIdx === -1 ? undefined : resolve(argv[sibIdx + 1]);
 
   if (!existsSync(join(root, CONTRACT_REL))) {
     process.stderr.write(
