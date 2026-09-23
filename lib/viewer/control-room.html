@@ -1126,7 +1126,7 @@ function viewPortfolio(view){
  var quiet=t.open===0;
  lead.appendChild(el("p","thesis",quiet
   ?fmt(plural(t.programs,STR.thesisQuietOne,STR.thesisQuiet),{programs:t.programs,closed:t.closed})
-  :(blockedClaim.known?fmt(plural(t.programs,STR.thesisOne,STR.thesis),{blocked:blockedClaim.value,open:t.open,programs:t.programs})
+  :(blockedClaim.known?fmt(plural(t.programs,STR.thesisOne,STR.thesis),{blocked:blockedClaim.value,blockedWord:plural(blockedClaim.value,STR.thesisBlockedWordOne,STR.thesisBlockedWord),open:t.open,programs:t.programs})
     :fmt(STR.thesisUnknown,{open:t.open,unknown:t.unknownRule,programs:t.programs}))));
  if(quiet)lead.appendChild(el("p","lede",fmt(STR.thesisQuietLede,{closed:t.closed})));
  lead.appendChild(el("p","lede",fmt(STR.generated,{source:ROOM.meta.generatedFrom,date:ROOM.meta.today})));
@@ -1465,7 +1465,7 @@ function viewPlan(view,program,summary){
  var mine=(ROOM.portfolio.blocked||[]).filter(function(b){return b.program===program.id;});
  var blockedClaim=claimOf(summary,"blocked",summary.blocked,summary.blockedRule.declared);
  var answer=el("div","answer"),lead=el("section","panel answer-lead"),i;
- lead.appendChild(el("p","thesis",blockedClaim.known?(mine.length?fmt(STR.techHeadline,{n:mine.length}):STR.noBlocked):STR.techHeadlineUnknown));
+ lead.appendChild(el("p","thesis",blockedClaim.known?(mine.length?fmt(plural(mine.length,STR.techHeadlineOne,STR.techHeadline),{n:mine.length}):STR.noBlocked):STR.techHeadlineUnknown));
  lead.appendChild(el("p","lede",STR.planLede));
  answer.appendChild(lead);
 
