@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-09-23T00:10:13.391Z",
+  "generatedAt": "2026-09-23T00:55:04.371Z",
   "source": {
     "repo": "forma",
-    "commit": "aa3ee64edb2eb27b785b3c54225601ef47865812",
+    "commit": "5dde9dff84ef2d355937ae30850e65884254be7e",
     "branch": "task/s5a-test-split",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",

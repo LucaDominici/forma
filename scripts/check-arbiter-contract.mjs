@@ -144,9 +144,10 @@ function main() {
     for (const v of result.violations) process.stderr.write(`  - ${v}\n`);
     return 1;
   }
-  process.stdout.write(
-    `check-arbiter-contract: PASS — schema contract holds with ${SIBLING_REPO}\n`,
-  );
+  const scope = sibling
+    ? `schema contract holds with ${SIBLING_REPO}`
+    : `owner-side schema contract holds (cross-checkout half skipped, no --sibling)`;
+  process.stdout.write(`check-arbiter-contract: PASS — ${scope}\n`);
   return 0;
 }
 
