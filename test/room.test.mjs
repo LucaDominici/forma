@@ -11,6 +11,7 @@ import { validateModel } from "../lib/validate.mjs";
 import {
   daysBetween,
   deriveAll,
+  derivePortfolio,
   documentGate,
   deriveBlocks,
   deriveCapabilities,
@@ -2581,6 +2582,278 @@ describe("room", () => {
       );
     console.log(
       `  ok rtm-dogfood — forma's own PRD parses as ${rows.length} traceable requirements, every one carrying its verification and its line`,
+    );
+  });
+
+  // F2 (2026-09-14 visual verification, #142) — the plan lens headline ("N decisions are waiting on
+  // you") and the portfolio front door ("N things need you") both count issues matching the DECLARED
+  // blocking rule (label OR an open blocker on a dependency edge, derivePortfolio's `blockedIssues`).
+  // The Kanban "Waiting on a human" bucket sits on a different, narrower axis (a declared needs-human
+  // LABEL only — deriveKanban never sees dependency edges) and is an intentionally separate
+  // epistemic question. Reusing the same wording for both made "1 decisions are waiting on you" read
+  // as contradicted by "Waiting on a human 0" on the same screen (viafera/forma: both declare
+  // `blockedBy: {labels: []}`, blocking is dependency-only, invisible to the label-only bucket).
+  test("room: f2-counts", async () => {
+    const mk = (id, blockedLabels, issues) => {
+      const issuesSnapshot = {
+        issues,
+        milestones: [],
+        fetchedAt: "2026-01-01",
+        collection: {},
+        dependencies: { supported: true, complete: true, edges: [] },
+      };
+      const deriveContext = {};
+      const derived = deriveAll(
+        {
+          repo: tmp,
+          model: null,
+          topo: null,
+          issuesSnapshot,
+          health: { verdicts: [], dependencyConfirmations: [] },
+          findings: { findings: [] },
+          brief: null,
+          briefPath: null,
+          manifest: { today: "2026-01-01", blockedBy: { labels: blockedLabels } },
+          gateInputs: null,
+          arbiterMilestones: null,
+          docs: null,
+        },
+        deriveContext,
+      );
+      return {
+        id,
+        ghRepo: "acme/" + id,
+        repo: tmp,
+        model: null,
+        topo: null,
+        issuesSnapshot,
+        derived,
+        deriveContext,
+        blockedBy: { labels: blockedLabels },
+      };
+    };
+    const issue = (n, labels) => ({
+      n,
+      title: "t" + n,
+      state: "OPEN",
+      labels,
+      ms: null,
+      createdAt: "2026-01-01",
+      closedAt: null,
+    });
+    // one blocked issue (singular case) ...
+    const one = mk("one", ["blocked"], [issue(1, ["blocked"]), issue(2, [])]);
+    // ... and two blocked issues (plural case), exercising both grammatical forms.
+    const two = mk(
+      "two",
+      ["blocked"],
+      [issue(3, ["blocked"]), issue(4, ["blocked"]), issue(5, [])],
+    );
+    // A programme blocked ONLY by a dependency edge, never a label — viafera/forma's real shape. #6
+    // carries no needs-human label, so it must still count as blocked (union rule) while staying OUT
+    // of the Kanban's label-only bucket.
+    const depIssuesSnapshot = {
+      issues: [issue(6, []), issue(7, [])],
+      milestones: [],
+      fetchedAt: "2026-01-01",
+      collection: {},
+      ghRepo: "acme/dep",
+      dependencies: {
+        supported: true,
+        complete: true,
+        edges: [
+          {
+            source: "native",
+            from: { repo: "acme/dep", number: 6 },
+            to: { repo: "acme/dep", number: 7, state: "OPEN" },
+          },
+        ],
+      },
+    };
+    const depDeriveContext = {};
+    const depDerived = deriveAll(
+      {
+        repo: tmp,
+        model: null,
+        topo: null,
+        issuesSnapshot: depIssuesSnapshot,
+        health: { verdicts: [], dependencyConfirmations: [] },
+        findings: { findings: [] },
+        brief: null,
+        briefPath: null,
+        manifest: { today: "2026-01-01", blockedBy: { labels: [] } },
+        gateInputs: null,
+        arbiterMilestones: null,
+        docs: null,
+      },
+      depDeriveContext,
+    );
+    const dep = {
+      id: "dep",
+      ghRepo: "acme/dep",
+      repo: tmp,
+      model: null,
+      topo: null,
+      issuesSnapshot: depIssuesSnapshot,
+      derived: depDerived,
+      deriveContext: depDeriveContext,
+      blockedBy: { labels: [] },
+    };
+    const portfolio = derivePortfolio({
+      today: "2026-01-01",
+      programs: [one, two, dep],
+    });
+    const summaryOf = (id) => portfolio.programs.find((p) => p.id === id);
+    const perProgramCount = (id) =>
+      portfolio.blocked.filter((b) => b.program === id).length;
+
+    // The "one count" invariant: the plan headline (built from `portfolio.blocked` filtered by
+    // programme) must equal the programme's own derived `blocked` figure, and the portfolio total
+    // must equal the sum across programmes — the same measurement read at two scopes, never two.
+    if (summaryOf("one").blocked !== 1 || perProgramCount("one") !== 1)
+      die(
+        "f2-counts: programme 'one' must show exactly 1 blocked issue at both the summary and the per-item list, got " +
+          JSON.stringify([summaryOf("one").blocked, perProgramCount("one")]),
+      );
+    if (summaryOf("two").blocked !== 2 || perProgramCount("two") !== 2)
+      die(
+        "f2-counts: programme 'two' must show exactly 2 blocked issues at both the summary and the per-item list, got " +
+          JSON.stringify([summaryOf("two").blocked, perProgramCount("two")]),
+      );
+    if (
+      portfolio.totals.blocked !==
+      summaryOf("one").blocked + summaryOf("two").blocked + summaryOf("dep").blocked
+    )
+      die(
+        "f2-counts: the portfolio total must be the sum of the per-programme blocked counts it declares, got " +
+          portfolio.totals.blocked,
+      );
+
+    // At both scopes, the dependency-only programme's union count (headline, KPI) must read 1, while
+    // the label-only Kanban bucket — a different, narrower rule — must read 0. Both are correct; the
+    // bug was letting them share wording that implied they were the same number.
+    if (summaryOf("dep").blocked !== 1 || perProgramCount("dep") !== 1)
+      die(
+        "f2-counts: programme 'dep' is blocked only via a dependency edge and must still count as 1 blocked issue (portfolio and per-programme), got " +
+          JSON.stringify([summaryOf("dep").blocked, perProgramCount("dep")]),
+      );
+    if ((dep.derived.kanban["aspettano-umano"] || []).length !== 0)
+      die(
+        "f2-counts: a dependency-only block must not land in the label-only Kanban bucket, got " +
+          JSON.stringify(dep.derived.kanban["aspettano-umano"]),
+      );
+    if (dep.derived.kanbanHumanDeclared !== true)
+      die(
+        "f2-counts: the label-only bucket's zero must be measured (declared), not unknown, in this fixture",
+      );
+
+    // The plural fix: "N decisions are waiting on you" had no singular. `techHeadline`/`techHeadlineOne`
+    // must differ only in the singular/plural of "issue(s)", both must name the blocking rule (never a
+    // bare, unexplained count), and the template must actually select between them by count.
+    const en = readJson(join(HERE, "..", "lib/viewer/strings/en.json"));
+    const it = readJson(join(HERE, "..", "lib/viewer/strings/it.json"));
+    const fmtLocal = (s, d) =>
+      String(s).replace(/\{([^}]+)\}/g, (_, k) => (d[k] == null ? "" : String(d[k])));
+    const pluralLocal = (n, one_, other_) => (n === 1 ? one_ : other_);
+    for (const [locale, strings, singleWord, pluralWord] of [
+      ["en", en, "issue matches", "issues match"],
+      ["it", it, "issue corrisponde", "issue corrispondono"],
+    ]) {
+      const headlineOne = fmtLocal(
+        pluralLocal(1, strings.techHeadlineOne, strings.techHeadline),
+        { n: 1 },
+      );
+      const headlineTwo = fmtLocal(
+        pluralLocal(2, strings.techHeadlineOne, strings.techHeadline),
+        { n: 2 },
+      );
+      if (!headlineOne.startsWith("1 " + singleWord))
+        die(
+          `f2-counts (${locale}): techHeadlineOne must read "1 ${singleWord}...", got "${headlineOne}"`,
+        );
+      if (!headlineTwo.startsWith("2 " + pluralWord))
+        die(
+          `f2-counts (${locale}): techHeadline must read "2 ${pluralWord}...", got "${headlineTwo}"`,
+        );
+      if (
+        !/blocking rule|regola di blocco/.test(strings.techHeadline) ||
+        !/blocking rule|regola di blocco/.test(strings.techHeadlineOne)
+      )
+        die(`f2-counts (${locale}): the plan headline must name the blocking rule it counts`);
+      // Same defect, portfolio scope: "{blocked} things need you" never agreed with blocked===1.
+      const thesisOne = fmtLocal(strings.thesisOne, {
+        blocked: 1,
+        blockedWord: pluralLocal(1, strings.thesisBlockedWordOne, strings.thesisBlockedWord),
+        open: 3,
+        programs: 1,
+      });
+      const thesisTwo = fmtLocal(strings.thesisOne, {
+        blocked: 2,
+        blockedWord: pluralLocal(2, strings.thesisBlockedWordOne, strings.thesisBlockedWord),
+        open: 3,
+        programs: 1,
+      });
+      if (thesisOne.indexOf("1 " + strings.thesisBlockedWordOne) === -1)
+        die(
+          `f2-counts (${locale}): the portfolio thesis must use the singular blocked word for blocked===1, got "${thesisOne}"`,
+        );
+      if (thesisTwo.indexOf("2 " + strings.thesisBlockedWord) === -1)
+        die(
+          `f2-counts (${locale}): the portfolio thesis must use the plural blocked word for blocked===2, got "${thesisTwo}"`,
+        );
+      // The Kanban bucket must no longer share its label with the blocking-rule count: same wording on
+      // both surfaces is exactly how "0 waiting on a human" read as a contradiction of "N blocked".
+      if (strings.bucketAspettanoUmano === strings.kpiBlocked)
+        die(
+          `f2-counts (${locale}): the "needs-human label" bucket must not share its name with the declared-blocking-rule KPI`,
+        );
+    }
+
+    // Every string the union-count verdict lens actually reads (viewVerdict: execHeadline, kpiBlocked,
+    // kpiHowToRead and its rule fragment) is derived from the template itself, not hand-listed — so a
+    // future string added to that same panel is covered by construction, not by remembering to add it
+    // here. None of them may use the label-only bucket's wording: that mismatch is the F2 defect.
+    const template = readFileSync(
+      join(HERE, "..", "lib/viewer/control-room.html"),
+      "utf-8",
+    );
+    const verdictFn = template.slice(
+      template.indexOf("function viewVerdict("),
+      template.indexOf("\nfunction ", template.indexOf("function viewVerdict(") + 1),
+    );
+    if (!verdictFn) die("f2-counts: could not locate viewVerdict in the template");
+    const verdictKeys = Array.from(
+      new Set(Array.from(verdictFn.matchAll(/STR\.(\w+)/g), (m) => m[1])),
+    );
+    if (!verdictKeys.includes("kpiBlocked") || !verdictKeys.includes("kpiHowToRead"))
+      die("f2-counts: expected keys not found by scanning viewVerdict — extraction is broken");
+    for (const [locale, strings, humanPhrase] of [
+      ["en", en, /waiting on a human/i],
+      ["it", it, /aspettano un umano/i],
+    ]) {
+      for (const key of verdictKeys) {
+        const value = strings[key];
+        if (typeof value === "string" && humanPhrase.test(value))
+          die(
+            `f2-counts (${locale}): ${key} is read by the union-count verdict lens and must not use the label-only "waiting on a human" wording, got "${value}"`,
+          );
+      }
+    }
+
+    // The template must actually route through plural(), not just declare the strings.
+    if (!/plural\(mine\.length,STR\.techHeadlineOne,STR\.techHeadline\)/.test(template))
+      die("f2-counts: viewPlan's headline does not select techHeadline/techHeadlineOne by count");
+    if (
+      !/plural\(blockedClaim\.value,STR\.thesisBlockedWordOne,STR\.thesisBlockedWord\)/.test(
+        template,
+      )
+    )
+      die(
+        "f2-counts: the portfolio thesis does not select a singular/plural blocked word by count",
+      );
+
+    console.log(
+      "  ok f2-counts — the plan headline, portfolio front door and verdict KPI panel derive from the same declared-blocking-rule count, name the rule, and none of them borrow the label-only bucket's wording",
     );
   });
 });
