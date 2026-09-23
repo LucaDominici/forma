@@ -62,7 +62,9 @@
             ".github/workflows/ci.yml",
             "lib/check.mjs",
             "test/run.mjs",
-            "test/gen.test.mjs"
+            "test/gen.test.mjs",
+            "test/room.test.mjs",
+            "test/briefing.test.mjs"
           ],
           "wiring": [
             {
@@ -72,22 +74,22 @@
             },
             {
               "invariant": "I12",
-              "registry": "test/run.mjs",
+              "registry": "test/room.test.mjs",
               "pattern": "two renders of the same manifest are not byte-identical"
             },
             {
               "invariant": "I15",
-              "registry": "test/run.mjs",
+              "registry": "test/briefing.test.mjs",
               "pattern": "keys present in en and missing from it"
             },
             {
               "invariant": "I15",
-              "registry": "test/run.mjs",
+              "registry": "test/briefing.test.mjs",
               "pattern": "declared but never read by the template"
             },
             {
               "invariant": "I15",
-              "registry": "test/run.mjs",
+              "registry": "test/briefing.test.mjs",
               "pattern": "never reaches fmt"
             }
           ],

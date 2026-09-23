@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-09-23T00:55:04.371Z",
+  "generatedAt": "2026-09-23T06:16:19.353Z",
   "source": {
     "repo": "forma",
-    "commit": "5dde9dff84ef2d355937ae30850e65884254be7e",
-    "branch": "task/s5a-test-split",
+    "commit": "01e9db819e843b730dbd9e72bfa2af6fa8f07a09",
+    "branch": "task/s5b-test-split",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -301,7 +301,7 @@
         {
           "type": "glob",
           "ref": "test",
-          "count": 8
+          "count": 11
         }
       ],
       "category": "container",
@@ -1001,6 +1001,25 @@
       "descSource": "docstring"
     },
     {
+      "id": "test__briefing_test_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "briefing.test",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/briefing.test.mjs"
+        }
+      ],
+      "category": "test",
+      "status2": "unknown",
+      "target": "",
+      "func": "The Control Room briefing surface: markdown rendering, locale string parity, the workflow view's queue and kanban, issue pills, the embedded C4 drill, and the public map's accessibility contract.",
+      "descSource": "docstring"
+    },
+    {
       "id": "test__gen_test_mjs",
       "level": "leaf",
       "parent": "test",
@@ -1074,6 +1093,44 @@
       "status2": "unknown",
       "target": "",
       "func": "§7 enrich, WP-A overlays (status/apply/verify), the offline agent stub.",
+      "descSource": "docstring"
+    },
+    {
+      "id": "test__repo_test_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "repo.test",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/repo.test.mjs"
+        }
+      ],
+      "category": "test",
+      "status2": "unknown",
+      "target": "",
+      "func": "Repository-level contracts: the Claude adapter skill, the release pipeline, public CI, the Pages dogfood, and the self-model-freshness gate.",
+      "descSource": "docstring"
+    },
+    {
+      "id": "test__room_test_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "room.test",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/room.test.mjs"
+        }
+      ],
+      "category": "test",
+      "status2": "unknown",
+      "target": "",
+      "func": "Control Room composition end to end: room.mjs, roomderive.mjs, link.mjs and taxonomy.mjs, the trackedFiles() cache lifetime, scan+serve autodetection, and the PRD requirements-trace dogfood.",
       "descSource": "docstring"
     },
     {

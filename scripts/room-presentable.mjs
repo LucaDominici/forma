@@ -63,7 +63,7 @@ const declaredIds = LENSES.map((lens) => lens.id)
 const injectedIa = Boolean(injected) && JSON.stringify(injected.map((lens) => lens.id)) === JSON.stringify(declaredIds)
 const oneHome = ownershipViolations(html, DERIVED_KEYS)
 const pageSize = Number((/var ISSUE_PAGE_SIZE=(\d+)/.exec(html) || [])[1])
-const boundedDom = pageSize > 0 && pageSize <= 50 && /function pagedList\(/.test(html) && /function ensureView\(/.test(html) && !/function buildAll\(/.test(html)
+const boundedDom = pageSize > 0 && pageSize <= 40 && /function pagedList\(/.test(html) && /function ensureView\(/.test(html) && !/function buildAll\(/.test(html)
 const mobileNav = /id="mobile-program"/.test(html) && /id="mobile-view"/.test(html) && /@media\(max-width:600px\)/.test(html)
 const boundedPrint = /\.screen-list,\.workflow\{display:none!important\}/.test(html) && !/details:not\(\[open\]\)/.test(html)
 // A single programme opens on its own first published lens: the aggregate front door that read
