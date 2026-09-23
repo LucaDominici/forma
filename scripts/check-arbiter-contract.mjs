@@ -117,11 +117,10 @@ function main() {
   const dirIdx = argv.indexOf("--dir");
   const root =
     dirIdx === -1 ? resolve(scriptDir, "..") : resolve(argv[dirIdx + 1]);
+  // F11 (audit 2026-09-14): no default sibling guess. The cross-checkout half is opt-in via
+  // --sibling; without it, checkContract's !siblingRoot branch just skips that half.
   const sibIdx = argv.indexOf("--sibling");
-  const sibling =
-    sibIdx === -1
-      ? resolve(root, "..", SIBLING_REPO)
-      : resolve(argv[sibIdx + 1]);
+  const sibling = sibIdx === -1 ? undefined : resolve(argv[sibIdx + 1]);
 
   if (!existsSync(join(root, CONTRACT_REL))) {
     process.stderr.write(
@@ -145,9 +144,10 @@ function main() {
     for (const v of result.violations) process.stderr.write(`  - ${v}\n`);
     return 1;
   }
-  process.stdout.write(
-    `check-arbiter-contract: PASS — schema contract holds with ${SIBLING_REPO}\n`,
-  );
+  const scope = sibling
+    ? `schema contract holds with ${SIBLING_REPO}`
+    : `owner-side schema contract holds (cross-checkout half skipped, no --sibling)`;
+  process.stdout.write(`check-arbiter-contract: PASS — ${scope}\n`);
   return 0;
 }
 

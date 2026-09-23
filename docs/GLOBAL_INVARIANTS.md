@@ -134,8 +134,8 @@ coverage is not optional: without it `check` cannot prove that a topology did no
 Nothing in the derivation path calls `Date.now()` or `new Date()` with no argument. `today` comes
 from `forma.room.json`. `gen` has exactly one volatile field, `generatedAt`.
 
-- **Enforced by:** `test/run.mjs` compares two consecutive `gen` runs and allows exactly one field
-  to differ; `room-presentable` re-renders and compares bytes.
+- **Enforced by:** `test/gen.test.mjs` compares two consecutive `gen` runs and allows exactly one
+  field to differ; `room-presentable` re-renders and compares bytes.
 - **Red when:** two runs on unchanged inputs differ.
 
 ## I13. Nothing in `lib/` knows any project's names
@@ -162,8 +162,9 @@ The single-lens viewer keeps its `STRINGS` literal; the Control Room's tables ar
 `lib/viewer/strings/{en,it}.json`. Both stay at parity, and the Control Room's are additionally
 checked for keys nothing reads — dead weight a translator still has to carry.
 
-- **Enforced by:** `test/run.mjs` compares the viewer's key counts, and compares the two JSON files
-  key by key plus greps the template for every one of them.
+- **Enforced by:** `test/viewer.test.mjs` compares the viewer's key counts; `test/run.mjs`'s
+  `strings` block compares the two Control Room JSON files key by key plus greps the template for
+  every one of them.
 - **Red when:** a string is added to one locale only, or a key survives the view that used it.
 - **Note:** this rule claimed to cover the Control Room long before it did. The parity half was only
   ever true of the viewer until the tables became files.
