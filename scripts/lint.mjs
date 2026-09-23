@@ -16,7 +16,7 @@ const files = [
   "bin/forma.mjs",
   ...mjs("lib"),
   ...mjs("scripts"),
-  "test/run.mjs",
+  ...mjs("test"),
 ];
 let bad = 0;
 for (const f of files) {
