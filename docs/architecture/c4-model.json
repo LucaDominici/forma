@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-09-23T07:16:04.102Z",
+  "generatedAt": "2026-09-23T17:55:40.179Z",
   "source": {
     "repo": "forma",
-    "commit": "b31077ec98c18f7982668301af46bb95f8f2e72c",
-    "branch": "task/s5c-test-split",
+    "commit": "9f92baca36ee2253d9b7de33f4e2bf6d1f83ebbb",
+    "branch": "rp-1.3.1",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -103,10 +103,10 @@
       "func": "Forma — a stack-agnostic C4 architecture explorer plus a deterministic drift check. Walks a codebase into an interactive viewer kept true to the code.",
       "descSource": "curated",
       "completion": 90,
-      "statusWord": "v1.3.0",
-      "current": "v1.3.0 on main (14/09): check --room gates the portfolio aggregate and sorts by code point, silent defaults fail closed, unknown is never shown as zero, forma serve binds loopback with strict CLI flags, the fill/counter ritual runs in two steps, one critical-path computation, and brief claims record author and verifier engines.",
+      "statusWord": "v1.3.1",
+      "current": "v1.3.1 on main (23/09): the verdict KPI panel no longer describes the union blocked count as label-only (#142); lib/evidence.mjs split out of audit.mjs; the test suite runs on node:test, one file per domain; PUBLISH.md documents the release-prep commit Release Please PRs need.",
       "verify": {
-        "source": "CHANGELOG 1.3.0 · tag v1.3.0"
+        "source": "CHANGELOG 1.3.1 · tag v1.3.1"
       }
     },
     {
