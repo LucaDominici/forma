@@ -4,8 +4,19 @@
 import test, { describe } from "node:test";
 
 import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import {
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  existsSync,
+  copyFileSync,
+  rmSync,
+  readdirSync,
+  mkdtempSync,
+} from "node:fs";
+import { createHash } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join, dirname } from "node:path";
 
 import { HERE, freshTmp, run, die } from "./helpers.mjs";
 
@@ -236,5 +247,204 @@ describe("repo", () => {
     console.log(
       "  ok self-model-fresh — forma's self-model version and Control Room status track the shipped package",
     );
+  });
+
+  // Frontmatter is the one document lifecycle source. Superseded UI names and duplicate inline
+  // statuses are archaeology, not current contracts (#58).
+  test("repo: doc-prune", async () => {
+    const findings = readFileSync(
+      join(HERE, "..", "lib/schema/c4-findings.schema.json"),
+      "utf-8",
+    );
+    const adr = readFileSync(
+      join(HERE, "..", "docs/adr/0004-control-room-as-a-forma-rendering.md"),
+      "utf-8",
+    );
+    const scope = readFileSync(join(HERE, "..", "docs/SCOPE-room.md"), "utf-8");
+    if (/\bseg\b|superseded/i.test(findings))
+      die("doc-prune: findings schema still carries a rejected UI shape");
+    if (/^[- ]*\*\*Status:\*\*/m.test(adr))
+      die("doc-prune: ADR-0004 duplicates its frontmatter status in the body");
+    if (/^Status:\s*\*\*open\*\*/m.test(scope))
+      die("doc-prune: SCOPE-room duplicates a stale open status in the body");
+    if (
+      !/### Success metric[\s\S]*room update[\s\S]*1:1[\s\S]*room-presentable[\s\S]*forma check/.test(
+        scope,
+      )
+    )
+      die("success-metric: SCOPE-room has no checkable reconciliation condition");
+    if (
+      /Parametricity across repos is not proven|A second target repo proving/.test(
+        scope,
+      )
+    )
+      die(
+        "success-metric: SCOPE-room still calls the completed portfolio proof future work",
+      );
+    console.log(
+      "  ok doc-prune — schemas and governance docs carry only the current shape",
+    );
+  });
+
+  // One committer is the solo tier. Governance may keep the external standard as a reference, but
+  // required CI and its enforcement prose must not claim the retired enterprise/private gate (#60).
+  test("repo: governance-solo", async () => {
+    const profile = readFileSync(
+      join(HERE, "..", "standards/doc-profile"),
+      "utf-8",
+    );
+    const governance = readFileSync(
+      join(HERE, "..", "docs/GOVERNANCE.md"),
+      "utf-8",
+    );
+    const agents = readFileSync(join(HERE, "..", "AGENTS.md"), "utf-8");
+    const decisions = readFileSync(
+      join(HERE, "..", "DECISION_REGISTRY.md"),
+      "utf-8",
+    );
+    if (!/^tier_floor:\s*solo$/m.test(profile))
+      die("governance-solo: standards/doc-profile is not pinned to solo");
+    if (
+      /enterprise column|documentation gates.*blocks|docs-gate.*CI/i.test(
+        governance,
+      )
+    )
+      die(
+        "governance-solo: GOVERNANCE still claims enterprise/private CI grading",
+      );
+    if (
+      /engines that grade them live in `arbiter` and run in the `docs` CI job/.test(
+        agents,
+      )
+    )
+      die("governance-solo: AGENTS still requires the removed private CI job");
+    if (
+      !/\| D-03 \| Documentation is graded on the \*\*solo\*\*/.test(decisions) ||
+      /docs-gate.*CI job/.test(decisions)
+    )
+      die("governance-solo: D-03 does not describe its actual solo enforcement");
+    console.log(
+      "  ok governance-solo — policy, profile and CI all describe the solo tier",
+    );
+  });
+
+  // I19: the shared schema contract with arbiter. The property under test is not that the gate
+  // passes today but that it CANNOT pass once a shared shape moves on one side — tampered in both
+  // directions, the way every other derivation in this suite is proven non-vacuous.
+  test("repo: arbiter-contract", async () => {
+    const contractPath = join(HERE, "..", "lib/schema/CONTRACT.json");
+    const contract = JSON.parse(readFileSync(contractPath, "utf-8"));
+    const owned = contract.schemas.filter((s) => s.owner === "forma");
+    if (owned.length === 0)
+      die(
+        "arbiter-contract: the manifest declares no forma-owned schema, so forma gates nothing",
+      );
+    for (const entry of owned) {
+      const real = join(HERE, "..", entry.ownerPath);
+      const actual = createHash("sha256")
+        .update(readFileSync(real))
+        .digest("hex");
+      if (actual !== entry.sha256)
+        die(`arbiter-contract: ${entry.ownerPath} does not match its pin`);
+    }
+
+    const gate = (dir) =>
+      spawnSync(
+        process.execPath,
+        [
+          join(HERE, "..", "scripts/check-arbiter-contract.mjs"),
+          "--dir",
+          dir,
+          "--sibling",
+          join(dir, "no-sibling"),
+        ],
+        { encoding: "utf-8" },
+      );
+
+    // A scratch copy so the tamper never touches the real tree.
+    const scratch = mkdtempSync(join(tmpdir(), "forma-contract-"));
+    mkdirSync(join(scratch, "lib/schema/vendor"), { recursive: true });
+    for (const entry of contract.schemas) {
+      if (entry.owner !== "forma") continue;
+      mkdirSync(dirname(join(scratch, entry.ownerPath)), { recursive: true });
+      copyFileSync(
+        join(HERE, "..", entry.ownerPath),
+        join(scratch, entry.ownerPath),
+      );
+    }
+    copyFileSync(contractPath, join(scratch, "lib/schema/CONTRACT.json"));
+    if (gate(scratch).status !== 0)
+      die("arbiter-contract: the untampered scratch copy should pass");
+
+    const victim = join(scratch, owned[0].ownerPath);
+    writeFileSync(
+      victim,
+      readFileSync(victim, "utf-8").replace('"title"', '"title_tampered"'),
+    );
+    const red = gate(scratch);
+    if (red.status === 0)
+      die(
+        "arbiter-contract: editing a forma-owned shared schema did not turn the gate red",
+      );
+    if (!/re-pin in BOTH/.test(red.stderr))
+      die("arbiter-contract: the failure does not name the remedy");
+
+    rmSync(scratch, { recursive: true, force: true });
+    console.log(
+      "  ok arbiter-contract — a shared shape cannot move on one side and stay green",
+    );
+  });
+
+  // #140 S3 F7: evidence hashing/staleness primitives live in lib/evidence.mjs, not lib/audit.mjs —
+  // roomderive.mjs/roomdocs.mjs/verify.mjs/check.mjs/room-presentable.mjs must import them from
+  // there, never reach back into the audit plan/apply channel for functions that have nothing to
+  // do with it.
+  test("repo: import-graph", async () => {
+    const evidenceImporters = [
+      "lib/roomderive.mjs",
+      "lib/roomdocs.mjs",
+      "lib/verify.mjs",
+      "lib/check.mjs",
+      "scripts/room-presentable.mjs",
+    ];
+    for (const rel of evidenceImporters) {
+      const src = readFileSync(join(HERE, "..", rel), "utf-8");
+      if (/from ['"](\.\.\/lib\/|\.\/)?audit\.mjs['"]/.test(src))
+        die(`import-graph: ${rel} must not import from audit.mjs (evidence primitives moved to evidence.mjs)`);
+      if (!/from ['"](\.\.\/lib\/|\.\/)?evidence\.mjs['"]/.test(src))
+        die(`import-graph: ${rel} must import evidence primitives from evidence.mjs`);
+    }
+    console.log("  ok import-graph — roomderive/roomdocs/verify/check/room-presentable import evidence primitives from evidence.mjs, not audit.mjs");
+  });
+
+  // S7 doc drift — ARCHITECTURE.md's Level 3 module table must name every lib/*.mjs module, and its
+  // stated count must match the real file count. This is a source-of-truth check on the table only
+  // (sliced between the two known headings), not a whole-file grep, so a basename mentioned in prose
+  // elsewhere does not pass this test falsely.
+  test("repo: architecture-module-table", async () => {
+    const archPath = join(HERE, "..", "docs/architecture/ARCHITECTURE.md");
+    const arch = readFileSync(archPath, "utf-8");
+    const heading = "### Level 3: engine modules";
+    const start = arch.indexOf(heading);
+    if (start === -1) die("architecture-module-table: missing the '" + heading + "' heading");
+    const end = arch.indexOf("\n## ", start);
+    const section = arch.slice(start, end === -1 ? undefined : end);
+    const countMatch = section.match(/The (\d+) top-level `lib\/\*\.mjs` modules/);
+    if (!countMatch) die("architecture-module-table: missing the 'The N top-level lib/*.mjs modules' sentence");
+    const modules = readdirSync(join(HERE, "..", "lib"))
+      .filter((f) => f.endsWith(".mjs"))
+      .sort();
+    // Only real Markdown table rows count (`| \`name.mjs\` | …`), so a prose mention cannot stand in
+    // for a missing row.
+    const rows = new Set(
+      [...section.matchAll(/^\|\s*`([^`]+\.mjs)`\s*\|/gm)].map((m) => m[1]),
+    );
+    const missing = modules.filter((f) => !rows.has(f));
+    if (missing.length) die("architecture-module-table: missing rows for " + missing.join(", "));
+    if (Number(countMatch[1]) !== modules.length)
+      die(
+        "architecture-module-table: stated count " + countMatch[1] + " does not match the actual " + modules.length + " lib/*.mjs modules",
+      );
+    console.log("  ok architecture-module-table — every lib/*.mjs module is in ARCHITECTURE.md's table, count matches");
   });
 });

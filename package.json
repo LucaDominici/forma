@@ -42,7 +42,7 @@
   },
   "scripts": {
     "lint": "node scripts/lint.mjs",
-    "test": "node scripts/palette.mjs --check && node scripts/check-arbiter-contract.mjs && node --test test/*.test.mjs && node test/run.mjs",
+    "test": "node scripts/palette.mjs --check && node scripts/check-arbiter-contract.mjs && node --test test/*.test.mjs",
     "prepack": "node scripts/check-clean.mjs",
     "palette": "node scripts/palette.mjs --check"
   },
