@@ -61,12 +61,13 @@
             "package.json",
             ".github/workflows/ci.yml",
             "lib/check.mjs",
-            "test/run.mjs"
+            "test/run.mjs",
+            "test/gen.test.mjs"
           ],
           "wiring": [
             {
               "invariant": "I12",
-              "registry": "test/run.mjs",
+              "registry": "test/gen.test.mjs",
               "pattern": "gen x2 should differ on generatedAt only"
             },
             {
@@ -106,7 +107,7 @@
                 "bin/forma.mjs",
                 "lib/*.mjs",
                 "scripts/*.mjs",
-                "test/run.mjs"
+                "test/*.mjs"
               ]
             },
             {
