@@ -41,7 +41,7 @@ names the file that turns red.
 
 1. Branch from `main`. Never commit to `main` directly.
 2. Make the change, with the check that would fail if it broke. For non-trivial logic that is a
-   block in `test/run.mjs`; for a claim about the model it is an assertion in `forma check`.
+   test in `test/*.test.mjs`; for a claim about the model it is an assertion in `forma check`.
 3. Run the gate locally: `npm run lint`, `npm test`, `node bin/forma.mjs check`.
 4. Open a PR. CI runs the same gate on Node 18/20/22.
 5. Squash-merge. One logical change, one commit.

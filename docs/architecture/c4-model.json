@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.6.0",
-  "generatedAt": "2026-09-23T06:16:19.353Z",
+  "generatedAt": "2026-09-23T07:16:04.102Z",
   "source": {
     "repo": "forma",
-    "commit": "01e9db819e843b730dbd9e72bfa2af6fa8f07a09",
-    "branch": "task/s5b-test-split",
+    "commit": "b31077ec98c18f7982668301af46bb95f8f2e72c",
+    "branch": "task/s5c-test-split",
     "docPath": "docs/architecture/ARCHITECTURE.md",
     "generator": "gen-c4-model@1.6.0",
     "statusPath": "docs/architecture/c4-status.json"
@@ -301,7 +301,7 @@
         {
           "type": "glob",
           "ref": "test",
-          "count": 11
+          "count": 14
         }
       ],
       "category": "container",
@@ -1001,6 +1001,25 @@
       "descSource": "docstring"
     },
     {
+      "id": "test__audit_test_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "audit.test",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/audit.test.mjs"
+        }
+      ],
+      "category": "test",
+      "status2": "unknown",
+      "target": "",
+      "func": "The audit/brief channel: offline plan authoring, agent fill, and validation before either evidence overlay is replaced.",
+      "descSource": "docstring"
+    },
+    {
       "id": "test__briefing_test_mjs",
       "level": "leaf",
       "parent": "test",
@@ -1017,6 +1036,25 @@
       "status2": "unknown",
       "target": "",
       "func": "The Control Room briefing surface: markdown rendering, locale string parity, the workflow view's queue and kanban, issue pills, the embedded C4 drill, and the public map's accessibility contract.",
+      "descSource": "docstring"
+    },
+    {
+      "id": "test__cli_test_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "cli.test",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/cli.test.mjs"
+        }
+      ],
+      "category": "test",
+      "status2": "unknown",
+      "target": "",
+      "func": "CLI surface: fail-closed flag handling, the S2 round-1 fixes, #132's unmeasured-vs-zero distinction, and forma serve's strict-flag/equals-flag parsing.",
       "descSource": "docstring"
     },
     {
@@ -1058,6 +1096,25 @@
       "descSource": "docstring"
     },
     {
+      "id": "test__lenses_test_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "lenses.test",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/lenses.test.mjs"
+        }
+      ],
+      "category": "test",
+      "status2": "unknown",
+      "target": "",
+      "func": "The lens ontology: derived-vs-read partitioning, ownership boundaries, and the locale tables each lens draws its strings from.",
+      "descSource": "docstring"
+    },
+    {
       "id": "test__model_test_mjs",
       "level": "leaf",
       "parent": "test",
@@ -1096,6 +1153,25 @@
       "descSource": "docstring"
     },
     {
+      "id": "test__plan_test_mjs",
+      "level": "leaf",
+      "parent": "test",
+      "kind": "leaf",
+      "name": "plan.test",
+      "status": "current",
+      "evidence": [
+        {
+          "type": "path",
+          "ref": "test/plan.test.mjs"
+        }
+      ],
+      "category": "test",
+      "status2": "unknown",
+      "target": "",
+      "func": "The critical-path/milestone-path derivations, one-cpm edge cases, and recovery from a broken or missing evidence overlay.",
+      "descSource": "docstring"
+    },
+    {
       "id": "test__repo_test_mjs",
       "level": "leaf",
       "parent": "test",
@@ -1131,25 +1207,6 @@
       "status2": "unknown",
       "target": "",
       "func": "Control Room composition end to end: room.mjs, roomderive.mjs, link.mjs and taxonomy.mjs, the trackedFiles() cache lifetime, scan+serve autodetection, and the PRD requirements-trace dogfood.",
-      "descSource": "docstring"
-    },
-    {
-      "id": "test__run_mjs",
-      "level": "leaf",
-      "parent": "test",
-      "kind": "leaf",
-      "name": "run",
-      "status": "current",
-      "evidence": [
-        {
-          "type": "path",
-          "ref": "test/run.mjs"
-        }
-      ],
-      "category": "test",
-      "status2": "unknown",
-      "target": "",
-      "func": "Fixture tests: init → gen → check across fixtures, plus §1a/§2/§1b/§7/§3. Deterministic, no deps.",
       "descSource": "docstring"
     },
     {

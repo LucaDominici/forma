@@ -61,10 +61,14 @@
             "package.json",
             ".github/workflows/ci.yml",
             "lib/check.mjs",
-            "test/run.mjs",
             "test/gen.test.mjs",
             "test/room.test.mjs",
-            "test/briefing.test.mjs"
+            "test/briefing.test.mjs",
+            "test/audit.test.mjs",
+            "test/plan.test.mjs",
+            "test/lenses.test.mjs",
+            "test/cli.test.mjs",
+            "test/repo.test.mjs"
           ],
           "wiring": [
             {

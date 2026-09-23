@@ -51,7 +51,9 @@ honest with a deterministic drift check. Apache-2.0. See [`README.md`](README.md
   actually reads every declared key.
 - `scripts/` — `lint.mjs` (zero-dep lint), `check-clean.mjs` (prepack `.fuse_hidden` guard),
   `presentable.mjs` (viewer publication gate), `room-presentable.mjs` (briefing publication gate).
-- `test/` — `run.mjs` runs `init→gen→check` across the fixtures; `stub-gh.mjs` stands in for the
+- `test/` — `helpers.mjs` (shared plumbing) plus one `node:test` file per domain
+  (`gen`, `overlays`, `viewer`, `model`, `room`, `briefing`, `repo`, `audit`, `plan`, `lenses`,
+  `cli`) running `init→gen→check` across the fixtures; `stub-gh.mjs` stands in for the
   `gh` CLI so `verify` is tested offline.
 
 ## Working on Forma

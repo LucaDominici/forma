@@ -31,7 +31,7 @@ Enforcement: `lib/link.mjs` derives the link from the subject, so an unlinked co
 
 | D-03 | Documentation is graded on the **solo** column of the doc-set standard | Forma is a one-committer, dogfood-first tool; the enterprise column (GAMP 5 / Part 11 …) is governance theatre for it and its `arbiter` coupling turned CI red. The reader who matters is the owner running it across a personal portfolio | Luca Dominici | 2026-08-17 (was enterprise, 2026-08-10) |
 
-Enforcement: `tier_floor: solo` in `standards/doc-profile`; `test/run.mjs` refuses a different floor or stale governance prose.
+Enforcement: `tier_floor: solo` in `standards/doc-profile`; `test/repo.test.mjs`'s `governance-solo` test refuses a different floor or stale governance prose.
 
 | D-04 | Required public CI depends only on this repository | A public fork must run every required gate with its default token; private tooling may remain an optional local audit but cannot decide whether Forma is green | Luca Dominici | 2026-08-17 (replaces private checkout, 2026-08-10) |
 
@@ -51,7 +51,7 @@ Enforcement: the `room-c4-drill` block in `test/briefing.test.mjs` proves that t
 
 | D-08 | Codex is the default counter-verification adapter, but runs outside Forma | I2 forbids network in the deterministic engine; the external Codex skill can inspect repo/gh and return the model-agnostic JSON contract without making `forma audit` spawn an agent or trust one | Luca agent, delegated by Luca Dominici | 2026-08-17 |
 
-Enforcement: the `audit` block in `test/run.mjs` exercises the offline agent stub and rejects incomplete or unanchored output; it also rejects `forma audit --run` and agent command wiring in `lib/audit.mjs`.
+Enforcement: the `audit/brief` test in `test/audit.test.mjs` exercises the offline agent stub and rejects incomplete or unanchored output; it also rejects `forma audit --run` and agent command wiring in `lib/audit.mjs`.
 
 ## Promotion
 

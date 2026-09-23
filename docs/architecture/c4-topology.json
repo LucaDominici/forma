@@ -125,7 +125,7 @@
     "exclusions": [
       {
         "dir": "test/fixtures",
-        "reason": "cross-language fixture source exercised by test/run.mjs, not Forma runtime"
+        "reason": "cross-language fixture source exercised by test/*.test.mjs, not Forma runtime"
       },
       {
         "dir": "docs/demo",

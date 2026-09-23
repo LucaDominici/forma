@@ -158,17 +158,17 @@
         },
         {
           "type": "path",
-          "ref": "test/run.mjs:2580"
+          "ref": "test/audit.test.mjs:417"
         }
       ],
       "writtenAt": "2026-08-18",
       "evidenceHash": "8d0100cca9c4d9618eb227d5c828cd35b98ebbfb98f09e5c2802b9de31c8cf24",
       "verified": {
         "verdict": "holds",
-        "reason": "test/run.mjs:2579 runs `audit --repo <r> --run <plan>` and dies unless it exits non-zero with \"unknown option: --run\", and the next lines refuse `codex exec`/`--agent-cmd` inside lib/audit.mjs, so the suite does gate the runner.",
+        "reason": "test/audit.test.mjs:417 runs `audit --repo <r> --run <plan>` and dies unless it exits non-zero with \"unknown option: --run\", and the next lines refuse `codex exec`/`--agent-cmd` inside lib/audit.mjs, so the suite does gate the runner.",
         "evidence": {
           "type": "path",
-          "ref": "test/run.mjs:2579"
+          "ref": "test/audit.test.mjs:417"
         },
         "at": "2026-08-18"
       }
@@ -190,17 +190,17 @@
         },
         {
           "type": "path",
-          "ref": "test/run.mjs:1631"
+          "ref": "test/room.test.mjs:252"
         }
       ],
       "writtenAt": "2026-08-18",
       "evidenceHash": "f68756afd51526610a687de0904fcbcea7ac815caa4bac0ee0befcb1dc3aec11",
       "verified": {
         "verdict": "holds",
-        "reason": "test/run.mjs:1631 renders the same manifest twice and dies unless the two files are byte-identical, and scripts/room-presentable.mjs:133-138 re-renders and compares independently, reporting it as predicate \"re-generating from the same manifest is byte-deterministic\" (line 157).",
+        "reason": "test/room.test.mjs:252 renders the same manifest twice and dies unless the two files are byte-identical, and scripts/room-presentable.mjs:133-138 re-renders and compares independently, reporting it as predicate \"re-generating from the same manifest is byte-deterministic\" (line 157).",
         "evidence": {
           "type": "path",
-          "ref": "test/run.mjs:1631"
+          "ref": "test/room.test.mjs:252"
         },
         "at": "2026-08-18"
       }
