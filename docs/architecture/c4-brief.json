@@ -162,7 +162,7 @@
         }
       ],
       "writtenAt": "2026-08-18",
-      "evidenceHash": "8d0100cca9c4d9618eb227d5c828cd35b98ebbfb98f09e5c2802b9de31c8cf24",
+      "evidenceHash": "6b0a715c23fbeea65bcb71dd85431c1ddff00e5ba9cd51fda2172fb1b6d37fc0",
       "verified": {
         "verdict": "holds",
         "reason": "test/audit.test.mjs:417 runs `audit --repo <r> --run <plan>` and dies unless it exits non-zero with \"unknown option: --run\", and the next lines refuse `codex exec`/`--agent-cmd` inside lib/audit.mjs, so the suite does gate the runner.",
@@ -194,7 +194,7 @@
         }
       ],
       "writtenAt": "2026-08-18",
-      "evidenceHash": "f68756afd51526610a687de0904fcbcea7ac815caa4bac0ee0befcb1dc3aec11",
+      "evidenceHash": "0131cc157a570b01f0f1ef1dca6f563da095ecd853a199760f4a792d8fd686e6",
       "verified": {
         "verdict": "holds",
         "reason": "test/room.test.mjs:252 renders the same manifest twice and dies unless the two files are byte-identical, and scripts/room-presentable.mjs:133-138 re-renders and compares independently, reporting it as predicate \"re-generating from the same manifest is byte-deterministic\" (line 157).",
@@ -229,7 +229,7 @@
       "evidenceHash": "c0daef91bb7b1a57cba60b4234125e7dd4ddac5c55161011ab6c3d9bfaf7e3e6",
       "verified": {
         "verdict": "holds",
-        "reason": "I6 at docs/GLOBAL_INVARIANTS.md:71 names lib/roomderive.mjs as enforcer and it returns null (lines 93, 102, 409, 543), while lib/link.mjs:86 returns pct 0 for an empty population exactly as D-5 records at docs/technical-debt.md:28, and the only coverage-null assertion in test/run.mjs (line 1816) covers the no-map path, not the empty-population one.",
+        "reason": "I6 at docs/GLOBAL_INVARIANTS.md:71 names lib/roomderive.mjs as enforcer and it returns null (lines 93, 102, 409, 543), while lib/link.mjs:86 returns pct 0 for an empty population exactly as D-5 records at docs/technical-debt.md:28, and the only coverage-null assertion in test/cli.test.mjs (line 73) covers the no-map path, not the empty-population one.",
         "evidence": {
           "type": "path",
           "ref": "docs/technical-debt.md:28"

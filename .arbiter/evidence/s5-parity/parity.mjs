@@ -2,8 +2,8 @@
 // One-off parity harness for #144 slice S5 (test/run.mjs -> node:test). NOT a permanent script —
 // lives in evidence/, not scripts/. Confirms every `ok` line printed by `node test/run.mjs` at the
 // pre-split baseline (aa3ee64, captured in baseline-ok-lines.txt) is still printed by the split
-// suite, whether from a new test/*.test.mjs file or from what remains of test/run.mjs. A block with
-// no ok line has no baseline entry and is not covered by this script; PR bodies list those by hand.
+// suite in test/*.test.mjs, now that test/run.mjs is fully deleted (S5 PR3). A block with no ok
+// line has no baseline entry and is not covered by this script; PR bodies list those by hand.
 //
 // Usage: node .arbiter/evidence/s5-parity/parity.mjs
 // Exit: 0 if every baseline line is still emitted, 1 if any is missing.
@@ -30,14 +30,7 @@ const splitRun = spawnSync(process.execPath, ["--test", ...nodeTestFiles], {
   encoding: "utf-8",
   cwd: ROOT,
 });
-const legacyRun = spawnSync(process.execPath, [join(ROOT, "test", "run.mjs")], {
-  encoding: "utf-8",
-  cwd: ROOT,
-});
-const emitted = new Set([
-  ...okLines(splitRun.stdout),
-  ...okLines(legacyRun.stdout),
-]);
+const emitted = new Set(okLines(splitRun.stdout));
 
 const raw = readFileSync(join(HERE, "baseline-ok-lines.txt"), "utf-8");
 const baseline = raw
