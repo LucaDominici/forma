@@ -1,0 +1,91 @@
+ok mini — 2 containers, 5 leaves, 1 derived edge(s); one volatile field (generatedAt)
+ok flat-python — 3 components (order,payment,user); §1a docstring+readme; R3 flags; R4 composed component prose
+ok data-noise — api seeded; demo/fixtures skipped, and ignored by language detection
+ok virgin-kebab — 1 derived edge(s), 2 component(s) (rate,session), every box described, state unknown until curated
+ok go-nested — 3 package containers (cmd/app,internal/server,internal/store), 0 package leaves, 2 import edge(s), zero test nodes
+ok go-grouped — a grouping box draws its children's arrows (platform→money 4×, self-loops dropped), tallies their verdicts (3/5), and a curation that would lose edges warns loud
+ok context-seed — §33 2 placeholder actor(s) + 2 edge(s), gen names them once and stops after the rename; a source-less repo still gets a context
+ok two-stack — Go + TypeScript seeded, generated and checked directly; removing one stack fails coverage
+ok cold-start-closure — multiroot/multistack, atomic docs, reasoned test exclusions and include-tests all close
+ok attach-doc — §1b inject preserves prose; R1 gate governs attached docs ≠ docPath, survives regen
+ok enrich — §7 filled 3 hole(s) offline; cache-merge sticky; R5 stale prose survives + refills
+ok scaffold — default forma doc unchanged
+ok status-overlay — WP-A1 decorates by id, refuses func/bad enums/orphan ids; gate catches a stale overlay
+ok status-apply — WP-A7 fill → curated overlay; merges, refuses without writing; init seeds ghRepo; leaf categories ["core","util"]
+ok component-hash — a child gaining documentation marks the component prose stale and refillable
+ok verify — WP-A5 closed→done with dated evidence, open untouched, idempotent, gh failure leaves the model intact
+ok enrich-agent — WP-A6 plan (5 holes) → fill → apply, offline; refuses documented nodes and unknown ids
+ok layout-hints — WP-A4 layout verbatim, pinned coords honoured; legibility floor holds to 60 siblings (worst 9.8px)
+ok viewer — edge label anchored on the curve; i18n parity (87 keys, en/it)
+ok f5-header-table — the stamp surfaces a curated version and the map table drops an all-Unknown evidence column
+ok f9-landmarks — skip link moves focus into a `<main>` landmark
+ok f10-detail-focus — opening a node's detail scrolls it into view and focuses it
+ok f14-single-leaf — a single dead-end leaf opens its detail instead of a one-box level
+ok f4-pan-hint — mobile pan affordance follows real overflow, both locales carry copy
+ok codex-r1-explorer — panhint tracks resize, tally role supports its name, close restores focus, reduced motion is honoured
+ok schema — 1.x contract frozen; incompatible major rejected; package 1.3.0
+ok timeline — legacy baseline + 3 cumulative checkpoints; local delta; board badge inert; invalid patches fail before write
+ok docmap — §17 4 node(s) described from docs/FEATURES.md; billing 50% derived, core over-cap, plumbing honest; overlay wins; drift gated
+ok declaration — an all-DONE inventory yields a verdict with no percentage, citation intact; a zero-reach box yields nothing
+ok doc-drift — a dead code_ref fails gen; a deleted document, a rewritten row and a silent derivation all fail check; the system box stays unknown
+ok presentable — a percentage no source measured fails the publication gate, by node id
+ok presentable — a percentage is a declaration unless its citation proves otherwise
+ok viewer — a mean and a coverage never share a badge unless they share a denominator
+ok presentable — the shipped artifact itself passes, not a cleaned copy of it
+ok room — the briefing composes deterministically, both gates fire, and both refuse a hand-altered aggregate
+ok rtm — requirements trace to issues, and check names each of the four holes at its source line
+ok views — history from one snapshot, checkpoints with measured completion, a canon within budget, and a programme deliberately left out
+ok room — the briefing composes deterministically, both gates fire, and both refuse a hand-altered aggregate
+ok rtm — requirements trace to issues, and check names each of the four holes at its source line
+ok views — history from one snapshot, checkpoints with measured completion, a canon within budget, and a programme deliberately left out
+ok one-cpm-cache — trackedFiles is reset at each compose(), not stuck for the life of the server
+ok scan+serve — discovery merges instead of replacing, an excluded programme stays excluded, and serve binds loopback only
+ok markdown — a document cannot inject a scheme through a link, a refused link is shown rather than dropped, and headings, bullet lists, numbered lists and quotes are real elements
+ok strings — 365 keys at en/it parity, every one read by the template
+ok room-workflow — lens routing from the injected table, searchable blocks/Kanban, honest milestones, bounded lazy evidence, mobile and print contracts
+ok claude-skill — init→update runs on a fresh target and the adapter links the artifact; the ritual and the verifier skills carry the gates in order
+ok release — conventional commits create reviewable version bumps and OIDC publishes only matching releases
+ok room-pill — every issue reference shares current/stale/closed state, anchored reason, glyph and word
+ok room-c4-drill — the embedded map is the ratified L1→L4 drill surface
+ok map-a11y — public map contract keeps its table columns and named SVG root
+ok rtm-dogfood — forma's own PRD parses as 9 traceable requirements, every one carrying its verification and its line
+ok ci-public — required CI has no private repository or credential dependency
+ok dogfood — Pages publishes the explorer only; the Control Room stays local
+ok self-model-fresh — forma's self-model version and Control Room status track the shipped package
+ok audit — deterministic offline plan; item-by-item apply that names every refusal in lastApply; findings and keyed signal/milestone evidence expire
+ok brief — claims need a subject and an anchor that can move; caps hold; colour only under a fresh hostile hold; a rewritten claim loses it; a taken decision can be retired; check refuses an unresolvable claim
+ok doc-prune — schemas and governance docs carry only the current shape
+ok governance-solo — policy, profile and CI all describe the solo tier
+ok arbiter-contract — a shared shape cannot move on one side and stay green
+ok critical-path — six-field float over the blocking DAG, cycles excluded, heuristic named
+ok milestone-path — estimates never blended with the heuristic, unestimated named, drift both ways
+ok one-cpm — milestone order and cycle tie-break follow codepointCompare, not a-b
+ok one-cpm-astral — criticalChain's tie-break is code-point order, not UTF-16 code-unit order
+ok one-cpm-characterization — issue criticalPath output pinned before the CPM refactor
+ok ontology-lenses — use cases and runbook coverage derived from arbiter's projections, the measurement passed through and the unwalked named
+ok lenses — one home per derived surface, publication measured from backing artifacts, routing mounts only what publishes
+ok recovery — staged facts roll back together, compose retains logical provenance, and absent overlays bootstrap
+ok production-recovery — symlink aliases canonicalize and the reviewed 43-file runtime allowlist is enforced
+ok import-graph — roomderive/roomdocs/verify/check/room-presentable import evidence primitives from evidence.mjs, not audit.mjs
+ok codepoint-compare — true Unicode scalar order (astral vs BMP, mixed-case ASCII), and the ICU NUL-collapse defect does not reproduce
+ok locale — milestone, use-case, runbook and milestone-path/reconciliation order is codepoint-stable across LC_ALL=sv_SE.UTF-8 and LC_ALL=C
+ok locale — verify's edge sort is codepoint-stable across LC_ALL=sv_SE.UTF-8 and LC_ALL=C
+ok s2-fail-closed-1 — empty-string arbiter.milestones fails schema validation
+ok s2-fail-closed-2 — an unsupported schema keyword is refused, and every shipped schema stays clean
+ok s2-fail-closed-3 — an unreadable git history yields link.error and a null (not zero) coverage
+ok s2-fail-closed-4 — a stub-gh transport failure fails verify and leaves the snapshot untouched
+ok s2-fail-closed-5 — an unreadable source directory fails SOURCE COVERAGE
+ok s2-round1-1 — portfolio linkCoverage stays null on an unreadable git history
+ok 132-unknown-not-zero — checkpoints, workPerNode, blocked nodes and landing stay unmeasured on an unreadable git history
+ok 132-room-unmeasured — a real `forma room`+`check --room` composition of an all-open, non-git programme renders "not measured" for landing, per-node work and checkpoints, not zero/blank
+ok s2-round1-2 — an auth/permission error fails verify instead of falling back silently
+ok s2-round1-3 — tuple-form items is refused, not silently allowlisted
+ok s2-round1-4 — an unstatable source entry fails SOURCE COVERAGE
+ok s2-round1-5 — minLength/maxLength count Unicode code points, not UTF-16 units
+ok serve-cli — forma serve binds loopback only and answers a malformed URI with 400 instead of crashing
+ok strict-flags — gen/init/check/verify/serve exit 1 on an unknown flag instead of ignoring it
+ok equals-flags-reject — check --key=/bad is honoured, not silently ignored
+ok equals-flags-honour — init/gen/check/verify/serve all honour --key=value, not just --key value
+ok limit-strict — room update --limit is an unknown flag now, not a silently-accepted dead one
+ok drill-label — [+] DRILL is localized (en/it) and rendered through STR.drillLabel, not hardcoded
+ok architecture-module-table — every lib/*.mjs module is in ARCHITECTURE.md's table, count matches
