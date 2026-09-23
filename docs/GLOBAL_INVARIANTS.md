@@ -162,8 +162,9 @@ The single-lens viewer keeps its `STRINGS` literal; the Control Room's tables ar
 `lib/viewer/strings/{en,it}.json`. Both stay at parity, and the Control Room's are additionally
 checked for keys nothing reads — dead weight a translator still has to carry.
 
-- **Enforced by:** `test/viewer.test.mjs` compares the viewer's key counts, and compares the two
-  JSON files key by key plus greps the template for every one of them.
+- **Enforced by:** `test/viewer.test.mjs` compares the viewer's key counts; `test/run.mjs`'s
+  `strings` block compares the two Control Room JSON files key by key plus greps the template for
+  every one of them.
 - **Red when:** a string is added to one locale only, or a key survives the view that used it.
 - **Note:** this rule claimed to cover the Control Room long before it did. The parity half was only
   ever true of the viewer until the tables became files.
