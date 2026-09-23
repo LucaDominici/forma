@@ -35,7 +35,7 @@ Enforcement: `tier_floor: solo` in `standards/doc-profile`; `test/run.mjs` refus
 
 | D-04 | Required public CI depends only on this repository | A public fork must run every required gate with its default token; private tooling may remain an optional local audit but cannot decide whether Forma is green | Luca Dominici | 2026-08-17 (replaces private checkout, 2026-08-10) |
 
-Enforcement: the `ci-public` block in `test/run.mjs` rejects private repository or credential references in `.github/workflows/ci.yml`.
+Enforcement: the `ci-public` block in `test/repo.test.mjs` rejects private repository or credential references in `.github/workflows/ci.yml`.
 
 | D-05 | ADR filenames use four digits (`0001-`), not the standard's three | Seven ADRs already carry four-digit names and are cross-referenced by number from code comments and other documents; renumbering would break every reference to buy nothing that a gate checks | Luca Dominici | 2026-08-10 |
 
@@ -47,7 +47,7 @@ Enforcement: `lib/render.mjs` emits the frontmatter block; the scaffold regressi
 
 | D-07 | The embedded hologram is sufficient as the Control Room's C4 L1→L4 drill surface; do not add a second C4 tab | The map iframe already exposes explicit `[+] DRILL`, double-click entry, back navigation and an L1→L4 breadcrumb. A parallel tab would duplicate one explorer and revive the flat eight-tab shape rejected in ADR-0005 | Luca Dominici | 2026-08-17 |
 
-Enforcement: the `room-c4-drill` block in `test/run.mjs` proves that the room embeds the hologram and that its drill control, stack navigation and level breadcrumb remain present.
+Enforcement: the `room-c4-drill` block in `test/briefing.test.mjs` proves that the room embeds the hologram and that its drill control, stack navigation and level breadcrumb remain present.
 
 | D-08 | Codex is the default counter-verification adapter, but runs outside Forma | I2 forbids network in the deterministic engine; the external Codex skill can inspect repo/gh and return the model-agnostic JSON contract without making `forma audit` spawn an agent or trust one | Luca agent, delegated by Luca Dominici | 2026-08-17 |
 

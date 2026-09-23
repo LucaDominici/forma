@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { LENSES } from "../lib/lenses.mjs";
 import { makeKanbanFixture } from "./fixtures/control-room-stress/kanban.mjs";
 
-import { HERE, run, die, readJson } from "./helpers.mjs";
+import { HERE, die, readJson } from "./helpers.mjs";
 
 describe("briefing", () => {
   // I14 on a surface that did not exist before: the briefing now RENDERS markdown out of a
@@ -444,11 +444,12 @@ describe("briefing", () => {
       !/function pagedList\(/.test(template)
     )
       die("room-dom: issue rendering has no bounded pager");
-    for (const fn of ["renderQueue", "renderKanban"]) {
-      const body = viewerFn(fn);
-      if (!(fn === "renderQueue" ? /filteredList\(/ : /pagedList\(/).test(body))
-        die("room-dom: " + fn + " bypasses the bounded pager");
-    }
+    // renderKanban's own pagedList wiring is proven functionally below (the lift asserts a lane
+    // never mounts more than the 40-row page), not just read as text — a text presence check here
+    // duplicated that proof without adding coverage (F9). renderQueue has no such lift, so it keeps
+    // its presence check.
+    if (!/filteredList\(/.test(viewerFn("renderQueue")))
+      die("room-dom: renderQueue bypasses the bounded pager");
     const filter = viewerFn("filteredList"),
       queue = viewerFn("renderQueue"),
       kanban = viewerFn("renderKanban"),
@@ -600,9 +601,10 @@ describe("briefing", () => {
       die("room-truth: unknown claims have no explicit headline path");
     // A viewport-locked shell turns "too tall" into "invisible", not "scrollable": an uncapped answer
     // tier took 868-967px on the verdict lens and left the evidence row at zero height with six
-    // panels below an unscrollable fold. Measured at 1440x900, 1280x800 and 1920x1080.
-    if (!/\.answer\{[^}]*max-height:\d+vh[^}]*overflow:auto/.test(template))
-      die("room-layout: the answer tier is unbounded and can starve the evidence tier to zero height");
+    // panels below an unscrollable fold. Measured at 1440x900, 1280x800 and 1920x1080. The bound
+    // itself is a CI `layout` job property (scripts/room-layout.mjs measures scrollHeight vs.
+    // innerHeight, and its own `--negative` run proves the probe rejects overflow), not a text
+    // check here — a presence regex on the CSS duplicated that proof without adding coverage (F9).
     if (!/\.pager button\{min-height:44px/.test(template))
       die("room-mobile: pager target is below 44px");
     if (!/\.skip\{[^}]*min-height:44px/.test(template))
