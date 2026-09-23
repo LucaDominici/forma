@@ -27,6 +27,17 @@ import {
 const tmp = freshTmp();
 
 describe("gen", () => {
+  // The #43 guard ("a box many rows name is judged by all of them, not silenced by the prose cap")
+  // used to be asserted a second time here, against a live checkout of the demo's private source
+  // repository. It was removed rather than repaired, for two reasons that are the same reason:
+  //   - it read `docs/FEATURE_MATRIX.md` from a path outside this repository, so two people running
+  //     `npm test` did not get the same verdict — and it silently SKIPPED when that path was absent,
+  //     which is every CI run. Green by absence on CI, red on one machine, is the false green this
+  //     project exists to kill;
+  //   - the rows it pinned have since been re-declared not-done upstream, so its expectation was
+  //     simply wrong: `planned` was the correct answer and the assertion was the stale party.
+  // The property itself is asserted on the committed `docmap` fixture, on the `core` node — see the
+  // #43 comment there for why one assertion covers both shapes.
   test("gen: mini", async () => {
     const REPO = FIX("mini"),
       topo = join(tmp, "topo.json"),
